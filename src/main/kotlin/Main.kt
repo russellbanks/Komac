@@ -1,15 +1,46 @@
 import com.github.ajalt.mordant.rendering.TextColors.blue
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextColors.yellow
 import com.github.ajalt.mordant.terminal.Terminal
+import io.ktor.client.HttpClient
+import io.ktor.client.call.NoTransformationFoundException
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import schemas.ManifestVersionSchema
+import schemas.Schemas
 import kotlin.system.exitProcess
 
-fun main() {
+suspend fun main() {
     fun optionBox(char: Char): String {
         return "${blue("[")}${brightWhite(char.toString())}${blue("]")}"
     }
+
+    val client = HttpClient(CIO) {
+        install(ContentNegotiation) {
+            json(
+                Json {
+                    ignoreUnknownKeys = true
+                }
+            )
+        }
+    }
+    var manifestVersionSchema: ManifestVersionSchema?
+    try {
+        manifestVersionSchema = client.get(Schemas.manifestVersionSchema).body()
+    } catch (exception: NoTransformationFoundException) {
+        val mealsString: String = client.get(Schemas.manifestVersionSchema).body()
+        val json = Json {
+            ignoreUnknownKeys = true
+        }
+        manifestVersionSchema = json.decodeFromString(mealsString)
+    }
+    client.close()
 
     with(Terminal()) {
         println(yellow("Select mode:"))
@@ -20,9 +51,9 @@ fun main() {
         println("   ${optionBox('5')} ${blue("Remove a manifest")}")
         println("   ${optionBox('Q')} ${red("Any key to quit")}")
         val selection = prompt(brightWhite("Selection"))
-        println("\n")
+        println()
         when(selection) {
-            "1" -> NewManifest(this).run()
+            "1" -> NewManifest(this, manifestVersionSchema!!).run() // TODO Handle nullability
             "2" -> TODO()
             "3" -> TODO()
             "4" -> TODO()
@@ -30,38 +61,4 @@ fun main() {
             else -> exitProcess(0)
         }
     }
-}
-
-class NewManifest(private val terminal: Terminal) {
-    fun run() {
-        packageIdentifierPrompt()
-        println()
-        packageVersionPrompt()
-    }
-
-    private fun packageIdentifierPrompt() {
-        with(terminal) {
-            var packageIdentifierSuccessful = false
-            println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
-            var packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
-            while(!packageIdentifierSuccessful) {
-                if ((packageIdentifier?.length ?: 0) < 4) {
-                    println(red("[Error] Invalid Length - Length must be between 4 and 128 characters"))
-                    println("\n")
-                    println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
-                    packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
-                } else {
-                    packageIdentifierSuccessful = true
-                }
-            }
-        }
-    }
-
-    private fun packageVersionPrompt() {
-        with(terminal) {
-            println(brightGreen("[Required] Enter the version. for example: 1.33.7"))
-            var packageVersion = prompt(brightWhite("Package Version"))?.trim()
-        }
-    }
-
 }
