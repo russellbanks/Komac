@@ -93,7 +93,7 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
                 /* prefix = */ "$packageIdentifier v$packageVersion - $formattedDate",
-                /* suffix = */ ".${FilenameUtils.getExtension(installerUrl)}"
+                /* suffix = */ ".${getURLExtension(installerUrl)}"
             )
         }
 
@@ -116,6 +116,14 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
         println()
         println(brightGreen("[Required] Enter the version. For example: 1.33.7"))
         packageVersion = prompt(brightWhite("Package Version"))?.trim()
+    }
+
+    private fun getURLExtension(url: String?): String {
+        var urlExtension: String? = FilenameUtils.getExtension(url)
+        if (urlExtension.isNullOrBlank()) {
+            urlExtension = "winget-tmp"
+        }
+        return urlExtension
     }
 
 }
