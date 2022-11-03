@@ -1,3 +1,5 @@
+import Hashing.hash
+import com.appmattus.crypto.Algorithm
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -24,6 +26,7 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
     var packageVersion: String? = null
     var installerUrl: String? = null
     var packageIdentifier: String? = null
+    var installerHash: String? = null
     val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(
@@ -107,8 +110,10 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
         progress.clear()
         val responseBody: ByteArray = httpResponse.body()
         file.writeBytes(responseBody)
-        file.delete()
+        installerHash = file.hash(Algorithm.SHA_256).uppercase()
+
         println("A file saved to ${file.path}")
+        file.delete()
     }
 
     private fun Terminal.packageVersionError(error: String) {
