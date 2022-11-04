@@ -1,18 +1,18 @@
 import Hashing.hash
 import com.appmattus.crypto.Algorithm
 import com.github.ajalt.mordant.animation.progressAnimation
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.red
+import com.github.ajalt.mordant.rendering.TextColors.*
 import com.github.ajalt.mordant.terminal.Terminal
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.onDownload
-import io.ktor.client.request.get
-import io.ktor.client.statement.HttpResponse
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.util.reflect.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -23,11 +23,12 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class NewManifest(private val terminal: Terminal, private val manifestVersionSchema: ManifestVersionSchema) {
-    var packageVersion: String? = null
-    var installerUrl: String? = null
-    var packageIdentifier: String? = null
-    var installerHash: String? = null
-    val client = HttpClient(CIO) {
+    private var packageVersion: String? = null
+    private var installerUrl: String? = null
+    private var packageIdentifier: String? = null
+    private var installerHash: String? = null
+    private val patterns = Patterns(manifestVersionSchema)
+    private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(
                 Json {
@@ -35,55 +36,77 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
                 }
             )
         }
+        followRedirects = false
     }
 
     suspend fun run() {
         with(terminal) {
             packageIdentifierPrompt()
-            println()
             packageVersionPrompt()
-            println()
             installerDownloadPrompt()
         }
     }
 
     private fun Terminal.packageIdentifierPrompt() {
         var packageIdentifierSuccessful = false
-        println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
-        packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
-        while(!packageIdentifierSuccessful) {
-            if ((packageIdentifier?.length ?: 0) < 4) {
-                println(red(Errors.invalidLength(min = 4, max = 128)))
-                println()
-                println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
-                packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
-            } else {
-                packageIdentifierSuccessful = true
+        while (!packageIdentifierSuccessful) {
+            println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
+            packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
+            val identifierLength = packageIdentifier?.length ?: 0
+            val lengthValid = identifierLength > 4 || identifierLength < manifestVersionSchema.properties.packageIdentifier.maxLength
+            val identifierValid = packageIdentifier?.matches(patterns.packageIdentifier) ?: false
+            when {
+                identifierValid && lengthValid -> packageIdentifierSuccessful = true
+                !lengthValid -> println(red(Errors.invalidLength(min = 4, max = 128)))
+                !identifierValid -> println(red(Errors.invalidRegex))
+                else -> println(red(Errors.genericError))
             }
+            println()
         }
     }
 
     private fun Terminal.packageVersionPrompt() {
         var packageVersionSuccessful = false
-        println(brightGreen("[Required] Enter the version. For example: 1.33.7"))
-        packageVersion = prompt(brightWhite("Package Version"))?.trim()
-        val lessThanMax = (packageVersion?.length ?: 0) > manifestVersionSchema.properties.packageVersion.maxLength
-        while(!packageVersionSuccessful) {
-            if (lessThanMax || packageVersion?.isNotBlank() != true) {
-                packageVersionError(Errors.invalidLength(min = 1, max = 128))
-            } else if (packageVersion?.matches(manifestVersionSchema.properties.packageVersion.pattern.toRegex()) != true) {
-                packageVersionError(Errors.invalidRegex)
-            } else {
-                packageVersionSuccessful = true
+        while (!packageVersionSuccessful) {
+            println(brightGreen("[Required] Enter the version. For example: 1.33.7"))
+            packageVersion = prompt(brightWhite("Package Version"))?.trim()
+            val isLessThanMax = (packageVersion?.length ?: 0) < patterns.packageIdentifierMaxLength
+            val versionValid = packageVersion?.matches(patterns.packageVersion) ?: false
+            when {
+                versionValid && isLessThanMax -> packageVersionSuccessful = true
+                !isLessThanMax -> println(red(Errors.invalidLength(min = 1, max = 128)))
+                !versionValid -> println(red(Errors.invalidRegex))
+                else -> println(red(Errors.genericError))
             }
+            println()
         }
     }
 
     private suspend fun Terminal.installerDownloadPrompt() {
-        println(brightGreen("[Required] Enter the download url to the installer."))
-        installerUrl = prompt(brightWhite("Url"))?.trim()
+        while (installerUrl.isNullOrBlank()) {
+            println(brightGreen("[Required] Enter the download url to the installer."))
+            installerUrl = prompt(brightWhite("Url"))?.trim()
+        }
+
+        val redirectedUrl = client.getRedirectedUrl(installerUrl!!)
+        var shouldUseRedirectedUrl = false
+        if (redirectedUrl != installerUrl) {
+            println(yellow("The URL appears to be redirected. Would you like to use the destination URL instead?"))
+            println(blue("Discovered URL: $redirectedUrl"))
+            println(brightGreen("   [Y] Use detected URL"))
+            println(brightWhite("   [N] Use original URL"))
+            val response: String? = prompt("Enter Choice (default is 'Y')")
+            shouldUseRedirectedUrl = response != "N".lowercase()
+        }
+        if (shouldUseRedirectedUrl) {
+            installerUrl = redirectedUrl
+            println(yellow("[Warning] URL Changed - The URL was changed during processing and will be re-validated"))
+        } else {
+            println(brightGreen("Original URL Retained - Proceeding with $installerUrl"))
+        }
+
         val progress = progressAnimation {
-            text("my-file.iso")
+            text(FilenameUtils.getName(installerUrl))
             percentage()
             progressBar()
             completed()
@@ -116,11 +139,19 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
         file.delete()
     }
 
-    private fun Terminal.packageVersionError(error: String) {
-        println(red(error))
-        println()
-        println(brightGreen("[Required] Enter the version. For example: 1.33.7"))
-        packageVersion = prompt(brightWhite("Package Version"))?.trim()
+    private suspend fun HttpClient.getRedirectedUrl(installerUrl: String): String {
+        val response = head(installerUrl)
+        var redirectedInstallerUrl: String = installerUrl
+
+        var status = response.status.value
+        var location = response.headers["Location"]
+        while (status in 301..308 && response.headers.contains(HttpHeaders.Location) && location != null) {
+            redirectedInstallerUrl = location
+            val newResponse = head(redirectedInstallerUrl)
+            status = newResponse.status.value
+            location = newResponse.headers["Location"]
+        }
+        return redirectedInstallerUrl
     }
 
     private fun getURLExtension(url: String?): String {
