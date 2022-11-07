@@ -11,6 +11,7 @@ object ManifestSerializer : JsonContentPolymorphicSerializer<Schema>(Schema::cla
         val id = element.jsonObject["\$id"]?.jsonPrimitive?.content
         return when {
             id?.contains("version") == true -> VersionSchema.serializer()
+            id?.contains("defaultlocale") == true -> DefaultLocaleSchema.serializer()
             id?.contains("installer") == true -> InstallerSchema.serializer()
             else -> throw IllegalArgumentException("Unknown manifest type")
         }

@@ -9,4 +9,8 @@ class Patterns(schemas: List<Schema?>) {
     val packageVersion = versionSchema.properties.packageVersion.pattern.toRegex()
 
     val installerUrlMaxLength = installerSchema.definitions.installer.properties.installerUrl.maxLength
+
+    companion object {
+        const val packageIdentifierMinLength = 4
+    }
 }

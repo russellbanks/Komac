@@ -36,13 +36,6 @@ class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
     private val patterns = Patterns(schemas)
 
     private val client = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(
-                Json {
-                    ignoreUnknownKeys = true
-                }
-            )
-        }
         install(UserAgent) {
             agent = "Microsoft-Delivery-Optimization/10.1"
         }
@@ -63,7 +56,7 @@ class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
             println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
             packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
             val identifierLength = packageIdentifier?.length ?: 0
-            val lengthValid = identifierLength > 4 || identifierLength < patterns.packageIdentifierMaxLength
+            val lengthValid = identifierLength > Patterns.packageIdentifierMinLength && identifierLength < patterns.packageIdentifierMaxLength
             val identifierValid = packageIdentifier?.matches(patterns.packageIdentifier) ?: false
             when {
                 identifierValid && lengthValid -> packageIdentifierSuccessful = true

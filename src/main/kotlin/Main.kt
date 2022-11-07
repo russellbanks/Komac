@@ -13,6 +13,7 @@ import io.ktor.client.request.get
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
+import schemas.DefaultLocaleSchema
 import schemas.InstallerSchema
 import schemas.Schema
 import schemas.Schemas
@@ -51,7 +52,7 @@ suspend fun main() {
         val selection = prompt(brightWhite("Selection"))
         println()
         when(selection) {
-            "1" -> NewManifest(this, schemas).main() // TODO Handle nullability
+            "1" -> NewManifest(this, schemas).main()
             "2" -> TODO()
             "3" -> TODO()
             "4" -> TODO()
@@ -64,6 +65,7 @@ suspend fun main() {
 suspend fun HttpClient.getManifestSchemas(): List<Schema?> {
     return hashMapOf(
         Schemas.versionSchema to null as VersionSchema?,
+        Schemas.defaultLocaleSchema to null as DefaultLocaleSchema?,
         Schemas.installerSchema to null as InstallerSchema?
     ).also {
         it.forEach { entry ->
