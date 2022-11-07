@@ -17,7 +17,7 @@ dependencies {
     implementation("com.github.ajalt.clikt:clikt:3.5.0")
     implementation("com.github.ajalt.mordant:mordant:2.0.0-beta8")
     implementation("io.ktor:ktor-client-core:2.1.3")
-    implementation("io.ktor:ktor-client-cio:2.1.3")
+    implementation("io.ktor:ktor-client-java:2.1.3")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.1.3")
     implementation("io.ktor:ktor-client-content-negotiation:2.1.3")
     implementation("commons-io:commons-io:2.11.0")

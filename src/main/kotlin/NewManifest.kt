@@ -2,25 +2,22 @@ import Hashing.hash
 import com.appmattus.crypto.Algorithm
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.blue
-import com.github.ajalt.mordant.rendering.TextColors.yellow
-import com.github.ajalt.mordant.rendering.TextColors.red
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.red
+import com.github.ajalt.mordant.rendering.TextColors.yellow
 import com.github.ajalt.mordant.terminal.Terminal
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.UserAgent
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.get
 import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import org.apache.commons.io.FilenameUtils
 import schemas.Patterns
 import schemas.Schema
@@ -35,7 +32,7 @@ class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
     private var installerHash: String? = null
     private val patterns = Patterns(schemas)
 
-    private val client = HttpClient(CIO) {
+    private val client = HttpClient(Java) {
         install(UserAgent) {
             agent = "Microsoft-Delivery-Optimization/10.1"
         }

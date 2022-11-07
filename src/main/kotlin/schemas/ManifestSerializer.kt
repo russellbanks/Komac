@@ -13,6 +13,7 @@ object ManifestSerializer : JsonContentPolymorphicSerializer<Schema>(Schema::cla
             id?.contains("version") == true -> VersionSchema.serializer()
             id?.contains("defaultlocale") == true -> DefaultLocaleSchema.serializer()
             id?.contains("installer") == true -> InstallerSchema.serializer()
+            id?.contains("locale") == true -> LocaleSchema.serializer()
             else -> throw IllegalArgumentException("Unknown manifest type")
         }
     }
