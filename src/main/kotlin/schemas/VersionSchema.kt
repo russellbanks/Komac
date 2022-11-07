@@ -1,16 +1,17 @@
 package schemas
+
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class ManifestVersionSchema(
-    @SerialName("id") val id: String? = null,
-    @SerialName("schema") val schema: String? = null,
+data class VersionSchema(
+    @SerialName("\$id") val id: String,
+    @SerialName("\$schema") val schema: String,
     @SerialName("description") val description: String,
     @SerialName("type") val type: String,
     @SerialName("properties") val properties: Properties,
     @SerialName("required") val required: List<String>
-) {
+) : Schema() {
     @Serializable
     data class Properties(
         @SerialName("PackageIdentifier") val packageIdentifier: PackageIdentifier,

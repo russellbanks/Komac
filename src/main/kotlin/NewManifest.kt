@@ -1,33 +1,40 @@
 import Hashing.hash
 import com.appmattus.crypto.Algorithm
 import com.github.ajalt.mordant.animation.progressAnimation
-import com.github.ajalt.mordant.rendering.TextColors.*
+import com.github.ajalt.mordant.rendering.TextColors.blue
+import com.github.ajalt.mordant.rendering.TextColors.yellow
+import com.github.ajalt.mordant.rendering.TextColors.red
+import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.terminal.Terminal
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.util.reflect.*
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.UserAgent
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.onDownload
+import io.ktor.client.request.get
+import io.ktor.client.request.head
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpHeaders
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import org.apache.commons.io.FilenameUtils
-import schemas.ManifestVersionSchema
+import schemas.Patterns
+import schemas.Schema
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class NewManifest(private val terminal: Terminal, private val manifestVersionSchema: ManifestVersionSchema) {
+class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
     private var packageVersion: String? = null
     private var installerUrl: String? = null
     private var packageIdentifier: String? = null
     private var installerHash: String? = null
-    private val patterns = Patterns(manifestVersionSchema)
+    private val patterns = Patterns(schemas)
+
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(
@@ -36,10 +43,13 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
                 }
             )
         }
+        install(UserAgent) {
+            agent = "Microsoft-Delivery-Optimization/10.1"
+        }
         followRedirects = false
     }
 
-    suspend fun run() {
+    suspend fun main() {
         with(terminal) {
             packageIdentifierPrompt()
             packageVersionPrompt()
@@ -53,7 +63,7 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
             println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
             packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
             val identifierLength = packageIdentifier?.length ?: 0
-            val lengthValid = identifierLength > 4 || identifierLength < manifestVersionSchema.properties.packageIdentifier.maxLength
+            val lengthValid = identifierLength > 4 || identifierLength < patterns.packageIdentifierMaxLength
             val identifierValid = packageIdentifier?.matches(patterns.packageIdentifier) ?: false
             when {
                 identifierValid && lengthValid -> packageIdentifierSuccessful = true
@@ -131,6 +141,7 @@ class NewManifest(private val terminal: Terminal, private val manifestVersionSch
         }
         progress.stop()
         progress.clear()
+        client.close()
         val responseBody: ByteArray = httpResponse.body()
         file.writeBytes(responseBody)
         installerHash = file.hash(Algorithm.SHA_256).uppercase()

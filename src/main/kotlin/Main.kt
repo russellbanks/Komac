@@ -7,13 +7,16 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import schemas.ManifestVersionSchema
+import kotlinx.serialization.json.decodeFromJsonElement
+import schemas.InstallerSchema
+import schemas.Schema
 import schemas.Schemas
+import schemas.VersionSchema
 import kotlin.system.exitProcess
 
 suspend fun main() {
@@ -29,17 +32,12 @@ suspend fun main() {
                 }
             )
         }
-    }
-    var manifestVersionSchema: ManifestVersionSchema?
-    try {
-        manifestVersionSchema = client.get(Schemas.manifestVersionSchema).body()
-    } catch (exception: NoTransformationFoundException) {
-        val mealsString: String = client.get(Schemas.manifestVersionSchema).body()
-        val json = Json {
-            ignoreUnknownKeys = true
+        install(UserAgent) {
+            agent = "Microsoft-Delivery-Optimization/10.1"
         }
-        manifestVersionSchema = json.decodeFromString(mealsString)
     }
+
+    val schemas = client.getManifestSchemas()
     client.close()
 
     with(Terminal()) {
@@ -53,7 +51,7 @@ suspend fun main() {
         val selection = prompt(brightWhite("Selection"))
         println()
         when(selection) {
-            "1" -> NewManifest(this, manifestVersionSchema!!).run() // TODO Handle nullability
+            "1" -> NewManifest(this, schemas).main() // TODO Handle nullability
             "2" -> TODO()
             "3" -> TODO()
             "4" -> TODO()
@@ -61,4 +59,21 @@ suspend fun main() {
             else -> exitProcess(0)
         }
     }
+}
+
+suspend fun HttpClient.getManifestSchemas(): List<Schema?> {
+    return hashMapOf(
+        Schemas.versionSchema to null as VersionSchema?,
+        Schemas.installerSchema to null as InstallerSchema?
+    ).also {
+        it.forEach { entry ->
+            try {
+                it[entry.key] = get(entry.key).body()
+            } catch (exception: NoTransformationFoundException) {
+                val jsonString: String = get(entry.key).body()
+                val json = Json { ignoreUnknownKeys = true }
+                it[entry.key] = json.decodeFromJsonElement(json.parseToJsonElement(jsonString))
+            }
+        }
+    }.map { it.value }
 }
