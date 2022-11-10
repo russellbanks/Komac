@@ -11,7 +11,7 @@ data class VersionSchema(
     @SerialName("type") val type: String,
     @SerialName("properties") val properties: Properties,
     @SerialName("required") val required: List<String>
-) : Schema() {
+) {
     @Serializable
     data class Properties(
         @SerialName("PackageIdentifier") val packageIdentifier: PackageIdentifier,

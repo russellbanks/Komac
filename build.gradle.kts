@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
     application
 }
 
@@ -27,6 +28,11 @@ dependencies {
     // Detekt Formatting Plugin - https://github.com/detekt/detekt
     detektPlugins(libs.detekt.formatting)
 
+    // Koin - https://github.com/InsertKoinIO/koin
+    implementation(libs.koin.core)
+    implementation(libs.koin.annotations)
+    ksp(libs.koin.ksp.compiler)
+
     // KotlinX Serialization - https://github.com/Kotlin/kotlinx.serialization
     implementation(libs.kotlinx.serialization.json)
 
@@ -38,6 +44,10 @@ dependencies {
 
     // Mordant - https://github.com/ajalt/mordant
     implementation(libs.mordant)
+}
+
+sourceSets.main {
+    java.srcDirs("build/generated/ksp/main/kotlin")
 }
 
 tasks.withType<KotlinCompile> {

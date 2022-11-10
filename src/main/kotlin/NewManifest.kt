@@ -17,20 +17,22 @@ import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.apache.commons.io.FilenameUtils
-import schemas.Patterns
-import schemas.Schema
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
+import schemas.VersionSchemaImpl
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
+class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var packageVersion: String? = null
     private var installerUrl: String? = null
     private var packageIdentifier: String? = null
     private var installerHash: String? = null
-    private val patterns = Patterns(schemas)
+    private val versionSchemaImpl: VersionSchemaImpl = get()
 
     private val client = HttpClient(Java) {
         install(UserAgent) {
@@ -40,6 +42,7 @@ class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
     }
 
     suspend fun main() {
+        while (versionSchemaImpl.versionSchema == null) delay(1)
         with(terminal) {
             packageIdentifierPrompt()
             packageVersionPrompt()
@@ -53,8 +56,8 @@ class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
             println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
             packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
             val identifierLength = packageIdentifier?.length ?: 0
-            val lengthValid = identifierLength > Patterns.packageIdentifierMinLength && identifierLength < patterns.packageIdentifierMaxLength
-            val identifierValid = packageIdentifier?.matches(patterns.packageIdentifier) ?: false
+            val lengthValid = identifierLength > 4 && identifierLength < versionSchemaImpl.packageIdentifierMaxLength()
+            val identifierValid = packageIdentifier?.matches(versionSchemaImpl.packageIdentifier()) ?: false
             when {
                 identifierValid && lengthValid -> packageIdentifierSuccessful = true
                 !lengthValid -> println(red(Errors.invalidLength(min = 4, max = 128)))
@@ -70,8 +73,8 @@ class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
         while (!packageVersionSuccessful) {
             println(brightGreen("[Required] Enter the version. For example: 1.33.7"))
             packageVersion = prompt(brightWhite("Package Version"))?.trim()
-            val isLessThanMax = (packageVersion?.length ?: 0) < patterns.packageIdentifierMaxLength
-            val versionValid = packageVersion?.matches(patterns.packageVersion) ?: false
+            val isLessThanMax = (packageVersion?.length ?: 0) < versionSchemaImpl.packageVersionMaxLength()
+            val versionValid = packageVersion?.matches(versionSchemaImpl.packageVersion()) ?: false
             when {
                 versionValid && isLessThanMax -> packageVersionSuccessful = true
                 !isLessThanMax -> println(red(Errors.invalidLength(min = 1, max = 128)))
@@ -88,7 +91,7 @@ class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
             installerUrl = prompt(brightWhite("Url"))?.trim()
         }
 
-        val redirectedUrl = client.getRedirectedUrl(installerUrl!!)
+        val redirectedUrl = client.getRedirectedUrl(installerUrl as String)
         var shouldUseRedirectedUrl = false
         if (redirectedUrl != installerUrl) {
             println(yellow("The URL appears to be redirected. Would you like to use the destination URL instead?"))
@@ -124,7 +127,7 @@ class NewManifest(private val terminal: Terminal, schemas: List<Schema?>) {
         }
 
         progress.start()
-        val httpResponse: HttpResponse = client.get(installerUrl!!) {
+        val httpResponse: HttpResponse = client.get(installerUrl as String) {
             onDownload { bytesSentTotal, contentLength ->
                 progress.update(bytesSentTotal, contentLength)
             }
