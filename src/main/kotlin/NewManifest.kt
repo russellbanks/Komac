@@ -16,6 +16,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -117,7 +118,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             timeRemaining()
         }
 
-
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
@@ -149,7 +149,11 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
         var status = response.status.value
         var location = response.headers["Location"]
-        while (status in 301..308 && response.headers.contains(HttpHeaders.Location) && location != null) {
+        while (
+            status in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value &&
+            response.headers.contains(HttpHeaders.Location) &&
+            location != null
+        ) {
             redirectedInstallerUrl = location
             val newResponse = head(redirectedInstallerUrl)
             status = newResponse.status.value
@@ -165,5 +169,4 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         }
         return urlExtension
     }
-
 }

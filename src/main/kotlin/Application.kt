@@ -1,5 +1,4 @@
 import com.github.ajalt.mordant.rendering.TextColors
-import com.github.ajalt.mordant.terminal.Terminal
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.TerminalInstance
@@ -17,7 +16,7 @@ class Application : KoinComponent {
             println("   ${optionBox('Q')} ${TextColors.red("Any key to quit")}")
             val selection = prompt(TextColors.brightWhite("Selection"))
             println()
-            when(selection) {
+            when (selection) {
                 "1" -> NewManifest(this).main()
                 "2" -> TODO()
                 "3" -> TODO()

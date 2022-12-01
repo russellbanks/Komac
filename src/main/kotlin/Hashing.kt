@@ -36,5 +36,4 @@ object Hashing {
             append(((bytes[index].toInt() and 0xff) + 0x100).toString(radix = 16).substring(startIndex = 1))
         }
     }.toString()
-
 }
