@@ -53,21 +53,18 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     }
 
     private fun Terminal.packageIdentifierPrompt() {
-        var packageIdentifierSuccessful = false
-        while (!packageIdentifierSuccessful) {
+        do {
             println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
             packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
             val identifierLength = packageIdentifier?.length ?: 0
-            val lengthValid = identifierLength > 4 && identifierLength < installerSchemaImpl.packageIdentifierMaxLength
-            val identifierValid = packageIdentifier?.matches(installerSchemaImpl.packageIdentifierPattern) ?: false
+            val isLengthValid = identifierLength > 4 && identifierLength < installerSchemaImpl.packageIdentifierMaxLength
+            val isIdentifierValid = packageIdentifier?.matches(installerSchemaImpl.packageIdentifierPattern) ?: false
             when {
-                identifierValid && lengthValid -> packageIdentifierSuccessful = true
-                !lengthValid -> println(red(Errors.invalidLength(min = 4, max = 128)))
-                !identifierValid -> println(red(Errors.invalidRegex))
-                else -> println(red(Errors.genericError))
+                !isLengthValid -> println(red(Errors.invalidLength(min = 4, max = installerSchemaImpl.packageIdentifierMaxLength)))
+                !isIdentifierValid -> println(red(Errors.invalidRegex))
             }
             println()
-        }
+        } while (!isIdentifierValid || !isLengthValid)
     }
 
     private fun Terminal.packageVersionPrompt() {
