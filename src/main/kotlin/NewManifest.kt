@@ -89,7 +89,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private suspend fun Terminal.installerDownloadPrompt() {
         var installerUrlResponse: HttpResponse? = null
-        var status: HttpStatusCode? = null
+        var status: HttpStatusCode?
 
         var installerUrlValid: Boolean? = null
         while (installerUrlValid != true) {
@@ -106,20 +106,17 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         }
 
         val redirectedUrl = client.getRedirectedUrl(installerUrl, installerUrlResponse)
-        var shouldUseRedirectedUrl = false
         if (redirectedUrl != installerUrl) {
             println(yellow("The URL appears to be redirected. Would you like to use the destination URL instead?"))
             println(blue("Discovered URL: $redirectedUrl"))
             println(brightGreen("   [Y] Use detected URL"))
             println(brightWhite("   [N] Use original URL"))
-            val response: String? = prompt("Enter Choice (default is 'Y')")
-            shouldUseRedirectedUrl = response != "N".lowercase()
-        }
-        if (shouldUseRedirectedUrl) {
-            installerUrl = redirectedUrl
-            println(yellow("[Warning] URL Changed - The URL was changed during processing and will be re-validated"))
-        } else {
-            println(brightGreen("Original URL Retained - Proceeding with $installerUrl"))
+            if (prompt("Enter Choice (default is 'Y')")?.lowercase() != "N".lowercase()) {
+                installerUrl = redirectedUrl
+                println(yellow("[Warning] URL Changed - The URL was changed during processing and will be re-validated"))
+            } else {
+                println(brightGreen("Original URL Retained - Proceeding with $installerUrl"))
+            }
         }
 
         val progress = progressAnimation {
