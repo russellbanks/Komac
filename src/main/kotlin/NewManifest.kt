@@ -71,29 +71,27 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     }
 
     private fun Terminal.packageVersionPrompt() {
-        var packageVersionSuccessful = false
-        while (!packageVersionSuccessful) {
+        do {
             println(brightGreen("[Required] Enter the version. For example: 1.33.7"))
             packageVersion = prompt(brightWhite("Package Version"))?.trim()
+            val isVersionValid = packageVersion?.matches(installerSchemaImpl.packageVersionPattern) == true
             val isVersionLessThanMaxLength = (packageVersion?.length ?: 0) < installerSchemaImpl.packageVersionMaxLength
-            val versionValid = packageVersion?.matches(installerSchemaImpl.packageVersionPattern) ?: false
             when {
-                versionValid && isVersionLessThanMaxLength -> packageVersionSuccessful = true
-                !isVersionLessThanMaxLength -> println(red(Errors.invalidLength(min = 1, max = 128)))
-                !versionValid -> println(red(Errors.invalidRegex))
-                else -> println(red(Errors.genericError))
+                packageVersion.isNullOrBlank() -> println(red("[Error] Version cannot be blank"))
+                !isVersionLessThanMaxLength -> println(red("[Error] Invalid Length - Length must be less than ${installerSchemaImpl.packageVersionMaxLength}"))
+                !isVersionValid -> println(red(Errors.invalidRegex))
             }
             println()
-        }
+        } while (packageVersion.isNullOrBlank() || !isVersionValid || !isVersionLessThanMaxLength)
     }
 
     private suspend fun Terminal.installerDownloadPrompt() {
         var installerUrlResponse: HttpResponse? = null
-        var status: HttpStatusCode? = null
 
         do {
             println(brightGreen("[Required] Enter the download url to the installer."))
             installerUrl = prompt(brightWhite("Url"))?.trim()
+            var status: HttpStatusCode? = null
             when {
                 installerUrl.isNullOrBlank() -> println(red("[Error] Url cannot be blank"))
                 (installerUrl?.length ?: 0) > installerSchemaImpl.installerUrlMaxLength -> {
@@ -105,7 +103,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 else -> {
                     runCatching { installerUrlResponse = client.head(installerUrl!!) }
                     status = installerUrlResponse?.status ?: HttpStatusCode.BadRequest
-                    if (!status.isSuccess() && !status.isRedirect()) println(red(Errors.unsuccessfulUrlResponse))
+                    if (!status.isSuccess() && !status.isRedirect()) {
+                        println(red(Errors.unsuccessfulUrlResponse(installerUrlResponse)))
+                    }
                 }
             }
             println()

@@ -1,3 +1,5 @@
+import io.ktor.client.statement.HttpResponse
+
 object Errors {
     fun invalidLength(min: Int, max: Int): String {
         return "[Error] Invalid Length - Length must be between $min and $max characters"
@@ -6,5 +8,11 @@ object Errors {
 
     const val genericError = "[Internal Error] - Value was not able to be saved successfully"
 
-    const val unsuccessfulUrlResponse = "[Error] Invalid URL Response - The URL did not return a successful response from the server"
+    fun unsuccessfulUrlResponse(response: HttpResponse?): String {
+        return if (response != null) {
+            "[Error] Unsuccessful response code - The server responded with ${response.status}"
+        } else {
+            "[Error] Unsuccessful response code - The server did not return a successful response"
+        }
+    }
 }
