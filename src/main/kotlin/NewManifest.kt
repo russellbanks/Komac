@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 import org.apache.commons.io.FilenameUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import schemas.VersionSchemaImpl
+import schemas.InstallerSchemaImpl
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -34,7 +34,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var installerUrl: String? = null
     private var packageIdentifier: String? = null
     private var installerHash: String? = null
-    private val versionSchemaImpl: VersionSchemaImpl = get()
+    private val installerSchemaImpl: InstallerSchemaImpl = get()
 
     private val client = HttpClient(Java) {
         install(UserAgent) {
@@ -44,7 +44,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     }
 
     suspend fun main() {
-        while (versionSchemaImpl.versionSchema == null) delay(1)
+        while (installerSchemaImpl.installerSchema == null) delay(1)
         with(terminal) {
             packageIdentifierPrompt()
             packageVersionPrompt()
@@ -58,8 +58,8 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
             packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
             val identifierLength = packageIdentifier?.length ?: 0
-            val lengthValid = identifierLength > 4 && identifierLength < versionSchemaImpl.packageIdentifierMaxLength()
-            val identifierValid = packageIdentifier?.matches(versionSchemaImpl.packageIdentifier()) ?: false
+            val lengthValid = identifierLength > 4 && identifierLength < installerSchemaImpl.packageIdentifierMaxLength
+            val identifierValid = packageIdentifier?.matches(installerSchemaImpl.packageIdentifierPattern) ?: false
             when {
                 identifierValid && lengthValid -> packageIdentifierSuccessful = true
                 !lengthValid -> println(red(Errors.invalidLength(min = 4, max = 128)))
@@ -75,11 +75,11 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         while (!packageVersionSuccessful) {
             println(brightGreen("[Required] Enter the version. For example: 1.33.7"))
             packageVersion = prompt(brightWhite("Package Version"))?.trim()
-            val isLessThanMax = (packageVersion?.length ?: 0) < versionSchemaImpl.packageVersionMaxLength()
-            val versionValid = packageVersion?.matches(versionSchemaImpl.packageVersion()) ?: false
+            val isVersionLessThanMaxLength = (packageVersion?.length ?: 0) < installerSchemaImpl.packageVersionMaxLength
+            val versionValid = packageVersion?.matches(installerSchemaImpl.packageVersionPattern) ?: false
             when {
-                versionValid && isLessThanMax -> packageVersionSuccessful = true
-                !isLessThanMax -> println(red(Errors.invalidLength(min = 1, max = 128)))
+                versionValid && isVersionLessThanMaxLength -> packageVersionSuccessful = true
+                !isVersionLessThanMaxLength -> println(red(Errors.invalidLength(min = 1, max = 128)))
                 !versionValid -> println(red(Errors.invalidRegex))
                 else -> println(red(Errors.genericError))
             }
@@ -89,21 +89,27 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private suspend fun Terminal.installerDownloadPrompt() {
         var installerUrlResponse: HttpResponse? = null
-        var status: HttpStatusCode?
+        var status: HttpStatusCode? = null
 
-        var installerUrlValid: Boolean? = null
-        while (installerUrlValid != true) {
+        do {
             println(brightGreen("[Required] Enter the download url to the installer."))
             installerUrl = prompt(brightWhite("Url"))?.trim()
-            if (!installerUrl.isNullOrBlank()) {
-                runCatching { installerUrlResponse = client.head(installerUrl!!) }
-                status = installerUrlResponse?.status ?: HttpStatusCode.BadRequest
-                installerUrlValid = status.isSuccess() || status.isRedirect()
-                if (installerUrlValid != true) println(red(Errors.invalidUrl))
-            } else {
-                println(red("[Error] Url cannot be blank"))
+            when {
+                installerUrl.isNullOrBlank() -> println(red("[Error] Url cannot be blank"))
+                (installerUrl?.length ?: 0) > installerSchemaImpl.installerUrlMaxLength -> {
+                    println(red("[Error] Invalid Length - Length must be less than ${installerSchemaImpl.installerUrlMaxLength}"))
+                }
+                installerUrl?.matches(installerSchemaImpl.installerUrlPattern) != true -> {
+                    println(red(Errors.invalidRegex))
+                }
+                else -> {
+                    runCatching { installerUrlResponse = client.head(installerUrl!!) }
+                    status = installerUrlResponse?.status ?: HttpStatusCode.BadRequest
+                    if (!status.isSuccess() && !status.isRedirect()) println(red(Errors.unsuccessfulUrlResponse))
+                }
             }
-        }
+            println()
+        } while (status?.isSuccess() != true && status?.isRedirect() != true)
 
         val redirectedUrl = client.getRedirectedUrl(installerUrl, installerUrlResponse)
         if (redirectedUrl != installerUrl && redirectedUrl?.contains("github") != true) {

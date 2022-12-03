@@ -16,13 +16,13 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 
 @Single
-class VersionSchemaImpl : KoinComponent {
+class InstallerSchemaImpl : KoinComponent {
     private val retrieveSchemas: RetrieveSchemas = get()
     private val client: HttpClient = retrieveSchemas.client
-    var versionSchema: VersionSchema? = null
+    var installerSchema: InstallerSchema? = null
     private val terminalInstance: TerminalInstance by inject()
     private val progress = terminalInstance.terminal.progressAnimation {
-        text("Retrieving version schema")
+        text("Retrieving installer schema")
         progressBar()
     }
 
@@ -30,13 +30,13 @@ class VersionSchemaImpl : KoinComponent {
         CoroutineScope(Dispatchers.Default).launch {
             progress.run {
                 start()
-                client.get(Schemas.versionSchema) {
+                client.get(Schemas.installerSchema) {
                     onDownload { bytesSentTotal, contentLength ->
                         progress.update(bytesSentTotal, contentLength)
                     }
                 }.body<String?>()?.let {
                     val json = Json { ignoreUnknownKeys = true }
-                    versionSchema = json.decodeFromString(it)
+                    installerSchema = json.decodeFromString(it)
                 }
                 stop()
                 clear()
@@ -44,8 +44,21 @@ class VersionSchemaImpl : KoinComponent {
         }
     }
 
-    fun packageIdentifier() = versionSchema?.properties?.packageIdentifier?.pattern?.toRegex() as Regex
-    fun packageIdentifierMaxLength() = versionSchema?.properties?.packageIdentifier?.maxLength as Int
-    fun packageVersion() = versionSchema?.properties?.packageVersion?.pattern?.toRegex() as Regex
-    fun packageVersionMaxLength() = versionSchema?.properties?.packageVersion?.maxLength as Int
+    val packageIdentifierPattern
+        get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex() as Regex
+
+    val packageIdentifierMaxLength
+        get() = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
+
+    val packageVersionPattern
+        get() = installerSchema?.definitions?.packageVersion?.pattern?.toRegex() as Regex
+
+    val packageVersionMaxLength
+        get() = installerSchema?.definitions?.packageVersion?.maxLength as Int
+
+    val installerUrlPattern
+        get() = installerSchema?.definitions?.installer?.properties?.installerUrl?.pattern?.toRegex() as Regex
+
+    val installerUrlMaxLength
+        get() = installerSchema?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
 }

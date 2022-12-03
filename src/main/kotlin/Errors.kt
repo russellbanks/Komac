@@ -6,5 +6,5 @@ object Errors {
 
     const val genericError = "[Internal Error] - Value was not able to be saved successfully"
 
-    const val invalidUrl = "[Error] Invalid URL Response - The URL did not return a successful response from the server"
+    const val unsuccessfulUrlResponse = "[Error] Invalid URL Response - The URL did not return a successful response from the server"
 }
