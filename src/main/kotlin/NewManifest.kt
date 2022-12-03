@@ -17,6 +17,7 @@ import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -87,12 +88,24 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     }
 
     private suspend fun Terminal.installerDownloadPrompt() {
-        while (installerUrl.isNullOrBlank()) {
+        var installerUrlResponse: HttpResponse? = null
+        var status: HttpStatusCode? = null
+
+        var installerUrlValid: Boolean? = null
+        while (installerUrlValid != true) {
             println(brightGreen("[Required] Enter the download url to the installer."))
             installerUrl = prompt(brightWhite("Url"))?.trim()
+            if (!installerUrl.isNullOrBlank()) {
+                runCatching { installerUrlResponse = client.head(installerUrl!!) }
+                status = installerUrlResponse?.status ?: HttpStatusCode.BadRequest
+                installerUrlValid = status.isSuccess() || status.isRedirect()
+                if (installerUrlValid != true) println(red(Errors.invalidUrl))
+            } else {
+                println(red("[Error] Url cannot be blank"))
+            }
         }
 
-        val redirectedUrl = client.getRedirectedUrl(installerUrl as String)
+        val redirectedUrl = client.getRedirectedUrl(installerUrl, installerUrlResponse)
         var shouldUseRedirectedUrl = false
         if (redirectedUrl != installerUrl) {
             println(yellow("The URL appears to be redirected. Would you like to use the destination URL instead?"))
@@ -143,23 +156,26 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         file.delete()
     }
 
-    private suspend fun HttpClient.getRedirectedUrl(installerUrl: String): String {
-        val response = head(installerUrl)
-        var redirectedInstallerUrl: String = installerUrl
+    private suspend fun HttpClient.getRedirectedUrl(installerUrl: String?, httpResponse: HttpResponse?): String? {
+        var redirectedInstallerUrl: String? = installerUrl
 
-        var status = response.status.value
-        var location = response.headers["Location"]
+        var status = httpResponse?.status
+        var location = httpResponse?.headers?.get("Location")
         while (
-            status in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value &&
-            response.headers.contains(HttpHeaders.Location) &&
+            status?.isRedirect() == true &&
+            httpResponse?.headers?.contains(HttpHeaders.Location) == true &&
             location != null
         ) {
             redirectedInstallerUrl = location
             val newResponse = head(redirectedInstallerUrl)
-            status = newResponse.status.value
+            status = newResponse.status
             location = newResponse.headers["Location"]
         }
         return redirectedInstallerUrl
+    }
+
+    private fun HttpStatusCode.isRedirect(): Boolean {
+        return value in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value
     }
 
     private fun getURLExtension(url: String?): String {

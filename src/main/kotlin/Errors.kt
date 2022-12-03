@@ -5,4 +5,6 @@ object Errors {
     const val invalidRegex = "[Error] Invalid Pattern - The value entered does not match the pattern requirements defined in the manifest schema"
 
     const val genericError = "[Internal Error] - Value was not able to be saved successfully"
+
+    const val invalidUrl = "[Error] Invalid URL Response - The URL did not return a successful response from the server"
 }
