@@ -106,7 +106,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         }
 
         val redirectedUrl = client.getRedirectedUrl(installerUrl, installerUrlResponse)
-        if (redirectedUrl != installerUrl) {
+        if (redirectedUrl != installerUrl && redirectedUrl?.contains("github") != true) {
             println(yellow("The URL appears to be redirected. Would you like to use the destination URL instead?"))
             println(blue("Discovered URL: $redirectedUrl"))
             println(brightGreen("   [Y] Use detected URL"))
