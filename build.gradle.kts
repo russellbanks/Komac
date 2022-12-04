@@ -28,6 +28,9 @@ dependencies {
     // Detekt Formatting Plugin - https://github.com/detekt/detekt
     detektPlugins(libs.detekt.formatting)
 
+    // Implementation - https://github.com/charleskorn/kaml
+    implementation(libs.kaml)
+
     // Koin - https://github.com/InsertKoinIO/koin
     implementation(libs.koin.core)
     implementation(libs.koin.annotations)

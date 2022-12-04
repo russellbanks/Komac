@@ -3,6 +3,7 @@ commonsio = "2.11.0"
 coroutines = "1.6.4"
 cryptohash = "0.10.1"
 detekt = "1.22.0"
+kaml = "0.49.0"
 koin = "3.2.2"
 koin-ksp = "1.0.3"
 kotlin = "1.7.22"
@@ -19,6 +20,8 @@ coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", ve
 crypto-cryptohash = { module = "com.appmattus.crypto:cryptohash", version.ref = "cryptohash" }
 
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
+
+kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin-ksp" }

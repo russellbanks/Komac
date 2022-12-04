@@ -32,7 +32,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var packageVersion: String? = null
     private var installerUrl: String? = null
     private var packageIdentifier: String? = null
-    private var installerHash: String? = null
+    private var installerSha256: String? = null
     private var architecture: String? = null
     private val installerSchemaImpl: InstallerSchemaImpl = get()
 
@@ -50,6 +50,13 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             packageVersionPrompt()
             installerDownloadPrompt()
             architecturePrompt()
+            ManifestCreator().createInstallerManifest(
+                packageIdentifier = packageIdentifier!!,
+                packageVersion = packageVersion!!,
+                architecture = architecture!!,
+                installerUrl = installerUrl!!,
+                installerSha256 = installerSha256!!
+            )
         }
     }
 
@@ -176,9 +183,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         client.close()
         val responseBody: ByteArray = httpResponse.body()
         file.writeBytes(responseBody)
-        installerHash = file.hash(Algorithm.SHA_256).uppercase()
+        installerSha256 = file.hash(Algorithm.SHA_256).uppercase()
 
-        println("Sha256: $installerHash")
+        println("Sha256: $installerSha256")
         file.delete()
     }
 
@@ -196,7 +203,10 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         } while (architectureValid != Validation.Success)
     }
 
-    private suspend fun HttpClient.getRedirectedUrl(installerUrl: String?, httpResponse: HttpResponse?): Pair<String?, HttpResponse?> {
+    private suspend fun HttpClient.getRedirectedUrl(
+        installerUrl: String?,
+        httpResponse: HttpResponse?
+    ): Pair<String?, HttpResponse?> {
         var redirectedInstallerUrl: String? = installerUrl
         var newResponse: HttpResponse? = httpResponse
 
