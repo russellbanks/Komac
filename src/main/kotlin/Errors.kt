@@ -1,18 +1,33 @@
 import io.ktor.client.statement.HttpResponse
 
 object Errors {
-    fun invalidLength(min: Int, max: Int): String {
-        return "[Error] Invalid Length - Length must be between $min and $max characters"
-    }
-    const val invalidRegex = "[Error] Invalid Pattern - The value entered does not match the pattern requirements defined in the manifest schema"
+    private const val error = "[Error]"
 
-    const val genericError = "[Internal Error] - Value was not able to be saved successfully"
+    fun invalidLength(min: Int? = null, max: Int? = null): String {
+        return when {
+            min != null && max != null -> "$error ${Validation.InvalidLength} - Length must be between $min and $max"
+            min != null -> "$error ${Validation.InvalidLength} - Length must be greater than $min"
+            max != null -> "$error ${Validation.InvalidLength} - Length must be less than $max"
+            else -> "$error ${Validation.InvalidLength}"
+        }
+    }
+
+    fun invalidRegex(regex: Regex? = null): String {
+        return when {
+            regex != null -> "$error ${Validation.InvalidPattern} - Must match regex: $regex"
+            else -> "$error ${Validation.InvalidPattern}"
+        }
+    }
 
     fun unsuccessfulUrlResponse(response: HttpResponse?): String {
         return if (response != null) {
-            "[Error] Unsuccessful response code - The server responded with ${response.status}"
+            "$error ${Validation.UnsuccessfulResponseCode} - The server responded with ${response.status}"
         } else {
-            "[Error] Unsuccessful response code - The server did not return a successful response"
+            "$error ${Validation.UnsuccessfulResponseCode} - The server did not return a successful response"
         }
+    }
+
+    fun blankInput(promptType: PromptType? = null): String {
+        return "$error ${promptType ?: "Input"} cannot be blank"
     }
 }

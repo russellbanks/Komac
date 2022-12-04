@@ -1,10 +1,15 @@
 package schemas
 
+import Ktor.isRedirect
+import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.get
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,8 +49,43 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
+    fun isPackageIdentifierValid(identifier: String?): Validation {
+        return when {
+            identifier?.length !in packageIdentifierMinLength until packageIdentifierMaxLength -> {
+                Validation.InvalidLength
+            }
+            packageIdentifierPattern?.let { identifier?.matches(it) } != true -> Validation.InvalidPattern
+            else -> Validation.Success
+        }
+    }
+
+    fun isPackageVersionValid(version: String?): Validation {
+        return when {
+            version.isNullOrBlank() -> Validation.Blank
+            version.length > packageVersionMaxLength -> Validation.InvalidLength
+            !version.matches(packageVersionPattern) -> Validation.InvalidPattern
+            else -> Validation.Success
+        }
+    }
+
+    suspend fun isInstallerUrlValid(url: String?, responseCallback: suspend () -> HttpResponse?): Validation {
+        return when {
+            url.isNullOrBlank() -> Validation.Blank
+            url.length > installerUrlMaxLength -> Validation.InvalidLength
+            !url.matches(installerUrlPattern) -> Validation.InvalidPattern
+            else -> {
+                val status = responseCallback()?.status ?: HttpStatusCode.BadRequest
+                if (status.isSuccess() || status.isRedirect()) {
+                    Validation.Success
+                } else {
+                    Validation.UnsuccessfulResponseCode
+                }
+            }
+        }
+    }
+
     val packageIdentifierPattern
-        get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex() as Regex
+        get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex()
 
     val packageIdentifierMaxLength
         get() = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
@@ -61,4 +101,8 @@ class InstallerSchemaImpl : KoinComponent {
 
     val installerUrlMaxLength
         get() = installerSchema?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
+
+    companion object {
+        const val packageIdentifierMinLength = 4
+    }
 }

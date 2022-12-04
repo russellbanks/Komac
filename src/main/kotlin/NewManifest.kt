@@ -1,4 +1,5 @@
 import Hashing.hash
+import Ktor.isRedirect
 import com.appmattus.crypto.Algorithm
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.blue
@@ -16,8 +17,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -54,71 +53,78 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun Terminal.packageIdentifierPrompt() {
         do {
-            println(brightGreen("[Required] Enter the Package Identifier, in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"))
-            packageIdentifier = prompt(brightWhite("Package Identifier"))?.trim()
-            val identifierLength = packageIdentifier?.length ?: 0
-            val isLengthValid = identifierLength > 4 && identifierLength < installerSchemaImpl.packageIdentifierMaxLength
-            val isIdentifierValid = packageIdentifier?.matches(installerSchemaImpl.packageIdentifierPattern) ?: false
-            when {
-                !isLengthValid -> println(red(Errors.invalidLength(min = 4, max = installerSchemaImpl.packageIdentifierMaxLength)))
-                !isIdentifierValid -> println(red(Errors.invalidRegex))
+            println(brightGreen(Prompts.packageIdentifierInfo))
+            packageIdentifier = prompt(brightWhite(Prompts.packageIdentifier))?.trim()
+            val packageIdentifierValid = installerSchemaImpl.isPackageIdentifierValid(packageIdentifier)
+            when (packageIdentifierValid) {
+                Validation.InvalidLength -> {
+                    println(red(Errors.invalidLength(
+                        min = InstallerSchemaImpl.packageIdentifierMinLength,
+                        max = installerSchemaImpl.packageIdentifierMaxLength
+                    )))
+                }
+                Validation.InvalidPattern -> {
+                    println(red(Errors.invalidRegex(installerSchemaImpl.packageIdentifierPattern)))
+                }
+                else -> { /* Success */ }
             }
             println()
-        } while (!isIdentifierValid || !isLengthValid)
+        } while (packageIdentifierValid != Validation.Success)
     }
 
     private fun Terminal.packageVersionPrompt() {
         do {
-            println(brightGreen("[Required] Enter the version. For example: 1.33.7"))
-            packageVersion = prompt(brightWhite("Package Version"))?.trim()
-            val isVersionValid = packageVersion?.matches(installerSchemaImpl.packageVersionPattern) == true
-            val isVersionLessThanMaxLength = (packageVersion?.length ?: 0) < installerSchemaImpl.packageVersionMaxLength
-            when {
-                packageVersion.isNullOrBlank() -> println(red("[Error] Version cannot be blank"))
-                !isVersionLessThanMaxLength -> println(red("[Error] Invalid Length - Length must be less than ${installerSchemaImpl.packageVersionMaxLength}"))
-                !isVersionValid -> println(red(Errors.invalidRegex))
+            println(brightGreen(Prompts.packageVersionInfo))
+            packageVersion = prompt(brightWhite(Prompts.packageVersion))?.trim()
+            val packageVersionValid = installerSchemaImpl.isPackageVersionValid(packageVersion)
+            when (packageVersionValid) {
+                Validation.Blank -> println(red(Errors.blankInput(PromptType.PackageVersion)))
+                Validation.InvalidLength -> {
+                    println(red(Errors.invalidLength(max = installerSchemaImpl.packageVersionMaxLength)))
+                }
+                Validation.InvalidPattern -> {
+                    println(red(Errors.invalidRegex(installerSchemaImpl.packageVersionPattern)))
+                }
+                else -> { /* Success */ }
             }
             println()
-        } while (packageVersion.isNullOrBlank() || !isVersionValid || !isVersionLessThanMaxLength)
+        } while (packageVersionValid != Validation.Success)
     }
 
     private suspend fun Terminal.installerDownloadPrompt() {
         var installerUrlResponse: HttpResponse? = null
-
         do {
-            println(brightGreen("[Required] Enter the download url to the installer."))
-            installerUrl = prompt(brightWhite("Url"))?.trim()
-            var status: HttpStatusCode? = null
-            when {
-                installerUrl.isNullOrBlank() -> println(red("[Error] Url cannot be blank"))
-                (installerUrl?.length ?: 0) > installerSchemaImpl.installerUrlMaxLength -> {
-                    println(red("[Error] Invalid Length - Length must be less than ${installerSchemaImpl.installerUrlMaxLength}"))
+            println(brightGreen(Prompts.installerUrlInfo))
+            installerUrl = prompt(brightWhite(Prompts.installerUrl))?.trim()
+            val installerUrlValid = installerSchemaImpl.isInstallerUrlValid(installerUrl) {
+                runCatching { installerUrlResponse = client.head(installerUrl!!) }
+                installerUrlResponse
+            }
+            when (installerUrlValid) {
+                Validation.Blank -> println(red(Errors.blankInput(PromptType.InstallerUrl)))
+                Validation.InvalidLength -> {
+                    println(red(Errors.invalidLength(max = installerSchemaImpl.installerUrlMaxLength)))
                 }
-                installerUrl?.matches(installerSchemaImpl.installerUrlPattern) != true -> {
-                    println(red(Errors.invalidRegex))
+                Validation.InvalidPattern -> println(red(Errors.invalidRegex(installerSchemaImpl.installerUrlPattern)))
+                Validation.UnsuccessfulResponseCode -> {
+                    println(red(Errors.unsuccessfulUrlResponse(installerUrlResponse)))
                 }
-                else -> {
-                    runCatching { installerUrlResponse = client.head(installerUrl!!) }
-                    status = installerUrlResponse?.status ?: HttpStatusCode.BadRequest
-                    if (!status.isSuccess() && !status.isRedirect()) {
-                        println(red(Errors.unsuccessfulUrlResponse(installerUrlResponse)))
-                    }
-                }
+                else -> { /* Success */ }
             }
             println()
-        } while (status?.isSuccess() != true && status?.isRedirect() != true)
+        } while (installerUrlValid != Validation.Success)
 
         val redirectedUrl = client.getRedirectedUrl(installerUrl, installerUrlResponse)
-        if (redirectedUrl != installerUrl && redirectedUrl?.contains("github") != true) {
-            println(yellow("The URL appears to be redirected. Would you like to use the destination URL instead?"))
-            println(blue("Discovered URL: $redirectedUrl"))
-            println(brightGreen("   [Y] Use detected URL"))
-            println(brightWhite("   [N] Use original URL"))
-            if (prompt("Enter Choice (default is 'Y')")?.lowercase() != "N".lowercase()) {
+        if (redirectedUrl != installerUrl && redirectedUrl?.contains(other = "github", ignoreCase = true) != true) {
+            println(yellow(Prompts.Redirection.redirectFound))
+            println(blue(Prompts.Redirection.discoveredUrl(redirectedUrl)))
+            println((brightGreen(Prompts.Redirection.useDetectedUrl)))
+            println(brightWhite(Prompts.Redirection.useOriginalUrl))
+            if (prompt(Prompts.Redirection.enterChoice, default = "Y")?.lowercase() != "N".lowercase()) {
                 installerUrl = redirectedUrl
-                println(yellow("[Warning] URL Changed - The URL was changed during processing and will be re-validated"))
+                println(yellow(Prompts.Redirection.urlChanged))
             } else {
-                println(brightGreen("Original URL Retained - Proceeding with $installerUrl"))
+                println(brightGreen(Prompts.Redirection.originalUrlRetained(installerUrl)))
             }
         }
 
@@ -172,10 +178,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             location = newResponse.headers["Location"]
         }
         return redirectedInstallerUrl
-    }
-
-    private fun HttpStatusCode.isRedirect(): Boolean {
-        return value in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value
     }
 
     private fun getURLExtension(url: String?): String {
