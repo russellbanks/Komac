@@ -29,13 +29,15 @@ class ManifestCreator : KoinComponent {
             ),
             manifestVersion = Schemas.manifestVersion
         )
-        val defaultEncoder = Yaml(configuration = YamlConfiguration(
+        val yamlEncoder = Yaml(configuration = YamlConfiguration(
             encodeDefaults = false,
             singleLineStringStyle = SingleLineStringStyle.Plain
         ))
-        val yamlOutput = defaultEncoder.encodeToString(InstallerManifest.serializer(), manifest)
-        val createdByComment = "${Schemas.Comments.createdBy}\n"
-        val languageServerComment = "${Schemas.Comments.installerLanguageServer}\n"
-        terminalInstance.terminal.println("$createdByComment$languageServerComment\n$yamlOutput")
+        buildString {
+            appendLine(Schemas.Comments.createdBy)
+            appendLine(Schemas.Comments.installerLanguageServer)
+            appendLine()
+            appendLine(yamlEncoder.encodeToString(InstallerManifest.serializer(), manifest))
+        }.let(terminalInstance.terminal::print)
     }
 }
