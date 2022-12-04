@@ -13,14 +13,11 @@ class Application : KoinComponent {
         with(get<TerminalInstance>().terminal) {
             println(verticalLayout {
                 cell(yellow("Select mode:"))
-                cell(option(Mode.NewManifest))
-                cell(option(Mode.QuickUpdate))
-                cell(option(Mode.UpdateMetadata))
-                cell(option(Mode.NewLocale))
-                cell(option(Mode.RemoveManifest))
-                cell(option(Mode.Exit, key = "Q"))
+                Mode.values().forEach { mode ->
+                    cell(option(mode, mode.key))
+                }
             })
-            val selection = prompt(brightWhite("Selection"), default = "Q", showDefault = false)
+            val selection = prompt(brightWhite("Selection"), default = Mode.Exit.key.toString(), showDefault = false)
             println()
             when (selection?.lowercase()) {
                 "1" -> NewManifest(this).main()
@@ -33,9 +30,9 @@ class Application : KoinComponent {
         }
     }
 
-    private fun option(mode: Mode, intent: Int = 3, key: String = mode.ordinal.inc().toString()): String {
+    private fun option(mode: Mode, key: Char, intent: Int = 3): String {
         val indent = " ".repeat(intent)
-        val keyString = "${blue("[")}${brightWhite(key)}${blue("]")}"
+        val keyString = "${blue("[")}${brightWhite(key.toString())}${blue("]")}"
         val textColour = if (mode != Mode.Exit) blue else red
         return "$indent${keyString} ${textColour(mode.toString())}"
     }
