@@ -1,3 +1,5 @@
+import schemas.InstallerSchemaImpl
+
 object Prompts {
     private const val required = "[Required]"
 
@@ -13,6 +15,12 @@ object Prompts {
     const val installerUrlInfo = "$required Enter the download url to the installer."
 
     const val installerUrl = "Url"
+
+    fun architectureInfo(installerSchemaImpl: InstallerSchemaImpl): String {
+        return "[Required] Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"
+    }
+
+    const val architecture = "Architecture"
 
     object Redirection {
         fun originalUrlRetained(url: String?) = "Original URL Retained - Proceeding with $url"

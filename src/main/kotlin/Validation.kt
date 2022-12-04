@@ -1,7 +1,8 @@
-    enum class Validation {
+enum class Validation {
         Blank,
+        Success,
         InvalidLength { override fun toString(): String = "Invalid Length" },
         InvalidPattern { override fun toString(): String = "Invalid Pattern" },
         UnsuccessfulResponseCode { override fun toString(): String = "Unsuccessful Response Code" },
-        Success
-    }
+        InvalidArchitecture { override fun toString(): String = "Invalid Architecture" }
+}

@@ -84,6 +84,16 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
+    fun isArchitectureValid(architecture: String?): Validation {
+        return when {
+            architecture.isNullOrBlank() -> Validation.Blank
+            installerSchema?.definitions?.architecture?.enum?.contains(architecture) != true -> {
+                Validation.InvalidArchitecture
+            }
+            else -> Validation.Success
+        }
+    }
+
     val packageIdentifierPattern
         get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex()
 
@@ -101,6 +111,9 @@ class InstallerSchemaImpl : KoinComponent {
 
     val installerUrlMaxLength
         get() = installerSchema?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
+
+    val architecturesEnum
+        get() = installerSchema?.definitions?.architecture?.enum as List<String>
 
     companion object {
         const val packageIdentifierMinLength = 4

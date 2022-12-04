@@ -33,6 +33,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var installerUrl: String? = null
     private var packageIdentifier: String? = null
     private var installerHash: String? = null
+    private var architecture: String? = null
     private val installerSchemaImpl: InstallerSchemaImpl = get()
 
     private val client = HttpClient(Java) {
@@ -48,6 +49,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             packageIdentifierPrompt()
             packageVersionPrompt()
             installerDownloadPrompt()
+            architecturePrompt()
         }
     }
 
@@ -158,8 +160,22 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         file.writeBytes(responseBody)
         installerHash = file.hash(Algorithm.SHA_256).uppercase()
 
-        println("A file saved to ${file.path}")
+        println("Sha256: $installerHash")
         file.delete()
+    }
+
+    private fun Terminal.architecturePrompt() {
+        do {
+            println(brightGreen(Prompts.architectureInfo(installerSchemaImpl)))
+            architecture = prompt(brightWhite(Prompts.architecture))?.trim()?.lowercase()
+            val architectureValid = installerSchemaImpl.isArchitectureValid(architecture)
+            when (architectureValid) {
+                Validation.Blank -> println(red(Errors.blankInput(PromptType.Architecture)))
+                Validation.InvalidArchitecture -> println(red(Errors.invalidArchitecture(installerSchemaImpl)))
+                else -> { /* Success */ }
+            }
+            println()
+        } while (architectureValid != Validation.Success)
     }
 
     private suspend fun HttpClient.getRedirectedUrl(installerUrl: String?, httpResponse: HttpResponse?): String? {
@@ -182,9 +198,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun getURLExtension(url: String?): String {
         var urlExtension: String? = FilenameUtils.getExtension(url)
-        if (urlExtension.isNullOrBlank()) {
-            urlExtension = "winget-tmp"
-        }
+        if (urlExtension.isNullOrBlank()) urlExtension = "winget-tmp"
         return urlExtension
     }
 }
