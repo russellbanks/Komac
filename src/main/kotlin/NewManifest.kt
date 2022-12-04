@@ -116,15 +116,33 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println()
         } while (installerUrlValid != Validation.Success)
 
-        val redirectedUrl = client.getRedirectedUrl(installerUrl, installerUrlResponse)
+        val (redirectedUrl, redirectedUrlResponse) = client.getRedirectedUrl(installerUrl, installerUrlResponse)
         if (redirectedUrl != installerUrl && redirectedUrl?.contains(other = "github", ignoreCase = true) != true) {
             println(yellow(Prompts.Redirection.redirectFound))
             println(blue(Prompts.Redirection.discoveredUrl(redirectedUrl)))
             println((brightGreen(Prompts.Redirection.useDetectedUrl)))
             println(brightWhite(Prompts.Redirection.useOriginalUrl))
             if (prompt(Prompts.Redirection.enterChoice, default = "Y")?.lowercase() != "N".lowercase()) {
-                installerUrl = redirectedUrl
                 println(yellow(Prompts.Redirection.urlChanged))
+                val redirectedUrlValid = installerSchemaImpl.isInstallerUrlValid(redirectedUrl) {
+                    redirectedUrlResponse
+                }
+                when (redirectedUrlValid) {
+                    Validation.Blank -> println(Errors.blankInput(PromptType.InstallerUrl))
+                    Validation.InvalidLength -> Errors.invalidLength(max = installerSchemaImpl.installerUrlMaxLength)
+                    Validation.InvalidPattern -> {
+                        println(red(Errors.invalidRegex(installerSchemaImpl.installerUrlPattern)))
+                    }
+                    Validation.UnsuccessfulResponseCode -> {
+                        println(red(Errors.unsuccessfulUrlResponse(redirectedUrlResponse)))
+                    }
+                    else -> installerUrl = redirectedUrl
+                }
+                if (redirectedUrlValid != Validation.Success) {
+                    println()
+                    println(yellow(Prompts.Redirection.detectedUrlValidationFailed))
+                }
+                println()
             } else {
                 println(brightGreen(Prompts.Redirection.originalUrlRetained(installerUrl)))
             }
@@ -178,8 +196,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         } while (architectureValid != Validation.Success)
     }
 
-    private suspend fun HttpClient.getRedirectedUrl(installerUrl: String?, httpResponse: HttpResponse?): String? {
+    private suspend fun HttpClient.getRedirectedUrl(installerUrl: String?, httpResponse: HttpResponse?): Pair<String?, HttpResponse?> {
         var redirectedInstallerUrl: String? = installerUrl
+        var newResponse: HttpResponse? = httpResponse
 
         var status = httpResponse?.status
         var location = httpResponse?.headers?.get("Location")
@@ -189,11 +208,11 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             location != null
         ) {
             redirectedInstallerUrl = location
-            val newResponse = head(redirectedInstallerUrl)
+            newResponse = head(redirectedInstallerUrl)
             status = newResponse.status
             location = newResponse.headers["Location"]
         }
-        return redirectedInstallerUrl
+        return redirectedInstallerUrl to newResponse
     }
 
     private fun getURLExtension(url: String?): String {

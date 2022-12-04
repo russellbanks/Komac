@@ -31,6 +31,8 @@ object Prompts {
 
         const val useDetectedUrl = "   [Y] Use detected URL"
 
+        const val detectedUrlValidationFailed = "Validation has failed for the detected URL. Using original URL."
+
         const val useOriginalUrl = "   [N] Use original URL"
 
         const val enterChoice = "Enter Choice"
