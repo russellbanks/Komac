@@ -15,11 +15,14 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.UserAgent
-import io.ktor.client.plugins.onDownload
-import io.ktor.client.request.get
 import io.ktor.client.request.head
+import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
+import io.ktor.http.contentLength
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.core.isNotEmpty
+import io.ktor.utils.io.core.readBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.io.FilenameUtils
@@ -159,7 +162,8 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         }
 
         val (redirectedUrl, redirectedUrlResponse) = noRedirectClient.getRedirectedUrl(
-            installerUrl, installerUrlResponse
+            installerUrl,
+            installerUrlResponse
         ).also { noRedirectClient.close() }
         if (redirectedUrl != installerUrl && redirectedUrl?.contains(other = "github", ignoreCase = true) != true) {
             println(yellow(Prompts.Redirection.redirectFound))
@@ -210,16 +214,20 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         }
 
         progress.start()
-        val httpResponse: HttpResponse = client.get(installerUrl as String) {
-            onDownload { bytesSentTotal, contentLength ->
-                progress.update(bytesSentTotal, contentLength)
+        client.prepareGet(installerUrl as String).execute { httpResponse ->
+            val channel: ByteReadChannel = httpResponse.body()
+            while (!channel.isClosedForRead) {
+                val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                while (packet.isNotEmpty) {
+                    val bytes = packet.readBytes()
+                    file.appendBytes(bytes)
+                    progress.update(file.length(), httpResponse.contentLength())
+                }
             }
         }
         progress.stop()
         progress.clear()
         client.close()
-        val responseBody: ByteArray = httpResponse.body()
-        file.writeBytes(responseBody)
         installerSha256 = file.hash(Hashing.Algorithms.SHA256).uppercase()
 
         println("Sha256: $installerSha256")
