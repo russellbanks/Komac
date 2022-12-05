@@ -45,7 +45,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         install(UserAgent) {
             agent = "Microsoft-Delivery-Optimization/10.1"
         }
-        followRedirects = false
     }
 
     suspend fun main() {
@@ -152,7 +151,16 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println()
         } while (installerUrlValid != Validation.Success)
 
-        val (redirectedUrl, redirectedUrlResponse) = client.getRedirectedUrl(installerUrl, installerUrlResponse)
+        val noRedirectClient = HttpClient(Java) {
+            install(UserAgent) {
+                agent = "Microsoft-Delivery-Optimization/10.1"
+            }
+            followRedirects = false
+        }
+
+        val (redirectedUrl, redirectedUrlResponse) = noRedirectClient.getRedirectedUrl(
+            installerUrl, installerUrlResponse
+        ).also { noRedirectClient.close() }
         if (redirectedUrl != installerUrl && redirectedUrl?.contains(other = "github", ignoreCase = true) != true) {
             println(yellow(Prompts.Redirection.redirectFound))
             println(blue(Prompts.Redirection.discoveredUrl(redirectedUrl)))
