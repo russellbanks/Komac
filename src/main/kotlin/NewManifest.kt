@@ -48,6 +48,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         install(UserAgent) {
             agent = "Microsoft-Delivery-Optimization/10.1"
         }
+        followRedirects = false
     }
 
     suspend fun main() {
@@ -154,17 +155,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println()
         } while (installerUrlValid != Validation.Success)
 
-        val noRedirectClient = HttpClient(Java) {
-            install(UserAgent) {
-                agent = "Microsoft-Delivery-Optimization/10.1"
-            }
-            followRedirects = false
-        }
-
-        val (redirectedUrl, redirectedUrlResponse) = noRedirectClient.getRedirectedUrl(
-            installerUrl,
-            installerUrlResponse
-        ).also { noRedirectClient.close() }
+        val (redirectedUrl, redirectedUrlResponse) = client.getRedirectedUrl(installerUrl, installerUrlResponse)
         if (redirectedUrl != installerUrl && redirectedUrl?.contains(other = "github", ignoreCase = true) != true) {
             println(yellow(Prompts.Redirection.redirectFound))
             println(blue(Prompts.Redirection.discoveredUrl(redirectedUrl)))
@@ -214,14 +205,16 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         }
 
         progress.start()
-        client.prepareGet(installerUrl as String).execute { httpResponse ->
-            val channel: ByteReadChannel = httpResponse.body()
-            while (!channel.isClosedForRead) {
-                val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-                while (packet.isNotEmpty) {
-                    val bytes = packet.readBytes()
-                    file.appendBytes(bytes)
-                    progress.update(file.length(), httpResponse.contentLength())
+        client.config { followRedirects = true }.use { client ->
+            client.prepareGet(installerUrl as String).execute { httpResponse ->
+                val channel: ByteReadChannel = httpResponse.body()
+                while (!channel.isClosedForRead) {
+                    val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                    while (packet.isNotEmpty) {
+                        val bytes = packet.readBytes()
+                        file.appendBytes(bytes)
+                        progress.update(file.length(), httpResponse.contentLength())
+                    }
                 }
             }
         }
