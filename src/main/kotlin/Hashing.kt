@@ -7,6 +7,9 @@ import java.io.IOException
 
 object Hashing {
 
+    private const val hex255 = 0xff
+    private const val hex256 = 0x100
+
     @Throws(IOException::class, IllegalArgumentException::class, IllegalStateException::class)
     suspend fun File.hash(
         algorithm: Algorithm,
@@ -31,9 +34,9 @@ object Hashing {
         return buildHash(digest.digest())
     }
 
-    private fun buildHash(bytes: ByteArray) = StringBuilder().apply {
+    private fun buildHash(bytes: ByteArray) = buildString {
         bytes.indices.forEach { index ->
-            append(((bytes[index].toInt() and 0xff) + 0x100).toString(radix = 16).substring(startIndex = 1))
+            append(((bytes[index].toInt() and hex255) + hex256).toString(radix = 16).substring(startIndex = 1))
         }
-    }.toString()
+    }
 }
