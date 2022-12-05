@@ -1,6 +1,4 @@
-import Hashing.hash
 import Ktor.isRedirect
-import com.appmattus.crypto.Algorithm
 import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
@@ -11,6 +9,8 @@ import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextColors.yellow
 import com.github.ajalt.mordant.terminal.Terminal
+import hashing.Hashing
+import hashing.Hashing.hash
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
@@ -212,7 +212,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         client.close()
         val responseBody: ByteArray = httpResponse.body()
         file.writeBytes(responseBody)
-        installerSha256 = file.hash(Algorithm.SHA_256).uppercase()
+        installerSha256 = file.hash(Hashing.Algorithms.SHA256).uppercase()
 
         println("Sha256: $installerSha256")
         file.delete()

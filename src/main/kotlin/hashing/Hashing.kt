@@ -1,9 +1,11 @@
-import com.appmattus.crypto.Algorithm
+package hashing
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.security.MessageDigest
 
 object Hashing {
 
@@ -12,10 +14,9 @@ object Hashing {
 
     @Throws(IOException::class, IllegalArgumentException::class, IllegalStateException::class)
     suspend fun File.hash(
-        algorithm: Algorithm,
+        digest: MessageDigest,
         hashProgressCallback: (Float) -> Unit = {}
     ): String {
-        val digest = algorithm.createDigest()
         val fileInputStream = withContext(Dispatchers.IO) { FileInputStream(this@hash) }
 
         val byteArray = ByteArray(size = 32_768)
@@ -38,5 +39,10 @@ object Hashing {
         bytes.indices.forEach { index ->
             append(((bytes[index].toInt() and hex255) + hex256).toString(radix = 16).substring(startIndex = 1))
         }
+    }
+
+    object Algorithms {
+        private const val SHA_256 = "SHA-256"
+        val SHA256: MessageDigest = MessageDigest.getInstance(SHA_256)
     }
 }
