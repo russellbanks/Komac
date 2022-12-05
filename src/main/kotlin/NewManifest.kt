@@ -21,7 +21,6 @@ import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.apache.commons.io.FilenameUtils
 import org.koin.core.component.KoinComponent
@@ -50,7 +49,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     }
 
     suspend fun main() {
-        while (installerSchemaImpl.installerSchema == null) delay(1)
         with(terminal) {
             packageIdentifierPrompt()
             packageVersionPrompt()
@@ -87,7 +85,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         }
     }
 
-    private fun Terminal.packageIdentifierPrompt() {
+    private suspend fun Terminal.packageIdentifierPrompt() {
         do {
             println(brightGreen(Prompts.packageIdentifierInfo))
             packageIdentifier = prompt(brightWhite(Prompts.packageIdentifier))?.trim()

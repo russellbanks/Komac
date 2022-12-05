@@ -5,14 +5,14 @@ import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Single
@@ -24,32 +24,37 @@ import org.koin.core.component.inject
 class InstallerSchemaImpl : KoinComponent {
     private val retrieveSchemas: RetrieveSchemas = get()
     private val client: HttpClient = retrieveSchemas.client
-    var installerSchema: InstallerSchema? = null
+    private var installerSchema: InstallerSchema? = null
     private val terminalInstance: TerminalInstance by inject()
     private val progress = terminalInstance.terminal.progressAnimation {
         text("Retrieving installer schema")
         progressBar()
     }
 
-    init {
-        CoroutineScope(Dispatchers.Default).launch {
-            progress.run {
-                start()
-                client.get(Schemas.installerSchema) {
-                    onDownload { bytesSentTotal, contentLength ->
-                        progress.update(bytesSentTotal, contentLength)
+    private var asyncJob: Deferred<Unit> = CoroutineScope(Dispatchers.Default).async {
+        client.get(Schemas.installerSchema).body<String?>()?.let {
+            val json = Json { ignoreUnknownKeys = true }
+            installerSchema = json.decodeFromString(it)
+        }
+    }
+
+    private suspend fun awaitInstallerSchema() {
+        with(asyncJob) {
+            if (isActive) {
+                progress.run {
+                    start()
+                    invokeOnCompletion {
+                        stop()
+                        clear()
                     }
-                }.body<String?>()?.let {
-                    val json = Json { ignoreUnknownKeys = true }
-                    installerSchema = json.decodeFromString(it)
+                    await()
                 }
-                stop()
-                clear()
             }
         }
     }
 
-    fun isPackageIdentifierValid(identifier: String?): Validation {
+    suspend fun isPackageIdentifierValid(identifier: String?): Validation {
+        awaitInstallerSchema()
         return when {
             identifier?.length !in packageIdentifierMinLength until packageIdentifierMaxLength -> {
                 Validation.InvalidLength
