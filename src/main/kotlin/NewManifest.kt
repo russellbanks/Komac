@@ -1,5 +1,3 @@
-import Hashing.HashingAlgorithms.SHA_256
-import Hashing.HashUtils.getFileHash
 import Ktor.isRedirect
 import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
@@ -11,6 +9,8 @@ import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextColors.yellow
 import com.github.ajalt.mordant.terminal.Terminal
+import hashing.Hashing
+import hashing.Hashing.hash
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
@@ -29,7 +29,6 @@ import schemas.InstallerManifest
 import schemas.InstallerSchemaImpl
 import schemas.Schemas
 import java.io.File
-import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -213,7 +212,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         client.close()
         val responseBody: ByteArray = httpResponse.body()
         file.writeBytes(responseBody)
-        installerSha256 = getFileHash(MessageDigest.getInstance(SHA_256), file).uppercase()
+        installerSha256 = file.hash(Hashing.Algorithms.SHA256).uppercase()
 
         println("Sha256: $installerSha256")
         file.delete()
