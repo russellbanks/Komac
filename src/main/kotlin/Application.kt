@@ -33,9 +33,13 @@ class Application : KoinComponent {
     }
 
     private fun option(mode: Mode, key: Char, intent: Int = 3): String {
-        val indent = " ".repeat(intent)
-        val keyString = "${blue("[")}${brightWhite(key.toString())}${blue("]")}"
         val textColour = if (mode != Mode.Exit) blue else red
-        return "$indent$keyString ${textColour(mode.toString())}"
+        return buildString {
+            append(" ".repeat(intent))
+            append(blue("["))
+            append(brightWhite(key.toString()))
+            append(blue("] "))
+            append(textColour(mode.toString()))
+        }
     }
 }
