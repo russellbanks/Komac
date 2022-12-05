@@ -3,8 +3,8 @@ import schemas.InstallerSchemaImpl
 object Prompts {
     private const val required = "[Required]"
 
-    const val packageIdentifierInfo = "$required Enter the Package Identifier, in the following format" +
-            "<Publisher shortname.Application shortname>. For example: Microsoft.Excel"
+    const val packageIdentifierInfo = "$required Enter the Package Identifier, in the following format " +
+        "<Publisher shortname.Application shortname>. For example: Microsoft.Excel"
 
     const val packageIdentifier = "Package Identifier"
 
@@ -23,8 +23,10 @@ object Prompts {
     const val architecture = "Architecture"
 
     fun installerTypeInfo(installerSchemaImpl: InstallerSchemaImpl): String {
-        return "$required Enter the installer type. Options: " +
-                installerSchemaImpl.installerTypesEnum.joinToString(", ")
+        return buildString {
+            append("$required Enter the installer type. Options: ")
+            append(installerSchemaImpl.installerTypesEnum.joinToString(", "))
+        }
     }
 
     const val installerType = "Installer Type"

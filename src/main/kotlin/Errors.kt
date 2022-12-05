@@ -5,35 +5,37 @@ object Errors {
     private const val error = "[Error]"
 
     fun invalidLength(min: Int? = null, max: Int? = null): String {
-        return when {
-            min != null && max != null -> "$error ${Validation.InvalidLength} - Length must be between $min and $max"
-            min != null -> "$error ${Validation.InvalidLength} - Length must be greater than $min"
-            max != null -> "$error ${Validation.InvalidLength} - Length must be less than $max"
-            else -> "$error ${Validation.InvalidLength}"
+        return buildString {
+            append("$error ${Validation.InvalidLength}")
+            if (min != null || max != null) append(" - Length must be ")
+            when {
+                min != null && max != null -> append("between $min and $max")
+                min != null -> append("greater than $min")
+                max != null -> append("less than $max")
+            }
         }
     }
 
     fun invalidRegex(regex: Regex? = null): String {
-        return when {
-            regex != null -> "$error ${Validation.InvalidPattern} - Must match regex: $regex"
-            else -> "$error ${Validation.InvalidPattern}"
+        return buildString {
+            append("$error ${Validation.InvalidPattern}")
+            regex?.let { append(" - Must match regex: $it") }
         }
     }
 
     fun unsuccessfulUrlResponse(response: HttpResponse?): String {
-        return if (response != null) {
-            "$error ${Validation.UnsuccessfulResponseCode} - The server responded with ${response.status}"
-        } else {
-            "$error ${Validation.UnsuccessfulResponseCode} - The server did not return a successful response"
+        return buildString {
+            append("$error ${Validation.UnsuccessfulResponseCode} - The server ")
+            append(response?.let { "responded with ${response.status}" } ?: "did not return a successful response")
         }
     }
 
-    fun blankInput(promptType: PromptType? = null): String {
-        return "$error ${promptType ?: "Input"} cannot be blank"
-    }
+    fun blankInput(promptType: PromptType? = null) = "$error ${promptType ?: "Input"} cannot be blank"
 
     fun invalidEnum(validation: Validation, installerSchemaImpl: InstallerSchemaImpl): String {
-        return "$error $validation - Value must exist in the enum - " +
-                installerSchemaImpl.architecturesEnum.joinToString(", ")
+        return buildString {
+            append("$error $validation - Value must exist in the enum - ")
+            append(installerSchemaImpl.architecturesEnum.joinToString(", "))
+        }
     }
 }

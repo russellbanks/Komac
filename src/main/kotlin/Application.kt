@@ -11,12 +11,14 @@ import kotlin.system.exitProcess
 class Application : KoinComponent {
     suspend fun main() {
         with(get<TerminalInstance>().terminal) {
-            println(verticalLayout {
-                cell(yellow("Select mode:"))
-                Mode.values().forEach { mode ->
-                    cell(option(mode, mode.key))
+            println(
+                verticalLayout {
+                    cell(yellow("Select mode:"))
+                    Mode.values().forEach { mode ->
+                        cell(option(mode, mode.key))
+                    }
                 }
-            })
+            )
             val selection = prompt(brightWhite("Selection"), default = Mode.Exit.key.toString(), showDefault = false)
             println()
             when (selection?.lowercase()) {
@@ -34,6 +36,6 @@ class Application : KoinComponent {
         val indent = " ".repeat(intent)
         val keyString = "${blue("[")}${brightWhite(key.toString())}${blue("]")}"
         val textColour = if (mode != Mode.Exit) blue else red
-        return "$indent${keyString} ${textColour(mode.toString())}"
+        return "$indent$keyString ${textColour(mode.toString())}"
     }
 }

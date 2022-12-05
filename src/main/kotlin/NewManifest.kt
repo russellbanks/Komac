@@ -70,16 +70,19 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 ),
                 manifestVersion = Schemas.manifestVersion
             ).also {
-                val yamlEncoder = Yaml(configuration = YamlConfiguration(
-                    encodeDefaults = false,
-                    singleLineStringStyle = SingleLineStringStyle.Plain
-                ))
-                buildString {
-                    appendLine(Schemas.Comments.createdBy)
-                    appendLine(Schemas.Comments.installerLanguageServer)
-                    appendLine()
-                    appendLine(yamlEncoder.encodeToString(InstallerManifest.serializer(), it))
-                }.let(this::print)
+                Yaml(
+                    configuration = YamlConfiguration(
+                        encodeDefaults = false,
+                        singleLineStringStyle = SingleLineStringStyle.Plain
+                    )
+                ).run {
+                    buildString {
+                        appendLine(Schemas.Comments.createdBy)
+                        appendLine(Schemas.Comments.installerLanguageServer)
+                        appendLine()
+                        appendLine(encodeToString(InstallerManifest.serializer(), it))
+                    }.let(this@with::print)
+                }
             }
         }
     }
@@ -91,10 +94,14 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val packageIdentifierValid = installerSchemaImpl.isPackageIdentifierValid(packageIdentifier)
             when (packageIdentifierValid) {
                 Validation.InvalidLength -> {
-                    println(red(Errors.invalidLength(
-                        min = InstallerSchemaImpl.packageIdentifierMinLength,
-                        max = installerSchemaImpl.packageIdentifierMaxLength
-                    )))
+                    println(
+                        red(
+                            Errors.invalidLength(
+                                min = InstallerSchemaImpl.packageIdentifierMinLength,
+                                max = installerSchemaImpl.packageIdentifierMaxLength
+                            )
+                        )
+                    )
                 }
                 Validation.InvalidPattern -> {
                     println(red(Errors.invalidRegex(installerSchemaImpl.packageIdentifierPattern)))
@@ -130,7 +137,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(brightGreen(Prompts.installerUrlInfo))
             installerUrl = prompt(brightWhite(Prompts.installerUrl))?.trim()
             val installerUrlValid = installerSchemaImpl.isInstallerUrlValid(installerUrl) {
-                runCatching { installerUrlResponse = client.head(installerUrl!!) }
+                runCatching { installerUrlResponse = installerUrl?.let { client.head(it) } }
                 installerUrlResponse
             }
             when (installerUrlValid) {
@@ -153,7 +160,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(blue(Prompts.Redirection.discoveredUrl(redirectedUrl)))
             println((brightGreen(Prompts.Redirection.useDetectedUrl)))
             println(brightWhite(Prompts.Redirection.useOriginalUrl))
-            if (prompt(Prompts.Redirection.enterChoice, default = "Y")?.lowercase() != "N".lowercase()) {
+            if (prompt(Prompts.Redirection.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(yellow(Prompts.Redirection.urlChanged))
                 val redirectedUrlValid = installerSchemaImpl.isInstallerUrlValid(redirectedUrl) {
                     redirectedUrlResponse
@@ -220,7 +227,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val architectureValid = installerSchemaImpl.isArchitectureValid(architecture)
             when (architectureValid) {
                 Validation.Blank -> println(red(Errors.blankInput(PromptType.Architecture)))
-                Validation.InvalidArchitecture -> println(red(Errors.invalidEnum(architectureValid, installerSchemaImpl)))
+                Validation.InvalidArchitecture -> {
+                    println(red(Errors.invalidEnum(architectureValid, installerSchemaImpl)))
+                }
                 else -> { /* Success */ }
             }
             println()
@@ -234,7 +243,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val installerTypeValid = installerSchemaImpl.isInstallerTypeValid(installerType)
             when (installerTypeValid) {
                 Validation.Blank -> println(red(Errors.blankInput(PromptType.InstallerType)))
-                Validation.InvalidInstallerType -> println(red(Errors.invalidEnum(installerTypeValid, installerSchemaImpl)))
+                Validation.InvalidInstallerType -> {
+                    println(red(Errors.invalidEnum(installerTypeValid, installerSchemaImpl)))
+                }
                 else -> { /* Success */ }
             }
             println()
