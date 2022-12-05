@@ -37,7 +37,6 @@ object HashUtils {
         return digest
     }
 
-
     /**
      * Converts an array of bytes into an array of characters representing the hexadecimal values of each byte in order.
      * The returned array will be double the length of the passed array, as it takes two characters to represent any
