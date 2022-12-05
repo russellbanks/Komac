@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.russellbanks"
-version = "1.0-SNAPSHOT"
+version = "alpha"
 
 repositories {
     mavenCentral()
@@ -22,9 +22,6 @@ dependencies {
 
     // Kotlin Coroutines - https://github.com/Kotlin/kotlinx.coroutines
     implementation(libs.coroutines.core)
-
-    // Crypto - https://github.com/appmattus/crypto
-    implementation(libs.crypto.cryptohash)
 
     // Detekt Formatting Plugin - https://github.com/detekt/detekt
     detektPlugins(libs.detekt.formatting)

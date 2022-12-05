@@ -1,6 +1,6 @@
-import Hashing.hash
+import Hashing.HashingAlgorithms.SHA_256
+import Hashing.HashUtils.getFileHash
 import Ktor.isRedirect
-import com.appmattus.crypto.Algorithm
 import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
@@ -29,6 +29,7 @@ import schemas.InstallerManifest
 import schemas.InstallerSchemaImpl
 import schemas.Schemas
 import java.io.File
+import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -212,7 +213,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         client.close()
         val responseBody: ByteArray = httpResponse.body()
         file.writeBytes(responseBody)
-        installerSha256 = file.hash(Algorithm.SHA_256).uppercase()
+        installerSha256 = getFileHash(MessageDigest.getInstance(SHA_256), file).uppercase()
 
         println("Sha256: $installerSha256")
         file.delete()
