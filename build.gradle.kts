@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
+    alias(libs.plugins.buildconfig)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
@@ -51,6 +52,11 @@ dependencies {
 
 sourceSets.main {
     java.srcDirs("build/generated/ksp/main/kotlin")
+}
+
+buildConfig {
+    buildConfigField("String", "appName", "\"${project.name}\"")
+    buildConfigField("String", "appVersion", provider { "\"${project.version}\"" })
 }
 
 tasks.withType<KotlinCompile> {

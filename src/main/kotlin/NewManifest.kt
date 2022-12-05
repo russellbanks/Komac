@@ -1,6 +1,9 @@
 import Hashing.hash
 import Ktor.isRedirect
 import com.appmattus.crypto.Algorithm
+import com.charleskorn.kaml.SingleLineStringStyle
+import com.charleskorn.kaml.Yaml
+import com.charleskorn.kaml.YamlConfiguration
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.blue
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
@@ -23,7 +26,9 @@ import kotlinx.coroutines.withContext
 import org.apache.commons.io.FilenameUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
+import schemas.InstallerManifest
 import schemas.InstallerSchemaImpl
+import schemas.Schemas
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -34,6 +39,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var packageIdentifier: String? = null
     private var installerSha256: String? = null
     private var architecture: String? = null
+    private var installerType: String? = null
     private val installerSchemaImpl: InstallerSchemaImpl = get()
 
     private val client = HttpClient(Java) {
@@ -50,13 +56,31 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             packageVersionPrompt()
             installerDownloadPrompt()
             architecturePrompt()
-            ManifestCreator().createInstallerManifest(
-                packageIdentifier = packageIdentifier!!,
-                packageVersion = packageVersion!!,
-                architecture = architecture!!,
-                installerUrl = installerUrl!!,
-                installerSha256 = installerSha256!!
-            )
+            installerTypePrompt()
+            InstallerManifest(
+                packageIdentifier = packageIdentifier,
+                packageVersion = packageVersion,
+                installers = listOf(
+                    InstallerManifest.Installer(
+                        architecture = architecture,
+                        installerType = installerType,
+                        installerUrl = installerUrl,
+                        installerSha256 = installerSha256
+                    )
+                ),
+                manifestVersion = Schemas.manifestVersion
+            ).also {
+                val yamlEncoder = Yaml(configuration = YamlConfiguration(
+                    encodeDefaults = false,
+                    singleLineStringStyle = SingleLineStringStyle.Plain
+                ))
+                buildString {
+                    appendLine(Schemas.Comments.createdBy)
+                    appendLine(Schemas.Comments.installerLanguageServer)
+                    appendLine()
+                    appendLine(yamlEncoder.encodeToString(InstallerManifest.serializer(), it))
+                }.let(this::print)
+            }
         }
     }
 
@@ -196,11 +220,25 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val architectureValid = installerSchemaImpl.isArchitectureValid(architecture)
             when (architectureValid) {
                 Validation.Blank -> println(red(Errors.blankInput(PromptType.Architecture)))
-                Validation.InvalidArchitecture -> println(red(Errors.invalidArchitecture(installerSchemaImpl)))
+                Validation.InvalidArchitecture -> println(red(Errors.invalidEnum(architectureValid, installerSchemaImpl)))
                 else -> { /* Success */ }
             }
             println()
         } while (architectureValid != Validation.Success)
+    }
+
+    private fun Terminal.installerTypePrompt() {
+        do {
+            println(brightGreen(Prompts.installerTypeInfo(installerSchemaImpl)))
+            installerType = prompt(brightWhite(Prompts.installerType))?.trim()?.lowercase()
+            val installerTypeValid = installerSchemaImpl.isInstallerTypeValid(installerType)
+            when (installerTypeValid) {
+                Validation.Blank -> println(red(Errors.blankInput(PromptType.InstallerType)))
+                Validation.InvalidInstallerType -> println(red(Errors.invalidEnum(installerTypeValid, installerSchemaImpl)))
+                else -> { /* Success */ }
+            }
+            println()
+        } while (installerTypeValid != Validation.Success)
     }
 
     private suspend fun HttpClient.getRedirectedUrl(

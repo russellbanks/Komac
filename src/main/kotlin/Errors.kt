@@ -32,8 +32,8 @@ object Errors {
         return "$error ${promptType ?: "Input"} cannot be blank"
     }
 
-    fun invalidArchitecture(installerSchemaImpl: InstallerSchemaImpl): String {
-        return "$error ${Validation.InvalidArchitecture} - Value must exist in the enum - " +
+    fun invalidEnum(validation: Validation, installerSchemaImpl: InstallerSchemaImpl): String {
+        return "$error $validation - Value must exist in the enum - " +
                 installerSchemaImpl.architecturesEnum.joinToString(", ")
     }
 }

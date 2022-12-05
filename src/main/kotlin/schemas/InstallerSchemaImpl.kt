@@ -94,6 +94,16 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
+    fun isInstallerTypeValid(installerType: String?): Validation {
+        return when {
+            installerType.isNullOrBlank() -> Validation.Blank
+            installerSchema?.definitions?.installerType?.enum?.contains(installerType) != true -> {
+                Validation.InvalidInstallerType
+            }
+            else -> Validation.Success
+        }
+    }
+
     val packageIdentifierPattern
         get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex()
 
@@ -114,6 +124,9 @@ class InstallerSchemaImpl : KoinComponent {
 
     val architecturesEnum
         get() = installerSchema?.definitions?.architecture?.enum as List<String>
+
+    val installerTypesEnum
+        get() = installerSchema?.definitions?.installerType?.enum as List<String>
 
     companion object {
         const val packageIdentifierMinLength = 4

@@ -1,4 +1,3 @@
-
 rootProject.name = "Komac"
 
 dependencyResolutionManagement {

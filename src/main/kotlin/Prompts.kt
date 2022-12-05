@@ -17,10 +17,17 @@ object Prompts {
     const val installerUrl = "Url"
 
     fun architectureInfo(installerSchemaImpl: InstallerSchemaImpl): String {
-        return "[Required] Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"
+        return "$required Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"
     }
 
     const val architecture = "Architecture"
+
+    fun installerTypeInfo(installerSchemaImpl: InstallerSchemaImpl): String {
+        return "$required Enter the installer type. Options: " +
+                installerSchemaImpl.installerTypesEnum.joinToString(", ")
+    }
+
+    const val installerType = "Installer Type"
 
     object Redirection {
         fun originalUrlRetained(url: String?) = "Original URL Retained - Proceeding with $url"
