@@ -56,6 +56,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             packageIdentifierPrompt()
             packageVersionPrompt()
             installerDownloadPrompt()
+            downloadInstallerFromUrl(installerUrl)
             architecturePrompt()
             installerTypePrompt()
             InstallerManifest(
@@ -186,16 +187,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 println(brightGreen(Prompts.Redirection.originalUrlRetained(installerUrl)))
             }
         }
+    }
 
-        val progress = progressAnimation {
-            text(FilenameUtils.getName(installerUrl))
-            percentage()
-            progressBar()
-            completed()
-            speed("B/s")
-            timeRemaining()
-        }
-
+    private suspend fun Terminal.downloadInstallerFromUrl(installerUrl: String?) {
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
@@ -204,22 +198,30 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             )
         }
 
-        progress.start()
-        client.config { followRedirects = true }.use { client ->
-            client.prepareGet(installerUrl as String).execute { httpResponse ->
-                val channel: ByteReadChannel = httpResponse.body()
-                while (!channel.isClosedForRead) {
-                    val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-                    while (packet.isNotEmpty) {
-                        val bytes = packet.readBytes()
-                        file.appendBytes(bytes)
-                        progress.update(file.length(), httpResponse.contentLength())
+        progressAnimation {
+            text(FilenameUtils.getName(installerUrl))
+            percentage()
+            progressBar()
+            completed()
+            speed("B/s")
+            timeRemaining()
+        }.run {
+            start()
+            client.config { followRedirects = true }.use { client ->
+                client.prepareGet(installerUrl as String).execute { httpResponse ->
+                    val channel: ByteReadChannel = httpResponse.body()
+                    while (!channel.isClosedForRead) {
+                        val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                        while (packet.isNotEmpty) {
+                            file.appendBytes(packet.readBytes())
+                            update(file.length(), httpResponse.contentLength())
+                        }
                     }
                 }
             }
+            stop()
+            clear()
         }
-        progress.stop()
-        progress.clear()
         client.close()
         installerSha256 = file.hash(Hashing.Algorithms.SHA256).uppercase()
 
