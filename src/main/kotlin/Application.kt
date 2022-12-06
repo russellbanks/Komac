@@ -22,11 +22,11 @@ class Application : KoinComponent {
             val selection = prompt(brightWhite("Selection"), default = Mode.Exit.key.toString(), showDefault = false)
             println()
             when (selection?.lowercase()) {
-                "1" -> NewManifest(this).main()
-                "2" -> TODO()
-                "3" -> TODO()
-                "4" -> TODO()
-                "5" -> TODO()
+                Mode.NewManifest.key.toString() -> NewManifest(this).main()
+                Mode.QuickUpdate.key.toString() -> TODO()
+                Mode.UpdateMetadata.key.toString() -> TODO()
+                Mode.NewLocale.key.toString() -> TODO()
+                Mode.RemoveManifest.key.toString() -> TODO()
                 else -> exitProcess(0)
             }
         }
