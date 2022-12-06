@@ -4,13 +4,15 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextColors.yellow
 import com.github.ajalt.mordant.table.verticalLayout
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
+import org.koin.core.component.inject
 import schemas.TerminalInstance
 import kotlin.system.exitProcess
 
 class Application : KoinComponent {
+    private val terminalInstance: TerminalInstance by inject()
+
     suspend fun main() {
-        with(get<TerminalInstance>().terminal) {
+        with(terminalInstance.terminal) {
             println(
                 verticalLayout {
                     cell(yellow("Select mode:"))
