@@ -1,6 +1,8 @@
 package schemas
 
+import Errors
 import Ktor.isRedirect
+import PromptType
 import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.red
@@ -56,94 +58,132 @@ class InstallerSchemaImpl : KoinComponent {
 
     suspend fun isPackageIdentifierValid(identifier: String?): Validation {
         awaitInstallerSchema()
-        return when {
-            identifier?.length !in packageIdentifierMinLength until packageIdentifierMaxLength -> {
-                Validation.InvalidLength
+        with(terminalInstance.terminal) {
+            return when {
+                identifier.isNullOrBlank() -> Validation.Blank.also {
+                    println(red(Errors.blankInput(PromptType.PackageVersion)))
+                }
+                identifier.length > packageIdentifierMaxLength -> Validation.InvalidLength.also {
+                    println(
+                        red(Errors.invalidLength(min = packageIdentifierMinLength, max = packageIdentifierMaxLength))
+                    )
+                }
+                packageIdentifierPattern?.let { identifier.matches(it) } != true -> Validation.InvalidPattern.also {
+                    println(red(Errors.invalidRegex(packageIdentifierPattern)))
+                }
+                else -> Validation.Success
             }
-            packageIdentifierPattern?.let { identifier?.matches(it) } != true -> Validation.InvalidPattern
-            else -> Validation.Success
         }
     }
 
     fun isPackageVersionValid(version: String?): Validation {
-        return when {
-            version.isNullOrBlank() -> Validation.Blank
-            version.length > packageVersionMaxLength -> Validation.InvalidLength
-            !version.matches(packageVersionPattern) -> Validation.InvalidPattern
-            else -> Validation.Success
+        with(terminalInstance.terminal) {
+            return when {
+                version.isNullOrBlank() -> Validation.Blank.also {
+                    println(red(Errors.blankInput(PromptType.PackageVersion)))
+                }
+                version.length > packageVersionMaxLength -> Validation.InvalidLength.also {
+                    println(red(Errors.invalidLength(max = packageVersionMaxLength)))
+                }
+                !version.matches(packageVersionPattern) -> Validation.InvalidPattern.also {
+                    println(red(Errors.invalidRegex(packageVersionPattern)))
+                }
+                else -> Validation.Success
+            }
         }
     }
 
     suspend fun isInstallerUrlValid(url: String?, responseCallback: suspend () -> HttpResponse?): Validation {
-        return when {
-            url.isNullOrBlank() -> Validation.Blank
-            url.length > installerUrlMaxLength -> Validation.InvalidLength
-            !url.matches(installerUrlPattern) -> Validation.InvalidPattern
-            else -> {
-                val status = responseCallback()?.status ?: HttpStatusCode.BadRequest
-                if (status.isSuccess() || status.isRedirect()) {
-                    Validation.Success
-                } else {
-                    Validation.UnsuccessfulResponseCode
+        with(terminalInstance.terminal) {
+            return when {
+                url.isNullOrBlank() -> Validation.Blank.also {
+                    println(red(Errors.blankInput(PromptType.InstallerUrl)))
+                }
+                url.length > installerUrlMaxLength -> Validation.InvalidLength.also {
+                    println(red(Errors.invalidLength(max = installerUrlMaxLength)))
+                }
+                !url.matches(installerUrlPattern) -> Validation.InvalidPattern.also {
+                    println(red(Errors.invalidRegex(installerUrlPattern)))
+                }
+                else -> {
+                    val installerUrlResponse: HttpResponse? = responseCallback()
+                    val status = installerUrlResponse?.status ?: HttpStatusCode.BadRequest
+                    if (!status.isSuccess() && !status.isRedirect()) {
+                        println(red(Errors.unsuccessfulUrlResponse(installerUrlResponse)))
+                        Validation.UnsuccessfulResponseCode
+                    } else {
+                        Validation.Success
+                    }
                 }
             }
         }
     }
 
     fun isArchitectureValid(architecture: String?): Validation {
-        return when {
-            architecture.isNullOrBlank() -> Validation.Blank
-            installerSchema?.definitions?.architecture?.enum?.contains(architecture) != true -> {
-                Validation.InvalidArchitecture
+        with(terminalInstance.terminal) {
+            return when {
+                architecture.isNullOrBlank() -> Validation.Blank.also {
+                    println(red(Errors.blankInput(PromptType.Architecture)))
+                }
+                !architecturesEnum.contains(architecture) -> Validation.InvalidArchitecture.also {
+                    println(red(Errors.invalidEnum(Validation.InvalidArchitecture, this@InstallerSchemaImpl)))
+                }
+                else -> Validation.Success
             }
-            else -> Validation.Success
         }
     }
 
     fun isInstallerTypeValid(installerType: String?): Validation {
-        return when {
-            installerType.isNullOrBlank() -> Validation.Blank
-            installerSchema?.definitions?.installerType?.enum?.contains(installerType) != true -> {
-                Validation.InvalidInstallerType
+        with(terminalInstance.terminal) {
+            return when {
+                installerType.isNullOrBlank() -> Validation.Blank.also {
+                    println(red(Errors.blankInput(PromptType.InstallerType)))
+                }
+                !installerTypesEnum.contains(installerType) -> Validation.InvalidInstallerType.also {
+                    println(red(Errors.invalidEnum(Validation.InvalidInstallerType, this@InstallerSchemaImpl)))
+                }
+                else -> Validation.Success
             }
-            else -> Validation.Success
         }
     }
 
     fun isSilentSwitchValid(silentSwitch: String?, canBeBlank: Boolean): Validation {
-        return when {
-            silentSwitch.isNullOrBlank() && !canBeBlank -> {
-                terminalInstance.terminal.println(red(Errors.blankInput(PromptType.SilentSwitch)))
-                Validation.Blank
-            }
-            (silentSwitch?.length ?: 0) > installerSilentSwitchMaxLength -> {
-                terminalInstance.terminal.println(
-                    red(
-                        Errors.invalidLength(min = installerSilentSwitchMinLength, max = installerSilentSwitchMaxLength)
+        with(terminalInstance.terminal) {
+            return when {
+                silentSwitch.isNullOrBlank() && !canBeBlank -> Validation.Blank.also {
+                    println(red(Errors.blankInput(PromptType.SilentSwitch)))
+                }
+                (silentSwitch?.length ?: 0) > installerSilentSwitchMaxLength -> Validation.InvalidLength.also {
+                    println(
+                        red(
+                            Errors.invalidLength(
+                                min = installerSilentSwitchMinLength,
+                                max = installerSilentSwitchMaxLength
+                            )
+                        )
                     )
-                )
-                Validation.InvalidLength
+                }
+                else -> Validation.Success
             }
-            else -> Validation.Success
         }
     }
 
-    val packageIdentifierPattern
+    private val packageIdentifierPattern
         get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex()
 
-    val packageIdentifierMaxLength
+    private val packageIdentifierMaxLength
         get() = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
 
-    val packageVersionPattern
+    private val packageVersionPattern
         get() = installerSchema?.definitions?.packageVersion?.pattern?.toRegex() as Regex
 
-    val packageVersionMaxLength
+    private val packageVersionMaxLength
         get() = installerSchema?.definitions?.packageVersion?.maxLength as Int
 
-    val installerUrlPattern
+    private val installerUrlPattern
         get() = installerSchema?.definitions?.installer?.properties?.installerUrl?.pattern?.toRegex() as Regex
 
-    val installerUrlMaxLength
+    private val installerUrlMaxLength
         get() = installerSchema?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
 
     val architecturesEnum

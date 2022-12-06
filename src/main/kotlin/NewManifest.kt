@@ -6,7 +6,6 @@ import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.blue
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextColors.yellow
 import com.github.ajalt.mordant.terminal.Terminal
 import hashing.Hashing
@@ -100,22 +99,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(brightGreen(Prompts.packageIdentifierInfo))
             packageIdentifier = prompt(brightWhite(Prompts.packageIdentifier))?.trim()
             val packageIdentifierValid = installerSchemaImpl.isPackageIdentifierValid(packageIdentifier)
-            when (packageIdentifierValid) {
-                Validation.InvalidLength -> {
-                    println(
-                        red(
-                            Errors.invalidLength(
-                                min = InstallerSchemaImpl.packageIdentifierMinLength,
-                                max = installerSchemaImpl.packageIdentifierMaxLength
-                            )
-                        )
-                    )
-                }
-                Validation.InvalidPattern -> {
-                    println(red(Errors.invalidRegex(installerSchemaImpl.packageIdentifierPattern)))
-                }
-                else -> { /* Success */ }
-            }
             println()
         } while (packageIdentifierValid != Validation.Success)
     }
@@ -125,16 +108,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(brightGreen(Prompts.packageVersionInfo))
             packageVersion = prompt(brightWhite(Prompts.packageVersion))?.trim()
             val packageVersionValid = installerSchemaImpl.isPackageVersionValid(packageVersion)
-            when (packageVersionValid) {
-                Validation.Blank -> println(red(Errors.blankInput(PromptType.PackageVersion)))
-                Validation.InvalidLength -> {
-                    println(red(Errors.invalidLength(max = installerSchemaImpl.packageVersionMaxLength)))
-                }
-                Validation.InvalidPattern -> {
-                    println(red(Errors.invalidRegex(installerSchemaImpl.packageVersionPattern)))
-                }
-                else -> { /* Success */ }
-            }
             println()
         } while (packageVersionValid != Validation.Success)
     }
@@ -147,17 +120,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val installerUrlValid = installerSchemaImpl.isInstallerUrlValid(installerUrl) {
                 runCatching { installerUrlResponse = installerUrl?.let { client.head(it) } }
                 installerUrlResponse
-            }
-            when (installerUrlValid) {
-                Validation.Blank -> println(red(Errors.blankInput(PromptType.InstallerUrl)))
-                Validation.InvalidLength -> {
-                    println(red(Errors.invalidLength(max = installerSchemaImpl.installerUrlMaxLength)))
-                }
-                Validation.InvalidPattern -> println(red(Errors.invalidRegex(installerSchemaImpl.installerUrlPattern)))
-                Validation.UnsuccessfulResponseCode -> {
-                    println(red(Errors.unsuccessfulUrlResponse(installerUrlResponse)))
-                }
-                else -> { /* Success */ }
             }
             println()
         } while (installerUrlValid != Validation.Success)
@@ -173,18 +135,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 val redirectedUrlValid = installerSchemaImpl.isInstallerUrlValid(redirectedUrl) {
                     redirectedUrlResponse
                 }
-                when (redirectedUrlValid) {
-                    Validation.Blank -> println(Errors.blankInput(PromptType.InstallerUrl))
-                    Validation.InvalidLength -> Errors.invalidLength(max = installerSchemaImpl.installerUrlMaxLength)
-                    Validation.InvalidPattern -> {
-                        println(red(Errors.invalidRegex(installerSchemaImpl.installerUrlPattern)))
-                    }
-                    Validation.UnsuccessfulResponseCode -> {
-                        println(red(Errors.unsuccessfulUrlResponse(redirectedUrlResponse)))
-                    }
-                    else -> installerUrl = redirectedUrl
-                }
-                if (redirectedUrlValid != Validation.Success) {
+                if (redirectedUrlValid == Validation.Success) {
+                    installerUrl = redirectedUrl
+                } else {
                     println()
                     println(yellow(Prompts.Redirection.detectedUrlValidationFailed))
                 }
@@ -240,13 +193,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(brightGreen(Prompts.architectureInfo(installerSchemaImpl)))
             architecture = prompt(brightWhite(Prompts.architecture))?.trim()?.lowercase()
             val architectureValid = installerSchemaImpl.isArchitectureValid(architecture)
-            when (architectureValid) {
-                Validation.Blank -> println(red(Errors.blankInput(PromptType.Architecture)))
-                Validation.InvalidArchitecture -> {
-                    println(red(Errors.invalidEnum(architectureValid, installerSchemaImpl)))
-                }
-                else -> { /* Success */ }
-            }
             println()
         } while (architectureValid != Validation.Success)
     }
@@ -256,13 +202,6 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(brightGreen(Prompts.installerTypeInfo(installerSchemaImpl)))
             installerType = prompt(brightWhite(Prompts.installerType))?.trim()?.lowercase()
             val installerTypeValid = installerSchemaImpl.isInstallerTypeValid(installerType)
-            when (installerTypeValid) {
-                Validation.Blank -> println(red(Errors.blankInput(PromptType.InstallerType)))
-                Validation.InvalidInstallerType -> {
-                    println(red(Errors.invalidEnum(installerTypeValid, installerSchemaImpl)))
-                }
-                else -> { /* Success */ }
-            }
             println()
         } while (installerTypeValid != Validation.Success)
     }

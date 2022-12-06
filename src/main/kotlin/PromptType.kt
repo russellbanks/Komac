@@ -1,4 +1,5 @@
 enum class PromptType {
+    PackageIdentifier { override fun toString(): String = "Package Identifier" },
     PackageVersion { override fun toString() = "Version" },
     InstallerUrl { override fun toString() = "Url" },
     Architecture,
