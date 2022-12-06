@@ -42,6 +42,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var installerSha256: String? = null
     private var architecture: String? = null
     private var installerType: String? = null
+    private var silentSwitch: String? = null
     private val installerSchemaImpl: InstallerSchemaImpl = get()
 
     private val client = HttpClient(Java) {
@@ -59,6 +60,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             downloadInstallerFromUrl(installerUrl)
             architecturePrompt()
             installerTypePrompt()
+            silentSwitchPrompt()
             InstallerManifest(
                 packageIdentifier = packageIdentifier,
                 packageVersion = packageVersion,
@@ -67,7 +69,11 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                         architecture = architecture,
                         installerType = installerType,
                         installerUrl = installerUrl,
-                        installerSha256 = installerSha256
+                        installerSha256 = installerSha256,
+                        installerSwitches = InstallerManifest.Installer.InstallerSwitches(
+                            silent = silentSwitch?.ifBlank { null },
+                            silentWithProgress = null,
+                        ),
                     )
                 ),
                 manifestVersion = Schemas.manifestVersion
@@ -259,6 +265,19 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             }
             println()
         } while (installerTypeValid != Validation.Success)
+    }
+
+    private fun Terminal.silentSwitchPrompt() {
+        do {
+            val infoTextColour = if (installerType == Schemas.InstallerType.exe) brightGreen else yellow
+            println(infoTextColour(Prompts.silentSwitchInfo(installerType)))
+            silentSwitch = prompt(brightWhite(Prompts.silentSwitch))?.trim()
+            val installerSwitchesValid = installerSchemaImpl.isSilentSwitchValid(
+                silentSwitch = silentSwitch,
+                canBeBlank = installerType != Schemas.InstallerType.exe
+            )
+            println()
+        } while (installerSwitchesValid != Validation.Success)
     }
 
     private suspend fun HttpClient.getRedirectedUrl(

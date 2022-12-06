@@ -13,4 +13,8 @@ object Schemas {
         const val createdBy = "# Created using ${BuildConfig.appName} ${BuildConfig.appVersion}"
         const val installerLanguageServer = "# yaml-language-server: \$schema=$installerSchema"
     }
+
+    object InstallerType {
+        const val exe = "exe"
+    }
 }

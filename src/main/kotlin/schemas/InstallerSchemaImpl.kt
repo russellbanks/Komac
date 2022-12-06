@@ -3,6 +3,7 @@ package schemas
 import Ktor.isRedirect
 import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
+import com.github.ajalt.mordant.rendering.TextColors.red
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -109,6 +110,24 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
+    fun isSilentSwitchValid(silentSwitch: String?, canBeBlank: Boolean): Validation {
+        return when {
+            silentSwitch.isNullOrBlank() && !canBeBlank -> {
+                terminalInstance.terminal.println(red(Errors.blankInput(PromptType.SilentSwitch)))
+                Validation.Blank
+            }
+            (silentSwitch?.length ?: 0) > installerSilentSwitchMaxLength -> {
+                terminalInstance.terminal.println(
+                    red(
+                        Errors.invalidLength(min = installerSilentSwitchMinLength, max = installerSilentSwitchMaxLength)
+                    )
+                )
+                Validation.InvalidLength
+            }
+            else -> Validation.Success
+        }
+    }
+
     val packageIdentifierPattern
         get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex()
 
@@ -132,6 +151,12 @@ class InstallerSchemaImpl : KoinComponent {
 
     val installerTypesEnum
         get() = installerSchema?.definitions?.installerType?.enum as List<String>
+
+    private val installerSilentSwitchMinLength
+        get() = installerSchema?.definitions?.installerSwitches?.properties?.silent?.minLength as Int
+
+    private val installerSilentSwitchMaxLength
+        get() = installerSchema?.definitions?.installerSwitches?.properties?.silent?.maxLength as Int
 
     companion object {
         const val packageIdentifierMinLength = 4

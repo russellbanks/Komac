@@ -1,4 +1,5 @@
 import schemas.InstallerSchemaImpl
+import schemas.Schemas
 
 object Prompts {
     private const val required = "[Required]"
@@ -28,6 +29,15 @@ object Prompts {
             append(installerSchemaImpl.installerTypesEnum.joinToString(", "))
         }
     }
+
+    fun silentSwitchInfo(installerType: String?): String {
+        return buildString {
+            append(if (installerType == Schemas.InstallerType.exe) "[Required]" else "[Optional]")
+            append(" Enter the silent install switch. For example: /S, -verysilent, /qn, --silent, /exenoui")
+        }
+    }
+
+    const val silentSwitch = "Silent Switch"
 
     const val installerType = "Installer Type"
 
