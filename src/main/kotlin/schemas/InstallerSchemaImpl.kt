@@ -58,6 +58,8 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     suspend fun isPackageIdentifierValid(identifier: String?): Validation {
+        val packageIdentifierPattern = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex() as Regex
+        val packageIdentifierMaxLength = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
         awaitInstallerSchema()
         with(terminalInstance.terminal) {
             return when {
@@ -78,6 +80,8 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     fun isPackageVersionValid(version: String?): Validation {
+        val packageVersionPattern = installerSchema?.definitions?.packageVersion?.pattern?.toRegex() as Regex
+        val packageVersionMaxLength = installerSchema?.definitions?.packageVersion?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
                 version.isNullOrBlank() -> Validation.Blank.also {
@@ -95,6 +99,9 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     suspend fun isInstallerUrlValid(url: String?, responseCallback: suspend () -> HttpResponse?): Validation {
+        val installerUrlPattern = installerSchema?.definitions?.installer?.properties?.installerUrl?.pattern?.toRegex()
+            as Regex
+        val installerUrlMaxLength = installerSchema?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
                 url.isNullOrBlank() -> Validation.Blank.also {
@@ -121,6 +128,7 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     fun isArchitectureValid(architecture: String?): Validation {
+        val architecturesEnum = installerSchema?.definitions?.architecture?.enum as List<String>
         with(terminalInstance.terminal) {
             return when {
                 architecture.isNullOrBlank() -> Validation.Blank.also {
@@ -135,6 +143,7 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     fun isInstallerTypeValid(installerType: String?): Validation {
+        val installerTypesEnum = installerSchema?.definitions?.installerType?.enum as List<String>
         with(terminalInstance.terminal) {
             return when {
                 installerType.isNullOrBlank() -> Validation.Blank.also {
@@ -187,29 +196,21 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    private val packageIdentifierPattern
-        get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex() as Regex
-
-    private val packageIdentifierMaxLength
-        get() = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
-
-    private val packageVersionPattern
-        get() = installerSchema?.definitions?.packageVersion?.pattern?.toRegex() as Regex
-
-    private val packageVersionMaxLength
-        get() = installerSchema?.definitions?.packageVersion?.maxLength as Int
-
-    private val installerUrlPattern
-        get() = installerSchema?.definitions?.installer?.properties?.installerUrl?.pattern?.toRegex() as Regex
-
-    private val installerUrlMaxLength
-        get() = installerSchema?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
-
-    val architecturesEnum
-        get() = installerSchema?.definitions?.architecture?.enum as List<String>
-
-    val installerTypesEnum
-        get() = installerSchema?.definitions?.installerType?.enum as List<String>
+    fun isProductCodeValid(productCode: String?): Validation {
+        val productCodeMinLength = installerSchema?.definitions?.productCode?.minLength as Int
+        val productCodeMaxLength = installerSchema?.definitions?.productCode?.maxLength as Int
+        with(terminalInstance.terminal) {
+            return when {
+                productCode.isNullOrBlank() -> Validation.Blank.also {
+                    println(red(Errors.blankInput(PromptType.ProductCode)))
+                }
+                productCode.length > productCodeMaxLength -> Validation.InvalidLength.also {
+                    println(red(Errors.invalidLength(min = productCodeMinLength, max = productCodeMaxLength)))
+                }
+                else -> Validation.Success
+            }
+        }
+    }
 
     private fun getInstallerSwitchLengthBoundary(installerSwitch: InstallerSwitch): Pair<Int, Int> {
         val installerSwitchProperties = installerSchema?.definitions?.installerSwitches?.properties
@@ -236,6 +237,12 @@ class InstallerSchemaImpl : KoinComponent {
             InstallerSwitch.Custom -> PromptType.CustomSwitch
         }
     }
+
+    val architecturesEnum
+        get() = installerSchema?.definitions?.architecture?.enum as List<String>
+
+    val installerTypesEnum
+        get() = installerSchema?.definitions?.installerType?.enum as List<String>
 
     companion object {
         const val packageIdentifierMinLength = 4

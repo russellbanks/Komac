@@ -20,6 +20,9 @@ object Prompts {
 
     const val installerLocaleInfo = "$optional Enter the installer locale. For example: en-US, en-CA"
 
+    const val productCodeInfo = "$optional Enter the application product code. " +
+        "Looks like {CF8E6E00-9C03-4440-81C0-21FACB921A6B}"
+
     fun architectureInfo(installerSchemaImpl: InstallerSchemaImpl): String {
         return "$required Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"
     }

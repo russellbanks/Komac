@@ -7,5 +7,6 @@ enum class PromptType {
     SilentSwitch { override fun toString() = "Silent Switch" },
     SilentWithProgressSwitch { override fun toString() = "Silent with Progress Switch" },
     CustomSwitch { override fun toString() = "Custom Switch" },
-    InstallerLocale { override fun toString() = "Installer Locale" }
+    InstallerLocale { override fun toString() = "Installer Locale" },
+    ProductCode { override fun toString() = "Product Code" },
 }

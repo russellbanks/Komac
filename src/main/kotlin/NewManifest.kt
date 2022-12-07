@@ -34,6 +34,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             switchPrompt(InstallerSwitch.SilentWithProgress)
             switchPrompt(InstallerSwitch.Custom)
             installerLocalePrompt()
+            productCodePrompt()
             installerManifestData.createInstallerManifest()
         }
     }
@@ -162,6 +163,15 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             )
             println()
         } while (switchValid != Validation.Success)
+    }
+
+    private fun Terminal.productCodePrompt() {
+        do {
+            println(yellow(Prompts.productCodeInfo))
+            installerManifestData.productCode = prompt(brightWhite(PromptType.ProductCode.toString()))?.trim()
+            val productCodeValid = installerSchemaImpl.isProductCodeValid(installerManifestData.productCode)
+            println()
+        } while (productCodeValid != Validation.Success)
     }
 
     private fun Terminal.installerLocalePrompt() {

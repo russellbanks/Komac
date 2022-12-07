@@ -21,6 +21,7 @@ class InstallerManifestData : KoinComponent {
     var silentWithProgressSwitch: String? = null
     var customSwitch: String? = null
     var installerLocale: String? = null
+    var productCode: String? = null
 
     private val terminalInstance: TerminalInstance by inject()
 
@@ -39,7 +40,8 @@ class InstallerManifestData : KoinComponent {
                         silent = silentSwitch?.ifBlank { null },
                         silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
                         custom = customSwitch?.ifBlank { null }
-                    )
+                    ),
+                    productCode = productCode
                 )
             ),
             manifestVersion = Schemas.manifestVersion
