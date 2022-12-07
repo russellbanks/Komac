@@ -9,7 +9,7 @@ koin-ksp = "1.0.3"
 kotlin = "1.7.22"
 kotlinx-serialization = "1.4.1"
 ksp = "1.7.22-1.0.8"
-ktor = "2.2.0"
+ktor = "2.2.1"
 mordant = "2.0.0-beta9"
 
 [libraries]
