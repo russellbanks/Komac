@@ -1,5 +1,5 @@
 import Ktor.downloadInstallerFromUrl
-import Ktor.isRedirect
+import Ktor.getRedirectedUrl
 import com.github.ajalt.mordant.rendering.TextColors.blue
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -13,7 +13,6 @@ import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
-import io.ktor.http.HttpHeaders
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -23,13 +22,6 @@ import schemas.Schemas
 class NewManifest(private val terminal: Terminal) : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val installerSchemaImpl: InstallerSchemaImpl = get()
-
-    private val client = HttpClient(Java) {
-        install(UserAgent) {
-            agent = "Microsoft-Delivery-Optimization/10.1"
-        }
-        followRedirects = false
-    }
 
     suspend fun main() {
         with(terminal) {
@@ -67,6 +59,12 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     }
 
     private suspend fun Terminal.installerDownloadPrompt() {
+        val client = HttpClient(Java) {
+            install(UserAgent) {
+                agent = "Microsoft-Delivery-Optimization/10.1"
+            }
+            followRedirects = false
+        }
         var installerUrlResponse: HttpResponse? = null
         do {
             println(brightGreen(Prompts.installerUrlInfo))
@@ -173,27 +171,5 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val installerLocaleValid = installerSchemaImpl.isInstallerLocaleValid(installerManifestData.installerLocale)
             println()
         } while (installerLocaleValid != Validation.Success)
-    }
-
-    private suspend fun HttpClient.getRedirectedUrl(
-        installerUrl: String?,
-        httpResponse: HttpResponse?
-    ): Pair<String?, HttpResponse?> {
-        var redirectedInstallerUrl: String? = installerUrl
-        var newResponse: HttpResponse? = httpResponse
-
-        var status = httpResponse?.status
-        var location = httpResponse?.headers?.get("Location")
-        while (
-            status?.isRedirect() == true &&
-            httpResponse?.headers?.contains(HttpHeaders.Location) == true &&
-            location != null
-        ) {
-            redirectedInstallerUrl = location
-            newResponse = head(redirectedInstallerUrl)
-            status = newResponse.status
-            location = newResponse.headers["Location"]
-        }
-        return redirectedInstallerUrl to newResponse
     }
 }

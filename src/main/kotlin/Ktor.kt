@@ -3,7 +3,10 @@ import com.github.ajalt.mordant.animation.progressAnimation
 import data.InstallerManifestData
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.head
 import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentLength
 import io.ktor.utils.io.ByteReadChannel
@@ -68,5 +71,27 @@ object Ktor : KoinComponent {
 
     fun HttpStatusCode.isRedirect(): Boolean {
         return value in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value
+    }
+
+    suspend fun HttpClient.getRedirectedUrl(
+        installerUrl: String?,
+        httpResponse: HttpResponse?
+    ): Pair<String?, HttpResponse?> {
+        var redirectedInstallerUrl: String? = installerUrl
+        var newResponse: HttpResponse? = httpResponse
+
+        var status = httpResponse?.status
+        var location = httpResponse?.headers?.get("Location")
+        while (
+            status?.isRedirect() == true &&
+            httpResponse?.headers?.contains(HttpHeaders.Location) == true &&
+            location != null
+        ) {
+            redirectedInstallerUrl = location
+            newResponse = head(redirectedInstallerUrl)
+            status = newResponse.status
+            location = newResponse.headers["Location"]
+        }
+        return redirectedInstallerUrl to newResponse
     }
 }
