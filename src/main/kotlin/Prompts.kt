@@ -3,6 +3,7 @@ import schemas.Schemas
 
 object Prompts {
     private const val required = "[Required]"
+    private const val optional = "[Optional]"
 
     const val packageIdentifierInfo = "$required Enter the Package Identifier, in the following format " +
         "<Publisher shortname.Application shortname>. For example: Microsoft.Excel"
@@ -30,14 +31,22 @@ object Prompts {
         }
     }
 
-    fun silentSwitchInfo(installerType: String?): String {
+    fun switchInfo(installerType: String?, installerSwitch: InstallerSwitch): String {
         return buildString {
-            append(if (installerType == Schemas.InstallerType.exe) "[Required]" else "[Optional]")
-            append(" Enter the silent install switch. For example: /S, -verysilent, /qn, --silent, /exenoui")
+            append(if (installerType == Schemas.InstallerType.exe) required else optional)
+            append(" Enter the ${installerSwitch.toString().lowercase()}. For example: ")
+            append(
+                when (installerSwitch) {
+                    InstallerSwitch.Silent -> "/S, -verysilent, /qn, --silent, /exenoui."
+                    InstallerSwitch.SilentWithProgress -> "/S, -silent, /qb, /exebasicui."
+                }
+            )
         }
     }
 
     const val silentSwitch = "Silent Switch"
+
+    const val silentWithProgressSwitch = "Silent with Progress Switch"
 
     const val installerType = "Installer Type"
 

@@ -147,13 +147,13 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isSilentSwitchValid(silentSwitch: String?, canBeBlank: Boolean): Validation {
+    fun isSwitchValid(switch: String?, canBeBlank: Boolean): Validation {
         with(terminalInstance.terminal) {
             return when {
-                silentSwitch.isNullOrBlank() && !canBeBlank -> Validation.Blank.also {
+                switch.isNullOrBlank() && !canBeBlank -> Validation.Blank.also {
                     println(red(Errors.blankInput(PromptType.SilentSwitch)))
                 }
-                (silentSwitch?.length ?: 0) > installerSilentSwitchMaxLength -> Validation.InvalidLength.also {
+                (switch?.length ?: 0) > installerSilentSwitchMaxLength -> Validation.InvalidLength.also {
                     println(
                         red(
                             Errors.invalidLength(

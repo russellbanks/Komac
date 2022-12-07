@@ -42,6 +42,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var architecture: String? = null
     private var installerType: String? = null
     private var silentSwitch: String? = null
+    private var silentWithProgressSwitch: String? = null
     private val installerSchemaImpl: InstallerSchemaImpl = get()
 
     private val client = HttpClient(Java) {
@@ -59,7 +60,8 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             downloadInstallerFromUrl(installerUrl)
             architecturePrompt()
             installerTypePrompt()
-            silentSwitchPrompt()
+            switchPrompt(InstallerSwitch.Silent)
+            switchPrompt(InstallerSwitch.SilentWithProgress)
             InstallerManifest(
                 packageIdentifier = packageIdentifier,
                 packageVersion = packageVersion,
@@ -71,7 +73,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                         installerSha256 = installerSha256,
                         installerSwitches = InstallerManifest.Installer.InstallerSwitches(
                             silent = silentSwitch?.ifBlank { null },
-                            silentWithProgress = null,
+                            silentWithProgress = silentWithProgressSwitch?.ifBlank { null }
                         ),
                     )
                 ),
@@ -206,13 +208,18 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         } while (installerTypeValid != Validation.Success)
     }
 
-    private fun Terminal.silentSwitchPrompt() {
+    private fun Terminal.switchPrompt(installerSwitch: InstallerSwitch) {
         do {
             val infoTextColour = if (installerType == Schemas.InstallerType.exe) brightGreen else yellow
-            println(infoTextColour(Prompts.silentSwitchInfo(installerType)))
-            silentSwitch = prompt(brightWhite(Prompts.silentSwitch))?.trim()
-            val installerSwitchesValid = installerSchemaImpl.isSilentSwitchValid(
-                silentSwitch = silentSwitch,
+            println(infoTextColour(Prompts.switchInfo(installerType, installerSwitch)))
+            when (installerSwitch) {
+                InstallerSwitch.Silent -> silentSwitch = prompt(brightWhite(Prompts.silentSwitch))?.trim()
+                InstallerSwitch.SilentWithProgress -> {
+                    silentWithProgressSwitch = prompt(brightWhite(Prompts.silentWithProgressSwitch))?.trim()
+                }
+            }
+            val installerSwitchesValid = installerSchemaImpl.isSwitchValid(
+                switch = silentSwitch,
                 canBeBlank = installerType != Schemas.InstallerType.exe
             )
             println()
