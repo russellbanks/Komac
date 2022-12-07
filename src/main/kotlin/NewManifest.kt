@@ -220,6 +220,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             }
             val installerSwitchesValid = installerSchemaImpl.isSwitchValid(
                 switch = silentSwitch,
+                installerSwitch = installerSwitch,
                 canBeBlank = installerType != Schemas.InstallerType.exe
             )
             println()

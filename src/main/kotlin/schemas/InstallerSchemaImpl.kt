@@ -1,6 +1,7 @@
 package schemas
 
 import Errors
+import InstallerSwitch
 import Ktor.isRedirect
 import PromptType
 import Validation
@@ -68,7 +69,7 @@ class InstallerSchemaImpl : KoinComponent {
                         red(Errors.invalidLength(min = packageIdentifierMinLength, max = packageIdentifierMaxLength))
                     )
                 }
-                packageIdentifierPattern?.let { identifier.matches(it) } != true -> Validation.InvalidPattern.also {
+                !identifier.matches(packageIdentifierPattern) -> Validation.InvalidPattern.also {
                     println(red(Errors.invalidRegex(packageIdentifierPattern)))
                 }
                 else -> Validation.Success
@@ -147,21 +148,23 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isSwitchValid(switch: String?, canBeBlank: Boolean): Validation {
+    fun isSwitchValid(switch: String?, installerSwitch: InstallerSwitch, canBeBlank: Boolean): Validation {
         with(terminalInstance.terminal) {
             return when {
                 switch.isNullOrBlank() && !canBeBlank -> Validation.Blank.also {
-                    println(red(Errors.blankInput(PromptType.SilentSwitch)))
+                    println(red(Errors.blankInput(getPromptTypeFromInstallerSwitch(installerSwitch))))
                 }
-                (switch?.length ?: 0) > installerSilentSwitchMaxLength -> Validation.InvalidLength.also {
-                    println(
-                        red(
-                            Errors.invalidLength(
-                                min = installerSilentSwitchMinLength,
-                                max = installerSilentSwitchMaxLength
+                (switch?.length ?: 0) > getInstallerSwitchLengthBoundary(installerSwitch).second -> {
+                    Validation.InvalidLength.also {
+                        println(
+                            red(
+                                Errors.invalidLength(
+                                    min = getInstallerSwitchLengthBoundary(installerSwitch).first,
+                                    max = getInstallerSwitchLengthBoundary(installerSwitch).second
+                                )
                             )
                         )
-                    )
+                    }
                 }
                 else -> Validation.Success
             }
@@ -169,7 +172,7 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     private val packageIdentifierPattern
-        get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex()
+        get() = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex() as Regex
 
     private val packageIdentifierMaxLength
         get() = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
@@ -192,11 +195,26 @@ class InstallerSchemaImpl : KoinComponent {
     val installerTypesEnum
         get() = installerSchema?.definitions?.installerType?.enum as List<String>
 
-    private val installerSilentSwitchMinLength
-        get() = installerSchema?.definitions?.installerSwitches?.properties?.silent?.minLength as Int
+    private fun getInstallerSwitchLengthBoundary(installerSwitch: InstallerSwitch): Pair<Int, Int> {
+        val installerSwitchProperties = installerSchema?.definitions?.installerSwitches?.properties
+        return when (installerSwitch) {
+            InstallerSwitch.Silent -> Pair(
+                installerSwitchProperties?.silent?.minLength as Int,
+                installerSwitchProperties.silent.maxLength
+            )
+            InstallerSwitch.SilentWithProgress -> Pair(
+                installerSwitchProperties?.silentWithProgress?.minLength as Int,
+                installerSwitchProperties.silentWithProgress.maxLength
+            )
+        }
+    }
 
-    private val installerSilentSwitchMaxLength
-        get() = installerSchema?.definitions?.installerSwitches?.properties?.silent?.maxLength as Int
+    private fun getPromptTypeFromInstallerSwitch(installerSwitch: InstallerSwitch): PromptType {
+        return when (installerSwitch) {
+            InstallerSwitch.Silent -> PromptType.SilentSwitch
+            InstallerSwitch.SilentWithProgress -> PromptType.SilentWithProgressSwitch
+        }
+    }
 
     companion object {
         const val packageIdentifierMinLength = 4
