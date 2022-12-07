@@ -206,6 +206,10 @@ class InstallerSchemaImpl : KoinComponent {
                 installerSwitchProperties?.silentWithProgress?.minLength as Int,
                 installerSwitchProperties.silentWithProgress.maxLength
             )
+            InstallerSwitch.Custom -> Pair(
+                installerSwitchProperties?.custom?.minLength as Int,
+                installerSwitchProperties.custom.maxLength
+            )
         }
     }
 
@@ -213,6 +217,7 @@ class InstallerSchemaImpl : KoinComponent {
         return when (installerSwitch) {
             InstallerSwitch.Silent -> PromptType.SilentSwitch
             InstallerSwitch.SilentWithProgress -> PromptType.SilentWithProgressSwitch
+            InstallerSwitch.Custom -> PromptType.CustomSwitch
         }
     }
 

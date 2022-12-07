@@ -43,6 +43,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var installerType: String? = null
     private var silentSwitch: String? = null
     private var silentWithProgressSwitch: String? = null
+    private var customSwitch: String? = null
     private val installerSchemaImpl: InstallerSchemaImpl = get()
 
     private val client = HttpClient(Java) {
@@ -62,6 +63,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             installerTypePrompt()
             switchPrompt(InstallerSwitch.Silent)
             switchPrompt(InstallerSwitch.SilentWithProgress)
+            switchPrompt(InstallerSwitch.Custom)
             InstallerManifest(
                 packageIdentifier = packageIdentifier,
                 packageVersion = packageVersion,
@@ -73,7 +75,8 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                         installerSha256 = installerSha256,
                         installerSwitches = InstallerManifest.Installer.InstallerSwitches(
                             silent = silentSwitch?.ifBlank { null },
-                            silentWithProgress = silentWithProgressSwitch?.ifBlank { null }
+                            silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
+                            custom = customSwitch?.ifBlank { null }
                         ),
                     )
                 ),
@@ -210,21 +213,32 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun Terminal.switchPrompt(installerSwitch: InstallerSwitch) {
         do {
-            val infoTextColour = if (installerType == Schemas.InstallerType.exe) brightGreen else yellow
-            println(infoTextColour(Prompts.switchInfo(installerType, installerSwitch)))
-            when (installerSwitch) {
-                InstallerSwitch.Silent -> silentSwitch = prompt(brightWhite(Prompts.silentSwitch))?.trim()
-                InstallerSwitch.SilentWithProgress -> {
-                    silentWithProgressSwitch = prompt(brightWhite(Prompts.silentWithProgressSwitch))?.trim()
-                }
+            val infoTextColour = when {
+                installerType == Schemas.InstallerType.exe && installerSwitch != InstallerSwitch.Custom -> brightGreen
+                else -> yellow
             }
-            val installerSwitchesValid = installerSchemaImpl.isSwitchValid(
-                switch = silentSwitch,
+            println(infoTextColour(Prompts.switchInfo(installerType, installerSwitch)))
+            var switchResponse: String? = null
+            when (installerSwitch) {
+                InstallerSwitch.Silent -> silentSwitch = prompt(
+                    brightWhite(PromptType.SilentSwitch.toString())
+                )?.trim().also { switchResponse = it }
+                InstallerSwitch.SilentWithProgress -> {
+                    silentWithProgressSwitch = prompt(
+                        brightWhite(PromptType.SilentWithProgressSwitch.toString())
+                    )?.trim().also { switchResponse = it }
+                }
+                InstallerSwitch.Custom -> customSwitch = prompt(
+                    brightWhite(PromptType.CustomSwitch.toString())
+                )?.trim().also { switchResponse = it }
+            }
+            val switchValid = installerSchemaImpl.isSwitchValid(
+                switch = switchResponse,
                 installerSwitch = installerSwitch,
-                canBeBlank = installerType != Schemas.InstallerType.exe
+                canBeBlank = installerType != Schemas.InstallerType.exe || installerSwitch == InstallerSwitch.Custom
             )
             println()
-        } while (installerSwitchesValid != Validation.Success)
+        } while (switchValid != Validation.Success)
     }
 
     private suspend fun HttpClient.getRedirectedUrl(

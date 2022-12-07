@@ -33,20 +33,22 @@ object Prompts {
 
     fun switchInfo(installerType: String?, installerSwitch: InstallerSwitch): String {
         return buildString {
-            append(if (installerType == Schemas.InstallerType.exe) required else optional)
+            append(
+                when {
+                    installerType == Schemas.InstallerType.exe && installerSwitch != InstallerSwitch.Custom -> required
+                    else -> optional
+                }
+            )
             append(" Enter the ${installerSwitch.toString().lowercase()}. For example: ")
             append(
                 when (installerSwitch) {
                     InstallerSwitch.Silent -> "/S, -verysilent, /qn, --silent, /exenoui."
                     InstallerSwitch.SilentWithProgress -> "/S, -silent, /qb, /exebasicui."
+                    InstallerSwitch.Custom -> "/norestart, -norestart"
                 }
             )
         }
     }
-
-    const val silentSwitch = "Silent Switch"
-
-    const val silentWithProgressSwitch = "Silent with Progress Switch"
 
     const val installerType = "Installer Type"
 
