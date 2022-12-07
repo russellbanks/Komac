@@ -44,6 +44,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private var silentSwitch: String? = null
     private var silentWithProgressSwitch: String? = null
     private var customSwitch: String? = null
+    private var installerLocale: String? = null
     private val installerSchemaImpl: InstallerSchemaImpl = get()
 
     private val client = HttpClient(Java) {
@@ -64,12 +65,14 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             switchPrompt(InstallerSwitch.Silent)
             switchPrompt(InstallerSwitch.SilentWithProgress)
             switchPrompt(InstallerSwitch.Custom)
+            installerLocalePrompt()
             InstallerManifest(
                 packageIdentifier = packageIdentifier,
                 packageVersion = packageVersion,
                 installers = listOf(
                     InstallerManifest.Installer(
                         architecture = architecture,
+                        installerLocale = installerLocale,
                         installerType = installerType,
                         installerUrl = installerUrl,
                         installerSha256 = installerSha256,
@@ -77,7 +80,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                             silent = silentSwitch?.ifBlank { null },
                             silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
                             custom = customSwitch?.ifBlank { null }
-                        ),
+                        )
                     )
                 ),
                 manifestVersion = Schemas.manifestVersion
@@ -196,7 +199,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private fun Terminal.architecturePrompt() {
         do {
             println(brightGreen(Prompts.architectureInfo(installerSchemaImpl)))
-            architecture = prompt(brightWhite(Prompts.architecture))?.trim()?.lowercase()
+            architecture = prompt(brightWhite(PromptType.Architecture.toString()))?.trim()?.lowercase()
             val architectureValid = installerSchemaImpl.isArchitectureValid(architecture)
             println()
         } while (architectureValid != Validation.Success)
@@ -239,6 +242,15 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             )
             println()
         } while (switchValid != Validation.Success)
+    }
+
+    private fun Terminal.installerLocalePrompt() {
+        do {
+            println(yellow(Prompts.installerLocaleInfo))
+            installerLocale = prompt(brightWhite(PromptType.InstallerLocale.toString()))?.trim()
+            val installerLocaleValid = installerSchemaImpl.isInstallerLocaleValid(installerLocale)
+            println()
+        } while (installerLocaleValid != Validation.Success)
     }
 
     private suspend fun HttpClient.getRedirectedUrl(

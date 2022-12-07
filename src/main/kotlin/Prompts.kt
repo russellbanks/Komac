@@ -18,11 +18,11 @@ object Prompts {
 
     const val installerUrl = "Url"
 
+    const val installerLocaleInfo = "$optional Enter the installer locale. For example: en-US, en-CA"
+
     fun architectureInfo(installerSchemaImpl: InstallerSchemaImpl): String {
         return "$required Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"
     }
-
-    const val architecture = "Architecture"
 
     fun installerTypeInfo(installerSchemaImpl: InstallerSchemaImpl): String {
         return buildString {
