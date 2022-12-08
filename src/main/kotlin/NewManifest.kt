@@ -186,7 +186,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     }
 
     private fun Terminal.installerScopePrompt() {
-        var promptInput: String? = null
+        var promptInput: String?
         do {
             println(
                 verticalLayout {
