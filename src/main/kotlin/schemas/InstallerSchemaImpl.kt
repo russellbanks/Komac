@@ -4,6 +4,7 @@ import Errors
 import InstallerSwitch
 import Ktor.isRedirect
 import PromptType
+import Prompts
 import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.red
@@ -225,6 +226,19 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
+    fun isUpgradeBehaviourValid(option: Char?): Validation {
+        with(terminalInstance.terminal) {
+            return when {
+                upgradeBehaviourEnum.all {
+                    it.first().titlecase() != option?.titlecase()
+                } -> Validation.InvalidUpgradeBehaviour.also {
+                    println(red(Errors.invalidEnum(Validation.InvalidUpgradeBehaviour, upgradeBehaviourEnum)))
+                }
+                else -> Validation.Success
+            }
+        }
+    }
+
     private fun getInstallerSwitchLengthBoundary(installerSwitch: InstallerSwitch): Pair<Int, Int> {
         val installerSwitchProperties = installerSchema?.definitions?.installerSwitches?.properties
         return when (installerSwitch) {
@@ -259,6 +273,9 @@ class InstallerSchemaImpl : KoinComponent {
 
     val installerScopeEnum
         get() = installerSchema?.definitions?.scope?.enum as List<String>
+
+    val upgradeBehaviourEnum
+        get() = installerSchema?.definitions?.upgradeBehavior?.enum as List<String>
 
     companion object {
         const val packageIdentifierMinLength = 4

@@ -29,6 +29,8 @@ object Prompts {
 
     const val noIdea = "No idea"
 
+    const val upgradeBehaviourInfo = "$optional Enter the Upgrade Behavior"
+
     fun architectureInfo(installerSchemaImpl: InstallerSchemaImpl): String {
         return "$required Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"
     }

@@ -37,6 +37,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             installerLocalePrompt()
             productCodePrompt()
             installerScopePrompt()
+            upgradeBehaviourPrompt()
             installerManifestData.createInstallerManifest()
         }
     }
@@ -218,6 +219,45 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println()
         } while (installerScopeValid != Validation.Success)
         installerManifestData.installerScope = installerSchemaImpl.installerScopeEnum.firstOrNull {
+            it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
+        }
+    }
+
+    private fun Terminal.upgradeBehaviourPrompt() {
+        var promptInput: String?
+        do {
+            println(
+                verticalLayout {
+                    cell(brightYellow(Prompts.upgradeBehaviourInfo))
+                    installerSchemaImpl.upgradeBehaviourEnum.forEach { behaviour ->
+                        cell(
+                            (
+                                if (behaviour.first().titlecase() ==
+                                    installerSchemaImpl.upgradeBehaviourEnum.first().first().titlecase()
+                                ) {
+                                    brightGreen
+                                } else {
+                                    brightWhite
+                                }
+                                )(
+                                buildString {
+                                    append(" ".repeat(Prompts.optionIndent))
+                                    append("[${behaviour.first().titlecase()}] ")
+                                    append(behaviour.replaceFirstChar { it.titlecase() })
+                                }
+                            )
+                        )
+                    }
+                }
+            )
+            promptInput = prompt(
+                brightWhite(Prompts.enterChoice),
+                default = installerSchemaImpl.upgradeBehaviourEnum.first().first().titlecase()
+            )?.trim()
+            val upgradeBehaviourValid = installerSchemaImpl.isUpgradeBehaviourValid(promptInput?.firstOrNull())
+            println()
+        } while (upgradeBehaviourValid != Validation.Success)
+        installerManifestData.upgradeBehavior = installerSchemaImpl.upgradeBehaviourEnum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
         }
     }

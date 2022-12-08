@@ -23,6 +23,7 @@ class InstallerManifestData : KoinComponent {
     var installerLocale: String? = null
     var productCode: String? = null
     var installerScope: String? = null
+    var upgradeBehavior: String? = null
 
     private val terminalInstance: TerminalInstance by inject()
 
@@ -43,6 +44,7 @@ class InstallerManifestData : KoinComponent {
                         silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
                         custom = customSwitch?.ifBlank { null }
                     ),
+                    upgradeBehavior = upgradeBehavior?.ifBlank { null },
                     productCode = productCode?.ifBlank { null }
                 )
             ),

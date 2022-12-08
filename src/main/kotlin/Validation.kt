@@ -6,5 +6,6 @@ enum class Validation {
     InvalidArchitecture { override fun toString(): String = "Invalid Architecture" },
     InvalidInstallerType { override fun toString(): String = "Invalid Installer Type" },
     InvalidInstallerScope { override fun toString(): String = "Invalid Installer Scope" },
+    InvalidUpgradeBehaviour { override fun toString(): String = "Invalid Upgrade Behaviour" },
     Success,
 }
