@@ -201,11 +201,10 @@ class InstallerSchemaImpl : KoinComponent {
         val productCodeMaxLength = installerSchema?.definitions?.productCode?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
-                productCode.isNullOrBlank() -> Validation.Blank.also {
-                    println(red(Errors.blankInput(PromptType.ProductCode)))
-                }
-                productCode.length > productCodeMaxLength -> Validation.InvalidLength.also {
-                    println(red(Errors.invalidLength(min = productCodeMinLength, max = productCodeMaxLength)))
+                !productCode.isNullOrBlank() && productCode.length > productCodeMaxLength -> {
+                    Validation.InvalidLength.also {
+                        println(red(Errors.invalidLength(min = productCodeMinLength, max = productCodeMaxLength)))
+                    }
                 }
                 else -> Validation.Success
             }

@@ -32,7 +32,7 @@ class InstallerManifestData : KoinComponent {
             installers = listOf(
                 InstallerManifest.Installer(
                     architecture = architecture,
-                    installerLocale = installerLocale,
+                    installerLocale = installerLocale?.ifBlank { null },
                     installerType = installerType,
                     installerUrl = installerUrl,
                     installerSha256 = installerSha256,
@@ -41,7 +41,7 @@ class InstallerManifestData : KoinComponent {
                         silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
                         custom = customSwitch?.ifBlank { null }
                     ),
-                    productCode = productCode
+                    productCode = productCode?.ifBlank { null }
                 )
             ),
             manifestVersion = Schemas.manifestVersion
