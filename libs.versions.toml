@@ -11,6 +11,7 @@ kotlinx-serialization = "1.4.1"
 ksp = "1.7.22-1.0.8"
 ktor = "2.2.1"
 mordant = "2.0.0-beta9"
+shadow = "7.1.2"
 
 [libraries]
 commons-io = { module = "commons-io:commons-io", version.ref = "commonsio" }
@@ -40,3 +41,4 @@ detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
