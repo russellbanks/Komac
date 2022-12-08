@@ -8,5 +8,5 @@ fun main(args: Array<String>) {
         defaultModule()
     }
 
-    Komac().versionOption(version = BuildConfig.appVersion, names = setOf("-v")).main(args)
+    Komac().versionOption(version = BuildConfig.appVersion, names = setOf("-v", "--version")).main(args)
 }
