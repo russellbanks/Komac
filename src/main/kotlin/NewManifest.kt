@@ -1,9 +1,9 @@
 import Ktor.downloadInstallerFromUrl
 import Ktor.getRedirectedUrl
-import com.github.ajalt.mordant.rendering.TextColors.blue
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.yellow
+import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -87,12 +87,12 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             redirectedUrl != installerManifestData.installerUrl &&
             redirectedUrl?.contains(other = "github", ignoreCase = true) != true
         ) {
-            println(yellow(Prompts.Redirection.redirectFound))
-            println(blue(Prompts.Redirection.discoveredUrl(redirectedUrl)))
+            println(brightYellow(Prompts.Redirection.redirectFound))
+            println(cyan(Prompts.Redirection.discoveredUrl(redirectedUrl)))
             println((brightGreen(Prompts.Redirection.useDetectedUrl)))
             println(brightWhite(Prompts.Redirection.useOriginalUrl))
             if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
-                println(yellow(Prompts.Redirection.urlChanged))
+                println(brightYellow(Prompts.Redirection.urlChanged))
                 val redirectedUrlValid = installerSchemaImpl.isInstallerUrlValid(redirectedUrl) {
                     redirectedUrlResponse
                 }
@@ -100,7 +100,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                     installerManifestData.installerUrl = redirectedUrl
                 } else {
                     println()
-                    println(yellow(Prompts.Redirection.detectedUrlValidationFailed))
+                    println(brightYellow(Prompts.Redirection.detectedUrlValidationFailed))
                 }
                 println()
             } else {
@@ -140,7 +140,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val infoTextColour = when {
                 installerManifestData.installerType == Schemas.InstallerType.exe &&
                     installerSwitch != InstallerSwitch.Custom -> brightGreen
-                else -> yellow
+                else -> brightYellow
             }
             println(infoTextColour(Prompts.switchInfo(installerManifestData.installerType, installerSwitch)))
             var switchResponse: String? = null
@@ -169,7 +169,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun Terminal.installerLocalePrompt() {
         do {
-            println(yellow(Prompts.installerLocaleInfo))
+            println(brightYellow(Prompts.installerLocaleInfo))
             installerManifestData.installerLocale = prompt(brightWhite(PromptType.InstallerLocale.toString()))?.trim()
             val installerLocaleValid = installerSchemaImpl.isInstallerLocaleValid(installerManifestData.installerLocale)
             println()
@@ -178,7 +178,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun Terminal.productCodePrompt() {
         do {
-            println(yellow(Prompts.productCodeInfo))
+            println(brightYellow(Prompts.productCodeInfo))
             installerManifestData.productCode = prompt(brightWhite(PromptType.ProductCode.toString()))?.trim()
             val productCodeValid = installerSchemaImpl.isProductCodeValid(installerManifestData.productCode)
             println()
@@ -190,7 +190,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         do {
             println(
                 verticalLayout {
-                    cell(yellow(Prompts.installerScopeInfo))
+                    cell(brightYellow(Prompts.installerScopeInfo))
                     installerSchemaImpl.installerScopeEnum.forEach { scope ->
                         cell(
                             brightWhite(

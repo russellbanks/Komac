@@ -1,8 +1,8 @@
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.mordant.rendering.TextColors.blue
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.red
-import com.github.ajalt.mordant.rendering.TextColors.yellow
+import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.table.verticalLayout
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
@@ -17,10 +17,12 @@ class Komac : CliktCommand(), KoinComponent {
         with(terminalInstance.terminal) {
             println(
                 verticalLayout {
-                    cell(yellow("Select mode:"))
+                    cell(brightYellow("Select mode:"))
+                    cell("")
                     Mode.values().forEach { mode ->
                         cell(option(mode, mode.key))
                     }
+                    cell("")
                 }
             )
             val selection = prompt(brightWhite("Selection"), default = Mode.Exit.key.toString(), showDefault = false)
@@ -37,12 +39,12 @@ class Komac : CliktCommand(), KoinComponent {
     }
 
     private fun option(mode: Mode, key: Char): String {
-        val textColour = if (mode != Mode.Exit) blue else red
+        val textColour = if (mode != Mode.Exit) cyan else brightRed
         return buildString {
             append(" ".repeat(Prompts.optionIndent))
-            append(blue("["))
+            append(cyan("["))
             append(brightWhite(key.toString()))
-            append(blue("] "))
+            append(cyan("] "))
             append(textColour(mode.toString()))
         }
     }
