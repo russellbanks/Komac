@@ -18,6 +18,9 @@ repositories {
 }
 
 dependencies {
+    // Clikt - https://github.com/ajalt/clikt
+    implementation(libs.clikt)
+
     // Commons IO - https://commons.apache.org/proper/commons-io/
     implementation(libs.commons.io)
 

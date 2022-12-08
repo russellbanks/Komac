@@ -1,17 +1,19 @@
+import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.rendering.TextColors.blue
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextColors.yellow
 import com.github.ajalt.mordant.table.verticalLayout
+import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.TerminalInstance
 import kotlin.system.exitProcess
 
-class Application : KoinComponent {
+class Komac : CliktCommand(), KoinComponent {
     private val terminalInstance: TerminalInstance by inject()
 
-    suspend fun main() {
+    override fun run() = runBlocking {
         with(terminalInstance.terminal) {
             println(
                 verticalLayout {
