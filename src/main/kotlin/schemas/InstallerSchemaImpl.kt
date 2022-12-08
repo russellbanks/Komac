@@ -58,9 +58,9 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     suspend fun isPackageIdentifierValid(identifier: String?): Validation {
+        awaitInstallerSchema()
         val packageIdentifierPattern = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex() as Regex
         val packageIdentifierMaxLength = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
-        awaitInstallerSchema()
         with(terminalInstance.terminal) {
             return when {
                 identifier.isNullOrBlank() -> Validation.Blank.also {
@@ -135,7 +135,7 @@ class InstallerSchemaImpl : KoinComponent {
                     println(red(Errors.blankInput(PromptType.Architecture)))
                 }
                 !architecturesEnum.contains(architecture) -> Validation.InvalidArchitecture.also {
-                    println(red(Errors.invalidEnum(Validation.InvalidArchitecture, this@InstallerSchemaImpl)))
+                    println(red(Errors.invalidEnum(Validation.InvalidArchitecture, architecturesEnum)))
                 }
                 else -> Validation.Success
             }
@@ -150,7 +150,7 @@ class InstallerSchemaImpl : KoinComponent {
                     println(red(Errors.blankInput(PromptType.InstallerType)))
                 }
                 !installerTypesEnum.contains(installerType) -> Validation.InvalidInstallerType.also {
-                    println(red(Errors.invalidEnum(Validation.InvalidInstallerType, this@InstallerSchemaImpl)))
+                    println(red(Errors.invalidEnum(Validation.InvalidInstallerType, installerTypesEnum)))
                 }
                 else -> Validation.Success
             }
@@ -211,6 +211,20 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
+    fun isInstallerScopeValid(option: Char?): Validation {
+        val installerScopeEnum = installerSchema?.definitions?.scope?.enum as List<String>
+        with(terminalInstance.terminal) {
+            return when {
+                option != Prompts.noIdea.first() && installerScopeEnum.all {
+                    it.first().titlecase() != option?.titlecase()
+                } -> Validation.InvalidInstallerScope.also {
+                    println(red(Errors.invalidEnum(Validation.InvalidInstallerScope, installerScopeEnum)))
+                }
+                else -> Validation.Success
+            }
+        }
+    }
+
     private fun getInstallerSwitchLengthBoundary(installerSwitch: InstallerSwitch): Pair<Int, Int> {
         val installerSwitchProperties = installerSchema?.definitions?.installerSwitches?.properties
         return when (installerSwitch) {
@@ -242,6 +256,9 @@ class InstallerSchemaImpl : KoinComponent {
 
     val installerTypesEnum
         get() = installerSchema?.definitions?.installerType?.enum as List<String>
+
+    val installerScopeEnum
+        get() = installerSchema?.definitions?.scope?.enum as List<String>
 
     companion object {
         const val packageIdentifierMinLength = 4

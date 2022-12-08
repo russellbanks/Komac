@@ -34,10 +34,10 @@ class Application : KoinComponent {
         }
     }
 
-    private fun option(mode: Mode, key: Char, intent: Int = 3): String {
+    private fun option(mode: Mode, key: Char): String {
         val textColour = if (mode != Mode.Exit) blue else red
         return buildString {
-            append(" ".repeat(intent))
+            append(" ".repeat(Prompts.optionIndent))
             append(blue("["))
             append(brightWhite(key.toString()))
             append(blue("] "))

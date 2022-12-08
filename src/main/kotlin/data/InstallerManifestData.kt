@@ -22,6 +22,7 @@ class InstallerManifestData : KoinComponent {
     var customSwitch: String? = null
     var installerLocale: String? = null
     var productCode: String? = null
+    var installerScope: String? = null
 
     private val terminalInstance: TerminalInstance by inject()
 
@@ -36,6 +37,7 @@ class InstallerManifestData : KoinComponent {
                     installerType = installerType,
                     installerUrl = installerUrl,
                     installerSha256 = installerSha256,
+                    scope = installerScope?.ifBlank { null },
                     installerSwitches = InstallerManifest.Installer.InstallerSwitches(
                         silent = silentSwitch?.ifBlank { null },
                         silentWithProgress = silentWithProgressSwitch?.ifBlank { null },

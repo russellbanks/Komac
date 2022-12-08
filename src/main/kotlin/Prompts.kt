@@ -5,6 +5,8 @@ object Prompts {
     private const val required = "[Required]"
     private const val optional = "[Optional]"
 
+    const val optionIndent = 3
+
     const val packageIdentifierInfo = "$required Enter the Package Identifier, in the following format " +
         "<Publisher shortname.Application shortname>. For example: Microsoft.Excel"
 
@@ -16,12 +18,16 @@ object Prompts {
 
     const val installerUrlInfo = "$required Enter the download url to the installer."
 
-    const val installerUrl = "Url"
-
     const val installerLocaleInfo = "$optional Enter the installer locale. For example: en-US, en-CA"
 
     const val productCodeInfo = "$optional Enter the application product code. " +
         "Looks like {CF8E6E00-9C03-4440-81C0-21FACB921A6B}"
+
+    const val installerScopeInfo = "$optional Enter the Installer Scope"
+
+    const val enterChoice = "Enter Choice"
+
+    const val noIdea = "No idea"
 
     fun architectureInfo(installerSchemaImpl: InstallerSchemaImpl): String {
         return "$required Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"
@@ -67,8 +73,6 @@ object Prompts {
         const val detectedUrlValidationFailed = "Validation has failed for the detected URL. Using original URL."
 
         const val useOriginalUrl = "   [N] Use original URL"
-
-        const val enterChoice = "Enter Choice"
 
         const val urlChanged = "[Warning] URL Changed - The URL was changed during processing and will be re-validated"
     }

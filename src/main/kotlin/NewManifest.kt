@@ -4,6 +4,7 @@ import com.github.ajalt.mordant.rendering.TextColors.blue
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.yellow
+import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import hashing.Hashing
@@ -35,6 +36,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             switchPrompt(InstallerSwitch.Custom)
             installerLocalePrompt()
             productCodePrompt()
+            installerScopePrompt()
             installerManifestData.createInstallerManifest()
         }
     }
@@ -69,7 +71,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         var installerUrlResponse: HttpResponse? = null
         do {
             println(brightGreen(Prompts.installerUrlInfo))
-            installerManifestData.installerUrl = prompt(brightWhite(Prompts.installerUrl))?.trim()
+            installerManifestData.installerUrl = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
             val installerUrlValid = installerSchemaImpl.isInstallerUrlValid(installerManifestData.installerUrl) {
                 runCatching { installerUrlResponse = installerManifestData.installerUrl?.let { client.head(it) } }
                 installerUrlResponse
@@ -89,7 +91,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(blue(Prompts.Redirection.discoveredUrl(redirectedUrl)))
             println((brightGreen(Prompts.Redirection.useDetectedUrl)))
             println(brightWhite(Prompts.Redirection.useOriginalUrl))
-            if (prompt(Prompts.Redirection.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
+            if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(yellow(Prompts.Redirection.urlChanged))
                 val redirectedUrlValid = installerSchemaImpl.isInstallerUrlValid(redirectedUrl) {
                     redirectedUrlResponse
@@ -181,5 +183,42 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val productCodeValid = installerSchemaImpl.isProductCodeValid(installerManifestData.productCode)
             println()
         } while (productCodeValid != Validation.Success)
+    }
+
+    private fun Terminal.installerScopePrompt() {
+        var promptInput: String? = null
+        do {
+            println(
+                verticalLayout {
+                    cell(yellow(Prompts.installerScopeInfo))
+                    installerSchemaImpl.installerScopeEnum.forEach { scope ->
+                        cell(
+                            brightWhite(
+                                buildString {
+                                    append(" ".repeat(Prompts.optionIndent))
+                                    append("[${scope.first().titlecase()}] ")
+                                    append(scope.replaceFirstChar { it.titlecase() })
+                                }
+                            )
+                        )
+                    }
+                    cell(
+                        brightGreen(
+                            buildString {
+                                append(" ".repeat(Prompts.optionIndent))
+                                append("[${Prompts.noIdea.first().titlecase()}] ")
+                                append(Prompts.noIdea)
+                            }
+                        )
+                    )
+                }
+            )
+            promptInput = prompt(brightWhite(Prompts.enterChoice), default = Prompts.noIdea.first().titlecase())?.trim()
+            val installerScopeValid = installerSchemaImpl.isInstallerScopeValid(promptInput?.firstOrNull())
+            println()
+        } while (installerScopeValid != Validation.Success)
+        installerManifestData.installerScope = installerSchemaImpl.installerScopeEnum.firstOrNull {
+            it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
+        }
     }
 }

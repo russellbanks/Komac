@@ -1,5 +1,4 @@
 import io.ktor.client.statement.HttpResponse
-import schemas.InstallerSchemaImpl
 
 object Errors {
     private const val error = "[Error]"
@@ -32,10 +31,10 @@ object Errors {
 
     fun blankInput(promptType: PromptType? = null) = "$error ${promptType ?: "Input"} cannot be blank"
 
-    fun invalidEnum(validation: Validation, installerSchemaImpl: InstallerSchemaImpl): String {
+    fun invalidEnum(validation: Validation, enum: List<String>): String {
         return buildString {
             append("$error $validation - Value must exist in the enum - ")
-            append(installerSchemaImpl.architecturesEnum.joinToString(", "))
+            append(enum.joinToString(", "))
         }
     }
 }
