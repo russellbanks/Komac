@@ -1,3 +1,5 @@
+package input
+
 enum class PromptType {
     PackageIdentifier { override fun toString() = "Package Identifier" },
     PackageVersion { override fun toString() = "Version" },

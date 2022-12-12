@@ -25,31 +25,34 @@ class InstallerManifestData : KoinComponent {
     var installerScope: String? = null
     var upgradeBehavior: String? = null
     var releaseDate: String? = null
+    private var installers = listOf<InstallerManifest.Installer>()
 
     private val terminalInstance: TerminalInstance by inject()
+
+    fun addInstaller() {
+        installers += InstallerManifest.Installer(
+            architecture = architecture,
+            installerLocale = installerLocale?.ifBlank { null },
+            installerType = installerType,
+            installerUrl = installerUrl,
+            installerSha256 = installerSha256,
+            scope = installerScope?.ifBlank { null },
+            installerSwitches = InstallerManifest.Installer.InstallerSwitches(
+                silent = silentSwitch?.ifBlank { null },
+                silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
+                custom = customSwitch?.ifBlank { null }
+            ),
+            upgradeBehavior = upgradeBehavior?.ifBlank { null },
+            productCode = productCode?.ifBlank { null },
+            releaseDate = releaseDate?.ifBlank { null }
+        )
+    }
 
     fun createInstallerManifest() {
         InstallerManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            installers = listOf(
-                InstallerManifest.Installer(
-                    architecture = architecture,
-                    installerLocale = installerLocale?.ifBlank { null },
-                    installerType = installerType,
-                    installerUrl = installerUrl,
-                    installerSha256 = installerSha256,
-                    scope = installerScope?.ifBlank { null },
-                    installerSwitches = InstallerManifest.Installer.InstallerSwitches(
-                        silent = silentSwitch?.ifBlank { null },
-                        silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
-                        custom = customSwitch?.ifBlank { null }
-                    ),
-                    upgradeBehavior = upgradeBehavior?.ifBlank { null },
-                    productCode = productCode?.ifBlank { null },
-                    releaseDate = releaseDate?.ifBlank { null }
-                )
-            ),
+            installers = installers,
             manifestVersion = Schemas.manifestVersion
         ).also {
             Yaml(

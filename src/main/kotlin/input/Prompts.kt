@@ -1,3 +1,6 @@
+package input
+
+import InstallerSwitch
 import schemas.InstallerSchemaImpl
 import schemas.Schemas
 
@@ -33,6 +36,8 @@ object Prompts {
 
     const val releaseDateInfo = "$optional Enter the application release date in the format YYYY-MM-DD. " +
         "Example: 2022-11-17"
+
+    const val additionalInstallerInfo = "Do you want to create another installer?"
 
     fun architectureInfo(installerSchemaImpl: InstallerSchemaImpl): String {
         return "$required Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"

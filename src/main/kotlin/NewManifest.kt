@@ -9,6 +9,9 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import hashing.Hashing
 import hashing.Hashing.hash
+import input.Polar
+import input.PromptType
+import input.Prompts
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.UserAgent
@@ -28,17 +31,21 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         with(terminal) {
             packageIdentifierPrompt()
             packageVersionPrompt()
-            installerDownloadPrompt()
-            architecturePrompt()
-            installerTypePrompt()
-            switchPrompt(InstallerSwitch.Silent)
-            switchPrompt(InstallerSwitch.SilentWithProgress)
-            switchPrompt(InstallerSwitch.Custom)
-            installerLocalePrompt()
-            productCodePrompt()
-            installerScopePrompt()
-            upgradeBehaviourPrompt()
-            releaseDatePrompt()
+            do {
+                installerDownloadPrompt()
+                architecturePrompt()
+                installerTypePrompt()
+                switchPrompt(InstallerSwitch.Silent)
+                switchPrompt(InstallerSwitch.SilentWithProgress)
+                switchPrompt(InstallerSwitch.Custom)
+                installerLocalePrompt()
+                productCodePrompt()
+                installerScopePrompt()
+                upgradeBehaviourPrompt()
+                releaseDatePrompt()
+                installerManifestData.addInstaller()
+                val shouldContinue = shouldLoopPrompt()
+            } while (shouldContinue)
             installerManifestData.createInstallerManifest()
         }
     }
@@ -270,5 +277,35 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val releaseDateValid = installerSchemaImpl.isReleaseDateValid(installerManifestData.releaseDate)
             println()
         } while (releaseDateValid != Validation.Success)
+    }
+
+    private fun Terminal.shouldLoopPrompt(): Boolean {
+        var promptInput: Char?
+        do {
+            println(
+                verticalLayout {
+                    cell(brightYellow(Prompts.additionalInstallerInfo))
+                    cell(
+                        brightWhite(
+                            "${" ".repeat(Prompts.optionIndent)} [${Polar.Yes.toString().first()}] ${Polar.Yes}"
+                        )
+                    )
+                    cell(
+                        brightGreen(
+                            "${" ".repeat(Prompts.optionIndent)} [${Polar.No.toString().first()}] ${Polar.No}"
+                        )
+                    )
+                }
+            )
+            promptInput = prompt(
+                prompt = brightWhite(Prompts.enterChoice),
+                default = Polar.No.toString().first().toString()
+            )?.trim()?.lowercase()?.firstOrNull()
+            println()
+        } while (
+            promptInput != Polar.Yes.toString().first().lowercaseChar() &&
+            promptInput != Polar.No.toString().first().lowercaseChar()
+        )
+        return promptInput == Polar.Yes.toString().first().lowercaseChar()
     }
 }

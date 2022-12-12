@@ -3,11 +3,11 @@ package schemas
 import Errors
 import InstallerSwitch
 import Ktor.isRedirect
-import PromptType
-import Prompts
 import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.red
+import input.PromptType
+import input.Prompts
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
