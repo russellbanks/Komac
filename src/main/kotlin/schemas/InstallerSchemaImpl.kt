@@ -24,6 +24,10 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 
 @Single
 class InstallerSchemaImpl : KoinComponent {
@@ -237,6 +241,17 @@ class InstallerSchemaImpl : KoinComponent {
                 else -> Validation.Success
             }
         }
+    }
+
+    fun isReleaseDateValid(releaseDate: String?): Validation {
+        val releaseDatePattern = "yyyy-MM-dd"
+        try {
+            LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(releaseDatePattern, Locale.getDefault()))
+        } catch (dateTimeParseException: DateTimeParseException) {
+            terminalInstance.terminal.println(red(Errors.invalidReleaseDate(dateTimeParseException)))
+            return Validation.InvalidReleaseDate
+        }
+        return Validation.Success
     }
 
     private fun getInstallerSwitchLengthBoundary(installerSwitch: InstallerSwitch): Pair<Int, Int> {

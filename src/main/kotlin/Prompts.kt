@@ -31,6 +31,9 @@ object Prompts {
 
     const val upgradeBehaviourInfo = "$optional Enter the Upgrade Behavior"
 
+    const val releaseDateInfo = "$optional Enter the application release date in the format YYYY-MM-DD. " +
+        "Example: 2022-11-17"
+
     fun architectureInfo(installerSchemaImpl: InstallerSchemaImpl): String {
         return "$required Enter the architecture. Options: ${installerSchemaImpl.architecturesEnum.joinToString(", ")}"
     }

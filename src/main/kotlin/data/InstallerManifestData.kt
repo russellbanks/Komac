@@ -24,6 +24,7 @@ class InstallerManifestData : KoinComponent {
     var productCode: String? = null
     var installerScope: String? = null
     var upgradeBehavior: String? = null
+    var releaseDate: String? = null
 
     private val terminalInstance: TerminalInstance by inject()
 
@@ -45,7 +46,8 @@ class InstallerManifestData : KoinComponent {
                         custom = customSwitch?.ifBlank { null }
                     ),
                     upgradeBehavior = upgradeBehavior?.ifBlank { null },
-                    productCode = productCode?.ifBlank { null }
+                    productCode = productCode?.ifBlank { null },
+                    releaseDate = releaseDate?.ifBlank { null }
                 )
             ),
             manifestVersion = Schemas.manifestVersion

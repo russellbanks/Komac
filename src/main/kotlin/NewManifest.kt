@@ -38,6 +38,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             productCodePrompt()
             installerScopePrompt()
             upgradeBehaviourPrompt()
+            releaseDatePrompt()
             installerManifestData.createInstallerManifest()
         }
     }
@@ -260,5 +261,14 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         installerManifestData.upgradeBehavior = installerSchemaImpl.upgradeBehaviourEnum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
         }
+    }
+
+    private fun Terminal.releaseDatePrompt() {
+        do {
+            println(brightYellow(Prompts.releaseDateInfo))
+            installerManifestData.releaseDate = prompt(brightWhite(PromptType.ReleaseDate.toString()))?.trim()
+            val releaseDateValid = installerSchemaImpl.isReleaseDateValid(installerManifestData.releaseDate)
+            println()
+        } while (releaseDateValid != Validation.Success)
     }
 }
