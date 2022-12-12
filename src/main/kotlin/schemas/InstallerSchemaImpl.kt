@@ -245,11 +245,13 @@ class InstallerSchemaImpl : KoinComponent {
 
     fun isReleaseDateValid(releaseDate: String?): Validation {
         val releaseDatePattern = "yyyy-MM-dd"
-        try {
-            LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(releaseDatePattern, Locale.getDefault()))
-        } catch (dateTimeParseException: DateTimeParseException) {
-            terminalInstance.terminal.println(red(Errors.invalidReleaseDate(dateTimeParseException)))
-            return Validation.InvalidReleaseDate
+        if (!releaseDate.isNullOrBlank()) {
+            try {
+                LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(releaseDatePattern, Locale.getDefault()))
+            } catch (dateTimeParseException: DateTimeParseException) {
+                terminalInstance.terminal.println(red(Errors.invalidReleaseDate(dateTimeParseException)))
+                return Validation.InvalidReleaseDate
+            }
         }
         return Validation.Success
     }
