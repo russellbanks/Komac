@@ -5,8 +5,6 @@ import java.time.format.DateTimeParseException
 object Errors {
     private const val error = "[Error]"
 
-    const val invalidReleaseDate = "Invalid Date - Input could not be resolved to a date"
-
     fun invalidLength(min: Int? = null, max: Int? = null): String {
         return buildString {
             append("$error ${Validation.InvalidLength}")

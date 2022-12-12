@@ -33,7 +33,7 @@ import java.util.Locale
 class InstallerSchemaImpl : KoinComponent {
     private val retrieveSchemas: RetrieveSchemas = get()
     private val client: HttpClient = retrieveSchemas.client
-    private var installerSchema: InstallerSchema? = null
+    var installerSchema: InstallerSchema? = null
     private val terminalInstance: TerminalInstance by inject()
     private val progress = terminalInstance.terminal.progressAnimation {
         text("Retrieving installer schema")
@@ -64,7 +64,6 @@ class InstallerSchemaImpl : KoinComponent {
 
     suspend fun isPackageIdentifierValid(identifier: String?): Validation {
         awaitInstallerSchema()
-        val packageIdentifierPattern = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex() as Regex
         val packageIdentifierMaxLength = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
@@ -76,8 +75,8 @@ class InstallerSchemaImpl : KoinComponent {
                         red(Errors.invalidLength(min = packageIdentifierMinLength, max = packageIdentifierMaxLength))
                     )
                 }
-                !identifier.matches(packageIdentifierPattern) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(packageIdentifierPattern)))
+                !identifier.matches(Pattern.packageIdentifier) -> Validation.InvalidPattern.also {
+                    println(red(Errors.invalidRegex(Pattern.packageIdentifier)))
                 }
                 else -> Validation.Success
             }
@@ -85,7 +84,6 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     fun isPackageVersionValid(version: String?): Validation {
-        val packageVersionPattern = installerSchema?.definitions?.packageVersion?.pattern?.toRegex() as Regex
         val packageVersionMaxLength = installerSchema?.definitions?.packageVersion?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
@@ -95,8 +93,8 @@ class InstallerSchemaImpl : KoinComponent {
                 version.length > packageVersionMaxLength -> Validation.InvalidLength.also {
                     println(red(Errors.invalidLength(max = packageVersionMaxLength)))
                 }
-                !version.matches(packageVersionPattern) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(packageVersionPattern)))
+                !version.matches(Pattern.packageVersion) -> Validation.InvalidPattern.also {
+                    println(red(Errors.invalidRegex(Pattern.packageVersion)))
                 }
                 else -> Validation.Success
             }
@@ -104,8 +102,6 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     suspend fun isInstallerUrlValid(url: String?, responseCallback: suspend () -> HttpResponse?): Validation {
-        val installerUrlPattern = installerSchema?.definitions?.installer?.properties?.installerUrl?.pattern?.toRegex()
-            as Regex
         val installerUrlMaxLength = installerSchema?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
@@ -115,8 +111,8 @@ class InstallerSchemaImpl : KoinComponent {
                 url.length > installerUrlMaxLength -> Validation.InvalidLength.also {
                     println(red(Errors.invalidLength(max = installerUrlMaxLength)))
                 }
-                !url.matches(installerUrlPattern) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(installerUrlPattern)))
+                !url.matches(Pattern.installerUrl) -> Validation.InvalidPattern.also {
+                    println(red(Errors.invalidRegex(Pattern.installerUrl)))
                 }
                 else -> {
                     val installerUrlResponse: HttpResponse? = responseCallback()
@@ -186,12 +182,11 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     fun isInstallerLocaleValid(locale: String?): Validation {
-        val installerLocalePattern = installerSchema?.definitions?.locale?.pattern?.toRegex() as Regex
         val installerLocaleMaxLength = installerSchema?.definitions?.locale?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
-                !locale.isNullOrBlank() && !locale.matches(installerLocalePattern) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(installerLocalePattern)))
+                !locale.isNullOrBlank() && !locale.matches(Pattern.installerLocale) -> Validation.InvalidPattern.also {
+                    println(red(Errors.invalidRegex(Pattern.installerLocale)))
                 }
                 (locale?.length ?: 0) > installerLocaleMaxLength -> Validation.InvalidLength.also {
                     println(red(Errors.invalidLength(max = installerLocaleMaxLength)))
@@ -244,10 +239,9 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     fun isReleaseDateValid(releaseDate: String?): Validation {
-        val releaseDatePattern = "yyyy-MM-dd"
         if (!releaseDate.isNullOrBlank()) {
             try {
-                LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(releaseDatePattern, Locale.getDefault()))
+                LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(Pattern.releaseDate, Locale.getDefault()))
             } catch (dateTimeParseException: DateTimeParseException) {
                 terminalInstance.terminal.println(red(Errors.invalidReleaseDate(dateTimeParseException)))
                 return Validation.InvalidReleaseDate
