@@ -1,7 +1,11 @@
 
+import data.InstallerManifestChecks
 import io.kotest.assertions.ktor.client.shouldHaveStatus
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.datatest.withData
+import io.kotest.koin.KoinExtension
 import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -12,59 +16,135 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import org.koin.ksp.generated.defaultModule
+import org.koin.test.KoinTest
 import schemas.InstallerSchema
 import schemas.LocaleSchema
 import schemas.Schemas
 import schemas.VersionSchema
 
-class InstallerManifestTests : FunSpec({
-    val client = HttpClient(Java) {
-        install(UserAgent) {
-            agent = "Microsoft-Delivery-Optimization/10.1"
-        }
-    }
+class InstallerManifestTests : FunSpec(), KoinTest {
+    override fun extensions() = listOf(KoinExtension(defaultModule))
 
-    val json = Json { ignoreUnknownKeys = true }
-    var installerSchema: InstallerSchema? = null
-    var localeSchema: LocaleSchema? = null
-    var versionSchema: VersionSchema? = null
-
-    listOf(
-        Schemas.installerSchema to installerSchema,
-        Schemas.localeSchema to localeSchema,
-        Schemas.versionSchema to versionSchema
-    ).forEach {
-        context("Get ${it.first}") {
-            lateinit var response: HttpResponse
-
-            test("Retrieve ${it.first}") {
-                response = client.get(it.first)
-                with(response) {
-                    shouldNotBeNull()
-                    shouldHaveStatus(HttpStatusCode.OK)
-                }
-            }
-
-            test("Parse ${it.first}") {
-                when (it.second) {
-                    Schemas.installerSchema -> {
-                        installerSchema = json.decodeFromString(response.body())
-                        installerSchema shouldNotBe null
-                    }
-                    Schemas.localeSchema -> {
-                        localeSchema = json.decodeFromString(response.body())
-                        localeSchema shouldNotBe null
-                    }
-                    Schemas.versionSchema -> {
-                        versionSchema = json.decodeFromString(response.body())
-                        versionSchema shouldNotBe null
-                    }
-                }
+    init {
+        val client = HttpClient(Java) {
+            install(UserAgent) {
+                agent = "Microsoft-Delivery-Optimization/10.1"
             }
         }
-    }
 
-    afterProject {
-        client.close()
+        lateinit var installerSchema: InstallerSchema
+        lateinit var localeSchema: LocaleSchema
+        lateinit var versionSchema: VersionSchema
+
+        listOf(
+            Schemas.installerSchema,
+            Schemas.localeSchema,
+            Schemas.versionSchema
+        ).forEach {
+            context("Get $it") {
+                lateinit var response: HttpResponse
+
+                test("Retrieve $it") {
+                    response = client.get(it)
+                    with(response) {
+                        shouldNotBeNull()
+                        shouldHaveStatus(HttpStatusCode.OK)
+                    }
+                }
+
+                test("Parse $it") {
+                    val json = Json { ignoreUnknownKeys = true }
+                    when (it) {
+                        Schemas.installerSchema -> installerSchema = json.decodeFromString(response.body())
+                        Schemas.localeSchema -> localeSchema = json.decodeFromString(response.body())
+                        Schemas.versionSchema -> versionSchema = json.decodeFromString(response.body())
+                    }
+                }
+
+                test("Validate parsed manifest") {
+                    when (it) {
+                        Schemas.installerSchema -> installerSchema.shouldNotBeNull()
+                        Schemas.localeSchema -> localeSchema.shouldNotBeNull()
+                        Schemas.versionSchema -> versionSchema.shouldNotBeNull()
+                    }
+                }
+            }
+        }
+
+        context("Package Identifier Tests") {
+            withData(
+                listOf(
+                    "ThisIsATest.Test",
+                    "Test.test",
+                    "test.test"
+                )
+            ) { identifier ->
+                InstallerManifestChecks.isPackageIdentifierValid(identifier, installerSchema).first
+                    .shouldBe(Validation.Success)
+            }
+
+            withData(
+                nameFn = { "${it}_" },
+                listOf(
+                    "",
+                    " ",
+                    null,
+                    "test",
+                    ".",
+                    "test./",
+                    "test/test",
+                )
+            ) { identifier ->
+                InstallerManifestChecks.isPackageIdentifierValid(identifier, installerSchema).first
+                    .shouldNotBe(Validation.Success)
+            }
+        }
+
+        context("Package Version Tests") {
+            withData(
+                listOf(
+                    "1.0.0",
+                    "1.2.3",
+                    "1.1.1.1",
+                    "1",
+                    "v1",
+                    "v1.0",
+                    "v1.0.0",
+                    "v1.0.0.0",
+                    "v1."
+                )
+            ) { version ->
+                InstallerManifestChecks.isPackageVersionValid(version, installerSchema).first
+                    .shouldBe(Validation.Success)
+            }
+
+            withData(
+                nameFn = { "${it}_" },
+                listOf(
+                    "",
+                    " ",
+                    null,
+                    "/",
+                    "?"
+                )
+            ) { version ->
+                InstallerManifestChecks.isPackageVersionValid(version, installerSchema).first
+                    .shouldNotBe(Validation.Success)
+            }
+        }
+
+        context("Installer Url Tests") {
+            withData(
+                listOf("https://github.com")
+            ) { url ->
+                InstallerManifestChecks.isInstallerUrlValid(url, installerSchema).first
+                    .shouldBe(Validation.Success)
+            }
+        }
+
+        afterProject {
+            client.close()
+        }
     }
-})
+}

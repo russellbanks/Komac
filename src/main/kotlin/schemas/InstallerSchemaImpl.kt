@@ -2,7 +2,6 @@ package schemas
 
 import Errors
 import InstallerSwitch
-import Ktor.isRedirect
 import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.red
@@ -14,9 +13,6 @@ import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
-import io.ktor.client.statement.HttpResponse
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.isSuccess
 import io.ktor.utils.io.core.use
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -62,78 +58,6 @@ class InstallerSchemaImpl : KoinComponent {
                         clear()
                     }
                     await()
-                }
-            }
-        }
-    }
-
-    fun isPackageIdentifierValid(
-        identifier: String?,
-        installerSchemaObj: InstallerSchema = installerSchema
-    ): Validation {
-        val packageIdentifierMaxLength = installerSchemaObj.definitions.packageIdentifier.maxLength
-        with(terminalInstance.terminal) {
-            return when {
-                identifier.isNullOrBlank() -> Validation.Blank.also {
-                    println(red(Errors.blankInput(PromptType.PackageVersion)))
-                }
-                identifier.length > packageIdentifierMaxLength -> Validation.InvalidLength.also {
-                    println(
-                        red(Errors.invalidLength(min = packageIdentifierMinLength, max = packageIdentifierMaxLength))
-                    )
-                }
-                !identifier.matches(Pattern.packageIdentifier) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(Pattern.packageIdentifier)))
-                }
-                else -> Validation.Success
-            }
-        }
-    }
-
-    fun isPackageVersionValid(version: String?, installerSchemaObj: InstallerSchema = installerSchema): Validation {
-        val packageVersionMaxLength = installerSchemaObj.definitions.packageVersion.maxLength
-        with(terminalInstance.terminal) {
-            return when {
-                version.isNullOrBlank() -> Validation.Blank.also {
-                    println(red(Errors.blankInput(PromptType.PackageVersion)))
-                }
-                version.length > packageVersionMaxLength -> Validation.InvalidLength.also {
-                    println(red(Errors.invalidLength(max = packageVersionMaxLength)))
-                }
-                !version.matches(Pattern.packageVersion) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(Pattern.packageVersion)))
-                }
-                else -> Validation.Success
-            }
-        }
-    }
-
-    suspend fun isInstallerUrlValid(
-        url: String?,
-        installerSchemaObj: InstallerSchema = installerSchema,
-        responseCallback: suspend () -> HttpResponse?
-    ): Validation {
-        val installerUrlMaxLength = installerSchemaObj.definitions.installer.properties.installerUrl.maxLength
-        with(terminalInstance.terminal) {
-            return when {
-                url.isNullOrBlank() -> Validation.Blank.also {
-                    println(red(Errors.blankInput(PromptType.InstallerUrl)))
-                }
-                url.length > installerUrlMaxLength -> Validation.InvalidLength.also {
-                    println(red(Errors.invalidLength(max = installerUrlMaxLength)))
-                }
-                !url.matches(Pattern.installerUrl) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(Pattern.installerUrl)))
-                }
-                else -> {
-                    val installerUrlResponse: HttpResponse? = responseCallback()
-                    val status = installerUrlResponse?.status ?: HttpStatusCode.BadRequest
-                    if (!status.isSuccess() && !status.isRedirect()) {
-                        println(red(Errors.unsuccessfulUrlResponse(installerUrlResponse)))
-                        Validation.UnsuccessfulResponseCode
-                    } else {
-                        Validation.Success
-                    }
                 }
             }
         }
@@ -205,8 +129,8 @@ class InstallerSchemaImpl : KoinComponent {
         val installerLocaleMaxLength = installerSchemaObj.definitions.locale.maxLength
         with(terminalInstance.terminal) {
             return when {
-                !locale.isNullOrBlank() && !locale.matches(Pattern.installerLocale) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(Pattern.installerLocale)))
+                !locale.isNullOrBlank() && !locale.matches(Pattern.installerLocale()) -> Validation.InvalidPattern.also {
+                    println(red(Errors.invalidRegex(Pattern.installerLocale())))
                 }
                 (locale?.length ?: 0) > installerLocaleMaxLength -> Validation.InvalidLength.also {
                     println(red(Errors.invalidLength(max = installerLocaleMaxLength)))
@@ -316,8 +240,4 @@ class InstallerSchemaImpl : KoinComponent {
 
     val upgradeBehaviourEnum
         get() = installerSchema.definitions.upgradeBehavior.enum
-
-    companion object {
-        const val packageIdentifierMinLength = 4
-    }
 }

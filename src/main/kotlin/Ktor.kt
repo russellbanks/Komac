@@ -3,6 +3,8 @@ import com.github.ajalt.mordant.animation.progressAnimation
 import data.InstallerManifestData
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.engine.java.Java
+import io.ktor.client.plugins.UserAgent
 import io.ktor.client.request.head
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.HttpResponse
@@ -73,25 +75,29 @@ object Ktor : KoinComponent {
         return value in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value
     }
 
-    suspend fun HttpClient.getRedirectedUrl(
-        installerUrl: String?,
-        httpResponse: HttpResponse?
-    ): Pair<String?, HttpResponse?> {
+    suspend fun getRedirectedUrl(installerUrl: String?): String? {
+        val noRedirectClient = HttpClient(Java) {
+            install(UserAgent) {
+                agent = "Microsoft-Delivery-Optimization/10.1"
+            }
+            followRedirects = false
+        }
         var redirectedInstallerUrl: String? = installerUrl
-        var newResponse: HttpResponse? = httpResponse
+        var response: HttpResponse? = installerUrl?.let { noRedirectClient.head(it) }
 
-        var status = httpResponse?.status
-        var location = httpResponse?.headers?.get("Location")
+        var status: HttpStatusCode? = response?.status
+        var location: String? = response?.headers?.get("Location")
         while (
             status?.isRedirect() == true &&
-            httpResponse?.headers?.contains(HttpHeaders.Location) == true &&
+            response?.headers?.contains(HttpHeaders.Location) == true &&
             location != null
         ) {
             redirectedInstallerUrl = location
-            newResponse = head(redirectedInstallerUrl)
-            status = newResponse.status
-            location = newResponse.headers["Location"]
+            response = noRedirectClient.head(redirectedInstallerUrl)
+            status = response.status
+            location = response.headers["Location"]
         }
-        return redirectedInstallerUrl to newResponse
+        noRedirectClient.close()
+        return redirectedInstallerUrl
     }
 }

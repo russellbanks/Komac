@@ -4,8 +4,10 @@ import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
+import data.InstallerManifestChecks
 import data.InstallerManifestData
 import hashing.Hashing
 import hashing.Hashing.hash
@@ -15,13 +17,12 @@ import input.Prompts
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.UserAgent
-import io.ktor.client.request.head
-import io.ktor.client.statement.HttpResponse
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchemaImpl
 import schemas.Schemas
+import java.io.File
 
 class NewManifest(private val terminal: Terminal) : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -55,9 +56,10 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(brightGreen(Prompts.packageIdentifierInfo))
             installerManifestData.packageIdentifier = prompt(brightWhite(Prompts.packageIdentifier))?.trim()
             installerSchemaImpl.awaitInstallerSchema()
-            val packageIdentifierValid = installerSchemaImpl.isPackageIdentifierValid(
+            val (packageIdentifierValid, error) = InstallerManifestChecks.isPackageIdentifierValid(
                 installerManifestData.packageIdentifier
             )
+            error?.let { println(red(it)) }
             println()
         } while (packageIdentifierValid != Validation.Success)
     }
@@ -66,33 +68,26 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         do {
             println(brightGreen(Prompts.packageVersionInfo))
             installerManifestData.packageVersion = prompt(brightWhite(Prompts.packageVersion))?.trim()
-            val packageVersionValid = installerSchemaImpl.isPackageVersionValid(installerManifestData.packageVersion)
+            val (packageVersionValid, error) = InstallerManifestChecks.isPackageVersionValid(
+                installerManifestData.packageVersion
+            )
+            error?.let { println(red(it)) }
             println()
         } while (packageVersionValid != Validation.Success)
     }
 
     private suspend fun Terminal.installerDownloadPrompt() {
-        val client = HttpClient(Java) {
-            install(UserAgent) {
-                agent = "Microsoft-Delivery-Optimization/10.1"
-            }
-            followRedirects = false
-        }
-        var installerUrlResponse: HttpResponse? = null
         do {
             println(brightGreen(Prompts.installerUrlInfo))
             installerManifestData.installerUrl = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
-            val installerUrlValid = installerSchemaImpl.isInstallerUrlValid(installerManifestData.installerUrl) {
-                runCatching { installerUrlResponse = installerManifestData.installerUrl?.let { client.head(it) } }
-                installerUrlResponse
-            }
+            val (installerUrlValid, error) = InstallerManifestChecks.isInstallerUrlValid(
+                installerManifestData.installerUrl
+            )
+            error?.let { println(red(it)) }
             println()
         } while (installerUrlValid != Validation.Success)
 
-        val (redirectedUrl, redirectedUrlResponse) = client.getRedirectedUrl(
-            installerManifestData.installerUrl,
-            installerUrlResponse
-        )
+        val redirectedUrl = getRedirectedUrl(installerManifestData.installerUrl)
         if (
             redirectedUrl != installerManifestData.installerUrl &&
             redirectedUrl?.contains(other = "github", ignoreCase = true) != true
@@ -103,9 +98,8 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             println(brightWhite(Prompts.Redirection.useOriginalUrl))
             if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(brightYellow(Prompts.Redirection.urlChanged))
-                val redirectedUrlValid = installerSchemaImpl.isInstallerUrlValid(redirectedUrl) {
-                    redirectedUrlResponse
-                }
+                val (redirectedUrlValid, error) = InstallerManifestChecks.isInstallerUrlValid(redirectedUrl)
+                error?.let { println(it) }
                 if (redirectedUrlValid == Validation.Success) {
                     installerManifestData.installerUrl = redirectedUrl
                 } else {
@@ -118,11 +112,15 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             }
         }
 
-        val downloadedFile = client.downloadInstallerFromUrl().also { client.close() }
+        lateinit var downloadedFile: File
+        HttpClient(Java) {
+            install(UserAgent) {
+                agent = "Microsoft-Delivery-Optimization/10.1"
+            }
+        }.use { downloadedFile = it.downloadInstallerFromUrl() }
         installerManifestData.installerSha256 = downloadedFile.hash(Hashing.Algorithms.SHA256).uppercase()
-
-        println("Sha256: ${installerManifestData.installerSha256}")
         downloadedFile.delete()
+        println("Sha256: ${installerManifestData.installerSha256}")
     }
 
     private fun Terminal.architecturePrompt() {

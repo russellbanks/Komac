@@ -37,11 +37,14 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.koin.annotations)
     ksp(libs.koin.ksp.compiler)
+    testImplementation(libs.koin.test)
 
     // Kotest - https://github.com/kotest/kotest
     testImplementation(libs.kotest.junit5)
     testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotest.framework.datatest)
     testImplementation(libs.kotest.extensions.assertions.ktor)
+    testImplementation(libs.kotest.extensions.koin)
 
     // KotlinX Serialization - https://github.com/Kotlin/kotlinx.serialization
     implementation(libs.kotlinx.serialization.json)

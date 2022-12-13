@@ -1,19 +1,24 @@
 package schemas
 
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import org.koin.core.component.get
 
 object Pattern : KoinComponent {
-    private val installerSchemaImpl: InstallerSchemaImpl by inject()
-    private val installerSchema = installerSchemaImpl.installerSchema
+    fun packageIdentifier(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): Regex {
+        return Regex(installerSchema.definitions.packageIdentifier.pattern)
+    }
 
-    val packageIdentifier = installerSchema.definitions.packageIdentifier.pattern.toRegex()
+    fun packageVersion(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): Regex {
+        return Regex(installerSchema.definitions.packageVersion.pattern)
+    }
 
-    val packageVersion = installerSchema.definitions.packageVersion.pattern.toRegex()
+    fun installerUrl(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): Regex {
+        return Regex(installerSchema.definitions.installer.properties.installerUrl.pattern)
+    }
 
-    val installerUrl = installerSchema.definitions.installer.properties.installerUrl.pattern.toRegex()
-
-    val installerLocale = installerSchema.definitions.locale.pattern.toRegex()
+    fun installerLocale(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): Regex {
+        return Regex(installerSchema.definitions.locale.pattern)
+    }
 
     const val releaseDate = "yyyy-MM-dd"
 }

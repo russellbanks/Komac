@@ -8,7 +8,8 @@ kaml = "0.49.0"
 koin = "3.2.2"
 koin-ksp = "1.0.3"
 kotest = "5.5.4"
-kotest-extensions = "1.0.3"
+kotest-extensions-ktor = "1.0.3"
+kotest-extensions-koin = "1.1.0"
 kotlin = "1.7.22"
 kotlinx-serialization = "1.4.1"
 ksp = "1.7.22-1.0.8"
@@ -30,10 +31,13 @@ kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin-ksp" }
 koin-ksp-compiler = { module = "io.insert-koin:koin-ksp-compiler", version.ref = "koin-ksp" }
+koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
 
 kotest-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
-kotest-extensions-assertions-ktor = { module = "io.kotest.extensions:kotest-assertions-ktor", version.ref = "kotest-extensions" }
+kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }
+kotest-extensions-assertions-ktor = { module = "io.kotest.extensions:kotest-assertions-ktor", version.ref = "kotest-extensions-ktor" }
+kotest-extensions-koin = { module = "io.kotest.extensions:kotest-extensions-koin", version.ref = "kotest-extensions-koin" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
