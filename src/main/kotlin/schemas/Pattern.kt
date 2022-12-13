@@ -7,13 +7,13 @@ object Pattern : KoinComponent {
     private val installerSchemaImpl: InstallerSchemaImpl by inject()
     private val installerSchema = installerSchemaImpl.installerSchema
 
-    val packageIdentifier = installerSchema?.definitions?.packageIdentifier?.pattern?.toRegex() as Regex
+    val packageIdentifier = installerSchema.definitions.packageIdentifier.pattern.toRegex()
 
-    val packageVersion = installerSchema?.definitions?.packageVersion?.pattern?.toRegex() as Regex
+    val packageVersion = installerSchema.definitions.packageVersion.pattern.toRegex()
 
-    val installerUrl = installerSchema?.definitions?.installer?.properties?.installerUrl?.pattern?.toRegex() as Regex
+    val installerUrl = installerSchema.definitions.installer.properties.installerUrl.pattern.toRegex()
 
-    val installerLocale = installerSchema?.definitions?.locale?.pattern?.toRegex() as Regex
+    val installerLocale = installerSchema.definitions.locale.pattern.toRegex()
 
     const val releaseDate = "yyyy-MM-dd"
 }

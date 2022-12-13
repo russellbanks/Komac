@@ -39,7 +39,7 @@ class InstallerManifestTests : FunSpec({
 
             test("Retrieve ${it.first}") {
                 response = client.get(it.first)
-                with (response) {
+                with(response) {
                     shouldNotBeNull()
                     shouldHaveStatus(HttpStatusCode.OK)
                 }

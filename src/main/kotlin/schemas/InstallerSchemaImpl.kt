@@ -10,10 +10,14 @@ import input.PromptType
 import input.Prompts
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.engine.java.Java
+import io.ktor.client.plugins.UserAgent
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.isSuccess
+import io.ktor.utils.io.core.use
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +26,6 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -31,26 +34,28 @@ import java.util.Locale
 
 @Single
 class InstallerSchemaImpl : KoinComponent {
-    private val retrieveSchemas: RetrieveSchemas = get()
-    private val client: HttpClient = retrieveSchemas.client
-    var installerSchema: InstallerSchema? = null
+    lateinit var installerSchema: InstallerSchema
     private val terminalInstance: TerminalInstance by inject()
-    private val progress = terminalInstance.terminal.progressAnimation {
-        text("Retrieving installer schema")
-        progressBar()
-    }
 
     private var asyncJob: Deferred<Unit> = CoroutineScope(Dispatchers.Default).async {
-        client.get(Schemas.installerSchema).body<String?>()?.let {
-            val json = Json { ignoreUnknownKeys = true }
-            installerSchema = json.decodeFromString(it)
+        val json = Json { ignoreUnknownKeys = true }
+        HttpClient(Java) {
+            install(ContentNegotiation)
+            install(UserAgent) {
+                agent = "Microsoft-Delivery-Optimization/10.1"
+            }
+        }.use {
+            installerSchema = json.decodeFromString(it.get(Schemas.installerSchema).body())
         }
     }
 
     suspend fun awaitInstallerSchema() {
         with(asyncJob) {
             if (isActive) {
-                progress.run {
+                terminalInstance.terminal.progressAnimation {
+                    text("Retrieving installer schema")
+                    progressBar()
+                }.run {
                     start()
                     invokeOnCompletion {
                         stop()
@@ -64,9 +69,9 @@ class InstallerSchemaImpl : KoinComponent {
 
     fun isPackageIdentifierValid(
         identifier: String?,
-        installerSchemaObj: InstallerSchema? = installerSchema
+        installerSchemaObj: InstallerSchema = installerSchema
     ): Validation {
-        val packageIdentifierMaxLength = installerSchemaObj?.definitions?.packageIdentifier?.maxLength as Int
+        val packageIdentifierMaxLength = installerSchemaObj.definitions.packageIdentifier.maxLength
         with(terminalInstance.terminal) {
             return when {
                 identifier.isNullOrBlank() -> Validation.Blank.also {
@@ -85,8 +90,8 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isPackageVersionValid(version: String?, installerSchemaObj: InstallerSchema? = installerSchema): Validation {
-        val packageVersionMaxLength = installerSchemaObj?.definitions?.packageVersion?.maxLength as Int
+    fun isPackageVersionValid(version: String?, installerSchemaObj: InstallerSchema = installerSchema): Validation {
+        val packageVersionMaxLength = installerSchemaObj.definitions.packageVersion.maxLength
         with(terminalInstance.terminal) {
             return when {
                 version.isNullOrBlank() -> Validation.Blank.also {
@@ -105,17 +110,17 @@ class InstallerSchemaImpl : KoinComponent {
 
     suspend fun isInstallerUrlValid(
         url: String?,
-        installerSchemaObj: InstallerSchema? = installerSchema,
+        installerSchemaObj: InstallerSchema = installerSchema,
         responseCallback: suspend () -> HttpResponse?
     ): Validation {
-        val urlMaxLength = installerSchemaObj?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
+        val installerUrlMaxLength = installerSchemaObj.definitions.installer.properties.installerUrl.maxLength
         with(terminalInstance.terminal) {
             return when {
                 url.isNullOrBlank() -> Validation.Blank.also {
                     println(red(Errors.blankInput(PromptType.InstallerUrl)))
                 }
-                url.length > urlMaxLength -> Validation.InvalidLength.also {
-                    println(red(Errors.invalidLength(max = urlMaxLength)))
+                url.length > installerUrlMaxLength -> Validation.InvalidLength.also {
+                    println(red(Errors.invalidLength(max = installerUrlMaxLength)))
                 }
                 !url.matches(Pattern.installerUrl) -> Validation.InvalidPattern.also {
                     println(red(Errors.invalidRegex(Pattern.installerUrl)))
@@ -134,8 +139,11 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isArchitectureValid(architecture: String?): Validation {
-        val architecturesEnum = installerSchema?.definitions?.architecture?.enum as List<String>
+    fun isArchitectureValid(
+        architecture: String?,
+        installerSchemaObj: InstallerSchema = installerSchema
+    ): Validation {
+        val architecturesEnum = installerSchemaObj.definitions.architecture.enum
         with(terminalInstance.terminal) {
             return when {
                 architecture.isNullOrBlank() -> Validation.Blank.also {
@@ -149,8 +157,11 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isInstallerTypeValid(installerType: String?): Validation {
-        val installerTypesEnum = installerSchema?.definitions?.installerType?.enum as List<String>
+    fun isInstallerTypeValid(
+        installerType: String?,
+        installerSchemaObj: InstallerSchema = installerSchema
+    ): Validation {
+        val installerTypesEnum = installerSchemaObj.definitions.installerType.enum
         with(terminalInstance.terminal) {
             return when {
                 installerType.isNullOrBlank() -> Validation.Blank.also {
@@ -187,8 +198,11 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isInstallerLocaleValid(locale: String?): Validation {
-        val installerLocaleMaxLength = installerSchema?.definitions?.locale?.maxLength as Int
+    fun isInstallerLocaleValid(
+        locale: String?,
+        installerSchemaObj: InstallerSchema = installerSchema
+    ): Validation {
+        val installerLocaleMaxLength = installerSchemaObj.definitions.locale.maxLength
         with(terminalInstance.terminal) {
             return when {
                 !locale.isNullOrBlank() && !locale.matches(Pattern.installerLocale) -> Validation.InvalidPattern.also {
@@ -202,9 +216,12 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isProductCodeValid(productCode: String?): Validation {
-        val productCodeMinLength = installerSchema?.definitions?.productCode?.minLength as Int
-        val productCodeMaxLength = installerSchema?.definitions?.productCode?.maxLength as Int
+    fun isProductCodeValid(
+        productCode: String?,
+        installerSchemaObj: InstallerSchema = installerSchema
+    ): Validation {
+        val productCodeMinLength = installerSchemaObj.definitions.productCode.minLength
+        val productCodeMaxLength = installerSchemaObj.definitions.productCode.maxLength
         with(terminalInstance.terminal) {
             return when {
                 !productCode.isNullOrBlank() && productCode.length > productCodeMaxLength -> {
@@ -217,8 +234,11 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isInstallerScopeValid(option: Char?): Validation {
-        val installerScopeEnum = installerSchema?.definitions?.scope?.enum as List<String>
+    fun isInstallerScopeValid(
+        option: Char?,
+        installerSchemaObj: InstallerSchema = installerSchema
+    ): Validation {
+        val installerScopeEnum = installerSchemaObj.definitions.scope.enum
         with(terminalInstance.terminal) {
             return when {
                 option != Prompts.noIdea.first() && installerScopeEnum.all {
@@ -256,19 +276,22 @@ class InstallerSchemaImpl : KoinComponent {
         return Validation.Success
     }
 
-    private fun getInstallerSwitchLengthBoundary(installerSwitch: InstallerSwitch): Pair<Int, Int> {
-        val installerSwitchProperties = installerSchema?.definitions?.installerSwitches?.properties
+    private fun getInstallerSwitchLengthBoundary(
+        installerSwitch: InstallerSwitch,
+        installerSchemaObj: InstallerSchema = installerSchema
+    ): Pair<Int, Int> {
+        val installerSwitchProperties = installerSchemaObj.definitions.installerSwitches.properties
         return when (installerSwitch) {
             InstallerSwitch.Silent -> Pair(
-                installerSwitchProperties?.silent?.minLength as Int,
+                installerSwitchProperties.silent.minLength,
                 installerSwitchProperties.silent.maxLength
             )
             InstallerSwitch.SilentWithProgress -> Pair(
-                installerSwitchProperties?.silentWithProgress?.minLength as Int,
+                installerSwitchProperties.silentWithProgress.minLength,
                 installerSwitchProperties.silentWithProgress.maxLength
             )
             InstallerSwitch.Custom -> Pair(
-                installerSwitchProperties?.custom?.minLength as Int,
+                installerSwitchProperties.custom.minLength,
                 installerSwitchProperties.custom.maxLength
             )
         }
@@ -283,16 +306,16 @@ class InstallerSchemaImpl : KoinComponent {
     }
 
     val architecturesEnum
-        get() = installerSchema?.definitions?.architecture?.enum as List<String>
+        get() = installerSchema.definitions.architecture.enum
 
     val installerTypesEnum
-        get() = installerSchema?.definitions?.installerType?.enum as List<String>
+        get() = installerSchema.definitions.installerType.enum
 
     val installerScopeEnum
-        get() = installerSchema?.definitions?.scope?.enum as List<String>
+        get() = installerSchema.definitions.scope.enum
 
     val upgradeBehaviourEnum
-        get() = installerSchema?.definitions?.upgradeBehavior?.enum as List<String>
+        get() = installerSchema.definitions.upgradeBehavior.enum
 
     companion object {
         const val packageIdentifierMinLength = 4
