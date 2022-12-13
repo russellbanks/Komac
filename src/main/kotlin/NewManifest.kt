@@ -54,6 +54,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         do {
             println(brightGreen(Prompts.packageIdentifierInfo))
             installerManifestData.packageIdentifier = prompt(brightWhite(Prompts.packageIdentifier))?.trim()
+            installerSchemaImpl.awaitInstallerSchema()
             val packageIdentifierValid = installerSchemaImpl.isPackageIdentifierValid(
                 installerManifestData.packageIdentifier
             )

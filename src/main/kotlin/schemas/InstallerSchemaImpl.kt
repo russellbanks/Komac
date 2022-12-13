@@ -47,7 +47,7 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    private suspend fun awaitInstallerSchema() {
+    suspend fun awaitInstallerSchema() {
         with(asyncJob) {
             if (isActive) {
                 progress.run {
@@ -62,11 +62,10 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    suspend fun isPackageIdentifierValid(
+    fun isPackageIdentifierValid(
         identifier: String?,
         installerSchemaObj: InstallerSchema? = installerSchema
     ): Validation {
-        awaitInstallerSchema()
         val packageIdentifierMaxLength = installerSchemaObj?.definitions?.packageIdentifier?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
