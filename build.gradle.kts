@@ -38,6 +38,11 @@ dependencies {
     implementation(libs.koin.annotations)
     ksp(libs.koin.ksp.compiler)
 
+    // Kotest - https://github.com/kotest/kotest
+    testImplementation(libs.kotest.junit5)
+    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotest.extensions.assertions.ktor)
+
     // KotlinX Serialization - https://github.com/Kotlin/kotlinx.serialization
     implementation(libs.kotlinx.serialization.json)
 
@@ -49,6 +54,10 @@ dependencies {
 
     // Mordant - https://github.com/ajalt/mordant
     implementation(libs.mordant)
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
 
 sourceSets.main {

@@ -62,9 +62,12 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    suspend fun isPackageIdentifierValid(identifier: String?): Validation {
+    suspend fun isPackageIdentifierValid(
+        identifier: String?,
+        installerSchemaObj: InstallerSchema? = installerSchema
+    ): Validation {
         awaitInstallerSchema()
-        val packageIdentifierMaxLength = installerSchema?.definitions?.packageIdentifier?.maxLength as Int
+        val packageIdentifierMaxLength = installerSchemaObj?.definitions?.packageIdentifier?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
                 identifier.isNullOrBlank() -> Validation.Blank.also {
@@ -83,8 +86,8 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isPackageVersionValid(version: String?): Validation {
-        val packageVersionMaxLength = installerSchema?.definitions?.packageVersion?.maxLength as Int
+    fun isPackageVersionValid(version: String?, installerSchemaObj: InstallerSchema? = installerSchema): Validation {
+        val packageVersionMaxLength = installerSchemaObj?.definitions?.packageVersion?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
                 version.isNullOrBlank() -> Validation.Blank.also {
@@ -101,15 +104,19 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    suspend fun isInstallerUrlValid(url: String?, responseCallback: suspend () -> HttpResponse?): Validation {
-        val installerUrlMaxLength = installerSchema?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
+    suspend fun isInstallerUrlValid(
+        url: String?,
+        installerSchemaObj: InstallerSchema? = installerSchema,
+        responseCallback: suspend () -> HttpResponse?
+    ): Validation {
+        val urlMaxLength = installerSchemaObj?.definitions?.installer?.properties?.installerUrl?.maxLength as Int
         with(terminalInstance.terminal) {
             return when {
                 url.isNullOrBlank() -> Validation.Blank.also {
                     println(red(Errors.blankInput(PromptType.InstallerUrl)))
                 }
-                url.length > installerUrlMaxLength -> Validation.InvalidLength.also {
-                    println(red(Errors.invalidLength(max = installerUrlMaxLength)))
+                url.length > urlMaxLength -> Validation.InvalidLength.also {
+                    println(red(Errors.invalidLength(max = urlMaxLength)))
                 }
                 !url.matches(Pattern.installerUrl) -> Validation.InvalidPattern.also {
                     println(red(Errors.invalidRegex(Pattern.installerUrl)))
