@@ -61,24 +61,6 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isInstallerLocaleValid(
-        locale: String?,
-        installerSchemaObj: InstallerSchema = installerSchema
-    ): Validation {
-        val installerLocaleMaxLength = installerSchemaObj.definitions.locale.maxLength
-        with(terminalInstance.terminal) {
-            return when {
-                !locale.isNullOrBlank() && !locale.matches(Pattern.installerLocale()) -> Validation.InvalidPattern.also {
-                    println(red(Errors.invalidRegex(Pattern.installerLocale())))
-                }
-                (locale?.length ?: 0) > installerLocaleMaxLength -> Validation.InvalidLength.also {
-                    println(red(Errors.invalidLength(max = installerLocaleMaxLength)))
-                }
-                else -> Validation.Success
-            }
-        }
-    }
-
     fun isProductCodeValid(
         productCode: String?,
         installerSchemaObj: InstallerSchema = installerSchema

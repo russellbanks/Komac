@@ -227,6 +227,19 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             }
         }
 
+        context("Installer Locale Checks") {
+            withData(
+                listOf(
+                    "en-US",
+                    "en-GB",
+                    "en-CA",
+                    "en-AU",
+                )
+            ) {
+                InstallerManifestChecks.isInstallerLocaleValid(it, installerSchema).first.shouldBe(Validation.Success)
+            }
+        }
+
         afterProject {
             client.close()
         }

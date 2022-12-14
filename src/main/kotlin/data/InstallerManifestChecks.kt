@@ -134,5 +134,22 @@ object InstallerManifestChecks : KoinComponent {
         }
     }
 
+    fun isInstallerLocaleValid(
+        locale: String?,
+        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+    ): Pair<Validation, String?> {
+        val installerLocaleMaxLength = installerSchema.definitions.locale.maxLength
+        val installerLocaleRegex = Pattern.installerLocale(installerSchema)
+        return when {
+            !locale.isNullOrBlank() && !locale.matches(installerLocaleRegex) -> {
+                Validation.InvalidPattern to Errors.invalidRegex(installerLocaleRegex)
+            }
+            (locale?.length ?: 0) > installerLocaleMaxLength -> {
+                Validation.InvalidLength to Errors.invalidLength(max = installerLocaleMaxLength)
+            }
+            else -> Validation.Success to null
+        }
+    }
+
     private const val packageIdentifierMinLength = 4
 }

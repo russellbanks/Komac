@@ -186,7 +186,10 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         do {
             println(brightYellow(Prompts.installerLocaleInfo))
             installerManifestData.installerLocale = prompt(brightWhite(PromptType.InstallerLocale.toString()))?.trim()
-            val installerLocaleValid = installerSchemaImpl.isInstallerLocaleValid(installerManifestData.installerLocale)
+            val (installerLocaleValid, error) = InstallerManifestChecks.isInstallerLocaleValid(
+                installerManifestData.installerLocale
+            )
+            error?.let { println(red(it)) }
             println()
         } while (installerLocaleValid != Validation.Success)
     }
