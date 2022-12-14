@@ -235,7 +235,8 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 }
             )
             promptInput = prompt(brightWhite(Prompts.enterChoice), default = Prompts.noIdea.first().titlecase())?.trim()
-            val installerScopeValid = installerSchemaImpl.isInstallerScopeValid(promptInput?.firstOrNull())
+            val (installerScopeValid, error) = InstallerManifestChecks.isInstallerScopeValid(promptInput?.firstOrNull())
+            error?.let { println(red(it)) }
             println()
         } while (installerScopeValid != Validation.Success)
         installerManifestData.installerScope = installerSchemaImpl.installerScopeEnum.firstOrNull {

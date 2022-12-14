@@ -168,5 +168,21 @@ object InstallerManifestChecks : KoinComponent {
         }
     }
 
+    fun isInstallerScopeValid(
+        option: Char?,
+        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+    ): Pair<Validation, String?> {
+        val installerScopeEnum = installerSchema.definitions.scope.enum
+        return when {
+            option != input.Prompts.noIdea.first() && installerScopeEnum.all {
+                it.first().titlecase() != option?.titlecase()
+            } -> Validation.InvalidInstallerScope to Errors.invalidEnum(
+                Validation.InvalidInstallerScope,
+                installerScopeEnum
+            )
+            else -> Validation.Success to null
+        }
+    }
+
     private const val packageIdentifierMinLength = 4
 }

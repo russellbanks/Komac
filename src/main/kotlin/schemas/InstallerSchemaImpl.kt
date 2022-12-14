@@ -4,7 +4,6 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.red
-import input.Prompts
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
@@ -57,23 +56,6 @@ class InstallerSchemaImpl : KoinComponent {
                     }
                     await()
                 }
-            }
-        }
-    }
-
-    fun isInstallerScopeValid(
-        option: Char?,
-        installerSchemaObj: InstallerSchema = installerSchema
-    ): Validation {
-        val installerScopeEnum = installerSchemaObj.definitions.scope.enum
-        with(terminalInstance.terminal) {
-            return when {
-                option != Prompts.noIdea.first() && installerScopeEnum.all {
-                    it.first().titlecase() != option?.titlecase()
-                } -> Validation.InvalidInstallerScope.also {
-                    println(red(Errors.invalidEnum(Validation.InvalidInstallerScope, installerScopeEnum)))
-                }
-                else -> Validation.Success
             }
         }
     }

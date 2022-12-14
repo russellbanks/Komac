@@ -247,10 +247,18 @@ class InstallerManifestTests : FunSpec(), KoinTest {
                     "{AE4D7451-6C83-4FEF-AC09-C72D0BAAE8F6}",
                     "{B894AEBC-EFBB-4109-8322-FCDCF1C72F23}",
                     "{40F1B3A4-38C4-4400-B7A2-3CDCF43DE2A2}",
-                    "{943025A8-6863-4768-ADC5-A632E31A2B98}"
+                    "{943025A8-6863-4768-ADC5-A632E31A2B98}",
+                    "{D0A2ECFA-0DD0-4827-8682-946DDCA9AFAA}",
+                    "{9AFB4EB8-CDAA-4A25-9A2F-5040792C53E5}"
                 )
             ) {
                 InstallerManifestChecks.isProductCodeValid(it, installerSchema).first.shouldBe(Validation.Success)
+            }
+        }
+
+        context("Installer Scope Tests") {
+            withData(listOf('M', 'U')) {
+                InstallerManifestChecks.isInstallerScopeValid(it, installerSchema).first.shouldBe(Validation.Success)
             }
         }
 
