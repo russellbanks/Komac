@@ -60,19 +60,6 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isUpgradeBehaviourValid(option: Char?): Validation {
-        with(terminalInstance.terminal) {
-            return when {
-                upgradeBehaviourEnum.all {
-                    it.first().titlecase() != option?.titlecase()
-                } -> Validation.InvalidUpgradeBehaviour.also {
-                    println(red(Errors.invalidEnum(Validation.InvalidUpgradeBehaviour, upgradeBehaviourEnum)))
-                }
-                else -> Validation.Success
-            }
-        }
-    }
-
     fun isReleaseDateValid(releaseDate: String?): Validation {
         if (!releaseDate.isNullOrBlank()) {
             try {
@@ -93,7 +80,4 @@ class InstallerSchemaImpl : KoinComponent {
 
     val installerScopeEnum
         get() = installerSchema.definitions.scope.enum
-
-    val upgradeBehaviourEnum
-        get() = installerSchema.definitions.upgradeBehavior.enum
 }

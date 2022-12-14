@@ -246,15 +246,16 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun Terminal.upgradeBehaviourPrompt() {
         var promptInput: String?
+        val upgradeBehaviourEnum = installerSchemaImpl.installerSchema.definitions.upgradeBehavior.enum
         do {
             println(
                 verticalLayout {
                     cell(brightYellow(Prompts.upgradeBehaviourInfo))
-                    installerSchemaImpl.upgradeBehaviourEnum.forEach { behaviour ->
+                    upgradeBehaviourEnum.forEach { behaviour ->
                         cell(
                             (
                                 if (behaviour.first().titlecase() ==
-                                    installerSchemaImpl.upgradeBehaviourEnum.first().first().titlecase()
+                                    upgradeBehaviourEnum.first().first().titlecase()
                                 ) {
                                     brightGreen
                                 } else {
@@ -273,12 +274,15 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             )
             promptInput = prompt(
                 brightWhite(Prompts.enterChoice),
-                default = installerSchemaImpl.upgradeBehaviourEnum.first().first().titlecase()
+                default = upgradeBehaviourEnum.first().first().titlecase()
             )?.trim()
-            val upgradeBehaviourValid = installerSchemaImpl.isUpgradeBehaviourValid(promptInput?.firstOrNull())
+            val (upgradeBehaviourValid, error) = InstallerManifestChecks.isUpgradeBehaviourValid(
+                promptInput?.firstOrNull()
+            )
+            error?.let { println(red(it)) }
             println()
         } while (upgradeBehaviourValid != Validation.Success)
-        installerManifestData.upgradeBehavior = installerSchemaImpl.upgradeBehaviourEnum.firstOrNull {
+        installerManifestData.upgradeBehavior = upgradeBehaviourEnum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
         }
     }

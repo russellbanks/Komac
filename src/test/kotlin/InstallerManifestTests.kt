@@ -262,6 +262,12 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             }
         }
 
+        context("Upgrade Behaviour Tests") {
+            withData(listOf('I', 'U')) {
+                InstallerManifestChecks.isUpgradeBehaviourValid(it, installerSchema).first.shouldBe(Validation.Success)
+            }
+        }
+
         afterProject {
             client.close()
         }

@@ -184,5 +184,21 @@ object InstallerManifestChecks : KoinComponent {
         }
     }
 
+    fun isUpgradeBehaviourValid(
+        option: Char?,
+        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+    ): Pair<Validation, String?> {
+        val upgradeBehaviourEnum = installerSchema.definitions.upgradeBehavior.enum
+        return when {
+            upgradeBehaviourEnum.all {
+                it.first().titlecase() != option?.titlecase()
+            } -> Validation.InvalidUpgradeBehaviour to Errors.invalidEnum(
+                Validation.InvalidUpgradeBehaviour,
+                upgradeBehaviourEnum
+            )
+            else -> Validation.Success to null
+        }
+    }
+
     private const val packageIdentifierMinLength = 4
 }
