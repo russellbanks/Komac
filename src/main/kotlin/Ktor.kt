@@ -78,7 +78,7 @@ object Ktor : KoinComponent {
     suspend fun getRedirectedUrl(installerUrl: String?): String? {
         val noRedirectClient = HttpClient(Java) {
             install(UserAgent) {
-                agent = "Microsoft-Delivery-Optimization/10.1"
+                agent = userAgent
             }
             followRedirects = false
         }
@@ -100,4 +100,6 @@ object Ktor : KoinComponent {
         noRedirectClient.close()
         return redirectedInstallerUrl
     }
+
+    const val userAgent = "Microsoft-Delivery-Optimization/10.1"
 }

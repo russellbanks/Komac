@@ -1,5 +1,6 @@
 package schemas
 
+import Ktor
 import com.github.ajalt.mordant.animation.progressAnimation
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -28,7 +29,7 @@ class InstallerSchemaImpl : KoinComponent {
         HttpClient(Java) {
             install(ContentNegotiation)
             install(UserAgent) {
-                agent = "Microsoft-Delivery-Optimization/10.1"
+                agent = Ktor.userAgent
             }
         }.use {
             installerSchema = json.decodeFromString(it.get(Schemas.installerSchema).body())
@@ -52,13 +53,4 @@ class InstallerSchemaImpl : KoinComponent {
             }
         }
     }
-
-    val architecturesEnum
-        get() = installerSchema.definitions.architecture.enum
-
-    val installerTypesEnum
-        get() = installerSchema.definitions.installerType.enum
-
-    val installerScopeEnum
-        get() = installerSchema.definitions.scope.enum
 }

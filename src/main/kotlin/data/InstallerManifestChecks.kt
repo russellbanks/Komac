@@ -2,6 +2,7 @@ package data
 
 import Errors
 import InstallerSwitch
+import Ktor
 import Ktor.isRedirect
 import Validation
 import input.PromptType
@@ -13,6 +14,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
+import schemas.Enum
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
 import schemas.Pattern
@@ -76,7 +78,7 @@ object InstallerManifestChecks : KoinComponent {
                 lateinit var installerUrlResponse: HttpResponse
                 HttpClient(Java) {
                     install(UserAgent) {
-                        agent = "Microsoft-Delivery-Optimization/10.1"
+                        agent = Ktor.userAgent
                     }
                     followRedirects = false
                 }.use { installerUrlResponse = it.head(url) }
@@ -93,7 +95,7 @@ object InstallerManifestChecks : KoinComponent {
         architecture: String?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val architecturesEnum = installerSchema.definitions.architecture.enum
+        val architecturesEnum = Enum.architecture(installerSchema)
         return when {
             architecture.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.Architecture)
             !architecturesEnum.contains(architecture) -> {
@@ -107,7 +109,7 @@ object InstallerManifestChecks : KoinComponent {
         installerType: String?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val installerTypesEnum = installerSchema.definitions.installerType.enum
+        val installerTypesEnum = Enum.installerType(installerSchema)
         return when {
             installerType.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerType)
             !installerTypesEnum.contains(installerType) -> {
@@ -176,7 +178,7 @@ object InstallerManifestChecks : KoinComponent {
         option: Char?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val installerScopeEnum = installerSchema.definitions.scope.enum
+        val installerScopeEnum = Enum.installerScope(installerSchema)
         return when {
             option != input.Prompts.noIdea.first() && installerScopeEnum.all {
                 it.first().titlecase() != option?.titlecase()
@@ -192,7 +194,7 @@ object InstallerManifestChecks : KoinComponent {
         option: Char?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val upgradeBehaviourEnum = installerSchema.definitions.upgradeBehavior.enum
+        val upgradeBehaviourEnum = Enum.upgradeBehaviour(installerSchema)
         return when {
             upgradeBehaviourEnum.all {
                 it.first().titlecase() != option?.titlecase()

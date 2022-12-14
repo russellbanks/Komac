@@ -20,6 +20,7 @@ import io.ktor.client.plugins.UserAgent
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.Enum
 import schemas.InstallerSchemaImpl
 import schemas.Schemas
 import java.io.File
@@ -27,6 +28,8 @@ import java.io.File
 class NewManifest(private val terminal: Terminal) : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val installerSchemaImpl: InstallerSchemaImpl = get()
+    private val installerSchema
+        get() = installerSchemaImpl.installerSchema
 
     suspend fun main() {
         with(terminal) {
@@ -115,7 +118,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         lateinit var downloadedFile: File
         HttpClient(Java) {
             install(UserAgent) {
-                agent = "Microsoft-Delivery-Optimization/10.1"
+                agent = Ktor.userAgent
             }
         }.use { downloadedFile = it.downloadInstallerFromUrl() }
         installerManifestData.installerSha256 = downloadedFile.hash(Hashing.Algorithms.SHA256).uppercase()
@@ -125,7 +128,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun Terminal.architecturePrompt() {
         do {
-            println(brightGreen(Prompts.architectureInfo(installerSchemaImpl)))
+            println(brightGreen(Prompts.architectureInfo(installerSchema)))
             installerManifestData.architecture = prompt(
                 brightWhite(PromptType.Architecture.toString())
             )?.trim()?.lowercase()
@@ -139,7 +142,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun Terminal.installerTypePrompt() {
         do {
-            println(brightGreen(Prompts.installerTypeInfo(installerSchemaImpl)))
+            println(brightGreen(Prompts.installerTypeInfo(installerSchema)))
             installerManifestData.installerType = prompt(brightWhite(Prompts.installerType))?.trim()?.lowercase()
             val (installerTypeValid, error) = InstallerManifestChecks.isInstallerTypeValid(
                 installerManifestData.installerType
@@ -208,11 +211,12 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
 
     private fun Terminal.installerScopePrompt() {
         var promptInput: String?
+        val installerScopeEnum = Enum.installerScope(installerSchema)
         do {
             println(
                 verticalLayout {
                     cell(brightYellow(Prompts.installerScopeInfo))
-                    installerSchemaImpl.installerScopeEnum.forEach { scope ->
+                    installerScopeEnum.forEach { scope ->
                         cell(
                             brightWhite(
                                 buildString {
@@ -239,14 +243,14 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             error?.let { println(red(it)) }
             println()
         } while (installerScopeValid != Validation.Success)
-        installerManifestData.installerScope = installerSchemaImpl.installerScopeEnum.firstOrNull {
+        installerManifestData.installerScope = installerScopeEnum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
         }
     }
 
     private fun Terminal.upgradeBehaviourPrompt() {
         var promptInput: String?
-        val upgradeBehaviourEnum = installerSchemaImpl.installerSchema.definitions.upgradeBehavior.enum
+        val upgradeBehaviourEnum = Enum.upgradeBehaviour(installerSchema)
         do {
             println(
                 verticalLayout {
@@ -254,9 +258,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                     upgradeBehaviourEnum.forEach { behaviour ->
                         cell(
                             (
-                                if (behaviour.first().titlecase() ==
-                                    upgradeBehaviourEnum.first().first().titlecase()
-                                ) {
+                                if (behaviour.first().titlecase() == upgradeBehaviourEnum.first().first().titlecase()) {
                                     brightGreen
                                 } else {
                                     brightWhite
@@ -273,7 +275,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 }
             )
             promptInput = prompt(
-                brightWhite(Prompts.enterChoice),
+                prompt = brightWhite(Prompts.enterChoice),
                 default = upgradeBehaviourEnum.first().first().titlecase()
             )?.trim()
             val (upgradeBehaviourValid, error) = InstallerManifestChecks.isUpgradeBehaviourValid(
