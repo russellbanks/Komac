@@ -268,6 +268,23 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             }
         }
 
+        context("Release Date Tests") {
+            withData(listOf("2020-01-01", "2020-01-01")) {
+                InstallerManifestChecks.isReleaseDateValid(it).first.shouldBe(Validation.Success)
+            }
+
+            withData(
+                listOf(
+                    "2022-13-01",
+                    "2020-01-32",
+                    "2020-01-01T00:00:00Z",
+                    "2020-01-01T00:00:00+00:00",
+                )
+            ) {
+                InstallerManifestChecks.isReleaseDateValid(it).first.shouldNotBe(Validation.Success)
+            }
+        }
+
         afterProject {
             client.close()
         }

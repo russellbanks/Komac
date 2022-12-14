@@ -16,6 +16,10 @@ import org.koin.core.component.get
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
 import schemas.Pattern
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 
 object InstallerManifestChecks : KoinComponent {
 
@@ -198,6 +202,17 @@ object InstallerManifestChecks : KoinComponent {
             )
             else -> Validation.Success to null
         }
+    }
+
+    fun isReleaseDateValid(releaseDate: String?): Pair<Validation, String?> {
+        if (!releaseDate.isNullOrBlank()) {
+            try {
+                LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(Pattern.releaseDate, Locale.getDefault()))
+            } catch (dateTimeParseException: DateTimeParseException) {
+                return Validation.InvalidReleaseDate to Errors.invalidReleaseDate(dateTimeParseException)
+            }
+        }
+        return Validation.Success to null
     }
 
     private const val packageIdentifierMinLength = 4

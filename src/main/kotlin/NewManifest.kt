@@ -291,7 +291,10 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         do {
             println(brightYellow(Prompts.releaseDateInfo))
             installerManifestData.releaseDate = prompt(brightWhite(PromptType.ReleaseDate.toString()))?.trim()
-            val releaseDateValid = installerSchemaImpl.isReleaseDateValid(installerManifestData.releaseDate)
+            val (releaseDateValid, error) = InstallerManifestChecks.isReleaseDateValid(
+                installerManifestData.releaseDate
+            )
+            error?.let { println(red(it)) }
             println()
         } while (releaseDateValid != Validation.Success)
     }

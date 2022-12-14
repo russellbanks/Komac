@@ -1,9 +1,6 @@
 package schemas
 
-import Errors
-import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
-import com.github.ajalt.mordant.rendering.TextColors.red
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
@@ -20,10 +17,6 @@ import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
-import java.util.Locale
 
 @Single
 class InstallerSchemaImpl : KoinComponent {
@@ -58,18 +51,6 @@ class InstallerSchemaImpl : KoinComponent {
                 }
             }
         }
-    }
-
-    fun isReleaseDateValid(releaseDate: String?): Validation {
-        if (!releaseDate.isNullOrBlank()) {
-            try {
-                LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(Pattern.releaseDate, Locale.getDefault()))
-            } catch (dateTimeParseException: DateTimeParseException) {
-                terminalInstance.terminal.println(red(Errors.invalidReleaseDate(dateTimeParseException)))
-                return Validation.InvalidReleaseDate
-            }
-        }
-        return Validation.Success
     }
 
     val architecturesEnum
