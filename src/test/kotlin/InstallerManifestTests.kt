@@ -85,10 +85,7 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             }
 
             withData(
-                nameFn = { "${it}_" },
                 listOf(
-                    "",
-                    " ",
                     null,
                     "test",
                     ".",
@@ -120,10 +117,7 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             }
 
             withData(
-                nameFn = { "${it}_" },
                 listOf(
-                    "",
-                    " ",
                     null,
                     "/",
                     "?"
@@ -138,8 +132,38 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             withData(
                 listOf("https://github.com")
             ) { url ->
-                InstallerManifestChecks.isInstallerUrlValid(url, installerSchema).first
-                    .shouldBe(Validation.Success)
+                InstallerManifestChecks.isInstallerUrlValid(url, installerSchema).first.shouldBe(Validation.Success)
+            }
+        }
+
+        context("Architecture Tests") {
+            withData(
+                listOf(
+                    "x64",
+                    "x86",
+                    "arm",
+                    "arm64",
+                    "neutral"
+                )
+            ) {
+                InstallerManifestChecks.isArchitectureValid(it, installerSchema).first.shouldBe(Validation.Success)
+            }
+
+            withData(
+                listOf(
+                    "64",
+                    "86",
+                    "x32",
+                    "64bit",
+                    "32bit",
+                    "arm32",
+                    "arm32bit",
+                    "arm64bit",
+                    "x64bit",
+                    null
+                )
+            ) {
+                InstallerManifestChecks.isArchitectureValid(it, installerSchema).first.shouldNotBe(Validation.Success)
             }
         }
 

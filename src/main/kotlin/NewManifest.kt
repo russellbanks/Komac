@@ -129,7 +129,10 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             installerManifestData.architecture = prompt(
                 brightWhite(PromptType.Architecture.toString())
             )?.trim()?.lowercase()
-            val architectureValid = installerSchemaImpl.isArchitectureValid(installerManifestData.architecture)
+            val (architectureValid, error) = InstallerManifestChecks.isArchitectureValid(
+                installerManifestData.architecture
+            )
+            error?.let { println(red(it)) }
             println()
         } while (architectureValid != Validation.Success)
     }

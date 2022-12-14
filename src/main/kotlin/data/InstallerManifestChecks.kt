@@ -66,9 +66,7 @@ object InstallerManifestChecks : KoinComponent {
             url.length > installerUrlMaxLength -> {
                 Validation.InvalidLength to Errors.invalidLength(max = installerUrlMaxLength)
             }
-            !url.matches(installerUrlRegex) -> {
-                Validation.InvalidPattern to Errors.invalidRegex(installerUrlRegex)
-            }
+            !url.matches(installerUrlRegex) -> Validation.InvalidPattern to Errors.invalidRegex(installerUrlRegex)
             else -> {
                 lateinit var installerUrlResponse: HttpResponse
                 HttpClient(Java) {
@@ -83,6 +81,20 @@ object InstallerManifestChecks : KoinComponent {
                     Validation.Success to null
                 }
             }
+        }
+    }
+
+    fun isArchitectureValid(
+        architecture: String?,
+        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+    ): Pair<Validation, String?> {
+        val architecturesEnum = installerSchema.definitions.architecture.enum
+        return when {
+            architecture.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.Architecture)
+            !architecturesEnum.contains(architecture) -> {
+                Validation.InvalidArchitecture to Errors.invalidEnum(Validation.InvalidArchitecture, architecturesEnum)
+            }
+            else -> Validation.Success to null
         }
     }
 

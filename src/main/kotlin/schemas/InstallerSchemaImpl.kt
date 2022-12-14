@@ -63,24 +63,6 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isArchitectureValid(
-        architecture: String?,
-        installerSchemaObj: InstallerSchema = installerSchema
-    ): Validation {
-        val architecturesEnum = installerSchemaObj.definitions.architecture.enum
-        with(terminalInstance.terminal) {
-            return when {
-                architecture.isNullOrBlank() -> Validation.Blank.also {
-                    println(red(Errors.blankInput(PromptType.Architecture)))
-                }
-                !architecturesEnum.contains(architecture) -> Validation.InvalidArchitecture.also {
-                    println(red(Errors.invalidEnum(Validation.InvalidArchitecture, architecturesEnum)))
-                }
-                else -> Validation.Success
-            }
-        }
-    }
-
     fun isInstallerTypeValid(
         installerType: String?,
         installerSchemaObj: InstallerSchema = installerSchema
