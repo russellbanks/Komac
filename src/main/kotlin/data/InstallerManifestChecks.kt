@@ -1,6 +1,7 @@
 package data
 
 import Errors
+import InstallerSwitch
 import Ktor.isRedirect
 import Validation
 import input.PromptType
@@ -110,6 +111,24 @@ object InstallerManifestChecks : KoinComponent {
                     Validation.InvalidInstallerType,
                     installerTypesEnum
                 )
+            }
+            else -> Validation.Success to null
+        }
+    }
+
+    fun isInstallerSwitchValid(
+        switch: String?,
+        installerSwitch: InstallerSwitch,
+        canBeBlank: Boolean = false,
+        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+    ): Pair<Validation, String?> {
+        val (minBoundary, maxBoundary) = installerSwitch.getLengthBoundary(installerSchema)
+        return when {
+            switch.isNullOrBlank() && !canBeBlank -> {
+                Validation.Blank to Errors.blankInput(installerSwitch.toPromptType())
+            }
+            (switch?.length ?: 0) > maxBoundary -> {
+                Validation.InvalidLength to Errors.invalidLength(min = minBoundary, max = maxBoundary)
             }
             else -> Validation.Success to null
         }

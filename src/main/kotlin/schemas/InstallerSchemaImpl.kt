@@ -1,11 +1,9 @@
 package schemas
 
 import Errors
-import InstallerSwitch
 import Validation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.red
-import input.PromptType
 import input.Prompts
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -59,29 +57,6 @@ class InstallerSchemaImpl : KoinComponent {
                     }
                     await()
                 }
-            }
-        }
-    }
-
-    fun isSwitchValid(switch: String?, installerSwitch: InstallerSwitch, canBeBlank: Boolean): Validation {
-        with(terminalInstance.terminal) {
-            return when {
-                switch.isNullOrBlank() && !canBeBlank -> Validation.Blank.also {
-                    println(red(Errors.blankInput(getPromptTypeFromInstallerSwitch(installerSwitch))))
-                }
-                (switch?.length ?: 0) > getInstallerSwitchLengthBoundary(installerSwitch).second -> {
-                    Validation.InvalidLength.also {
-                        println(
-                            red(
-                                Errors.invalidLength(
-                                    min = getInstallerSwitchLengthBoundary(installerSwitch).first,
-                                    max = getInstallerSwitchLengthBoundary(installerSwitch).second
-                                )
-                            )
-                        )
-                    }
-                }
-                else -> Validation.Success
             }
         }
     }
@@ -162,35 +137,6 @@ class InstallerSchemaImpl : KoinComponent {
             }
         }
         return Validation.Success
-    }
-
-    private fun getInstallerSwitchLengthBoundary(
-        installerSwitch: InstallerSwitch,
-        installerSchemaObj: InstallerSchema = installerSchema
-    ): Pair<Int, Int> {
-        val installerSwitchProperties = installerSchemaObj.definitions.installerSwitches.properties
-        return when (installerSwitch) {
-            InstallerSwitch.Silent -> Pair(
-                installerSwitchProperties.silent.minLength,
-                installerSwitchProperties.silent.maxLength
-            )
-            InstallerSwitch.SilentWithProgress -> Pair(
-                installerSwitchProperties.silentWithProgress.minLength,
-                installerSwitchProperties.silentWithProgress.maxLength
-            )
-            InstallerSwitch.Custom -> Pair(
-                installerSwitchProperties.custom.minLength,
-                installerSwitchProperties.custom.maxLength
-            )
-        }
-    }
-
-    private fun getPromptTypeFromInstallerSwitch(installerSwitch: InstallerSwitch): PromptType {
-        return when (installerSwitch) {
-            InstallerSwitch.Silent -> PromptType.SilentSwitch
-            InstallerSwitch.SilentWithProgress -> PromptType.SilentWithProgressSwitch
-            InstallerSwitch.Custom -> PromptType.CustomSwitch
-        }
     }
 
     val architecturesEnum

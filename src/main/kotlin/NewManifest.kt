@@ -171,12 +171,13 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                     brightWhite(PromptType.CustomSwitch.toString())
                 )?.trim().also { switchResponse = it }
             }
-            val switchValid = installerSchemaImpl.isSwitchValid(
+            val (switchValid, error) = InstallerManifestChecks.isInstallerSwitchValid(
                 switch = switchResponse,
                 installerSwitch = installerSwitch,
                 canBeBlank = installerManifestData.installerType != Schemas.InstallerType.exe ||
                     installerSwitch == InstallerSwitch.Custom
             )
+            error?.let { println(red(it)) }
             println()
         } while (switchValid != Validation.Success)
     }

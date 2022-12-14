@@ -11,5 +11,5 @@ enum class PromptType {
     CustomSwitch { override fun toString() = "Custom Switch" },
     InstallerLocale { override fun toString() = "Installer Locale" },
     ProductCode { override fun toString() = "Product Code" },
-    ReleaseDate { override fun toString() = "Release Date" },
+    ReleaseDate { override fun toString() = "Release Date" }
 }

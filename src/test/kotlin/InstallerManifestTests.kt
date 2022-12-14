@@ -189,7 +189,6 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             withData(
                 listOf(
                     "msixx",
-                    "msixx",
                     "appxx",
                     "exx",
                     "zipp",
@@ -203,6 +202,28 @@ class InstallerManifestTests : FunSpec(), KoinTest {
                 )
             ) {
                 InstallerManifestChecks.isInstallerTypeValid(it, installerSchema).first.shouldNotBe(Validation.Success)
+            }
+        }
+
+        context("Installer Switch Checks") {
+            InstallerSwitch.values().forEach { installerSwitch ->
+                withData(
+                    listOf(
+                        "/S",
+                        "-silent",
+                        "/silent",
+                        "-SILENT",
+                        "/norestart",
+                        "-norestart"
+                    )
+                ) {
+                    InstallerManifestChecks.isInstallerSwitchValid(
+                        switch = it,
+                        installerSwitch = installerSwitch,
+                        canBeBlank = false,
+                        installerSchema = installerSchema
+                    ).first.shouldBe(Validation.Success)
+                }
             }
         }
 
