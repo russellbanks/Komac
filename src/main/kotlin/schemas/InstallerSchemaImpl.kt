@@ -63,24 +63,6 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isInstallerTypeValid(
-        installerType: String?,
-        installerSchemaObj: InstallerSchema = installerSchema
-    ): Validation {
-        val installerTypesEnum = installerSchemaObj.definitions.installerType.enum
-        with(terminalInstance.terminal) {
-            return when {
-                installerType.isNullOrBlank() -> Validation.Blank.also {
-                    println(red(Errors.blankInput(PromptType.InstallerType)))
-                }
-                !installerTypesEnum.contains(installerType) -> Validation.InvalidInstallerType.also {
-                    println(red(Errors.invalidEnum(Validation.InvalidInstallerType, installerTypesEnum)))
-                }
-                else -> Validation.Success
-            }
-        }
-    }
-
     fun isSwitchValid(switch: String?, installerSwitch: InstallerSwitch, canBeBlank: Boolean): Validation {
         with(terminalInstance.terminal) {
             return when {

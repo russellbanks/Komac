@@ -141,7 +141,10 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         do {
             println(brightGreen(Prompts.installerTypeInfo(installerSchemaImpl)))
             installerManifestData.installerType = prompt(brightWhite(Prompts.installerType))?.trim()?.lowercase()
-            val installerTypeValid = installerSchemaImpl.isInstallerTypeValid(installerManifestData.installerType)
+            val (installerTypeValid, error) = InstallerManifestChecks.isInstallerTypeValid(
+                installerManifestData.installerType
+            )
+            error?.let { println(red(it)) }
             println()
         } while (installerTypeValid != Validation.Success)
     }

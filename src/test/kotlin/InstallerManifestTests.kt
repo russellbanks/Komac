@@ -167,6 +167,45 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             }
         }
 
+        context("Installer Type Checks") {
+            withData(
+                listOf(
+                    "msix",
+                    "msi",
+                    "appx",
+                    "exe",
+                    "zip",
+                    "inno",
+                    "nullsoft",
+                    "wix",
+                    "burn",
+                    "pwa",
+                    "portable"
+                )
+            ) {
+                InstallerManifestChecks.isInstallerTypeValid(it, installerSchema).first.shouldBe(Validation.Success)
+            }
+
+            withData(
+                listOf(
+                    "msixx",
+                    "msixx",
+                    "appxx",
+                    "exx",
+                    "zipp",
+                    "inn",
+                    "nullsof",
+                    "wixx",
+                    "burnn",
+                    "pwaa",
+                    "portablee",
+                    null
+                )
+            ) {
+                InstallerManifestChecks.isInstallerTypeValid(it, installerSchema).first.shouldNotBe(Validation.Success)
+            }
+        }
+
         afterProject {
             client.close()
         }

@@ -98,5 +98,22 @@ object InstallerManifestChecks : KoinComponent {
         }
     }
 
+    fun isInstallerTypeValid(
+        installerType: String?,
+        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+    ): Pair<Validation, String?> {
+        val installerTypesEnum = installerSchema.definitions.installerType.enum
+        return when {
+            installerType.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerType)
+            !installerTypesEnum.contains(installerType) -> {
+                Validation.InvalidInstallerType to Errors.invalidEnum(
+                    Validation.InvalidInstallerType,
+                    installerTypesEnum
+                )
+            }
+            else -> Validation.Success to null
+        }
+    }
+
     private const val packageIdentifierMinLength = 4
 }
