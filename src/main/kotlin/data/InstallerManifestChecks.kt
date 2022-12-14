@@ -151,5 +151,22 @@ object InstallerManifestChecks : KoinComponent {
         }
     }
 
+    fun isProductCodeValid(
+        productCode: String?,
+        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+    ): Pair<Validation, String?> {
+        val productCodeMinLength = installerSchema.definitions.productCode.minLength
+        val productCodeMaxLength = installerSchema.definitions.productCode.maxLength
+        return when {
+            !productCode.isNullOrBlank() && productCode.length > productCodeMaxLength -> {
+                Validation.InvalidLength to Errors.invalidLength(
+                    min = productCodeMinLength,
+                    max = productCodeMaxLength
+                )
+            }
+            else -> Validation.Success to null
+        }
+    }
+
     private const val packageIdentifierMinLength = 4
 }

@@ -240,6 +240,20 @@ class InstallerManifestTests : FunSpec(), KoinTest {
             }
         }
 
+        context("Product Code Checks") {
+            withData(
+                listOf(
+                    "{E1E861BE-3251-44C5-B927-80CA66D8727E}",
+                    "{AE4D7451-6C83-4FEF-AC09-C72D0BAAE8F6}",
+                    "{B894AEBC-EFBB-4109-8322-FCDCF1C72F23}",
+                    "{40F1B3A4-38C4-4400-B7A2-3CDCF43DE2A2}",
+                    "{943025A8-6863-4768-ADC5-A632E31A2B98}"
+                )
+            ) {
+                InstallerManifestChecks.isProductCodeValid(it, installerSchema).first.shouldBe(Validation.Success)
+            }
+        }
+
         afterProject {
             client.close()
         }

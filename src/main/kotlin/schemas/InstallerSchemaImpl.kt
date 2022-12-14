@@ -61,24 +61,6 @@ class InstallerSchemaImpl : KoinComponent {
         }
     }
 
-    fun isProductCodeValid(
-        productCode: String?,
-        installerSchemaObj: InstallerSchema = installerSchema
-    ): Validation {
-        val productCodeMinLength = installerSchemaObj.definitions.productCode.minLength
-        val productCodeMaxLength = installerSchemaObj.definitions.productCode.maxLength
-        with(terminalInstance.terminal) {
-            return when {
-                !productCode.isNullOrBlank() && productCode.length > productCodeMaxLength -> {
-                    Validation.InvalidLength.also {
-                        println(red(Errors.invalidLength(min = productCodeMinLength, max = productCodeMaxLength)))
-                    }
-                }
-                else -> Validation.Success
-            }
-        }
-    }
-
     fun isInstallerScopeValid(
         option: Char?,
         installerSchemaObj: InstallerSchema = installerSchema

@@ -198,7 +198,10 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         do {
             println(brightYellow(Prompts.productCodeInfo))
             installerManifestData.productCode = prompt(brightWhite(PromptType.ProductCode.toString()))?.trim()
-            val productCodeValid = installerSchemaImpl.isProductCodeValid(installerManifestData.productCode)
+            val (productCodeValid, error) = InstallerManifestChecks.isProductCodeValid(
+                installerManifestData.productCode
+            )
+            error?.let { println(red(it)) }
             println()
         } while (productCodeValid != Validation.Success)
     }
