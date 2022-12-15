@@ -341,7 +341,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             val inputList = FileExtensions.convertInputToList(input)
             val (fileExtensionsValid, error) = InstallerManifestChecks.areFileExtensionsValid(inputList)
             if (fileExtensionsValid == Validation.Success) {
-                installerManifestData.fileExtensions = inputList?.joinToString(", ")
+                installerManifestData.fileExtensions = inputList
             }
             error?.let { println(red(it)) }
             println()

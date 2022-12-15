@@ -27,7 +27,7 @@ class InstallerManifestData : KoinComponent {
     var upgradeBehavior: String? = null
     var releaseDate: String? = null
     private var installers = listOf<InstallerManifest.Installer>()
-    var fileExtensions: String? = null
+    var fileExtensions: List<String>? = null
 
     private val terminalInstance: TerminalInstance by inject()
     private val installerSchemaImpl: InstallerSchemaImpl by inject()
@@ -48,7 +48,7 @@ class InstallerManifestData : KoinComponent {
                 custom = customSwitch?.ifBlank { null }
             ),
             upgradeBehavior = upgradeBehavior?.ifBlank { null },
-            fileExtensions = fileExtensions?.ifBlank { null },
+            fileExtensions = fileExtensions?.ifEmpty { null },
             productCode = productCode?.ifBlank { null },
             releaseDate = releaseDate?.ifBlank { null }
         )

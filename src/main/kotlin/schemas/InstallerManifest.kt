@@ -28,7 +28,7 @@ data class InstallerManifest(
         @SerialName("UpgradeBehavior") val upgradeBehavior: String? = null,
         @SerialName("Commands") val commands: String? = null,
         @SerialName("Protocols") val protocols: String? = null,
-        @SerialName("FileExtensions") val fileExtensions: String? = null,
+        @SerialName("FileExtensions") val fileExtensions: List<String>? = null,
         @SerialName("Dependencies") val dependencies: List<Dependency> = listOf(),
         @SerialName("PackageFamilyName") val packageFamilyName: String? = null,
         @SerialName("Capabilities") val capabilities: String? = null,
