@@ -73,6 +73,13 @@ object Prompts : KoinComponent {
         }
     }
 
+    fun fileExtensionsInfo(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): String {
+        return buildString {
+            append("$optional Enter any File Extensions the application could support. For example: html, htm, url")
+            append(" (Max: ${installerSchema.definitions.fileExtensions.maxItems})")
+        }
+    }
+
     const val installerType = "Installer Type"
 
     object Redirection {

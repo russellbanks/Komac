@@ -11,8 +11,8 @@ import io.kotest.matchers.shouldBe
 class InstallerSwitchTests : FunSpec({
     val installerSchema = InstallerSchemaData.installerSchema
 
-    context("Installer Switch Checks") {
-        InstallerSwitch.values().forEach { installerSwitch ->
+    context("Installer Switch Tests") {
+        withData(InstallerSwitch.values().toList()) { installerSwitch ->
             withData(
                 listOf(
                     "/S",
@@ -22,9 +22,9 @@ class InstallerSwitchTests : FunSpec({
                     "/norestart",
                     "-norestart"
                 )
-            ) {
+            ) { switchString ->
                 InstallerManifestChecks.isInstallerSwitchValid(
-                    switch = it,
+                    switch = switchString,
                     installerSwitch = installerSwitch,
                     canBeBlank = false,
                     installerSchema = installerSchema

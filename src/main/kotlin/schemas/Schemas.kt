@@ -9,6 +9,10 @@ object Schemas {
     const val installerSchema = "https://aka.ms/winget-manifest.installer.$manifestVersion.schema.json"
     const val localeSchema = "https://aka.ms/winget-manifest.locale.$manifestVersion.schema.json"
 
+    fun manifestType(installerSchema: InstallerSchema): String {
+        return installerSchema.properties.manifestType.const
+    }
+
     object Comments {
         const val createdBy = "# Created using ${BuildConfig.appName} ${BuildConfig.appVersion}"
         const val installerLanguageServer = "# yaml-language-server: \$schema=$installerSchema"

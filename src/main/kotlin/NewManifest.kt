@@ -7,6 +7,7 @@ import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
+import data.FileExtensions
 import data.InstallerManifestChecks
 import data.InstallerManifestData
 import hashing.Hashing
@@ -46,7 +47,8 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 productCodePrompt()
                 installerScopePrompt()
                 upgradeBehaviourPrompt()
-                releaseDatePrompt()
+                releaseDatePrompt() // YamlCreate finishes installer values here
+                fileExtensionsPrompt()
                 installerManifestData.addInstaller()
                 val shouldContinue = shouldLoopPrompt()
             } while (shouldContinue)
@@ -329,5 +331,20 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             promptInput != Polar.No.toString().first().lowercaseChar()
         )
         return promptInput == Polar.Yes.toString().first().lowercaseChar()
+    }
+
+    private suspend fun Terminal.fileExtensionsPrompt() {
+        installerSchemaImpl.awaitInstallerSchema()
+        do {
+            println(brightYellow(Prompts.fileExtensionsInfo(installerSchema)))
+            val input = prompt(brightWhite(PromptType.FileExtensions.toString()))?.trim()
+            val inputList = FileExtensions.convertInputToList(input)
+            val (fileExtensionsValid, error) = InstallerManifestChecks.areFileExtensionsValid(inputList)
+            if (fileExtensionsValid == Validation.Success) {
+                installerManifestData.fileExtensions = inputList?.joinToString(", ")
+            }
+            error?.let { println(red(it)) }
+            println()
+        } while (fileExtensionsValid != Validation.Success)
     }
 }

@@ -6,18 +6,18 @@ import data.InstallerManifestChecks
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
-import java.util.UUID
 
-class ProductCodeChecks : FunSpec({
+class FileExtensionsTests : FunSpec({
     val installerSchema = InstallerSchemaData.installerSchema
 
-    context("Product Code Checks") {
+    context("File Extension Tests") {
         withData(
-            List(50) {
-                "{${UUID.randomUUID().toString().uppercase()}}"
-            }
+            listOf(
+                listOf("html", "htm", "docx"),
+                listOf("doc", "pdf")
+            )
         ) {
-            InstallerManifestChecks.isProductCodeValid(it, installerSchema).first.shouldBe(Validation.Success)
+            InstallerManifestChecks.areFileExtensionsValid(it, installerSchema).first.shouldBe(Validation.Success)
         }
     }
 })

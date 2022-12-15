@@ -217,5 +217,30 @@ object InstallerManifestChecks : KoinComponent {
         return Validation.Success to null
     }
 
+    fun areFileExtensionsValid(
+        fileExtensions: Iterable<String>?,
+        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+    ): Pair<Validation, String?> {
+        val fileExtensionsMaxItems = installerSchema.definitions.fileExtensions.maxItems
+        return when {
+            (fileExtensions?.count() ?: 0) > fileExtensionsMaxItems -> {
+                Validation.InvalidLength to Errors.invalidLength(max = fileExtensionsMaxItems)
+            }
+            fileExtensions?.any { !it.matches(Pattern.fileExtension(installerSchema)) } == true -> {
+                Validation.InvalidPattern to Errors.invalidRegex(
+                    Pattern.fileExtension(installerSchema),
+                    mutableListOf<String>().apply {
+                        fileExtensions.forEach {
+                            if (!it.matches(Pattern.fileExtension(installerSchema))) {
+                                add(it)
+                            }
+                        }
+                    }
+                )
+            }
+            else -> Validation.Success to null
+        }
+    }
+
     private const val packageIdentifierMinLength = 4
 }

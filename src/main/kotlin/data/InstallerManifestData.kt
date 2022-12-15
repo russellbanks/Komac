@@ -6,6 +6,7 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.InstallerManifest
+import schemas.InstallerSchemaImpl
 import schemas.Schemas
 import schemas.TerminalInstance
 
@@ -26,8 +27,12 @@ class InstallerManifestData : KoinComponent {
     var upgradeBehavior: String? = null
     var releaseDate: String? = null
     private var installers = listOf<InstallerManifest.Installer>()
+    var fileExtensions: String? = null
 
     private val terminalInstance: TerminalInstance by inject()
+    private val installerSchemaImpl: InstallerSchemaImpl by inject()
+    private val installerSchema
+        get() = installerSchemaImpl.installerSchema
 
     fun addInstaller() {
         installers += InstallerManifest.Installer(
@@ -43,6 +48,7 @@ class InstallerManifestData : KoinComponent {
                 custom = customSwitch?.ifBlank { null }
             ),
             upgradeBehavior = upgradeBehavior?.ifBlank { null },
+            fileExtensions = fileExtensions?.ifBlank { null },
             productCode = productCode?.ifBlank { null },
             releaseDate = releaseDate?.ifBlank { null }
         )
@@ -53,6 +59,7 @@ class InstallerManifestData : KoinComponent {
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             installers = installers,
+            manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = Schemas.manifestVersion
         ).also {
             Yaml(

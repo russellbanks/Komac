@@ -17,10 +17,17 @@ object Errors {
         }
     }
 
-    fun invalidRegex(regex: Regex? = null): String {
+    fun invalidRegex(regex: Regex? = null, items: Iterable<String>? = null): String {
         return buildString {
             append("$error ${Validation.InvalidPattern}")
             regex?.let { append(" - Must match regex: $it") }
+            items?.let { nonNullItems ->
+                appendLine()
+                appendLine("Items that did not match:")
+                nonNullItems.forEach {
+                    appendLine(" - $it")
+                }
+            }
         }
     }
 
