@@ -48,7 +48,6 @@ class InstallerManifestData : KoinComponent {
                 custom = customSwitch?.ifBlank { null }
             ),
             upgradeBehavior = upgradeBehavior?.ifBlank { null },
-            fileExtensions = fileExtensions?.ifEmpty { null },
             productCode = productCode?.ifBlank { null },
             releaseDate = releaseDate?.ifBlank { null }
         )
@@ -58,6 +57,7 @@ class InstallerManifestData : KoinComponent {
         InstallerManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
+            fileExtensions = fileExtensions?.ifEmpty { null },
             installers = installers,
             manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = Schemas.manifestVersion

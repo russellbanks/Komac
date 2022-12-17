@@ -47,11 +47,11 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 productCodePrompt()
                 installerScopePrompt()
                 upgradeBehaviourPrompt()
-                releaseDatePrompt() // YamlCreate finishes installer values here
-                fileExtensionsPrompt()
+                releaseDatePrompt()
                 installerManifestData.addInstaller()
                 val shouldContinue = shouldLoopPrompt()
             } while (shouldContinue)
+            fileExtensionsPrompt()
             installerManifestData.createInstallerManifest()
         }
     }
