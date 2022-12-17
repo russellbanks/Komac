@@ -8,6 +8,6 @@ object FileExtensions {
             input.split(",").map { it.trim() }
         } else {
             input.split(" ").map { it.trim() }
-        }.distinct()
+        }.distinct().sorted()
     }
 }
