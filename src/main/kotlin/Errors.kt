@@ -5,14 +5,23 @@ import java.time.format.DateTimeParseException
 object Errors {
     private const val error = "[Error]"
 
-    fun invalidLength(min: Int? = null, max: Int? = null): String {
+    fun invalidLength(min: Int? = null, max: Int? = null, items: Iterable<String>? = null): String {
         return buildString {
             append("$error ${Validation.InvalidLength}")
-            if (min != null || max != null) append(" - Length must be ")
+            if (min != null || max != null) {
+                append(" -${items?.let { "Item" } ?: ""} ${items?.let { "Length" } ?: "length"} must be")
+            }
             when {
                 min != null && max != null -> append("between $min and $max")
                 min != null -> append("greater than $min")
                 max != null -> append("less than $max")
+            }
+            items?.let { nonNullItems ->
+                appendLine()
+                appendLine("Items that did not match:")
+                nonNullItems.forEach {
+                    appendLine(" - $it")
+                }
             }
         }
     }
@@ -34,17 +43,14 @@ object Errors {
     fun unsuccessfulUrlResponse(response: HttpResponse?): String {
         return buildString {
             append("$error ${Validation.UnsuccessfulResponseCode} - The server ")
-            append(response?.let { "responded with ${response.status}" } ?: "did not return a successful response")
+            append(response?.let { "responded with ${it.status}" } ?: "did not return a successful response")
         }
     }
 
     fun blankInput(promptType: PromptType? = null) = "$error ${promptType ?: "Input"} cannot be blank"
 
     fun invalidEnum(validation: Validation, enum: List<String>): String {
-        return buildString {
-            append("$error $validation - Value must exist in the enum - ")
-            append(enum.joinToString(", "))
-        }
+        return "$error $validation - Value must exist in the enum - ${enum.joinToString(", ")}"
     }
 
     fun invalidReleaseDate(dateTimeParseException: DateTimeParseException): String {

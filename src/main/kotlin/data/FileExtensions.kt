@@ -19,11 +19,15 @@ object FileExtensions : KoinComponent {
     fun Terminal.fileExtensionsPrompt() {
         val installerManifestData: InstallerManifestData by inject()
         val installerSchemaImpl: InstallerSchemaImpl by inject()
-        val uniqueItems = installerSchemaImpl.installerSchema.definitions.fileExtensions.uniqueItems
+        val fileExtensionsSchema = installerSchemaImpl.installerSchema.definitions.fileExtensions
         do {
-            println(brightYellow(Prompts.fileExtensionsInfo(installerSchemaImpl.installerSchema)))
+            println(
+                brightYellow(
+                    "${Prompts.optional} ${fileExtensionsSchema.description} (Max ${fileExtensionsSchema.maxItems})"
+                )
+            )
             val input = prompt(brightWhite(PromptType.FileExtensions.toString()))
-                ?.trim()?.convertToYamlList(uniqueItems)
+                ?.trim()?.convertToYamlList(fileExtensionsSchema.uniqueItems)
             val (fileExtensionsValid, error) = areFileExtensionsValid(input)
             if (fileExtensionsValid == Validation.Success) installerManifestData.fileExtensions = input
             error?.let { println(red(it)) }
@@ -35,19 +39,21 @@ object FileExtensions : KoinComponent {
         fileExtensions: Iterable<String>?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val fileExtensionsMaxItems = installerSchema.definitions.fileExtensions.maxItems
+        val fileExtensionsSchema = installerSchema.definitions.fileExtensions
         return when {
-            (fileExtensions?.count() ?: 0) > fileExtensionsMaxItems -> {
-                Validation.InvalidLength to Errors.invalidLength(max = fileExtensionsMaxItems)
+            (fileExtensions?.count() ?: 0) > fileExtensionsSchema.maxItems -> {
+                Validation.InvalidLength to Errors.invalidLength(max = fileExtensionsSchema.maxItems)
             }
             fileExtensions?.any { !it.matches(Pattern.fileExtension(installerSchema)) } == true -> {
                 Validation.InvalidPattern to Errors.invalidRegex(
-                    Pattern.fileExtension(installerSchema),
-                    mutableListOf<String>().apply {
-                        fileExtensions.forEach {
-                            if (!it.matches(Pattern.fileExtension(installerSchema))) add(it)
-                        }
-                    }
+                    regex = Pattern.fileExtension(installerSchema),
+                    items = fileExtensions.filterNot { it.matches(Pattern.fileExtension(installerSchema)) }
+                )
+            }
+            fileExtensions?.any { it.length > fileExtensionsSchema.items.maxLength } == true -> {
+                Validation.InvalidLength to Errors.invalidLength(
+                    max = fileExtensionsSchema.items.maxLength,
+                    items = fileExtensions.filter { it.length > fileExtensionsSchema.items.maxLength }
                 )
             }
             else -> Validation.Success to null

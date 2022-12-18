@@ -20,7 +20,8 @@ object InstallerType : KoinComponent {
         val installerSchemaImpl: InstallerSchemaImpl = get()
         do {
             println(brightGreen(Prompts.installerTypeInfo(installerSchemaImpl.installerSchema)))
-            installerManifestData.installerType = prompt(brightWhite(Prompts.installerType))?.trim()?.lowercase()
+            installerManifestData.installerType = prompt(brightWhite(PromptType.InstallerType.toString()))
+                ?.trim()?.lowercase()
             val (installerTypeValid, error) = isInstallerTypeValid(installerManifestData.installerType)
             error?.let { println(red(it)) }
             println()

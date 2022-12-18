@@ -1,4 +1,5 @@
-import input.PromptType
+package input
+
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.InstallerSchema
@@ -6,8 +7,10 @@ import schemas.InstallerSchemaImpl
 
 enum class InstallerSwitch : KoinComponent {
     Silent,
-    SilentWithProgress { override fun toString() = "Silent with Progress" },
+    SilentWithProgress,
     Custom;
+
+    override fun toString() = name.replace(Regex("([A-Z])"), " $1").trim()
 
     fun toPromptType(): PromptType {
         return when (this) {

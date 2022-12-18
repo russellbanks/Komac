@@ -42,7 +42,8 @@ object Commands : KoinComponent {
             commands?.any { it.length > commandsSchema.items.maxLength } == true -> {
                 Validation.InvalidLength to Errors.invalidLength(
                     min = commandsSchema.items.minLength,
-                    max = commandsSchema.items.maxLength
+                    max = commandsSchema.items.maxLength,
+                    items = commands.filter { it.length > commandsSchema.items.maxLength }
                 )
             }
             else -> Validation.Success to null

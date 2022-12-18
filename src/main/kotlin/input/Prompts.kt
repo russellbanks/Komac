@@ -1,6 +1,5 @@
 package input
 
-import InstallerSwitch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.Enum
@@ -72,22 +71,6 @@ object Prompts : KoinComponent {
             )
         }
     }
-
-    fun fileExtensionsInfo(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): String {
-        return buildString {
-            append("$optional Enter any File Extensions the application could support. For example: html, htm, url")
-            append(" (Max: ${installerSchema.definitions.fileExtensions.maxItems})")
-        }
-    }
-
-    fun protocolsInfo(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): String {
-        return buildString {
-            append("$optional Enter any Protocols the application provides a handler for. For example: http, https")
-            append(" (Max: ${installerSchema.definitions.protocols.maxItems})")
-        }
-    }
-
-    const val installerType = "Installer Type"
 
     object Redirection {
         fun originalUrlRetained(url: String?) = "Original URL Retained - Proceeding with $url"

@@ -1,18 +1,20 @@
 package input
 
 enum class PromptType {
-    PackageIdentifier { override fun toString() = "Package Identifier" },
-    PackageVersion { override fun toString() = "Version" },
-    InstallerUrl { override fun toString() = "Url" },
+    PackageIdentifier,
+    PackageVersion,
+    InstallerUrl,
     Architecture,
-    InstallerType { override fun toString() = "Installer Type" },
-    SilentSwitch { override fun toString() = "Silent Switch" },
-    SilentWithProgressSwitch { override fun toString() = "Silent with Progress Switch" },
-    CustomSwitch { override fun toString() = "Custom Switch" },
-    InstallerLocale { override fun toString() = "Installer Locale" },
-    ProductCode { override fun toString() = "Product Code" },
-    ReleaseDate { override fun toString() = "Release Date" },
-    FileExtensions { override fun toString() = "File Extensions" },
+    InstallerType,
+    SilentSwitch,
+    SilentWithProgressSwitch,
+    CustomSwitch,
+    InstallerLocale,
+    ProductCode,
+    ReleaseDate,
+    FileExtensions,
     Protocols,
-    Commands
+    Commands;
+
+    override fun toString() = name.replace(Regex("([A-Z])"), " $1").trim()
 }

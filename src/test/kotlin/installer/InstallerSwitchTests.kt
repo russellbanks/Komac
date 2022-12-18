@@ -1,9 +1,9 @@
 package installer
 
 import InstallerSchemaData
-import InstallerSwitch
 import Validation
 import data.InstallerSwitch.isInstallerSwitchValid
+import input.InstallerSwitch
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe

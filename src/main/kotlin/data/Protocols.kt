@@ -18,10 +18,13 @@ object Protocols : KoinComponent {
     fun Terminal.protocolsPrompt() {
         val installerManifestData: InstallerManifestData by inject()
         val installerSchemaImpl: InstallerSchemaImpl by inject()
-        val uniqueItems = installerSchemaImpl.installerSchema.definitions.protocols.uniqueItems
+        val protocolsSchema = installerSchemaImpl.installerSchema.definitions.protocols
         do {
-            println(brightYellow(Prompts.protocolsInfo(installerSchemaImpl.installerSchema)))
-            val input = prompt(brightWhite(PromptType.Protocols.toString()))?.trim()?.convertToYamlList(uniqueItems)
+            println(
+                brightYellow("${Prompts.optional} ${protocolsSchema.description} (Max ${protocolsSchema.maxItems})")
+            )
+            val input = prompt(brightWhite(PromptType.Protocols.toString()))
+                ?.trim()?.convertToYamlList(protocolsSchema.uniqueItems)
             val (protocolsValid, error) = areProtocolsValid(input)
             if (protocolsValid == Validation.Success) installerManifestData.protocols = input
             error?.let { println(red(it)) }
@@ -33,14 +36,16 @@ object Protocols : KoinComponent {
         protocols: Iterable<String>?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val protocolsMaxItems = installerSchema.definitions.protocols.maxItems
-        val protocolMaxLength = installerSchema.definitions.protocols.items.maxLength
+        val protocolsSchema = installerSchema.definitions.protocols
         return when {
-            (protocols?.count() ?: 0) > protocolsMaxItems -> {
-                Validation.InvalidLength to Errors.invalidLength(max = protocolsMaxItems)
+            (protocols?.count() ?: 0) > protocolsSchema.maxItems -> {
+                Validation.InvalidLength to Errors.invalidLength(max = protocolsSchema.maxItems)
             }
-            protocols?.any { it.length > protocolMaxLength } == true -> {
-                Validation.InvalidLength to Errors.invalidLength(max = protocolMaxLength)
+            protocols?.any { it.length > protocolsSchema.items.maxLength } == true -> {
+                Validation.InvalidLength to Errors.invalidLength(
+                    max = protocolsSchema.items.maxLength,
+                    items = protocols.filter { it.length > protocolsSchema.items.maxLength }
+                )
             }
             else -> Validation.Success to null
         }

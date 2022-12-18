@@ -37,7 +37,7 @@ object PackageIdentifier : KoinComponent {
         val packageIdentifierMaxLength = installerSchema.definitions.packageIdentifier.maxLength
         val packageIdentifierRegex = Pattern.packageIdentifier(installerSchema)
         return when {
-            identifier.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.PackageVersion)
+            identifier.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.PackageIdentifier)
             identifier.length > packageIdentifierMaxLength -> {
                 Validation.InvalidLength to Errors.invalidLength(
                     min = packageIdentifierMinLength,

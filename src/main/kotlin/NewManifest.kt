@@ -18,6 +18,7 @@ import data.ProductCode.productCodePrompt
 import data.Protocols.protocolsPrompt
 import data.ReleaseDate.releaseDatePrompt
 import data.UpgradeBehaviour.upgradeBehaviourPrompt
+import input.InstallerSwitch
 import input.Polar
 import input.Prompts
 import org.koin.core.component.KoinComponent
