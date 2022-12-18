@@ -4,6 +4,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.Architecture.architecturePrompt
+import data.Commands.commandsPrompt
 import data.FileExtensions.fileExtensionsPrompt
 import data.InstallerLocale.installerLocalePrompt
 import data.InstallerManifestData
@@ -46,6 +47,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             } while (shouldContinue)
             fileExtensionsPrompt()
             protocolsPrompt()
+            commandsPrompt()
             installerManifestData.createInstallerManifest()
         }
     }

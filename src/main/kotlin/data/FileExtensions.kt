@@ -18,7 +18,7 @@ import schemas.Pattern
 object FileExtensions : KoinComponent {
     fun Terminal.fileExtensionsPrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl = get()
+        val installerSchemaImpl: InstallerSchemaImpl by inject()
         val uniqueItems = installerSchemaImpl.installerSchema.definitions.fileExtensions.uniqueItems
         do {
             println(brightYellow(Prompts.fileExtensionsInfo(installerSchemaImpl.installerSchema)))

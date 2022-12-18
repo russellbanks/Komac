@@ -13,5 +13,6 @@ enum class PromptType {
     ProductCode { override fun toString() = "Product Code" },
     ReleaseDate { override fun toString() = "Release Date" },
     FileExtensions { override fun toString() = "File Extensions" },
-    Protocols
+    Protocols,
+    Commands
 }

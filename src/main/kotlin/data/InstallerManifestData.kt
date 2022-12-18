@@ -29,6 +29,7 @@ class InstallerManifestData : KoinComponent {
     private var installers = listOf<InstallerManifest.Installer>()
     var fileExtensions: List<String>? = null
     var protocols: List<String>? = null
+    var commands: List<String>? = null
 
     private val terminalInstance: TerminalInstance by inject()
     private val installerSchemaImpl: InstallerSchemaImpl by inject()
@@ -58,6 +59,7 @@ class InstallerManifestData : KoinComponent {
         InstallerManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
+            commands = commands?.ifEmpty { null },
             fileExtensions = fileExtensions?.ifEmpty { null },
             protocols = protocols?.ifEmpty { null },
             installers = installers,

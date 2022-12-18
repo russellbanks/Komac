@@ -10,7 +10,7 @@ import schemas.Schemas
 
 object Prompts : KoinComponent {
     private const val required = "[Required]"
-    private const val optional = "[Optional]"
+    const val optional = "[Optional]"
 
     const val optionIndent = 3
 

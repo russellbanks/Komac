@@ -17,7 +17,7 @@ import schemas.InstallerSchemaImpl
 object Protocols : KoinComponent {
     fun Terminal.protocolsPrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl = get()
+        val installerSchemaImpl: InstallerSchemaImpl by inject()
         val uniqueItems = installerSchemaImpl.installerSchema.definitions.protocols.uniqueItems
         do {
             println(brightYellow(Prompts.protocolsInfo(installerSchemaImpl.installerSchema)))
