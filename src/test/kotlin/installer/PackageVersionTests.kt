@@ -2,7 +2,7 @@ package installer
 
 import InstallerSchemaData
 import Validation
-import data.InstallerManifestChecks
+import data.PackageVersion.isPackageVersionValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -21,8 +21,7 @@ class PackageVersionTests : FunSpec({
                 "${if (it % 2 == 0) "v" else ""}$major.$minor.$patch"
             }
         ) { version ->
-            InstallerManifestChecks.isPackageVersionValid(version, installerSchema).first
-                .shouldBe(Validation.Success)
+            isPackageVersionValid(version, installerSchema).first shouldBe Validation.Success
         }
 
         withData(
@@ -32,8 +31,7 @@ class PackageVersionTests : FunSpec({
                 "?"
             )
         ) { version ->
-            InstallerManifestChecks.isPackageVersionValid(version, installerSchema).first
-                .shouldNotBe(Validation.Success)
+            isPackageVersionValid(version, installerSchema).first shouldNotBe Validation.Success
         }
     }
 })

@@ -2,7 +2,7 @@ package installer
 
 import InstallerSchemaData
 import Validation
-import data.InstallerManifestChecks
+import data.InstallerType.isInstallerTypeValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -14,7 +14,7 @@ class InstallerTypeTests : FunSpec({
 
     context("Installer Type Checks") {
         withData(Enum.installerType(installerSchema)) {
-            InstallerManifestChecks.isInstallerTypeValid(it, installerSchema).first.shouldBe(Validation.Success)
+            isInstallerTypeValid(it, installerSchema).first shouldBe Validation.Success
         }
 
         withData(
@@ -32,7 +32,7 @@ class InstallerTypeTests : FunSpec({
                 null
             )
         ) {
-            InstallerManifestChecks.isInstallerTypeValid(it, installerSchema).first.shouldNotBe(Validation.Success)
+            isInstallerTypeValid(it, installerSchema).first shouldNotBe Validation.Success
         }
     }
 })

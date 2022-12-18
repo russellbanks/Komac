@@ -1,7 +1,7 @@
 package installer
 
 import Validation
-import data.InstallerManifestChecks
+import data.ReleaseDate.isReleaseDateValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -18,7 +18,7 @@ class ReleaseDateTests : FunSpec({
                 SimpleDateFormat(Pattern.releaseDate).format(Date((Random.nextDouble() * Date().time).toLong()))
             }
         ) {
-            InstallerManifestChecks.isReleaseDateValid(it).first.shouldBe(Validation.Success)
+            isReleaseDateValid(it).first shouldBe Validation.Success
         }
 
         withData(
@@ -30,7 +30,7 @@ class ReleaseDateTests : FunSpec({
                     .joinToString("-")
             }
         ) {
-            InstallerManifestChecks.isReleaseDateValid(it).first.shouldNotBe(Validation.Success)
+            isReleaseDateValid(it).first shouldNotBe Validation.Success
         }
     }
 })

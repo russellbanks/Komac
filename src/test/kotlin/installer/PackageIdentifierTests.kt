@@ -1,7 +1,8 @@
 package installer
+
 import InstallerSchemaData
 import Validation
-import data.InstallerManifestChecks
+import data.PackageIdentifier.isPackageIdentifierValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -18,8 +19,7 @@ class PackageIdentifierTests : FunSpec({
                 "test.test"
             )
         ) { identifier ->
-            InstallerManifestChecks.isPackageIdentifierValid(identifier, installerSchema).first
-                .shouldBe(Validation.Success)
+            isPackageIdentifierValid(identifier, installerSchema).first shouldBe Validation.Success
         }
 
         withData(
@@ -31,8 +31,7 @@ class PackageIdentifierTests : FunSpec({
                 "test/test",
             )
         ) { identifier ->
-            InstallerManifestChecks.isPackageIdentifierValid(identifier, installerSchema).first
-                .shouldNotBe(Validation.Success)
+            isPackageIdentifierValid(identifier, installerSchema).first shouldNotBe Validation.Success
         }
     }
 })

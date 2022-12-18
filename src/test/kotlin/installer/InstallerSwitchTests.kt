@@ -3,7 +3,7 @@ package installer
 import InstallerSchemaData
 import InstallerSwitch
 import Validation
-import data.InstallerManifestChecks
+import data.InstallerSwitch.isInstallerSwitchValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -23,12 +23,12 @@ class InstallerSwitchTests : FunSpec({
                     "-norestart"
                 )
             ) { switchString ->
-                InstallerManifestChecks.isInstallerSwitchValid(
+                isInstallerSwitchValid(
                     switch = switchString,
                     installerSwitch = installerSwitch,
                     canBeBlank = false,
                     installerSchema = installerSchema
-                ).first.shouldBe(Validation.Success)
+                ).first shouldBe Validation.Success
             }
         }
     }

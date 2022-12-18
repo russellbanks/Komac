@@ -2,13 +2,13 @@ package installer
 
 import InstallerSchemaData
 import Validation
-import data.InstallerManifestChecks
+import data.ProductCode.isProductCodeValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import java.util.UUID
 
-class ProductCodeChecks : FunSpec({
+class ProductCodeTests : FunSpec({
     val installerSchema = InstallerSchemaData.installerSchema
 
     context("Product Code Checks") {
@@ -17,7 +17,7 @@ class ProductCodeChecks : FunSpec({
                 "{${UUID.randomUUID().toString().uppercase()}}"
             }
         ) {
-            InstallerManifestChecks.isProductCodeValid(it, installerSchema).first.shouldBe(Validation.Success)
+            isProductCodeValid(it, installerSchema).first shouldBe Validation.Success
         }
     }
 })

@@ -1,7 +1,8 @@
 package installer
 import Ktor
 import Validation
-import data.InstallerManifestChecks
+import data.InstallerScope.isInstallerScopeValid
+import data.UpgradeBehaviour.isUpgradeBehaviourValid
 import io.kotest.assertions.ktor.client.shouldHaveStatus
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
@@ -74,13 +75,13 @@ class InstallerManifestTests : FunSpec() {
 
         context("Installer Scope Tests") {
             withData(listOf('M', 'U')) {
-                InstallerManifestChecks.isInstallerScopeValid(it, installerSchema).first.shouldBe(Validation.Success)
+                isInstallerScopeValid(it, installerSchema).first shouldBe Validation.Success
             }
         }
 
         context("Upgrade Behaviour Tests") {
             withData(listOf('I', 'U')) {
-                InstallerManifestChecks.isUpgradeBehaviourValid(it, installerSchema).first.shouldBe(Validation.Success)
+                isUpgradeBehaviourValid(it, installerSchema).first shouldBe Validation.Success
             }
         }
 
