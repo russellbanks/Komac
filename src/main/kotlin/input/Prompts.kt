@@ -80,6 +80,13 @@ object Prompts : KoinComponent {
         }
     }
 
+    fun protocolsInfo(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): String {
+        return buildString {
+            append("$optional Enter any Protocols the application provides a handler for. For example: http, https")
+            append(" (Max: ${installerSchema.definitions.protocols.maxItems})")
+        }
+    }
+
     const val installerType = "Installer Type"
 
     object Redirection {

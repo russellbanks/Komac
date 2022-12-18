@@ -12,5 +12,6 @@ enum class PromptType {
     InstallerLocale { override fun toString() = "Installer Locale" },
     ProductCode { override fun toString() = "Product Code" },
     ReleaseDate { override fun toString() = "Release Date" },
-    FileExtensions { override fun toString() = "File Extensions" }
+    FileExtensions { override fun toString() = "File Extensions" },
+    Protocols
 }

@@ -3,7 +3,7 @@ package installer
 import InstallerSchemaData
 import Validation
 import data.FileExtensions.areFileExtensionsValid
-import data.FileExtensions.convertToYamlList
+import input.YamlExtensions.convertToYamlList
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe

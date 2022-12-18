@@ -7,6 +7,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import input.PromptType
 import input.Prompts
+import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -18,10 +19,11 @@ object FileExtensions : KoinComponent {
     fun Terminal.fileExtensionsPrompt() {
         val installerManifestData: InstallerManifestData by inject()
         val installerSchemaImpl: InstallerSchemaImpl = get()
+        val uniqueItems = installerSchemaImpl.installerSchema.definitions.fileExtensions.uniqueItems
         do {
             println(brightYellow(Prompts.fileExtensionsInfo(installerSchemaImpl.installerSchema)))
             val input = prompt(brightWhite(PromptType.FileExtensions.toString()))
-                ?.trim()?.convertToYamlList()
+                ?.trim()?.convertToYamlList(uniqueItems)
             val (fileExtensionsValid, error) = areFileExtensionsValid(input)
             if (fileExtensionsValid == Validation.Success) installerManifestData.fileExtensions = input
             error?.let { println(red(it)) }
@@ -50,9 +52,5 @@ object FileExtensions : KoinComponent {
             }
             else -> Validation.Success to null
         }
-    }
-
-    fun String.convertToYamlList(): List<String>? {
-        return if (isNullOrBlank()) null else split("\\W+".toRegex()).distinct().sorted().filterNot { it.isBlank() }
     }
 }

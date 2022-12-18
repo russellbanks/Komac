@@ -14,6 +14,7 @@ import data.InstallerUrl.installerDownloadPrompt
 import data.PackageIdentifier.packageIdentifierPrompt
 import data.PackageVersion.packageVersionPrompt
 import data.ProductCode.productCodePrompt
+import data.Protocols.protocolsPrompt
 import data.ReleaseDate.releaseDatePrompt
 import data.UpgradeBehaviour.upgradeBehaviourPrompt
 import input.Polar
@@ -44,6 +45,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 val shouldContinue = shouldLoopPrompt()
             } while (shouldContinue)
             fileExtensionsPrompt()
+            protocolsPrompt()
             installerManifestData.createInstallerManifest()
         }
     }
