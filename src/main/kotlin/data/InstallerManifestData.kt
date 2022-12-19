@@ -1,4 +1,5 @@
 package data
+
 import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
@@ -60,48 +61,32 @@ class InstallerManifestData : KoinComponent {
     }
 
     fun createInstallerManifest() {
+        val installersLocaleDistinct = installers.distinctBy { it.installerLocale }.size == 1
+        val releaseDateDistinct = installers.distinctBy { it.releaseDate }.size == 1
+        val installerScopeDistinct = installers.distinctBy { it.scope }.size == 1
+        val upgradeBehaviourDistinct = installers.distinctBy { it.upgradeBehavior }.size == 1
+        val installerSwitchesDistinct = installers.distinctBy { it.installerSwitches }.size == 1
+        val installerTypeDistinct = installers.distinctBy { it.installerType }.size == 1
         InstallerManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            installerLocale = if (installers.distinctBy { it.installerLocale }.size == 1) {
-                installerLocale?.ifBlank { null }
-            } else null,
+            installerLocale = if (installersLocaleDistinct) installerLocale?.ifBlank { null } else null,
             installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
-            scope = if (installers.distinctBy { it.scope }.size == 1) installerScope else null,
+            scope = if (installerScopeDistinct) installerScope else null,
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null },
-            upgradeBehavior = if (installers.distinctBy { it.upgradeBehavior }.size == 1) upgradeBehavior else null,
+            upgradeBehavior = if (upgradeBehaviourDistinct) upgradeBehavior else null,
             commands = commands?.ifEmpty { null },
             protocols = protocols?.ifEmpty { null },
             fileExtensions = fileExtensions?.ifEmpty { null },
-            releaseDate = if (installers.distinctBy { it.releaseDate }.size == 1) releaseDate else null,
+            releaseDate = if (releaseDateDistinct) releaseDate else null,
             installers = installers.map { installer ->
                 installer.copy(
-                    installerLocale = if (installers.distinctBy { it.installerLocale }.size == 1) {
-                        null
-                    } else {
-                        installer.installerLocale
-                    },
-                    scope = if (installers.distinctBy { it.scope }.size == 1) null else installer.scope,
-                    releaseDate = if (installers.distinctBy { it.releaseDate }.size == 1) {
-                        null
-                    } else {
-                        installer.releaseDate
-                    },
-                    upgradeBehavior = if (installers.distinctBy { it.upgradeBehavior }.size == 1) {
-                        null
-                    } else {
-                        installer.upgradeBehavior
-                    },
-                    installerSwitches = if (installers.distinctBy { it.installerSwitches }.size == 1) {
-                        null
-                    } else {
-                        installer.installerSwitches
-                    },
-                    installerType = if (installers.distinctBy { it.installerType }.size == 1) {
-                        null
-                    } else {
-                        installer.installerType
-                    },
+                    installerLocale = if (installersLocaleDistinct) null else installer.installerLocale,
+                    scope = if (installerScopeDistinct) null else installer.scope,
+                    releaseDate = if (releaseDateDistinct) null else installer.releaseDate,
+                    upgradeBehavior = if (upgradeBehaviourDistinct) null else installer.upgradeBehavior,
+                    installerSwitches = if (installerSwitchesDistinct) null else installer.installerSwitches,
+                    installerType = if (installerTypeDistinct) null else installer.installerType,
                 )
                                         },
             manifestType = Schemas.manifestType(installerSchema),
