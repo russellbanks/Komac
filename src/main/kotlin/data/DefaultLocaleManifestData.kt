@@ -14,6 +14,7 @@ import schemas.TerminalInstance
 @Single
 class DefaultLocaleManifestData : KoinComponent {
     lateinit var packageLocale: String
+    lateinit var publisher: String
 
     private val terminalInstance: TerminalInstance by inject()
     private val sharedManifestData: SharedManifestData by inject()
@@ -23,10 +24,10 @@ class DefaultLocaleManifestData : KoinComponent {
 
     fun createDefaultLocaleManifest() {
         DefaultLocaleManifest(
-            packageIdentifier = sharedManifestData.packageVersion,
+            packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = packageLocale,
-            publisher = "Publisher",
+            publisher = publisher,
             packageName = "Package Name",
             license = "License",
             shortDescription = "ShortDescription",

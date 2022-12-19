@@ -20,6 +20,7 @@ import data.PackageIdentifier.packageIdentifierPrompt
 import data.PackageVersion.packageVersionPrompt
 import data.ProductCode.productCodePrompt
 import data.Protocols.protocolsPrompt
+import data.Publisher.publisherPrompt
 import data.ReleaseDate.releaseDatePrompt
 import data.UpgradeBehaviour.upgradeBehaviourPrompt
 import input.InstallerSwitch
@@ -40,9 +41,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 installerDownloadPrompt()
                 architecturePrompt()
                 installerTypePrompt()
-                installerSwitchPrompt(InstallerSwitch.Silent)
-                installerSwitchPrompt(InstallerSwitch.SilentWithProgress)
-                installerSwitchPrompt(InstallerSwitch.Custom)
+                InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
                 installerLocalePrompt()
                 productCodePrompt()
                 installerScopePrompt()
@@ -57,6 +56,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             installerSuccessCodesPrompt()
             installModesPrompt()
             packageLocalePrompt()
+            publisherPrompt()
             installerManifestData.createInstallerManifest()
             defaultLocalManifestData.createDefaultLocaleManifest()
         }
