@@ -19,7 +19,7 @@ object PackageVersion : KoinComponent {
         val installerManifestData: InstallerManifestData by inject()
         do {
             println(brightGreen(Prompts.packageVersionInfo))
-            installerManifestData.packageVersion = prompt(brightWhite(Prompts.packageVersion))?.trim()
+            installerManifestData.packageVersion = prompt(brightWhite(Prompts.packageVersion))?.trim().toString()
             val (packageVersionValid, error) = isPackageVersionValid(installerManifestData.packageVersion)
             error?.let { println(red(it)) }
             println()

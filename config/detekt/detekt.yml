@@ -727,7 +727,7 @@ formatting:
   android: false
   autoCorrect: true
   AnnotationOnSeparateLine:
-    active: true
+    active: false
     autoCorrect: true
   AnnotationSpacing:
     active: true
@@ -892,7 +892,7 @@ formatting:
     active: true
     autoCorrect: true
   SpacingBetweenDeclarationsWithAnnotations:
-    active: true
+    active: false
     autoCorrect: true
   SpacingBetweenDeclarationsWithComments:
     active: true

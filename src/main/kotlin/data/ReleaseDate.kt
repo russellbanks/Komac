@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -9,20 +10,24 @@ import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.Pattern
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
-import java.util.Locale
 
 object ReleaseDate : KoinComponent {
     fun Terminal.releaseDatePrompt() {
         val installerManifestData: InstallerManifestData by inject()
         do {
             println(brightYellow(Prompts.releaseDateInfo))
-            installerManifestData.releaseDate = prompt(brightWhite(PromptType.ReleaseDate.toString()))?.trim()
-            val (releaseDateValid, error) = isReleaseDateValid(installerManifestData.releaseDate)
+            val input = prompt(brightWhite(PromptType.ReleaseDate.toString()))?.trim()
+            val (releaseDateValid, error) = isReleaseDateValid(input)
             error?.let { println(red(it)) }
+            if (releaseDateValid == Validation.Success && !input.isNullOrBlank()) {
+                installerManifestData.releaseDate = LocalDate.parse(
+                    input,
+                    DateTimeFormatter.ofPattern(releaseDatePattern)
+                )
+            }
             println()
         } while (releaseDateValid != Validation.Success)
     }
@@ -30,11 +35,21 @@ object ReleaseDate : KoinComponent {
     fun isReleaseDateValid(releaseDate: String?): Pair<Validation, String?> {
         if (!releaseDate.isNullOrBlank()) {
             try {
-                LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(Pattern.releaseDate, Locale.getDefault()))
+                LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(releaseDatePattern))
             } catch (dateTimeParseException: DateTimeParseException) {
-                return Validation.InvalidReleaseDate to Errors.invalidReleaseDate(dateTimeParseException)
+                return Validation.InvalidReleaseDate to invalidReleaseDate(dateTimeParseException)
             }
         }
         return Validation.Success to null
     }
+
+    private fun invalidReleaseDate(dateTimeParseException: DateTimeParseException): String {
+        return "${Errors.error} Invalid Date - ${
+        dateTimeParseException.cause?.message
+            ?: dateTimeParseException.message
+            ?: "Input could not be resolved to a date"
+        }"
+    }
+
+    private const val releaseDatePattern = "yyyy-MM-dd"
 }

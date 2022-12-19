@@ -35,7 +35,8 @@ object InstallerUrl : KoinComponent {
         val installerManifestData: InstallerManifestData by inject()
         do {
             println(brightGreen(Prompts.installerUrlInfo))
-            installerManifestData.installerUrl = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
+            installerManifestData.installerUrl = prompt(brightWhite(PromptType.InstallerUrl.toString()))
+                ?.trim().toString()
             val (installerUrlValid, error) = isInstallerUrlValid(installerManifestData.installerUrl)
             error?.let { println(red(it)) }
             println()
@@ -55,7 +56,7 @@ object InstallerUrl : KoinComponent {
                 val (redirectedUrlValid, error) = isInstallerUrlValid(redirectedUrl)
                 error?.let { println(it) }
                 if (redirectedUrlValid == Validation.Success) {
-                    installerManifestData.installerUrl = redirectedUrl
+                    installerManifestData.installerUrl = redirectedUrl.toString()
                 } else {
                     println()
                     println(brightYellow(Prompts.Redirection.detectedUrlValidationFailed))

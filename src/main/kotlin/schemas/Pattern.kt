@@ -23,6 +23,4 @@ object Pattern : KoinComponent {
     fun fileExtension(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): Regex {
         return Regex(installerSchema.definitions.fileExtensions.items.pattern)
     }
-
-    const val releaseDate = "yyyy-MM-dd"
 }

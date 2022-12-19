@@ -11,6 +11,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Enum
+import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
 
@@ -20,10 +21,12 @@ object InstallerType : KoinComponent {
         val installerSchemaImpl: InstallerSchemaImpl = get()
         do {
             println(brightGreen(Prompts.installerTypeInfo(installerSchemaImpl.installerSchema)))
-            installerManifestData.installerType = prompt(brightWhite(PromptType.InstallerType.toString()))
-                ?.trim()?.lowercase()
-            val (installerTypeValid, error) = isInstallerTypeValid(installerManifestData.installerType)
+            val input = prompt(brightWhite(PromptType.InstallerType.toString()))?.trim()?.lowercase()
+            val (installerTypeValid, error) = isInstallerTypeValid(input)
             error?.let { println(red(it)) }
+            if (installerTypeValid == Validation.Success && input != null) {
+                installerManifestData.installerType = input.toInstallerType()
+            }
             println()
         } while (installerTypeValid != Validation.Success)
     }
@@ -43,5 +46,12 @@ object InstallerType : KoinComponent {
             }
             else -> Validation.Success to null
         }
+    }
+
+    private fun String.toInstallerType(): InstallerManifest.InstallerType {
+        enumValues<InstallerManifest.InstallerType>().forEach {
+            if (it.toString().lowercase() == this) return it
+        }
+        throw IllegalArgumentException("Invalid installer type: $this")
     }
 }

@@ -3,9 +3,9 @@ package input
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.Enum
+import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
-import schemas.Schemas
 
 object Prompts : KoinComponent {
     private const val required = "[Required]"
@@ -53,11 +53,12 @@ object Prompts : KoinComponent {
         }
     }
 
-    fun switchInfo(installerType: String?, installerSwitch: InstallerSwitch): String {
+    fun switchInfo(installerType: InstallerManifest.InstallerType?, installerSwitch: InstallerSwitch): String {
         return buildString {
             append(
                 when {
-                    installerType == Schemas.InstallerType.exe && installerSwitch != InstallerSwitch.Custom -> required
+                    installerType == InstallerManifest.InstallerType.EXE &&
+                        installerSwitch != InstallerSwitch.Custom -> required
                     else -> optional
                 }
             )

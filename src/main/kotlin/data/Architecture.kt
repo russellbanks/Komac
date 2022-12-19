@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -11,6 +12,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Enum
+import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
 
@@ -21,11 +23,12 @@ object Architecture : KoinComponent {
         val installerSchemaImpl: InstallerSchemaImpl by inject()
         do {
             println(brightGreen(Prompts.architectureInfo(installerSchemaImpl.installerSchema)))
-            installerManifestData.architecture = prompt(
-                brightWhite(PromptType.Architecture.toString())
-            )?.trim()?.lowercase()
-            val (architectureValid, error) = isArchitectureValid(installerManifestData.architecture)
+            val input = prompt(brightWhite(PromptType.Architecture.toString()))?.trim()?.lowercase()
+            val (architectureValid, error) = isArchitectureValid(input)
             error?.let { println(red(it)) }
+            if (architectureValid == Validation.Success && input != null) {
+                installerManifestData.architecture = input.toArchitecture()
+            }
             println()
         } while (architectureValid != Validation.Success)
     }
@@ -42,5 +45,12 @@ object Architecture : KoinComponent {
             }
             else -> Validation.Success to null
         }
+    }
+
+    private fun String.toArchitecture(): InstallerManifest.Installer.Architecture {
+        enumValues<InstallerManifest.Installer.Architecture>().forEach {
+            if (it.toString().lowercase() == this) return it
+        }
+        throw IllegalArgumentException("Invalid architecture: $this")
     }
 }

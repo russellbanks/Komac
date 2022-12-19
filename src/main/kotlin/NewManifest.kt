@@ -9,6 +9,7 @@ import data.FileExtensions.fileExtensionsPrompt
 import data.InstallerLocale.installerLocalePrompt
 import data.InstallerManifestData
 import data.InstallerScope.installerScopePrompt
+import data.InstallerSuccessCodes.installerSuccessCodesPrompt
 import data.InstallerSwitch.installerSwitchPrompt
 import data.InstallerType.installerTypePrompt
 import data.InstallerUrl.installerDownloadPrompt
@@ -49,6 +50,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             fileExtensionsPrompt()
             protocolsPrompt()
             commandsPrompt()
+            installerSuccessCodesPrompt()
             installerManifestData.createInstallerManifest()
         }
     }

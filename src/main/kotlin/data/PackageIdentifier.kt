@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -20,11 +21,9 @@ object PackageIdentifier : KoinComponent {
         val installerSchemaImpl: InstallerSchemaImpl = get()
         do {
             println(brightGreen(Prompts.packageIdentifierInfo))
-            installerManifestData.packageIdentifier = prompt(brightWhite(Prompts.packageIdentifier))?.trim()
+            installerManifestData.packageIdentifier = prompt(brightWhite(Prompts.packageIdentifier))?.trim().toString()
             installerSchemaImpl.awaitInstallerSchema()
-            val (packageIdentifierValid, error) = isPackageIdentifierValid(
-                installerManifestData.packageIdentifier
-            )
+            val (packageIdentifierValid, error) = isPackageIdentifierValid(installerManifestData.packageIdentifier)
             error?.let { println(red(it)) }
             println()
         } while (packageIdentifierValid != Validation.Success)

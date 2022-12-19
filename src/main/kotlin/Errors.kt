@@ -1,11 +1,10 @@
 import input.PromptType
 import io.ktor.client.statement.HttpResponse
-import java.time.format.DateTimeParseException
 
 object Errors {
-    private const val error = "[Error]"
+    const val error = "[Error]"
 
-    fun invalidLength(min: Int? = null, max: Int? = null, items: Iterable<String>? = null): String {
+    fun invalidLength(min: Number? = null, max: Number? = null, items: Iterable<String>? = null): String {
         return buildString {
             append("$error ${Validation.InvalidLength}")
             if (min != null || max != null) {
@@ -51,13 +50,5 @@ object Errors {
 
     fun invalidEnum(validation: Validation, enum: List<String>): String {
         return "$error $validation - Value must exist in the enum - ${enum.joinToString(", ")}"
-    }
-
-    fun invalidReleaseDate(dateTimeParseException: DateTimeParseException): String {
-        return "$error Invalid Date - ${
-        dateTimeParseException.cause?.message
-            ?: dateTimeParseException.message
-            ?: "Input could not be resolved to a date"
-        }"
     }
 }

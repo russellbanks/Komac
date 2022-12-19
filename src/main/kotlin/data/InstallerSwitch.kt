@@ -13,14 +13,14 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
-import schemas.Schemas
 
 object InstallerSwitch : KoinComponent {
     fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
         val installerManifestData: InstallerManifestData by inject()
-        val isRequired = installerManifestData.installerType == Schemas.InstallerType.exe &&
+        val isRequired = installerManifestData.installerType == InstallerManifest.InstallerType.EXE &&
             installerSwitch != InstallerSwitch.Custom
         do {
             val infoTextColour = if (isRequired) brightGreen else brightYellow
@@ -42,7 +42,7 @@ object InstallerSwitch : KoinComponent {
             val (switchValid, error) = isInstallerSwitchValid(
                 switch = switchResponse,
                 installerSwitch = installerSwitch,
-                canBeBlank = isRequired.not()
+                canBeBlank = !isRequired
             )
             error?.let { println(red(it)) }
             println()

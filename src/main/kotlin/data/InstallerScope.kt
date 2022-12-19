@@ -12,6 +12,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Enum
+import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
 
@@ -54,7 +55,7 @@ object InstallerScope : KoinComponent {
         } while (installerScopeValid != Validation.Success)
         installerManifestData.installerScope = installerScopeEnum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
-        }
+        }?.toScope()
     }
 
     fun isInstallerScopeValid(
@@ -70,6 +71,12 @@ object InstallerScope : KoinComponent {
                 installerScopeEnum
             )
             else -> Validation.Success to null
+        }
+    }
+
+    private fun String.toScope(): InstallerManifest.Scope? {
+        return enumValues<InstallerManifest.Scope>().firstOrNull {
+            it.name.lowercase() == this.lowercase()
         }
     }
 }

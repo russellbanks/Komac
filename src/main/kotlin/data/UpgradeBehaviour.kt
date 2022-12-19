@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -12,6 +13,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Enum
+import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
 
@@ -56,7 +58,7 @@ object UpgradeBehaviour : KoinComponent {
         } while (upgradeBehaviourValid != Validation.Success)
         installerManifestData.upgradeBehavior = upgradeBehaviourEnum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
-        }
+        }?.toUpgradeBehaviour()
     }
 
     fun isUpgradeBehaviourValid(
@@ -73,5 +75,9 @@ object UpgradeBehaviour : KoinComponent {
             )
             else -> Validation.Success to null
         }
+    }
+
+    private fun String.toUpgradeBehaviour(): InstallerManifest.UpgradeBehavior? {
+        return enumValues<InstallerManifest.UpgradeBehavior>().firstOrNull { it.name.lowercase() == this.lowercase() }
     }
 }
