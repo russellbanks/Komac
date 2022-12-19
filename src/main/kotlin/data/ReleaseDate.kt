@@ -51,5 +51,5 @@ object ReleaseDate : KoinComponent {
         }"
     }
 
-    private const val releaseDatePattern = "yyyy-MM-dd"
+    const val releaseDatePattern = "yyyy-MM-dd"
 }
