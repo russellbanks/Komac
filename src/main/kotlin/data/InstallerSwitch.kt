@@ -15,7 +15,7 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerManifest
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object InstallerSwitch : KoinComponent {
     fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
@@ -53,7 +53,7 @@ object InstallerSwitch : KoinComponent {
         switch: String?,
         installerSwitch: InstallerSwitch,
         canBeBlank: Boolean = false,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val (minBoundary, maxBoundary) = installerSwitch.getLengthBoundary(installerSchema)
         return when {

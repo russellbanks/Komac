@@ -8,9 +8,9 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.InstallerManifest
-import schemas.InstallerSchemaImpl
 import schemas.LocalDateSerializer
 import schemas.Schemas
+import schemas.SchemasImpl
 import schemas.TerminalInstance
 import java.time.LocalDate
 
@@ -36,10 +36,10 @@ class InstallerManifestData : KoinComponent {
     var installModes: List<InstallerManifest.InstallModes>? = null
 
     private val terminalInstance: TerminalInstance by inject()
-    private val installerSchemaImpl: InstallerSchemaImpl by inject()
+    private val schemaImpl: SchemasImpl by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private val installerSchema
-        get() = installerSchemaImpl.installerSchema
+        get() = schemaImpl.installerSchema
 
     fun addInstaller() {
         installers += InstallerManifest.Installer(

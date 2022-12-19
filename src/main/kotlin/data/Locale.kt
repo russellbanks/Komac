@@ -13,9 +13,8 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleSchema
-import schemas.DefaultLocaleSchemaImpl
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object Locale : KoinComponent {
     fun Terminal.installerLocalePrompt() {
@@ -31,9 +30,9 @@ object Locale : KoinComponent {
 
     suspend fun Terminal.packageLocalePrompt() {
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val defaultLocaleSchemaImpl: DefaultLocaleSchemaImpl = get()
-        defaultLocaleSchemaImpl.awaitDefaultLocaleSchema()
-        val packageLocaleSchema = defaultLocaleSchemaImpl.defaultLocaleSchema.properties.packageLocale
+        val schemasImpl: SchemasImpl = get()
+        schemasImpl.awaitDefaultLocaleSchema()
+        val packageLocaleSchema = schemasImpl.defaultLocaleSchema.properties.packageLocale
         do {
             println(brightGreen(localeInfo(PromptType.PackageLocale)))
             val input = prompt(
@@ -51,7 +50,7 @@ object Locale : KoinComponent {
 
     fun isInstallerLocaleValid(
         locale: String?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val installerLocale = installerSchema.definitions.locale
         return when {
@@ -67,7 +66,7 @@ object Locale : KoinComponent {
 
     fun isPackageLocaleValid(
         locale: String?,
-        defaultLocaleSchema: DefaultLocaleSchema = get<DefaultLocaleSchemaImpl>().defaultLocaleSchema
+        defaultLocaleSchema: DefaultLocaleSchema = get<SchemasImpl>().defaultLocaleSchema
     ): Pair<Validation, String?> {
         val packageLocaleSchema = defaultLocaleSchema.properties.packageLocale
         return when {

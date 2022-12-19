@@ -14,13 +14,13 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerManifest
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object InstallModes : KoinComponent {
     fun Terminal.installModesPrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl by inject()
-        val installModesSchema = installerSchemaImpl.installerSchema.definitions.installModes
+        val schemasImpl: SchemasImpl by inject()
+        val installModesSchema = schemasImpl.installerSchema.definitions.installModes
         do {
             println(brightYellow(promptInfo(installModesSchema)))
             val input = prompt(brightWhite(PromptType.InstallModes.toString()))
@@ -36,7 +36,7 @@ object InstallModes : KoinComponent {
 
     private fun areInstallModesValid(
         installModes: Iterable<String>?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val installModesSchema = installerSchema.definitions.installModes
         return when {

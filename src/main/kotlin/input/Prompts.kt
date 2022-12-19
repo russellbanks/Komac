@@ -5,7 +5,7 @@ import org.koin.core.component.get
 import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object Prompts : KoinComponent {
     const val required = "[Required]"
@@ -33,11 +33,11 @@ object Prompts : KoinComponent {
 
     const val additionalInstallerInfo = "Do you want to create another installer?"
 
-    fun architectureInfo(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): String {
+    fun architectureInfo(installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema): String {
         return "$required Enter the architecture. Options: ${Enum.architecture(installerSchema).joinToString(", ")}"
     }
 
-    fun installerTypeInfo(installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema): String {
+    fun installerTypeInfo(installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema): String {
         return buildString {
             append("$required Enter the installer type. Options: ")
             append(Enum.installerType(installerSchema).joinToString(", "))

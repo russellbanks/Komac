@@ -13,13 +13,13 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object FileExtensions : KoinComponent {
     fun Terminal.fileExtensionsPrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl by inject()
-        val fileExtensionsSchema = installerSchemaImpl.installerSchema.definitions.fileExtensions
+        val schemasImpl: SchemasImpl by inject()
+        val fileExtensionsSchema = schemasImpl.installerSchema.definitions.fileExtensions
         do {
             println(
                 brightYellow(
@@ -37,7 +37,7 @@ object FileExtensions : KoinComponent {
 
     fun areFileExtensionsValid(
         fileExtensions: Iterable<String>?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val fileExtensionsSchema = installerSchema.definitions.fileExtensions
         return when {

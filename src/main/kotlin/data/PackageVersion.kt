@@ -12,7 +12,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object PackageVersion : KoinComponent {
     fun Terminal.packageVersionPrompt() {
@@ -31,7 +31,7 @@ object PackageVersion : KoinComponent {
 
     fun isPackageVersionValid(
         version: String?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val packageVersionSchema = installerSchema.definitions.packageVersion
         return when {

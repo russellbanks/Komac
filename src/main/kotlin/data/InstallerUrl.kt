@@ -26,7 +26,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 import java.io.File
 
 object InstallerUrl : KoinComponent {
@@ -81,7 +81,7 @@ object InstallerUrl : KoinComponent {
 
     suspend fun isInstallerUrlValid(
         url: String?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val installerUrlSchema = installerSchema.definitions.installer.properties.installerUrl
         return when {

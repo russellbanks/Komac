@@ -12,16 +12,16 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object PackageIdentifier : KoinComponent {
     suspend fun Terminal.packageIdentifierPrompt() {
         val sharedManifestData: SharedManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl = get()
+        val schemasImpl: SchemasImpl = get()
         do {
             println(brightGreen(Prompts.packageIdentifierInfo))
             val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
-            installerSchemaImpl.awaitInstallerSchema()
+            schemasImpl.awaitInstallerSchema()
             val (packageIdentifierValid, error) = isPackageIdentifierValid(input)
             if (packageIdentifierValid == Validation.Success && input != null) {
                 sharedManifestData.packageIdentifier = input
@@ -33,7 +33,7 @@ object PackageIdentifier : KoinComponent {
 
     fun isPackageIdentifierValid(
         identifier: String?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val packageIdentifierSchema = installerSchema.definitions.packageIdentifier
         return when {

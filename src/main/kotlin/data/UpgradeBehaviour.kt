@@ -15,14 +15,14 @@ import org.koin.core.component.inject
 import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object UpgradeBehaviour : KoinComponent {
     fun Terminal.upgradeBehaviourPrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl = get()
+        val schemasImpl: SchemasImpl = get()
         var promptInput: String?
-        val upgradeBehaviourEnum = Enum.upgradeBehaviour(installerSchemaImpl.installerSchema)
+        val upgradeBehaviourEnum = Enum.upgradeBehaviour(schemasImpl.installerSchema)
         do {
             println(
                 verticalLayout {
@@ -63,7 +63,7 @@ object UpgradeBehaviour : KoinComponent {
 
     fun isUpgradeBehaviourValid(
         option: Char?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val upgradeBehaviourEnum = Enum.upgradeBehaviour(installerSchema)
         return when {

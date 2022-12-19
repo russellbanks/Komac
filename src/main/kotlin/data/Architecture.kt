@@ -14,15 +14,15 @@ import org.koin.core.component.inject
 import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object Architecture : KoinComponent {
 
     fun Terminal.architecturePrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl by inject()
+        val schemasImpl: SchemasImpl by inject()
         do {
-            println(brightGreen(Prompts.architectureInfo(installerSchemaImpl.installerSchema)))
+            println(brightGreen(Prompts.architectureInfo(schemasImpl.installerSchema)))
             val input = prompt(brightWhite(PromptType.Architecture.toString()))?.trim()?.lowercase()
             val (architectureValid, error) = isArchitectureValid(input)
             error?.let { println(red(it)) }
@@ -35,7 +35,7 @@ object Architecture : KoinComponent {
 
     fun isArchitectureValid(
         architecture: String?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val architecturesEnum = Enum.architecture(installerSchema)
         return when {

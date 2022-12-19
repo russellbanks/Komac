@@ -7,8 +7,8 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.DefaultLocaleManifest
-import schemas.DefaultLocaleSchemaImpl
 import schemas.Schemas
+import schemas.SchemasImpl
 import schemas.TerminalInstance
 
 @Single
@@ -17,9 +17,9 @@ class DefaultLocaleManifestData : KoinComponent {
 
     private val terminalInstance: TerminalInstance by inject()
     private val sharedManifestData: SharedManifestData by inject()
-    private val defaultLocaleSchemaImpl: DefaultLocaleSchemaImpl by inject()
+    private val schemasImpl: SchemasImpl by inject()
     private val defaultLocaleSchema
-        get() = defaultLocaleSchemaImpl.defaultLocaleSchema
+        get() = schemasImpl.defaultLocaleSchema
 
     fun createDefaultLocaleManifest() {
         DefaultLocaleManifest(

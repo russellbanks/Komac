@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -14,14 +15,14 @@ import org.koin.core.component.inject
 import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object InstallerScope : KoinComponent {
     fun Terminal.installerScopePrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl = get()
+        val schemaImpl: SchemasImpl = get()
         var promptInput: String?
-        val installerScopeEnum = Enum.installerScope(installerSchemaImpl.installerSchema)
+        val installerScopeEnum = Enum.installerScope(schemaImpl.installerSchema)
         do {
             println(
                 verticalLayout {
@@ -60,7 +61,7 @@ object InstallerScope : KoinComponent {
 
     fun isInstallerScopeValid(
         option: Char?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val installerScopeEnum = Enum.installerScope(installerSchema)
         return when {

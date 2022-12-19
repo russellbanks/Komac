@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -11,7 +12,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object ProductCode : KoinComponent {
     fun Terminal.productCodePrompt() {
@@ -27,7 +28,7 @@ object ProductCode : KoinComponent {
 
     fun isProductCodeValid(
         productCode: String?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val productCodeMinLength = installerSchema.definitions.productCode.minLength
         val productCodeMaxLength = installerSchema.definitions.productCode.maxLength

@@ -3,7 +3,7 @@ package input
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 enum class InstallerSwitch : KoinComponent {
     Silent,
@@ -21,7 +21,7 @@ enum class InstallerSwitch : KoinComponent {
     }
 
     fun getLengthBoundary(
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Int, Int> {
         val installerSwitchProperties = installerSchema.definitions.installerSwitches.properties
         return when (this) {

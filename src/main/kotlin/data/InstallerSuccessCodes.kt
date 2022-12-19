@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -12,14 +13,14 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object InstallerSuccessCodes : KoinComponent {
     fun Terminal.installerSuccessCodesPrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl by inject()
-        val installerSuccessCodesSchema = installerSchemaImpl.installerSchema.definitions.installerSuccessCodes
-        val installerReturnCodeSchema = installerSchemaImpl.installerSchema.definitions.installerReturnCode
+        val schemasImpl: SchemasImpl by inject()
+        val installerSuccessCodesSchema = schemasImpl.installerSchema.definitions.installerSuccessCodes
+        val installerReturnCodeSchema = schemasImpl.installerSchema.definitions.installerReturnCode
         do {
             println(brightYellow(promptInfo(installerSuccessCodesSchema)))
             val input = prompt(brightWhite(PromptType.InstallerSuccessCodes.toString()))
@@ -38,7 +39,7 @@ object InstallerSuccessCodes : KoinComponent {
 
     fun areInstallerSuccessCodesValid(
         installerSuccessCodes: Iterable<Int>?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val installerSuccessCodesSchema = installerSchema.definitions.installerSuccessCodes
         val installerReturnCodeSchema = installerSchema.definitions.installerReturnCode

@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -13,14 +14,14 @@ import org.koin.core.component.inject
 import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object InstallerType : KoinComponent {
     fun Terminal.installerTypePrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl = get()
+        val schemasImpl: SchemasImpl = get()
         do {
-            println(brightGreen(Prompts.installerTypeInfo(installerSchemaImpl.installerSchema)))
+            println(brightGreen(Prompts.installerTypeInfo(schemasImpl.installerSchema)))
             val input = prompt(brightWhite(PromptType.InstallerType.toString()))?.trim()?.lowercase()
             val (installerTypeValid, error) = isInstallerTypeValid(input)
             error?.let { println(red(it)) }
@@ -33,7 +34,7 @@ object InstallerType : KoinComponent {
 
     fun isInstallerTypeValid(
         installerType: String?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val installerTypesEnum = Enum.installerType(installerSchema)
         return when {

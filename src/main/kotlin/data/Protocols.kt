@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -12,13 +13,13 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
-import schemas.InstallerSchemaImpl
+import schemas.SchemasImpl
 
 object Protocols : KoinComponent {
     fun Terminal.protocolsPrompt() {
         val installerManifestData: InstallerManifestData by inject()
-        val installerSchemaImpl: InstallerSchemaImpl by inject()
-        val protocolsSchema = installerSchemaImpl.installerSchema.definitions.protocols
+        val schemasImpl: SchemasImpl by inject()
+        val protocolsSchema = schemasImpl.installerSchema.definitions.protocols
         do {
             println(
                 brightYellow("${Prompts.optional} ${protocolsSchema.description} (Max ${protocolsSchema.maxItems})")
@@ -34,7 +35,7 @@ object Protocols : KoinComponent {
 
     fun areProtocolsValid(
         protocols: Iterable<String>?,
-        installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
+        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {
         val protocolsSchema = installerSchema.definitions.protocols
         return when {
