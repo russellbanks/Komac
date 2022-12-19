@@ -35,6 +35,7 @@ class InstallerManifestData : KoinComponent {
     var protocols: List<String>? = null
     var commands: List<String>? = null
     var installerSuccessCodes: List<Int>? = null
+    var installModes: List<InstallerManifest.InstallModes>? = null
 
     private val terminalInstance: TerminalInstance by inject()
     private val installerSchemaImpl: InstallerSchemaImpl by inject()
@@ -73,6 +74,7 @@ class InstallerManifestData : KoinComponent {
             installerLocale = if (installersLocaleDistinct) installerLocale?.ifBlank { null } else null,
             installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
             scope = if (installerScopeDistinct) installerScope else null,
+            installModes = installModes?.ifEmpty { null },
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null },
             upgradeBehavior = if (upgradeBehaviourDistinct) upgradeBehavior else null,
             commands = commands?.ifEmpty { null },
@@ -88,7 +90,7 @@ class InstallerManifestData : KoinComponent {
                     installerSwitches = if (installerSwitchesDistinct) null else installer.installerSwitches,
                     installerType = if (installerTypeDistinct) null else installer.installerType,
                 )
-                                        },
+            },
             manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = Schemas.manifestVersion
         ).also {

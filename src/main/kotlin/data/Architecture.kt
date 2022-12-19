@@ -48,7 +48,7 @@ object Architecture : KoinComponent {
     }
 
     private fun String.toArchitecture(): InstallerManifest.Installer.Architecture {
-        enumValues<InstallerManifest.Installer.Architecture>().forEach {
+        InstallerManifest.Installer.Architecture.values().forEach {
             if (it.toString().lowercase() == this) return it
         }
         throw IllegalArgumentException("Invalid architecture: $this")

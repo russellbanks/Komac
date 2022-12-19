@@ -75,7 +75,7 @@ object InstallerScope : KoinComponent {
     }
 
     private fun String.toScope(): InstallerManifest.Scope? {
-        return enumValues<InstallerManifest.Scope>().firstOrNull {
+        return InstallerManifest.Scope.values().firstOrNull {
             it.name.lowercase() == this.lowercase()
         }
     }

@@ -78,6 +78,6 @@ object UpgradeBehaviour : KoinComponent {
     }
 
     private fun String.toUpgradeBehaviour(): InstallerManifest.UpgradeBehavior? {
-        return enumValues<InstallerManifest.UpgradeBehavior>().firstOrNull { it.name.lowercase() == this.lowercase() }
+        return InstallerManifest.UpgradeBehavior.values().firstOrNull { it.name.lowercase() == lowercase() }
     }
 }

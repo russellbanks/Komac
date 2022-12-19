@@ -6,6 +6,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.Architecture.architecturePrompt
 import data.Commands.commandsPrompt
 import data.FileExtensions.fileExtensionsPrompt
+import data.InstallModes.installModesPrompt
 import data.InstallerLocale.installerLocalePrompt
 import data.InstallerManifestData
 import data.InstallerScope.installerScopePrompt
@@ -51,6 +52,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             protocolsPrompt()
             commandsPrompt()
             installerSuccessCodesPrompt()
+            installModesPrompt()
             installerManifestData.createInstallerManifest()
         }
     }

@@ -49,7 +49,7 @@ object InstallerType : KoinComponent {
     }
 
     private fun String.toInstallerType(): InstallerManifest.InstallerType {
-        enumValues<InstallerManifest.InstallerType>().forEach {
+        InstallerManifest.InstallerType.values().forEach {
             if (it.toString().lowercase() == this) return it
         }
         throw IllegalArgumentException("Invalid installer type: $this")
