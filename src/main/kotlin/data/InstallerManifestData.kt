@@ -63,11 +63,47 @@ class InstallerManifestData : KoinComponent {
         InstallerManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            commands = commands?.ifEmpty { null },
+            installerLocale = if (installers.distinctBy { it.installerLocale }.size == 1) {
+                installerLocale?.ifBlank { null }
+            } else null,
+            installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
+            scope = if (installers.distinctBy { it.scope }.size == 1) installerScope else null,
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null },
-            fileExtensions = fileExtensions?.ifEmpty { null },
+            upgradeBehavior = if (installers.distinctBy { it.upgradeBehavior }.size == 1) upgradeBehavior else null,
+            commands = commands?.ifEmpty { null },
             protocols = protocols?.ifEmpty { null },
-            installers = installers,
+            fileExtensions = fileExtensions?.ifEmpty { null },
+            releaseDate = if (installers.distinctBy { it.releaseDate }.size == 1) releaseDate else null,
+            installers = installers.map { installer ->
+                installer.copy(
+                    installerLocale = if (installers.distinctBy { it.installerLocale }.size == 1) {
+                        null
+                    } else {
+                        installer.installerLocale
+                    },
+                    scope = if (installers.distinctBy { it.scope }.size == 1) null else installer.scope,
+                    releaseDate = if (installers.distinctBy { it.releaseDate }.size == 1) {
+                        null
+                    } else {
+                        installer.releaseDate
+                    },
+                    upgradeBehavior = if (installers.distinctBy { it.upgradeBehavior }.size == 1) {
+                        null
+                    } else {
+                        installer.upgradeBehavior
+                    },
+                    installerSwitches = if (installers.distinctBy { it.installerSwitches }.size == 1) {
+                        null
+                    } else {
+                        installer.installerSwitches
+                    },
+                    installerType = if (installers.distinctBy { it.installerType }.size == 1) {
+                        null
+                    } else {
+                        installer.installerType
+                    },
+                )
+                                        },
             manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = Schemas.manifestVersion
         ).also {
