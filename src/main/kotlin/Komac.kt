@@ -1,10 +1,13 @@
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.table.verticalLayout
 import input.Mode
+import input.Parameter
 import input.Prompts
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
@@ -13,10 +16,12 @@ import schemas.TerminalInstance
 import kotlin.system.exitProcess
 
 class Komac : CliktCommand(), KoinComponent {
-    private val terminalInstance: TerminalInstance by inject()
+    private val option: String? by argument().optional()
 
     override fun run() = runBlocking {
+        val terminalInstance: TerminalInstance by inject()
         with(terminalInstance.terminal) {
+            if (option?.lowercase() == Parameter.New.name.lowercase()) NewManifest(this).main()
             println(
                 verticalLayout {
                     cell(brightYellow("Select mode:"))
