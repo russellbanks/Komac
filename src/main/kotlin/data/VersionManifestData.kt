@@ -6,33 +6,26 @@ import com.charleskorn.kaml.YamlConfiguration
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.DefaultLocaleManifest
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.TerminalInstance
+import schemas.VersionManifest
 
 @Single
-class DefaultLocaleManifestData : KoinComponent {
-    lateinit var publisher: String
-    lateinit var packageName: String
-
+class VersionManifestData : KoinComponent {
     private val terminalInstance: TerminalInstance by inject()
+    private val schemaImpl: SchemasImpl by inject()
     private val sharedManifestData: SharedManifestData by inject()
-    private val schemasImpl: SchemasImpl by inject()
-    private val defaultLocaleSchema
-        get() = schemasImpl.defaultLocaleSchema
+    private val versionSchema
+        get() = schemaImpl.versionSchema
 
-    fun createDefaultLocaleManifest() {
-        DefaultLocaleManifest(
+    fun createVersionManifest() {
+        VersionManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
-            packageLocale = sharedManifestData.defaultLocale,
-            publisher = publisher,
-            packageName = packageName,
-            license = "License",
-            shortDescription = "ShortDescription",
-            manifestType = defaultLocaleSchema.properties.manifestType.const,
-            manifestVersion = defaultLocaleSchema.properties.manifestVersion.default,
+            defaultLocale = sharedManifestData.defaultLocale,
+            manifestType = versionSchema.properties.manifestType.const,
+            manifestVersion = versionSchema.properties.manifestVersion.default,
         ).also {
             Yaml(
                 configuration = YamlConfiguration(
@@ -42,9 +35,9 @@ class DefaultLocaleManifestData : KoinComponent {
             ).run {
                 buildString {
                     appendLine(Schemas.Comments.createdBy)
-                    appendLine(Schemas.Comments.languageServer(defaultLocaleSchema.id))
+                    appendLine(Schemas.Comments.languageServer(versionSchema.id))
                     appendLine()
-                    appendLine(encodeToString(DefaultLocaleManifest.serializer(), it))
+                    appendLine(encodeToString(VersionManifest.serializer(), it))
                 }.let(terminalInstance.terminal::print)
             }
         }

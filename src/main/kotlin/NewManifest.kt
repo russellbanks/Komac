@@ -24,6 +24,7 @@ import data.Protocols.protocolsPrompt
 import data.Publisher.publisherPrompt
 import data.ReleaseDate.releaseDatePrompt
 import data.UpgradeBehaviour.upgradeBehaviourPrompt
+import data.VersionManifestData
 import input.InstallerSwitch
 import input.Polar
 import input.Prompts
@@ -33,6 +34,7 @@ import org.koin.core.component.inject
 class NewManifest(private val terminal: Terminal) : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val defaultLocalManifestData: DefaultLocaleManifestData by inject()
+    private val versionManifestData: VersionManifestData by inject()
 
     suspend fun main() {
         with(terminal) {
@@ -60,7 +62,10 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             publisherPrompt()
             packageNamePrompt()
             installerManifestData.createInstallerManifest()
+            println()
             defaultLocalManifestData.createDefaultLocaleManifest()
+            println()
+            versionManifestData.createVersionManifest()
         }
     }
 

@@ -30,7 +30,7 @@ object Locale : KoinComponent {
     }
 
     suspend fun Terminal.packageLocalePrompt() {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+        val sharedManifestData: SharedManifestData by inject()
         val schemasImpl: SchemasImpl = get()
         schemasImpl.awaitSchema(Schema.DefaultLocale)
         val packageLocaleSchema = schemasImpl.defaultLocaleSchema.properties.packageLocale
@@ -42,7 +42,7 @@ object Locale : KoinComponent {
             )?.trim()
             val (packageLocaleValid, error) = isPackageLocaleValid(input)
             if (packageLocaleValid == Validation.Success && input != null) {
-                defaultLocaleManifestData.packageLocale = input
+                sharedManifestData.defaultLocale = input
             }
             error?.let { println(red(it)) }
             println()

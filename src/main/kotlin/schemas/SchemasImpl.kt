@@ -23,8 +23,12 @@ class SchemasImpl : KoinComponent {
     private val terminalInstance: TerminalInstance by inject()
     private lateinit var installerSchemaJob: Deferred<Unit>
     private lateinit var defaultLocaleSchemaJob: Deferred<Unit>
+    private lateinit var localeSchemaJob: Deferred<Unit>
+    private lateinit var versionSchemaJob: Deferred<Unit>
     lateinit var installerSchema: InstallerSchema
     lateinit var defaultLocaleSchema: DefaultLocaleSchema
+    lateinit var localeSchema: LocaleSchema
+    lateinit var versionSchema: VersionSchema
 
     init {
         CoroutineScope(Dispatchers.Default).launch {
@@ -40,8 +44,16 @@ class SchemasImpl : KoinComponent {
             defaultLocaleSchemaJob = async {
                 defaultLocaleSchema = json.decodeFromString(client.get(Schemas.defaultLocaleSchema).body())
             }
+            localeSchemaJob = async {
+                localeSchema = json.decodeFromString(client.get(Schemas.localeSchema).body())
+            }
+            versionSchemaJob = async {
+                versionSchema = json.decodeFromString(client.get(Schemas.versionSchema).body())
+            }
             installerSchemaJob.await()
             defaultLocaleSchemaJob.await()
+            localeSchemaJob.await()
+            versionSchemaJob.await()
             client.close()
         }
     }
@@ -49,7 +61,9 @@ class SchemasImpl : KoinComponent {
     suspend fun awaitSchema(schema: Schema) {
         val job = when (schema) {
             Schema.Installer -> installerSchemaJob
-            else -> defaultLocaleSchemaJob
+            Schema.DefaultLocale -> defaultLocaleSchemaJob
+            Schema.Locale -> localeSchemaJob
+            Schema.Version -> versionSchemaJob
         }
         with(job) {
             if (isActive) {
