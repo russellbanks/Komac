@@ -21,54 +21,40 @@ import org.koin.core.component.inject
 @Single
 class SchemasImpl : KoinComponent {
     private val terminalInstance: TerminalInstance by inject()
-    lateinit var installerSchema: InstallerSchema
     private lateinit var installerSchemaJob: Deferred<Unit>
-    lateinit var defaultLocaleSchema: DefaultLocaleSchema
     private lateinit var defaultLocaleSchemaJob: Deferred<Unit>
+    lateinit var installerSchema: InstallerSchema
+    lateinit var defaultLocaleSchema: DefaultLocaleSchema
 
     init {
-        val client = HttpClient(Java) {
-            install(UserAgent) {
-                agent = Ktor.userAgent
-            }
-        }
-        val json = Json { ignoreUnknownKeys = true }
         CoroutineScope(Dispatchers.Default).launch {
+            val client = HttpClient(Java) {
+                install(UserAgent) {
+                    agent = Ktor.userAgent
+                }
+            }
+            val json = Json { ignoreUnknownKeys = true }
             installerSchemaJob = async {
                 installerSchema = json.decodeFromString(client.get(Schemas.installerSchema).body())
             }
-            installerSchemaJob.await()
             defaultLocaleSchemaJob = async {
                 defaultLocaleSchema = json.decodeFromString(client.get(Schemas.defaultLocaleSchema).body())
             }
+            installerSchemaJob.await()
             defaultLocaleSchemaJob.await()
             client.close()
         }
     }
 
-    suspend fun awaitInstallerSchema() {
-        with(installerSchemaJob) {
-            if (isActive) {
-                terminalInstance.terminal.progressAnimation {
-                    text("Retrieving installer schema")
-                    progressBar()
-                }.run {
-                    start()
-                    invokeOnCompletion {
-                        stop()
-                        clear()
-                    }
-                    await()
-                }
-            }
+    suspend fun awaitSchema(schema: Schema) {
+        val job = when (schema) {
+            Schema.Installer -> installerSchemaJob
+            else -> defaultLocaleSchemaJob
         }
-    }
-
-    suspend fun awaitDefaultLocaleSchema() {
-        with(defaultLocaleSchemaJob) {
+        with(job) {
             if (isActive) {
                 terminalInstance.terminal.progressAnimation {
-                    text("Retrieving default locale schema")
+                    text("Retrieving $schema schema")
                     progressBar()
                 }.run {
                     start()

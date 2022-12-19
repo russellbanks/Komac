@@ -12,6 +12,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
+import schemas.Schema
 import schemas.SchemasImpl
 
 object PackageIdentifier : KoinComponent {
@@ -21,7 +22,7 @@ object PackageIdentifier : KoinComponent {
         do {
             println(brightGreen(Prompts.packageIdentifierInfo))
             val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
-            schemasImpl.awaitInstallerSchema()
+            schemasImpl.awaitSchema(Schema.Installer)
             val (packageIdentifierValid, error) = isPackageIdentifierValid(input)
             if (packageIdentifierValid == Validation.Success && input != null) {
                 sharedManifestData.packageIdentifier = input
