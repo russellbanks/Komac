@@ -46,9 +46,6 @@ object Publisher : KoinComponent {
     }
 
     private fun publisherInfo(publisherSchema: DefaultLocaleSchema.Properties.Publisher): String {
-        return buildString {
-            append("Enter ${publisherSchema.description.lowercase()}, shown in Apps and Features. ")
-            append("For example: Microsoft Corporation")
-        }
+        return "Enter ${publisherSchema.description.lowercase()}. For example: Microsoft Corporation"
     }
 }

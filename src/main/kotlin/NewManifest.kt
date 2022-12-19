@@ -17,6 +17,7 @@ import data.InstallerUrl.installerDownloadPrompt
 import data.Locale.installerLocalePrompt
 import data.Locale.packageLocalePrompt
 import data.PackageIdentifier.packageIdentifierPrompt
+import data.PackageName.packageNamePrompt
 import data.PackageVersion.packageVersionPrompt
 import data.ProductCode.productCodePrompt
 import data.Protocols.protocolsPrompt
@@ -57,6 +58,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             installModesPrompt()
             packageLocalePrompt()
             publisherPrompt()
+            packageNamePrompt()
             installerManifestData.createInstallerManifest()
             defaultLocalManifestData.createDefaultLocaleManifest()
         }

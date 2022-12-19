@@ -2,6 +2,7 @@ package input
 
 enum class PromptType {
     Architecture,
+    PackageName,
     Publisher,
     Commands,
     CustomSwitch,
