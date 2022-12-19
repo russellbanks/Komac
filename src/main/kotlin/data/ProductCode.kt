@@ -9,7 +9,6 @@ import com.github.ajalt.mordant.terminal.Terminal
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.SchemasImpl
@@ -17,10 +16,12 @@ import schemas.SchemasImpl
 object ProductCode : KoinComponent {
     fun Terminal.productCodePrompt() {
         val installerManifestData: InstallerManifestData by inject()
+        val schemasImpl: SchemasImpl by inject()
+        val productCodeSchema = schemasImpl.installerSchema.definitions.productCode
         do {
-            println(brightYellow(Prompts.productCodeInfo))
+            println(brightYellow(productCodeInfo))
             installerManifestData.productCode = prompt(brightWhite(PromptType.ProductCode.toString()))?.trim()
-            val (productCodeValid, error) = isProductCodeValid(installerManifestData.productCode)
+            val (productCodeValid, error) = isProductCodeValid(installerManifestData.productCode, productCodeSchema)
             error?.let { println(red(it)) }
             println()
         } while (productCodeValid != Validation.Success)
@@ -28,18 +29,19 @@ object ProductCode : KoinComponent {
 
     fun isProductCodeValid(
         productCode: String?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
+        productCodeSchema: InstallerSchema.Definitions.ProductCode
     ): Pair<Validation, String?> {
-        val productCodeMinLength = installerSchema.definitions.productCode.minLength
-        val productCodeMaxLength = installerSchema.definitions.productCode.maxLength
         return when {
-            !productCode.isNullOrBlank() && productCode.length > productCodeMaxLength -> {
+            !productCode.isNullOrBlank() && productCode.length > productCodeSchema.maxLength -> {
                 Validation.InvalidLength to Errors.invalidLength(
-                    min = productCodeMinLength,
-                    max = productCodeMaxLength
+                    min = productCodeSchema.minLength,
+                    max = productCodeSchema.maxLength
                 )
             }
             else -> Validation.Success to null
         }
     }
+
+    private const val productCodeInfo = "${Prompts.optional} Enter the application product code. " +
+        "Looks like {CF8E6E00-9C03-4440-81C0-21FACB921A6B}"
 }

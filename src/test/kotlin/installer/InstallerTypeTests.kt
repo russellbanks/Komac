@@ -7,14 +7,13 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import schemas.Enum
 
 class InstallerTypeTests : FunSpec({
-    val installerSchema = InstallerSchemaData.installerSchema
+    val installerTypeSchema = InstallerSchemaData.installerSchema.definitions.installerType
 
     context("Installer Type Checks") {
-        withData(Enum.installerType(installerSchema)) {
-            isInstallerTypeValid(it, installerSchema).first shouldBe Validation.Success
+        withData(installerTypeSchema.enum) {
+            isInstallerTypeValid(it, installerTypeSchema).first shouldBe Validation.Success
         }
 
         withData(
@@ -32,7 +31,7 @@ class InstallerTypeTests : FunSpec({
                 null
             )
         ) {
-            isInstallerTypeValid(it, installerSchema).first shouldNotBe Validation.Success
+            isInstallerTypeValid(it, installerTypeSchema).first shouldNotBe Validation.Success
         }
     }
 })

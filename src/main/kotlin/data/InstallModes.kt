@@ -22,7 +22,7 @@ object InstallModes : KoinComponent {
         val schemasImpl: SchemasImpl by inject()
         val installModesSchema = schemasImpl.installerSchema.definitions.installModes
         do {
-            println(brightYellow(promptInfo(installModesSchema)))
+            println(brightYellow(installModesInfo(installModesSchema)))
             val input = prompt(brightWhite(PromptType.InstallModes.toString()))
                 ?.trim()?.convertToYamlList(installModesSchema.uniqueItems)
             val (installModesValid, error) = areInstallModesValid(input)
@@ -53,7 +53,7 @@ object InstallModes : KoinComponent {
         }
     }
 
-    private fun promptInfo(installModesDefinitions: InstallerSchema.Definitions.InstallModes): String {
+    private fun installModesInfo(installModesDefinitions: InstallerSchema.Definitions.InstallModes): String {
         return buildString {
             append(Prompts.optional)
             append(" ")

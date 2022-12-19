@@ -24,7 +24,7 @@ object InstallerSwitch : KoinComponent {
             installerSwitch != InstallerSwitch.Custom
         do {
             val infoTextColour = if (isRequired) brightGreen else brightYellow
-            println(infoTextColour(Prompts.switchInfo(installerManifestData.installerType, installerSwitch)))
+            println(infoTextColour(switchInfo(installerManifestData.installerType, installerSwitch)))
             var switchResponse: String? = null
             when (installerSwitch) {
                 InstallerSwitch.Silent -> installerManifestData.silentSwitch = prompt(
@@ -64,6 +64,26 @@ object InstallerSwitch : KoinComponent {
                 Validation.InvalidLength to Errors.invalidLength(min = minBoundary, max = maxBoundary)
             }
             else -> Validation.Success to null
+        }
+    }
+
+    private fun switchInfo(installerType: InstallerManifest.InstallerType?, installerSwitch: InstallerSwitch): String {
+        return buildString {
+            append(
+                when {
+                    installerType == InstallerManifest.InstallerType.EXE &&
+                        installerSwitch != InstallerSwitch.Custom -> Prompts.required
+                    else -> Prompts.optional
+                }
+            )
+            append(" Enter the ${installerSwitch.toString().lowercase()}. For example: ")
+            append(
+                when (installerSwitch) {
+                    InstallerSwitch.Silent -> "/S, -verysilent, /qn, --silent, /exenoui."
+                    InstallerSwitch.SilentWithProgress -> "/S, -silent, /qb, /exebasicui."
+                    InstallerSwitch.Custom -> "/norestart, -norestart"
+                }
+            )
         }
     }
 }

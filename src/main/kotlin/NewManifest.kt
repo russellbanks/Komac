@@ -69,7 +69,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
         do {
             println(
                 verticalLayout {
-                    cell(brightYellow(Prompts.additionalInstallerInfo))
+                    cell(brightYellow(additionalInstallerInfo))
                     Polar.values().forEach {
                         val textColour = if (it == Polar.No) brightGreen else brightWhite
                         cell(
@@ -94,5 +94,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             promptInput != Polar.No.toString().first().lowercaseChar()
         )
         return promptInput == Polar.Yes.toString().first().lowercaseChar()
+    }
+
+    companion object {
+        private const val additionalInstallerInfo = "Do you want to create another installer?"
     }
 }

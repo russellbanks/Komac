@@ -11,7 +11,6 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.SchemasImpl
@@ -20,10 +19,11 @@ object InstallerType : KoinComponent {
     fun Terminal.installerTypePrompt() {
         val installerManifestData: InstallerManifestData by inject()
         val schemasImpl: SchemasImpl = get()
+        val installerTypeSchema = schemasImpl.installerSchema.definitions.installerType
         do {
-            println(brightGreen(Prompts.installerTypeInfo(schemasImpl.installerSchema)))
+            println(brightGreen(installerTypeInfo(installerTypeSchema)))
             val input = prompt(brightWhite(PromptType.InstallerType.toString()))?.trim()?.lowercase()
-            val (installerTypeValid, error) = isInstallerTypeValid(input)
+            val (installerTypeValid, error) = isInstallerTypeValid(input, installerTypeSchema)
             error?.let { println(red(it)) }
             if (installerTypeValid == Validation.Success && input != null) {
                 installerManifestData.installerType = input.toInstallerType()
@@ -34,15 +34,14 @@ object InstallerType : KoinComponent {
 
     fun isInstallerTypeValid(
         installerType: String?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
+        installerTypeSchema: InstallerSchema.Definitions.InstallerType
     ): Pair<Validation, String?> {
-        val installerTypesEnum = Enum.installerType(installerSchema)
         return when {
             installerType.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerType)
-            !installerTypesEnum.contains(installerType) -> {
+            !installerTypeSchema.enum.contains(installerType) -> {
                 Validation.InvalidInstallerType to Errors.invalidEnum(
                     Validation.InvalidInstallerType,
-                    installerTypesEnum
+                    installerTypeSchema.enum
                 )
             }
             else -> Validation.Success to null
@@ -54,5 +53,12 @@ object InstallerType : KoinComponent {
             if (it.toString().lowercase() == this) return it
         }
         throw IllegalArgumentException("Invalid installer type: $this")
+    }
+
+    private fun installerTypeInfo(installerTypeSchema: InstallerSchema.Definitions.InstallerType): String {
+        return buildString {
+            append("${Prompts.required} Enter the installer type. Options: ")
+            append(installerTypeSchema.enum.joinToString(", "))
+        }
     }
 }

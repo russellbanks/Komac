@@ -75,13 +75,16 @@ class InstallerManifestTests : FunSpec() {
 
         context("Installer Scope Tests") {
             withData(listOf('M', 'U')) {
-                isInstallerScopeValid(it, installerSchema).first shouldBe Validation.Success
+                isInstallerScopeValid(it, installerSchema.definitions.scope).first shouldBe Validation.Success
             }
         }
 
         context("Upgrade Behaviour Tests") {
             withData(listOf('I', 'U')) {
-                isUpgradeBehaviourValid(it, installerSchema).first shouldBe Validation.Success
+                isUpgradeBehaviourValid(
+                    it,
+                    installerSchema.definitions.upgradeBehavior
+                ).first shouldBe Validation.Success
             }
         }
 

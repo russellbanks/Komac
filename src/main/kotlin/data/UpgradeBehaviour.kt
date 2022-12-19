@@ -12,7 +12,6 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.SchemasImpl
@@ -21,15 +20,16 @@ object UpgradeBehaviour : KoinComponent {
     fun Terminal.upgradeBehaviourPrompt() {
         val installerManifestData: InstallerManifestData by inject()
         val schemasImpl: SchemasImpl = get()
+        val upgradeBehaviourSchema = schemasImpl.installerSchema.definitions.upgradeBehavior
         var promptInput: String?
-        val upgradeBehaviourEnum = Enum.upgradeBehaviour(schemasImpl.installerSchema)
         do {
             println(
                 verticalLayout {
-                    cell(brightYellow(Prompts.upgradeBehaviourInfo))
-                    upgradeBehaviourEnum.forEach { behaviour ->
+                    cell(brightYellow(upgradeBehaviourInfo))
+                    upgradeBehaviourSchema.enum.forEach { behaviour ->
                         val textColour = when {
-                            behaviour.first().titlecase() == upgradeBehaviourEnum.first().first().titlecase() -> {
+                            behaviour.first().titlecase() ==
+                                upgradeBehaviourSchema.enum.first().first().titlecase() -> {
                                 brightGreen
                             }
                             else -> brightWhite
@@ -48,30 +48,30 @@ object UpgradeBehaviour : KoinComponent {
             )
             promptInput = prompt(
                 prompt = brightWhite(Prompts.enterChoice),
-                default = upgradeBehaviourEnum.first().first().titlecase()
+                default = upgradeBehaviourSchema.enum.first().first().titlecase()
             )?.trim()
             val (upgradeBehaviourValid, error) = isUpgradeBehaviourValid(
-                promptInput?.firstOrNull()
+                promptInput?.firstOrNull(),
+                upgradeBehaviourSchema
             )
             error?.let { println(red(it)) }
             println()
         } while (upgradeBehaviourValid != Validation.Success)
-        installerManifestData.upgradeBehavior = upgradeBehaviourEnum.firstOrNull {
+        installerManifestData.upgradeBehavior = upgradeBehaviourSchema.enum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
         }?.toUpgradeBehaviour()
     }
 
     fun isUpgradeBehaviourValid(
         option: Char?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
+        upgradeBehaviourSchema: InstallerSchema.Definitions.UpgradeBehavior
     ): Pair<Validation, String?> {
-        val upgradeBehaviourEnum = Enum.upgradeBehaviour(installerSchema)
         return when {
-            upgradeBehaviourEnum.all {
+            upgradeBehaviourSchema.enum.all {
                 it.first().titlecase() != option?.titlecase()
             } -> Validation.InvalidUpgradeBehaviour to Errors.invalidEnum(
                 Validation.InvalidUpgradeBehaviour,
-                upgradeBehaviourEnum
+                upgradeBehaviourSchema.enum
             )
             else -> Validation.Success to null
         }
@@ -80,4 +80,6 @@ object UpgradeBehaviour : KoinComponent {
     private fun String.toUpgradeBehaviour(): InstallerManifest.UpgradeBehavior? {
         return InstallerManifest.UpgradeBehavior.values().firstOrNull { it.name.lowercase() == lowercase() }
     }
+
+    private const val upgradeBehaviourInfo = "${Prompts.optional} Enter the Upgrade Behavior"
 }

@@ -12,7 +12,6 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.SchemasImpl
@@ -22,12 +21,12 @@ object InstallerScope : KoinComponent {
         val installerManifestData: InstallerManifestData by inject()
         val schemaImpl: SchemasImpl = get()
         var promptInput: String?
-        val installerScopeEnum = Enum.installerScope(schemaImpl.installerSchema)
+        val installerScopeSchema = schemaImpl.installerSchema.definitions.scope
         do {
             println(
                 verticalLayout {
-                    cell(brightYellow(Prompts.installerScopeInfo))
-                    installerScopeEnum.forEach { scope ->
+                    cell(brightYellow(installerScopeInfo))
+                    installerScopeSchema.enum.forEach { scope ->
                         cell(
                             brightWhite(
                                 buildString {
@@ -50,26 +49,25 @@ object InstallerScope : KoinComponent {
                 }
             )
             promptInput = prompt(brightWhite(Prompts.enterChoice), default = Prompts.noIdea.first().titlecase())?.trim()
-            val (installerScopeValid, error) = isInstallerScopeValid(promptInput?.firstOrNull())
+            val (installerScopeValid, error) = isInstallerScopeValid(promptInput?.firstOrNull(), installerScopeSchema)
             error?.let { println(red(it)) }
             println()
         } while (installerScopeValid != Validation.Success)
-        installerManifestData.installerScope = installerScopeEnum.firstOrNull {
+        installerManifestData.installerScope = installerScopeSchema.enum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
         }?.toScope()
     }
 
     fun isInstallerScopeValid(
         option: Char?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
+        installerScopeSchema: InstallerSchema.Definitions.Scope
     ): Pair<Validation, String?> {
-        val installerScopeEnum = Enum.installerScope(installerSchema)
         return when {
-            option != Prompts.noIdea.first() && installerScopeEnum.all {
+            option != Prompts.noIdea.first() && installerScopeSchema.enum.all {
                 it.first().titlecase() != option?.titlecase()
             } -> Validation.InvalidInstallerScope to Errors.invalidEnum(
                 Validation.InvalidInstallerScope,
-                installerScopeEnum
+                installerScopeSchema.enum
             )
             else -> Validation.Success to null
         }
@@ -80,4 +78,6 @@ object InstallerScope : KoinComponent {
             it.name.lowercase() == this.lowercase()
         }
     }
+
+    private const val installerScopeInfo = "${Prompts.optional} Enter the Installer Scope"
 }

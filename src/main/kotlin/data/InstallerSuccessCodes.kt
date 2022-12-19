@@ -22,7 +22,7 @@ object InstallerSuccessCodes : KoinComponent {
         val installerSuccessCodesSchema = schemasImpl.installerSchema.definitions.installerSuccessCodes
         val installerReturnCodeSchema = schemasImpl.installerSchema.definitions.installerReturnCode
         do {
-            println(brightYellow(promptInfo(installerSuccessCodesSchema)))
+            println(brightYellow(installerSuccessCodeInfo(installerSuccessCodesSchema)))
             val input = prompt(brightWhite(PromptType.InstallerSuccessCodes.toString()))
                 ?.trim()
                 ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
@@ -62,7 +62,9 @@ object InstallerSuccessCodes : KoinComponent {
         }
     }
 
-    private fun promptInfo(successCodesDefinitions: InstallerSchema.Definitions.InstallerSuccessCodes): String {
+    private fun installerSuccessCodeInfo(
+        successCodesDefinitions: InstallerSchema.Definitions.InstallerSuccessCodes
+    ): String {
         return "${Prompts.optional} ${successCodesDefinitions.description} (Max ${successCodesDefinitions.maxItems})"
     }
 }

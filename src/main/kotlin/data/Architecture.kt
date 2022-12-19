@@ -9,9 +9,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.Enum
 import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.SchemasImpl
@@ -21,10 +19,11 @@ object Architecture : KoinComponent {
     fun Terminal.architecturePrompt() {
         val installerManifestData: InstallerManifestData by inject()
         val schemasImpl: SchemasImpl by inject()
+        val architectureSchema = schemasImpl.installerSchema.definitions.architecture
         do {
-            println(brightGreen(Prompts.architectureInfo(schemasImpl.installerSchema)))
+            println(brightGreen(architectureInfo(architectureSchema)))
             val input = prompt(brightWhite(PromptType.Architecture.toString()))?.trim()?.lowercase()
-            val (architectureValid, error) = isArchitectureValid(input)
+            val (architectureValid, error) = isArchitectureValid(input, architectureSchema)
             error?.let { println(red(it)) }
             if (architectureValid == Validation.Success && input != null) {
                 installerManifestData.architecture = input.toArchitecture()
@@ -35,13 +34,15 @@ object Architecture : KoinComponent {
 
     fun isArchitectureValid(
         architecture: String?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
+        architectureSchema: InstallerSchema.Definitions.Architecture
     ): Pair<Validation, String?> {
-        val architecturesEnum = Enum.architecture(installerSchema)
         return when {
             architecture.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.Architecture)
-            !architecturesEnum.contains(architecture) -> {
-                Validation.InvalidArchitecture to Errors.invalidEnum(Validation.InvalidArchitecture, architecturesEnum)
+            !architectureSchema.enum.contains(architecture) -> {
+                Validation.InvalidArchitecture to Errors.invalidEnum(
+                    Validation.InvalidArchitecture,
+                    architectureSchema.enum
+                )
             }
             else -> Validation.Success to null
         }
@@ -52,5 +53,9 @@ object Architecture : KoinComponent {
             if (it.toString().lowercase() == this) return it
         }
         throw IllegalArgumentException("Invalid architecture: $this")
+    }
+
+    private fun architectureInfo(architectureSchema: InstallerSchema.Definitions.Architecture): String {
+        return "${Prompts.required} Enter the architecture. Options: ${architectureSchema.enum.joinToString(", ")}"
     }
 }

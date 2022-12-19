@@ -20,7 +20,7 @@ object PackageIdentifier : KoinComponent {
         val sharedManifestData: SharedManifestData by inject()
         val schemasImpl: SchemasImpl = get()
         do {
-            println(brightGreen(Prompts.packageIdentifierInfo))
+            println(brightGreen(packageIdentifierInfo))
             val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
             schemasImpl.awaitSchema(Schema.Installer)
             val (packageIdentifierValid, error) = isPackageIdentifierValid(input)
@@ -52,5 +52,7 @@ object PackageIdentifier : KoinComponent {
         }
     }
 
+    private const val packageIdentifierInfo = "${Prompts.required} Enter the Package Identifier, " +
+        "in the following format <Publisher shortname.Application shortname>. For example: Microsoft.Excel"
     private const val packageIdentifierMinLength = 4
 }

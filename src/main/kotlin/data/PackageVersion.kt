@@ -18,7 +18,7 @@ object PackageVersion : KoinComponent {
     fun Terminal.packageVersionPrompt() {
         val sharedManifestData: SharedManifestData by inject()
         do {
-            println(brightGreen(Prompts.packageVersionInfo))
+            println(brightGreen(packageVersionInfo))
             val input = prompt(brightWhite(PromptType.PackageVersion.toString()))?.trim()
             val (packageVersionValid, error) = isPackageVersionValid(input)
             if (packageVersionValid == Validation.Success && input != null) {
@@ -45,4 +45,6 @@ object PackageVersion : KoinComponent {
             else -> Validation.Success to null
         }
     }
+
+    private const val packageVersionInfo = "${Prompts.required} Enter the version. For example: 1.33.7"
 }

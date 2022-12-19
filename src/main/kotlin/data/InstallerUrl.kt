@@ -33,7 +33,7 @@ object InstallerUrl : KoinComponent {
     suspend fun Terminal.installerDownloadPrompt() {
         val installerManifestData: InstallerManifestData by inject()
         do {
-            println(brightGreen(Prompts.installerUrlInfo))
+            println(brightGreen(installerUrlInfo))
             val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
             val (installerUrlValid, error) = isInstallerUrlValid(input)
             if (installerUrlValid == Validation.Success && input != null) {
@@ -48,23 +48,23 @@ object InstallerUrl : KoinComponent {
             redirectedUrl != installerManifestData.installerUrl &&
             redirectedUrl?.contains(other = "github", ignoreCase = true) != true
         ) {
-            println(brightYellow(Prompts.Redirection.redirectFound))
-            println(cyan(Prompts.Redirection.discoveredUrl(redirectedUrl)))
-            println((brightGreen(Prompts.Redirection.useDetectedUrl)))
-            println(brightWhite(Prompts.Redirection.useOriginalUrl))
+            println(brightYellow(redirectFound))
+            println(cyan(discoveredUrl(redirectedUrl)))
+            println((brightGreen(useDetectedUrl)))
+            println(brightWhite(useOriginalUrl))
             if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
-                println(brightYellow(Prompts.Redirection.urlChanged))
+                println(brightYellow(urlChanged))
                 val (redirectedUrlValid, error) = isInstallerUrlValid(redirectedUrl)
                 error?.let { println(it) }
                 if (redirectedUrlValid == Validation.Success) {
                     installerManifestData.installerUrl = redirectedUrl.toString()
                 } else {
                     println()
-                    println(brightYellow(Prompts.Redirection.detectedUrlValidationFailed))
+                    println(brightYellow(detectedUrlValidationFailed))
                 }
                 println()
             } else {
-                println(brightGreen(Prompts.Redirection.originalUrlRetained(installerManifestData.installerUrl)))
+                println(brightGreen(originalUrlRetained(installerManifestData.installerUrl)))
             }
         }
 
@@ -108,4 +108,22 @@ object InstallerUrl : KoinComponent {
             }
         }
     }
+
+    private fun originalUrlRetained(url: String?) = "Original URL Retained - Proceeding with $url"
+
+    private fun discoveredUrl(url: String?) = "Discovered URL: $url"
+
+    private const val installerUrlInfo = "${Prompts.required} Enter the download url to the installer."
+
+    private const val redirectFound = "The URL appears to be redirected. " +
+        "Would you like to use the destination URL instead?"
+
+    private const val useDetectedUrl = "   [Y] Use detected URL"
+
+    private const val detectedUrlValidationFailed = "Validation has failed for the detected URL. Using original URL."
+
+    private const val useOriginalUrl = "   [N] Use original URL"
+
+    private const val urlChanged = "[Warning] URL Changed - " +
+        "The URL was changed during processing and will be re-validated"
 }

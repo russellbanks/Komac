@@ -9,7 +9,7 @@ import io.kotest.matchers.shouldBe
 import java.util.UUID
 
 class ProductCodeTests : FunSpec({
-    val installerSchema = InstallerSchemaData.installerSchema
+    val productCodeSchema = InstallerSchemaData.installerSchema.definitions.productCode
 
     context("Product Code Checks") {
         withData(
@@ -17,7 +17,7 @@ class ProductCodeTests : FunSpec({
                 "{${UUID.randomUUID().toString().uppercase()}}"
             }
         ) {
-            isProductCodeValid(it, installerSchema).first shouldBe Validation.Success
+            isProductCodeValid(it, productCodeSchema).first shouldBe Validation.Success
         }
     }
 })
