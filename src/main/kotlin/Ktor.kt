@@ -1,6 +1,7 @@
 
 import com.github.ajalt.mordant.animation.progressAnimation
 import data.InstallerManifestData
+import data.SharedManifestData
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.java.Java
@@ -27,11 +28,12 @@ import java.time.format.DateTimeFormatter
 object Ktor : KoinComponent {
     suspend fun HttpClient.downloadInstallerFromUrl(): File {
         val terminalInstance: TerminalInstance by inject()
+        val sharedManifestData: SharedManifestData by inject()
         val installerManifestData: InstallerManifestData by inject()
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
-                "${installerManifestData.packageIdentifier} v${installerManifestData.packageVersion} - $formattedDate",
+                "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
                 ".${getURLExtension(installerManifestData.installerUrl)}"
             )
         }
@@ -47,7 +49,7 @@ object Ktor : KoinComponent {
             }.run {
                 start()
                 config { followRedirects = true }.use { client ->
-                    client.prepareGet(installerManifestData.installerUrl as String).execute { httpResponse ->
+                    client.prepareGet(installerManifestData.installerUrl).execute { httpResponse ->
                         val channel: ByteReadChannel = httpResponse.body()
                         while (!channel.isClosedForRead) {
                             val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())

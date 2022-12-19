@@ -8,7 +8,7 @@ import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
 
 object Prompts : KoinComponent {
-    private const val required = "[Required]"
+    const val required = "[Required]"
     const val optional = "[Optional]"
 
     const val optionIndent = 3
@@ -16,15 +16,9 @@ object Prompts : KoinComponent {
     const val packageIdentifierInfo = "$required Enter the Package Identifier, in the following format " +
         "<Publisher shortname.Application shortname>. For example: Microsoft.Excel"
 
-    const val packageIdentifier = "Package Identifier"
-
     const val packageVersionInfo = "$required Enter the version. For example: 1.33.7"
 
-    const val packageVersion = "Package Version"
-
     const val installerUrlInfo = "$required Enter the download url to the installer."
-
-    const val installerLocaleInfo = "$optional Enter the installer locale. For example: en-US, en-CA"
 
     const val productCodeInfo = "$optional Enter the application product code. " +
         "Looks like {CF8E6E00-9C03-4440-81C0-21FACB921A6B}"
@@ -36,9 +30,6 @@ object Prompts : KoinComponent {
     const val noIdea = "No idea"
 
     const val upgradeBehaviourInfo = "$optional Enter the Upgrade Behavior"
-
-    const val releaseDateInfo = "$optional Enter the application release date in the format YYYY-MM-DD. " +
-        "Example: 2022-11-17"
 
     const val additionalInstallerInfo = "Do you want to create another installer?"
 

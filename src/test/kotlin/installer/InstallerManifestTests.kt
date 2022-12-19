@@ -19,8 +19,8 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.koin.core.context.startKoin
 import org.koin.ksp.generated.defaultModule
+import schemas.DefaultLocaleSchema
 import schemas.InstallerSchema
-import schemas.LocaleSchema
 import schemas.Schemas
 import schemas.VersionSchema
 
@@ -35,12 +35,12 @@ class InstallerManifestTests : FunSpec() {
         }
 
         lateinit var installerSchema: InstallerSchema
-        lateinit var localeSchema: LocaleSchema
+        lateinit var defaultLocaleSchema: DefaultLocaleSchema
         lateinit var versionSchema: VersionSchema
 
         listOf(
             Schemas.installerSchema,
-            Schemas.localeSchema,
+            Schemas.defaultLocaleSchema,
             Schemas.versionSchema
         ).forEach {
             context("Get $it") {
@@ -58,7 +58,7 @@ class InstallerManifestTests : FunSpec() {
                     val json = Json { ignoreUnknownKeys = true }
                     when (it) {
                         Schemas.installerSchema -> installerSchema = json.decodeFromString(response.body())
-                        Schemas.localeSchema -> localeSchema = json.decodeFromString(response.body())
+                        Schemas.defaultLocaleSchema -> defaultLocaleSchema = json.decodeFromString(response.body())
                         Schemas.versionSchema -> versionSchema = json.decodeFromString(response.body())
                     }
                 }
@@ -66,7 +66,7 @@ class InstallerManifestTests : FunSpec() {
                 test("Validate parsed manifest") {
                     when (it) {
                         Schemas.installerSchema -> installerSchema.shouldNotBeNull()
-                        Schemas.localeSchema -> localeSchema.shouldNotBeNull()
+                        Schemas.defaultLocaleSchema -> defaultLocaleSchema.shouldNotBeNull()
                         Schemas.versionSchema -> versionSchema.shouldNotBeNull()
                     }
                 }

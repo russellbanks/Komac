@@ -16,8 +16,6 @@ import java.time.LocalDate
 
 @Single
 class InstallerManifestData : KoinComponent {
-    lateinit var packageIdentifier: String
-    lateinit var packageVersion: String
     lateinit var installerUrl: String
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
@@ -39,6 +37,7 @@ class InstallerManifestData : KoinComponent {
 
     private val terminalInstance: TerminalInstance by inject()
     private val installerSchemaImpl: InstallerSchemaImpl by inject()
+    private val sharedManifestData: SharedManifestData by inject()
     private val installerSchema
         get() = installerSchemaImpl.installerSchema
 
@@ -69,8 +68,8 @@ class InstallerManifestData : KoinComponent {
         val installerSwitchesDistinct = installers.distinctBy { it.installerSwitches }.size == 1
         val installerTypeDistinct = installers.distinctBy { it.installerType }.size == 1
         InstallerManifest(
-            packageIdentifier = packageIdentifier,
-            packageVersion = packageVersion,
+            packageIdentifier = sharedManifestData.packageIdentifier,
+            packageVersion = sharedManifestData.packageVersion,
             installerLocale = if (installersLocaleDistinct) installerLocale?.ifBlank { null } else null,
             installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
             scope = if (installerScopeDistinct) installerScope else null,
@@ -92,7 +91,7 @@ class InstallerManifestData : KoinComponent {
                 )
             },
             manifestType = Schemas.manifestType(installerSchema),
-            manifestVersion = Schemas.manifestVersion
+            manifestVersion = installerSchema.properties.manifestVersion.default
         ).also {
             Yaml(
                 serializersModule = SerializersModule {
@@ -105,7 +104,7 @@ class InstallerManifestData : KoinComponent {
             ).run {
                 buildString {
                     appendLine(Schemas.Comments.createdBy)
-                    appendLine(Schemas.Comments.installerLanguageServer)
+                    appendLine(Schemas.Comments.languageServer(installerSchema.id))
                     appendLine()
                     appendLine(encodeToString(InstallerManifest.serializer(), it))
                 }.let(terminalInstance.terminal::print)

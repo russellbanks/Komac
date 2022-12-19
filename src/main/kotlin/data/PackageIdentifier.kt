@@ -13,17 +13,19 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
-import schemas.Pattern
 
 object PackageIdentifier : KoinComponent {
     suspend fun Terminal.packageIdentifierPrompt() {
-        val installerManifestData: InstallerManifestData by inject()
+        val sharedManifestData: SharedManifestData by inject()
         val installerSchemaImpl: InstallerSchemaImpl = get()
         do {
             println(brightGreen(Prompts.packageIdentifierInfo))
-            installerManifestData.packageIdentifier = prompt(brightWhite(Prompts.packageIdentifier))?.trim().toString()
+            val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
             installerSchemaImpl.awaitInstallerSchema()
-            val (packageIdentifierValid, error) = isPackageIdentifierValid(installerManifestData.packageIdentifier)
+            val (packageIdentifierValid, error) = isPackageIdentifierValid(input)
+            if (packageIdentifierValid == Validation.Success && input != null) {
+                sharedManifestData.packageIdentifier = input
+            }
             error?.let { println(red(it)) }
             println()
         } while (packageIdentifierValid != Validation.Success)
@@ -33,18 +35,17 @@ object PackageIdentifier : KoinComponent {
         identifier: String?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val packageIdentifierMaxLength = installerSchema.definitions.packageIdentifier.maxLength
-        val packageIdentifierRegex = Pattern.packageIdentifier(installerSchema)
+        val packageIdentifierSchema = installerSchema.definitions.packageIdentifier
         return when {
             identifier.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.PackageIdentifier)
-            identifier.length > packageIdentifierMaxLength -> {
+            identifier.length > packageIdentifierSchema.maxLength -> {
                 Validation.InvalidLength to Errors.invalidLength(
                     min = packageIdentifierMinLength,
-                    max = packageIdentifierMaxLength
+                    max = packageIdentifierSchema.maxLength
                 )
             }
-            !identifier.matches(packageIdentifierRegex) -> {
-                Validation.InvalidPattern to Errors.invalidRegex(packageIdentifierRegex)
+            !identifier.matches(Regex(packageIdentifierSchema.pattern)) -> {
+                Validation.InvalidPattern to Errors.invalidRegex(Regex(packageIdentifierSchema.pattern))
             }
             else -> Validation.Success to null
         }

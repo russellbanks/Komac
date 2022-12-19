@@ -18,7 +18,7 @@ object ReleaseDate : KoinComponent {
     fun Terminal.releaseDatePrompt() {
         val installerManifestData: InstallerManifestData by inject()
         do {
-            println(brightYellow(Prompts.releaseDateInfo))
+            println(brightYellow(releaseDateInfo))
             val input = prompt(brightWhite(PromptType.ReleaseDate.toString()))?.trim()
             val (releaseDateValid, error) = isReleaseDateValid(input)
             error?.let { println(red(it)) }
@@ -52,4 +52,6 @@ object ReleaseDate : KoinComponent {
     }
 
     const val releaseDatePattern = "yyyy-MM-dd"
+    private const val releaseDateInfo = "${Prompts.optional} Enter the application release date in the format " +
+        "$releaseDatePattern. Example: 2022-11-17"
 }

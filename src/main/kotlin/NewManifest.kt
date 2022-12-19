@@ -5,15 +5,17 @@ import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.Architecture.architecturePrompt
 import data.Commands.commandsPrompt
+import data.DefaultLocaleManifestData
 import data.FileExtensions.fileExtensionsPrompt
 import data.InstallModes.installModesPrompt
-import data.InstallerLocale.installerLocalePrompt
 import data.InstallerManifestData
 import data.InstallerScope.installerScopePrompt
 import data.InstallerSuccessCodes.installerSuccessCodesPrompt
 import data.InstallerSwitch.installerSwitchPrompt
 import data.InstallerType.installerTypePrompt
 import data.InstallerUrl.installerDownloadPrompt
+import data.Locale.installerLocalePrompt
+import data.Locale.packageLocalePrompt
 import data.PackageIdentifier.packageIdentifierPrompt
 import data.PackageVersion.packageVersionPrompt
 import data.ProductCode.productCodePrompt
@@ -28,6 +30,7 @@ import org.koin.core.component.inject
 
 class NewManifest(private val terminal: Terminal) : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
+    private val defaultLocalManifestData: DefaultLocaleManifestData by inject()
 
     suspend fun main() {
         with(terminal) {
@@ -53,7 +56,9 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             commandsPrompt()
             installerSuccessCodesPrompt()
             installModesPrompt()
+            packageLocalePrompt()
             installerManifestData.createInstallerManifest()
+            defaultLocalManifestData.createDefaultLocaleManifest()
         }
     }
 

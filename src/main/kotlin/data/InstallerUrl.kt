@@ -27,7 +27,6 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
-import schemas.Pattern
 import java.io.File
 
 object InstallerUrl : KoinComponent {
@@ -35,9 +34,11 @@ object InstallerUrl : KoinComponent {
         val installerManifestData: InstallerManifestData by inject()
         do {
             println(brightGreen(Prompts.installerUrlInfo))
-            installerManifestData.installerUrl = prompt(brightWhite(PromptType.InstallerUrl.toString()))
-                ?.trim().toString()
-            val (installerUrlValid, error) = isInstallerUrlValid(installerManifestData.installerUrl)
+            val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
+            val (installerUrlValid, error) = isInstallerUrlValid(input)
+            if (installerUrlValid == Validation.Success && input != null) {
+                installerManifestData.installerUrl = input
+            }
             error?.let { println(red(it)) }
             println()
         } while (installerUrlValid != Validation.Success)
@@ -82,14 +83,15 @@ object InstallerUrl : KoinComponent {
         url: String?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val installerUrlMaxLength = installerSchema.definitions.installer.properties.installerUrl.maxLength
-        val installerUrlRegex = Pattern.installerUrl(installerSchema)
+        val installerUrlSchema = installerSchema.definitions.installer.properties.installerUrl
         return when {
             url.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerUrl)
-            url.length > installerUrlMaxLength -> {
-                Validation.InvalidLength to Errors.invalidLength(max = installerUrlMaxLength)
+            url.length > installerUrlSchema.maxLength -> {
+                Validation.InvalidLength to Errors.invalidLength(max = installerUrlSchema.maxLength)
             }
-            !url.matches(installerUrlRegex) -> Validation.InvalidPattern to Errors.invalidRegex(installerUrlRegex)
+            !url.matches(Regex(installerUrlSchema.pattern)) -> {
+                Validation.InvalidPattern to Errors.invalidRegex(Regex(installerUrlSchema.pattern))
+            }
             else -> {
                 lateinit var installerUrlResponse: HttpResponse
                 HttpClient(Java) {

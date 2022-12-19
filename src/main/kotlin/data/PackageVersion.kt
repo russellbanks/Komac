@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -12,15 +13,17 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
-import schemas.Pattern
 
 object PackageVersion : KoinComponent {
     fun Terminal.packageVersionPrompt() {
-        val installerManifestData: InstallerManifestData by inject()
+        val sharedManifestData: SharedManifestData by inject()
         do {
             println(brightGreen(Prompts.packageVersionInfo))
-            installerManifestData.packageVersion = prompt(brightWhite(Prompts.packageVersion))?.trim().toString()
-            val (packageVersionValid, error) = isPackageVersionValid(installerManifestData.packageVersion)
+            val input = prompt(brightWhite(PromptType.PackageVersion.toString()))?.trim()
+            val (packageVersionValid, error) = isPackageVersionValid(input)
+            if (packageVersionValid == Validation.Success && input != null) {
+                sharedManifestData.packageVersion = input
+            }
             error?.let { println(red(it)) }
             println()
         } while (packageVersionValid != Validation.Success)
@@ -30,15 +33,14 @@ object PackageVersion : KoinComponent {
         version: String?,
         installerSchema: InstallerSchema = get<InstallerSchemaImpl>().installerSchema
     ): Pair<Validation, String?> {
-        val packageVersionMaxLength = installerSchema.definitions.packageVersion.maxLength
-        val packageVersionRegex = Pattern.packageVersion(installerSchema)
+        val packageVersionSchema = installerSchema.definitions.packageVersion
         return when {
             version.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.PackageVersion)
-            version.length > packageVersionMaxLength -> {
-                Validation.InvalidLength to Errors.invalidLength(max = packageVersionMaxLength)
+            version.length > packageVersionSchema.maxLength -> {
+                Validation.InvalidLength to Errors.invalidLength(max = packageVersionSchema.maxLength)
             }
-            !version.matches(packageVersionRegex) -> {
-                Validation.InvalidPattern to Errors.invalidRegex(packageVersionRegex)
+            !version.matches(Regex(packageVersionSchema.pattern)) -> {
+                Validation.InvalidPattern to Errors.invalidRegex(Regex(packageVersionSchema.pattern))
             }
             else -> Validation.Success to null
         }

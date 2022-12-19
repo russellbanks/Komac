@@ -1,5 +1,6 @@
 package data
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -13,7 +14,6 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.InstallerSchemaImpl
-import schemas.Pattern
 
 object FileExtensions : KoinComponent {
     fun Terminal.fileExtensionsPrompt() {
@@ -44,10 +44,10 @@ object FileExtensions : KoinComponent {
             (fileExtensions?.count() ?: 0) > fileExtensionsSchema.maxItems -> {
                 Validation.InvalidLength to Errors.invalidLength(max = fileExtensionsSchema.maxItems)
             }
-            fileExtensions?.any { !it.matches(Pattern.fileExtension(installerSchema)) } == true -> {
+            fileExtensions?.any { !it.matches(Regex(fileExtensionsSchema.items.pattern)) } == true -> {
                 Validation.InvalidPattern to Errors.invalidRegex(
-                    regex = Pattern.fileExtension(installerSchema),
-                    items = fileExtensions.filterNot { it.matches(Pattern.fileExtension(installerSchema)) }
+                    regex = Regex(fileExtensionsSchema.items.pattern),
+                    items = fileExtensions.filterNot { it.matches(Regex(fileExtensionsSchema.items.pattern)) }
                 )
             }
             fileExtensions?.any { it.length > fileExtensionsSchema.items.maxLength } == true -> {
