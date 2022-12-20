@@ -71,6 +71,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             authorPrompt()
             localeUrlPrompt(LocaleUrl.PackageUrl)
             licensePrompt()
+            localeUrlPrompt(LocaleUrl.LicenseUrl)
             installerManifestData.createInstallerManifest()
             println()
             defaultLocalManifestData.createDefaultLocaleManifest()

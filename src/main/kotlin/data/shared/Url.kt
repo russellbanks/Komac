@@ -102,6 +102,7 @@ object Url : KoinComponent {
             val (publisherUrlValid, error) = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true)
             if (publisherUrlValid == Validation.Success) {
                 when (localeUrl) {
+                    LocaleUrl.LicenseUrl -> defaultLocaleManifestData.licenseUrl = input
                     LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
                     LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
                     LocaleUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
@@ -150,6 +151,7 @@ object Url : KoinComponent {
 
     private fun publisherUrlInfo(publisherUrl: LocaleUrl, defaultLocaleSchema: DefaultLocaleSchema): String {
         val description = when (publisherUrl) {
+            LocaleUrl.LicenseUrl -> defaultLocaleSchema.properties.licenseUrl.description
             LocaleUrl.PackageUrl -> defaultLocaleSchema.properties.packageUrl.description
             LocaleUrl.PublisherUrl -> defaultLocaleSchema.properties.publisherUrl.description
             LocaleUrl.PublisherSupportUrl -> defaultLocaleSchema.properties.publisherSupportUrl.description
