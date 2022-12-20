@@ -13,7 +13,7 @@ class InstallerUrlTests : FunSpec({
         withData(
             listOf("https://github.com")
         ) { url ->
-            isUrlValid(url, installerSchema).first shouldBe Validation.Success
+            isUrlValid(url = url, schema = installerSchema, canBeBlank = false).first shouldBe Validation.Success
         }
     }
 })
