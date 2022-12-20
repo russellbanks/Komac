@@ -23,7 +23,8 @@ enum class PromptType {
     Publisher,
     ReleaseDate,
     SilentSwitch,
-    SilentWithProgressSwitch;
+    SilentWithProgressSwitch,
+    Tags;
 
     override fun toString() = name.replace(Regex("([A-Z])"), " $1").trim()
 }
