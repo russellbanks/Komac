@@ -1,6 +1,7 @@
 package data.locale
 
 enum class LocaleUrl {
+    CopyrightUrl,
     LicenseUrl,
     PackageUrl,
     PublisherUrl,

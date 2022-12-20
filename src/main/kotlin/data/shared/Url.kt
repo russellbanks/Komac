@@ -97,11 +97,12 @@ object Url : KoinComponent {
         val defaultLocaleSchema: DefaultLocaleSchema = get<SchemasImpl>().defaultLocaleSchema
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         do {
-            println(brightYellow(publisherUrlInfo(localeUrl, defaultLocaleSchema)))
+            println(brightYellow(publisherUrlInfo(localeUrl, defaultLocaleSchema.properties)))
             val input = prompt(brightWhite(localeUrl.toString()))?.trim()
             val (publisherUrlValid, error) = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true)
             if (publisherUrlValid == Validation.Success) {
                 when (localeUrl) {
+                    LocaleUrl.CopyrightUrl -> defaultLocaleManifestData.copyrightUrl = input
                     LocaleUrl.LicenseUrl -> defaultLocaleManifestData.licenseUrl = input
                     LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
                     LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
@@ -149,13 +150,14 @@ object Url : KoinComponent {
         }
     }
 
-    private fun publisherUrlInfo(publisherUrl: LocaleUrl, defaultLocaleSchema: DefaultLocaleSchema): String {
+    private fun publisherUrlInfo(publisherUrl: LocaleUrl, schemaProperties: DefaultLocaleSchema.Properties): String {
         val description = when (publisherUrl) {
-            LocaleUrl.LicenseUrl -> defaultLocaleSchema.properties.licenseUrl.description
-            LocaleUrl.PackageUrl -> defaultLocaleSchema.properties.packageUrl.description
-            LocaleUrl.PublisherUrl -> defaultLocaleSchema.properties.publisherUrl.description
-            LocaleUrl.PublisherSupportUrl -> defaultLocaleSchema.properties.publisherSupportUrl.description
-            LocaleUrl.PublisherPrivacyUrl -> defaultLocaleSchema.properties.privacyUrl.description
+            LocaleUrl.CopyrightUrl -> schemaProperties.copyrightUrl.description
+            LocaleUrl.LicenseUrl -> schemaProperties.licenseUrl.description
+            LocaleUrl.PackageUrl -> schemaProperties.packageUrl.description
+            LocaleUrl.PublisherUrl -> schemaProperties.publisherUrl.description
+            LocaleUrl.PublisherSupportUrl -> schemaProperties.publisherSupportUrl.description
+            LocaleUrl.PublisherPrivacyUrl -> schemaProperties.privacyUrl.description
         }
         return "${Prompts.optional} Enter ${description.lowercase()}"
     }
