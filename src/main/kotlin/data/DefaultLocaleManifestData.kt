@@ -15,6 +15,7 @@ import schemas.TerminalInstance
 class DefaultLocaleManifestData : KoinComponent {
     lateinit var publisher: String
     lateinit var packageName: String
+    lateinit var license: String
     var moniker: String? = null
     var publisherUrl: String? = null
     var publisherSupportUrl: String? = null
@@ -40,7 +41,7 @@ class DefaultLocaleManifestData : KoinComponent {
             author = author?.ifBlank { null },
             packageName = packageName,
             packageUrl = packageUrl?.ifBlank { null },
-            license = "License",
+            license = license,
             shortDescription = "ShortDescription",
             moniker = moniker?.ifBlank { null },
             manifestType = defaultLocaleSchema.properties.manifestType.const,

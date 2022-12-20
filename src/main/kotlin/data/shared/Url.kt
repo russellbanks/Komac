@@ -14,7 +14,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.InstallerManifestData
-import data.locale.LocaleUrls
+import data.locale.LocaleUrl
 import hashing.Hashing
 import hashing.Hashing.hash
 import input.PromptType
@@ -93,19 +93,19 @@ object Url : KoinComponent {
         println("Sha256: ${installerManifestData.installerSha256}")
     }
 
-    suspend fun Terminal.localeUrlPrompt(localeUrls: LocaleUrls) {
+    suspend fun Terminal.localeUrlPrompt(localeUrl: LocaleUrl) {
         val defaultLocaleSchema: DefaultLocaleSchema = get<SchemasImpl>().defaultLocaleSchema
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         do {
-            println(brightYellow(publisherUrlInfo(localeUrls, defaultLocaleSchema)))
-            val input = prompt(brightWhite(localeUrls.toString()))?.trim()
+            println(brightYellow(publisherUrlInfo(localeUrl, defaultLocaleSchema)))
+            val input = prompt(brightWhite(localeUrl.toString()))?.trim()
             val (publisherUrlValid, error) = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true)
             if (publisherUrlValid == Validation.Success) {
-                when (localeUrls) {
-                    LocaleUrls.PackageUrl -> defaultLocaleManifestData.packageUrl = input
-                    LocaleUrls.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
-                    LocaleUrls.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
-                    LocaleUrls.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
+                when (localeUrl) {
+                    LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
+                    LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
+                    LocaleUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
+                    LocaleUrl.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
                 }
             }
             error?.let { println(red(it)) }
@@ -148,12 +148,12 @@ object Url : KoinComponent {
         }
     }
 
-    private fun publisherUrlInfo(publisherUrl: LocaleUrls, defaultLocaleSchema: DefaultLocaleSchema): String {
+    private fun publisherUrlInfo(publisherUrl: LocaleUrl, defaultLocaleSchema: DefaultLocaleSchema): String {
         val description = when (publisherUrl) {
-            LocaleUrls.PackageUrl -> defaultLocaleSchema.properties.packageUrl.description
-            LocaleUrls.PublisherUrl -> defaultLocaleSchema.properties.publisherUrl.description
-            LocaleUrls.PublisherSupportUrl -> defaultLocaleSchema.properties.publisherSupportUrl.description
-            LocaleUrls.PublisherPrivacyUrl -> defaultLocaleSchema.properties.privacyUrl.description
+            LocaleUrl.PackageUrl -> defaultLocaleSchema.properties.packageUrl.description
+            LocaleUrl.PublisherUrl -> defaultLocaleSchema.properties.publisherUrl.description
+            LocaleUrl.PublisherSupportUrl -> defaultLocaleSchema.properties.publisherSupportUrl.description
+            LocaleUrl.PublisherPrivacyUrl -> defaultLocaleSchema.properties.privacyUrl.description
         }
         return "${Prompts.optional} Enter ${description.lowercase()}"
     }
