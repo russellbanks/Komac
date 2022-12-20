@@ -8,7 +8,7 @@ object Errors {
         return buildString {
             append("$error ${Validation.InvalidLength}")
             if (min != null || max != null) {
-                append(" -${items?.let { "Item" } ?: ""} ${items?.let { "Length" } ?: "length"} must be")
+                append(" -${items?.let { "Item" } ?: ""} ${items?.let { "Length" } ?: "length"} must be ")
             }
             when {
                 min != null && max != null -> append("between $min and $max")

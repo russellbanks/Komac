@@ -12,6 +12,7 @@ enum class PromptType {
     InstallerType,
     InstallerUrl,
     InstallModes,
+    Moniker,
     PackageIdentifier,
     PackageLocale,
     PackageVersion,
