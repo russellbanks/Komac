@@ -4,6 +4,7 @@ enum class PromptType {
     Architecture,
     PackageName,
     Publisher,
+    PublisherSupportUrl,
     PublisherUrl,
     Commands,
     CustomSwitch,

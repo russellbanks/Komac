@@ -29,6 +29,7 @@ import data.shared.Url.installerDownloadPrompt
 import data.shared.Url.publisherUrlPrompt
 import input.InstallerSwitch
 import input.Polar
+import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -64,7 +65,8 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             publisherPrompt()
             packageNamePrompt()
             monikerPrompt()
-            publisherUrlPrompt()
+            publisherUrlPrompt(PromptType.PublisherUrl)
+            publisherUrlPrompt(PromptType.PublisherSupportUrl)
             installerManifestData.createInstallerManifest()
             println()
             defaultLocalManifestData.createDefaultLocaleManifest()

@@ -39,7 +39,11 @@ object Url : KoinComponent {
         do {
             println(brightGreen(installerUrlInfo))
             val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
-            val (installerUrlValid, error) = isUrlValid(input, schemasImpl.installerSchema)
+            val (installerUrlValid, error) = isUrlValid(
+                url = input,
+                schema = schemasImpl.installerSchema,
+                canBeBlank = false
+            )
             if (installerUrlValid == Validation.Success && input != null) {
                 installerManifestData.installerUrl = input
             }
@@ -58,7 +62,11 @@ object Url : KoinComponent {
             println(brightWhite(useOriginalUrl))
             if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(brightYellow(urlChanged))
-                val (redirectedUrlValid, error) = isUrlValid(redirectedUrl, schemasImpl.installerSchema)
+                val (redirectedUrlValid, error) = isUrlValid(
+                    url = redirectedUrl,
+                    schema = schemasImpl.installerSchema,
+                    canBeBlank = false
+                )
                 error?.let { println(it) }
                 if (redirectedUrlValid == Validation.Success) {
                     installerManifestData.installerUrl = redirectedUrl.toString()
@@ -83,22 +91,47 @@ object Url : KoinComponent {
         println("Sha256: ${installerManifestData.installerSha256}")
     }
 
-    suspend fun Terminal.publisherUrlPrompt() {
+    suspend fun Terminal.publisherUrlPrompt(promptType: PromptType) {
         val schemasImpl: SchemasImpl by inject()
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         do {
-            println(brightYellow(publisherUrlInfo))
-            val input = prompt(brightWhite(PromptType.PublisherUrl.toString()))?.trim()
-            val (packageLocaleValid, error) = isUrlValid(input, schemasImpl.defaultLocaleSchema)
-            if (packageLocaleValid == Validation.Success && input != null) {
-                defaultLocaleManifestData.publisherUrl = input
+            println(
+                brightYellow(
+                    when (promptType) {
+                        PromptType.PublisherSupportUrl -> publisherSupportUrlInfo
+                        else -> publisherUrlInfo
+                    }
+                )
+            )
+            val input = prompt(
+                brightWhite(
+                    when (promptType) {
+                        PromptType.PublisherSupportUrl -> PromptType.PublisherSupportUrl.toString()
+                        else -> PromptType.PublisherUrl.toString()
+                    }
+                )
+            )?.trim()
+            val (publisherUrlValid, error) = isUrlValid(
+                url = input,
+                schema = schemasImpl.defaultLocaleSchema,
+                canBeBlank = true
+            )
+            if (publisherUrlValid == Validation.Success) {
+                when (promptType) {
+                    PromptType.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
+                    else -> defaultLocaleManifestData.publisherUrl = input
+                }
             }
             error?.let { println(red(it)) }
             println()
-        } while (packageLocaleValid != Validation.Success)
+        } while (publisherUrlValid != Validation.Success)
     }
 
-    private suspend fun isUrlValid(url: String?, schema: RemoteSchema): Pair<Validation, String?> {
+    suspend fun isUrlValid(
+        url: String?,
+        schema: RemoteSchema,
+        canBeBlank: Boolean
+    ): Pair<Validation, String?> {
         val maxLength = when (schema) {
             is InstallerSchema -> schema.definitions.url.maxLength
             is DefaultLocaleSchema -> schema.definitions.url.maxLength
@@ -112,6 +145,7 @@ object Url : KoinComponent {
             }
         )
         return when {
+            url.isNullOrBlank() && canBeBlank -> Validation.Success to null
             url.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerUrl)
             url.length > maxLength -> Validation.InvalidLength to Errors.invalidLength(max = maxLength)
             !url.matches(pattern) -> Validation.InvalidPattern to Errors.invalidRegex(pattern)
@@ -133,6 +167,8 @@ object Url : KoinComponent {
     }
 
     private const val publisherUrlInfo = "${Prompts.optional} Enter the Publisher Url."
+
+    private const val publisherSupportUrlInfo = "${Prompts.optional} Enter the Publisher Support Url."
 
     private fun originalUrlRetained(url: String?) = "Original URL Retained - Proceeding with $url"
 
