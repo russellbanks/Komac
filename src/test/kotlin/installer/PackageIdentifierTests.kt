@@ -2,7 +2,7 @@ package installer
 
 import InstallerSchemaData
 import Validation
-import data.PackageIdentifier.isPackageIdentifierValid
+import data.shared.PackageIdentifier.isPackageIdentifierValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe

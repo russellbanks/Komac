@@ -2,7 +2,7 @@ package installer
 
 import InstallerSchemaData
 import Validation
-import data.Url.isUrlValid
+import data.shared.Url.isUrlValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe

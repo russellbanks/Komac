@@ -1,8 +1,8 @@
 package installer
 import Ktor
 import Validation
-import data.InstallerScope.isInstallerScopeValid
-import data.UpgradeBehaviour.isUpgradeBehaviourValid
+import data.installer.InstallerScope.isInstallerScopeValid
+import data.installer.UpgradeBehaviour.isUpgradeBehaviourValid
 import io.kotest.assertions.ktor.client.shouldHaveStatus
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData

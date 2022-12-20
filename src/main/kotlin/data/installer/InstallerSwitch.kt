@@ -1,4 +1,4 @@
-package data
+package data.installer
 
 import Errors
 import Validation
@@ -7,6 +7,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
+import data.InstallerManifestData
 import input.InstallerSwitch
 import input.PromptType
 import input.Prompts

@@ -1,4 +1,4 @@
-package data
+package data.installer
 
 import Errors
 import Validation
@@ -8,6 +8,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
+import data.InstallerManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get

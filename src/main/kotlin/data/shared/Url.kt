@@ -1,4 +1,4 @@
-package data
+package data.shared
 
 import Errors
 import Ktor
@@ -12,6 +12,8 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
+import data.DefaultLocaleManifestData
+import data.InstallerManifestData
 import hashing.Hashing
 import hashing.Hashing.hash
 import input.PromptType
