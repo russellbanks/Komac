@@ -1,3 +1,4 @@
+import data.locale.DescriptionType
 import input.PromptType
 import io.ktor.client.statement.HttpResponse
 
@@ -46,7 +47,11 @@ object Errors {
         }
     }
 
-    fun blankInput(promptType: PromptType? = null) = "$error ${promptType ?: "Input"} cannot be blank"
+    fun blankInput(descriptionType: DescriptionType? = null) = blankInput(descriptionType?.promptName)
+
+    fun blankInput(promptType: PromptType? = null) = blankInput(promptType.toString())
+
+    private fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
 
     fun invalidEnum(validation: Validation, enum: List<String>): String {
         return "$error $validation - Value must exist in the enum - ${enum.joinToString(", ")}"

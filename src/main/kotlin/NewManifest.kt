@@ -20,6 +20,8 @@ import data.installer.ReleaseDate.releaseDatePrompt
 import data.installer.UpgradeBehaviour.upgradeBehaviourPrompt
 import data.locale.Author.authorPrompt
 import data.locale.Copyright.copyrightPrompt
+import data.locale.Description.descriptionPrompt
+import data.locale.DescriptionType
 import data.locale.License.licensePrompt
 import data.locale.LocaleUrl
 import data.locale.Moniker.monikerPrompt
@@ -79,6 +81,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             copyrightPrompt()
             localeUrlPrompt(LocaleUrl.CopyrightUrl)
             tagsPrompt()
+            DescriptionType.values().forEach { descriptionPrompt(it) }
             installerManifestData.createInstallerManifest()
             println()
             defaultLocalManifestData.createDefaultLocaleManifest()
