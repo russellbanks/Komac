@@ -18,6 +18,7 @@ import data.installer.ProductCode.productCodePrompt
 import data.installer.Protocols.protocolsPrompt
 import data.installer.ReleaseDate.releaseDatePrompt
 import data.installer.UpgradeBehaviour.upgradeBehaviourPrompt
+import data.locale.Author.authorPrompt
 import data.locale.Moniker.monikerPrompt
 import data.locale.Publisher.publisherPrompt
 import data.locale.PublisherUrl
@@ -66,6 +67,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             packageNamePrompt()
             monikerPrompt()
             PublisherUrl.values().forEach { publisherUrlPrompt(it) }
+            authorPrompt()
             installerManifestData.createInstallerManifest()
             println()
             defaultLocalManifestData.createDefaultLocaleManifest()
