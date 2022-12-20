@@ -82,6 +82,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             localeUrlPrompt(LocaleUrl.CopyrightUrl)
             tagsPrompt()
             DescriptionType.values().forEach { descriptionPrompt(it) }
+            localeUrlPrompt(LocaleUrl.ReleaseNotesUrl)
             installerManifestData.createInstallerManifest()
             println()
             defaultLocalManifestData.createDefaultLocaleManifest()

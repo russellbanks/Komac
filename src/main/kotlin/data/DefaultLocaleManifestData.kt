@@ -28,6 +28,7 @@ class DefaultLocaleManifestData : KoinComponent {
     var copyrightUrl: String? = null
     var tags: List<String>? = null
     var description: String? = null
+    var releaseNotesUrl: String? = null
 
     private val terminalInstance: TerminalInstance by inject()
     private val sharedManifestData: SharedManifestData by inject()
@@ -55,6 +56,7 @@ class DefaultLocaleManifestData : KoinComponent {
             description = description?.ifBlank { null },
             moniker = moniker?.ifBlank { null },
             tags = tags?.ifEmpty { null },
+            releaseNotesUrl = releaseNotesUrl?.ifBlank { null },
             manifestType = defaultLocaleSchema.properties.manifestType.const,
             manifestVersion = defaultLocaleSchema.properties.manifestVersion.default,
         ).also {

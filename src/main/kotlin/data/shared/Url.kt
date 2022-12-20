@@ -108,6 +108,7 @@ object Url : KoinComponent {
                     LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
                     LocaleUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
                     LocaleUrl.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
+                    LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
                 }
             }
             error?.let { println(red(it)) }
@@ -158,6 +159,7 @@ object Url : KoinComponent {
             LocaleUrl.PublisherUrl -> schemaProperties.publisherUrl.description
             LocaleUrl.PublisherSupportUrl -> schemaProperties.publisherSupportUrl.description
             LocaleUrl.PublisherPrivacyUrl -> schemaProperties.privacyUrl.description
+            LocaleUrl.ReleaseNotesUrl -> schemaProperties.releaseNotesUrl.description
         }
         return "${Prompts.optional} Enter ${description.lowercase()}"
     }
