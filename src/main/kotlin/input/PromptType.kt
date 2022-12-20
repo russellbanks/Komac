@@ -4,6 +4,7 @@ enum class PromptType {
     Architecture,
     Author,
     Commands,
+    Copyright,
     CustomSwitch,
     FileExtensions,
     InstallModes,
