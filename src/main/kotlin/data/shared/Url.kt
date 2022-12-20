@@ -26,6 +26,7 @@ import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleSchema
 import schemas.InstallerSchema
@@ -93,16 +94,12 @@ object Url : KoinComponent {
     }
 
     suspend fun Terminal.publisherUrlPrompt(publisherUrl: PublisherUrl) {
-        val schemasImpl: SchemasImpl by inject()
+        val defaultLocaleSchema: DefaultLocaleSchema = get<SchemasImpl>().defaultLocaleSchema
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         do {
-            println(brightYellow(publisherUrlInfo(publisherUrl, schemasImpl.defaultLocaleSchema)))
+            println(brightYellow(publisherUrlInfo(publisherUrl, defaultLocaleSchema)))
             val input = prompt(brightWhite(publisherUrl.toString()))?.trim()
-            val (publisherUrlValid, error) = isUrlValid(
-                url = input,
-                schema = schemasImpl.defaultLocaleSchema,
-                canBeBlank = true
-            )
+            val (publisherUrlValid, error) = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true)
             if (publisherUrlValid == Validation.Success) {
                 when (publisherUrl) {
                     PublisherUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
