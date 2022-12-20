@@ -12,7 +12,7 @@ data class LocaleSchema(
     @SerialName("type") val type: String,
     @SerialName("properties") val properties: Properties,
     @SerialName("required") val required: List<String>
-) {
+) : RemoteSchema {
     @Serializable
     data class Definitions(
         @SerialName("Url") val url: Url,

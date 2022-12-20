@@ -13,7 +13,6 @@ import data.InstallerScope.installerScopePrompt
 import data.InstallerSuccessCodes.installerSuccessCodesPrompt
 import data.InstallerSwitch.installerSwitchPrompt
 import data.InstallerType.installerTypePrompt
-import data.InstallerUrl.installerDownloadPrompt
 import data.Locale.installerLocalePrompt
 import data.Locale.packageLocalePrompt
 import data.Moniker.monikerPrompt
@@ -25,6 +24,8 @@ import data.Protocols.protocolsPrompt
 import data.Publisher.publisherPrompt
 import data.ReleaseDate.releaseDatePrompt
 import data.UpgradeBehaviour.upgradeBehaviourPrompt
+import data.Url.installerDownloadPrompt
+import data.Url.publisherUrlPrompt
 import data.VersionManifestData
 import input.InstallerSwitch
 import input.Polar
@@ -63,6 +64,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             publisherPrompt()
             packageNamePrompt()
             monikerPrompt()
+            publisherUrlPrompt()
             installerManifestData.createInstallerManifest()
             println()
             defaultLocalManifestData.createDefaultLocaleManifest()

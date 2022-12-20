@@ -16,6 +16,7 @@ class DefaultLocaleManifestData : KoinComponent {
     lateinit var publisher: String
     lateinit var packageName: String
     var moniker: String? = null
+    var publisherUrl: String? = null
 
     private val terminalInstance: TerminalInstance by inject()
     private val sharedManifestData: SharedManifestData by inject()
@@ -29,6 +30,7 @@ class DefaultLocaleManifestData : KoinComponent {
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
             publisher = publisher,
+            publisherUrl = publisherUrl?.ifBlank { null },
             packageName = packageName,
             license = "License",
             shortDescription = "ShortDescription",

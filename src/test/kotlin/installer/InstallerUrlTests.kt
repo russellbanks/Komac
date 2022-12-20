@@ -2,7 +2,7 @@ package installer
 
 import InstallerSchemaData
 import Validation
-import data.InstallerUrl.isInstallerUrlValid
+import data.Url.isUrlValid
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -13,7 +13,7 @@ class InstallerUrlTests : FunSpec({
         withData(
             listOf("https://github.com")
         ) { url ->
-            isInstallerUrlValid(url, installerSchema).first shouldBe Validation.Success
+            isUrlValid(url, installerSchema).first shouldBe Validation.Success
         }
     }
 })

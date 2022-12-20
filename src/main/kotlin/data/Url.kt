@@ -23,19 +23,21 @@ import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.DefaultLocaleSchema
 import schemas.InstallerSchema
+import schemas.RemoteSchema
 import schemas.SchemasImpl
 import java.io.File
 
-object InstallerUrl : KoinComponent {
+object Url : KoinComponent {
     suspend fun Terminal.installerDownloadPrompt() {
         val installerManifestData: InstallerManifestData by inject()
+        val schemasImpl: SchemasImpl by inject()
         do {
             println(brightGreen(installerUrlInfo))
             val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
-            val (installerUrlValid, error) = isInstallerUrlValid(input)
+            val (installerUrlValid, error) = isUrlValid(input, schemasImpl.installerSchema)
             if (installerUrlValid == Validation.Success && input != null) {
                 installerManifestData.installerUrl = input
             }
@@ -54,7 +56,7 @@ object InstallerUrl : KoinComponent {
             println(brightWhite(useOriginalUrl))
             if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(brightYellow(urlChanged))
-                val (redirectedUrlValid, error) = isInstallerUrlValid(redirectedUrl)
+                val (redirectedUrlValid, error) = isUrlValid(redirectedUrl, schemasImpl.installerSchema)
                 error?.let { println(it) }
                 if (redirectedUrlValid == Validation.Success) {
                     installerManifestData.installerUrl = redirectedUrl.toString()
@@ -79,19 +81,38 @@ object InstallerUrl : KoinComponent {
         println("Sha256: ${installerManifestData.installerSha256}")
     }
 
-    suspend fun isInstallerUrlValid(
-        url: String?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
-        val installerUrlSchema = installerSchema.definitions.installer.properties.installerUrl
+    suspend fun Terminal.publisherUrlPrompt() {
+        val schemasImpl: SchemasImpl by inject()
+        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+        do {
+            println(brightYellow(publisherUrlInfo))
+            val input = prompt(brightWhite(PromptType.PublisherUrl.toString()))?.trim()
+            val (packageLocaleValid, error) = isUrlValid(input, schemasImpl.defaultLocaleSchema)
+            if (packageLocaleValid == Validation.Success && input != null) {
+                defaultLocaleManifestData.publisherUrl = input
+            }
+            error?.let { println(red(it)) }
+            println()
+        } while (packageLocaleValid != Validation.Success)
+    }
+
+    private suspend fun isUrlValid(url: String?, schema: RemoteSchema): Pair<Validation, String?> {
+        val maxLength = when (schema) {
+            is InstallerSchema -> schema.definitions.url.maxLength
+            is DefaultLocaleSchema -> schema.definitions.url.maxLength
+            else -> 0
+        }
+        val pattern = Regex(
+            when (schema) {
+                is InstallerSchema -> schema.definitions.url.pattern
+                is DefaultLocaleSchema -> schema.definitions.url.pattern
+                else -> ""
+            }
+        )
         return when {
             url.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerUrl)
-            url.length > installerUrlSchema.maxLength -> {
-                Validation.InvalidLength to Errors.invalidLength(max = installerUrlSchema.maxLength)
-            }
-            !url.matches(Regex(installerUrlSchema.pattern)) -> {
-                Validation.InvalidPattern to Errors.invalidRegex(Regex(installerUrlSchema.pattern))
-            }
+            url.length > maxLength -> Validation.InvalidLength to Errors.invalidLength(max = maxLength)
+            !url.matches(pattern) -> Validation.InvalidPattern to Errors.invalidRegex(pattern)
             else -> {
                 lateinit var installerUrlResponse: HttpResponse
                 HttpClient(Java) {
@@ -108,6 +129,8 @@ object InstallerUrl : KoinComponent {
             }
         }
     }
+
+    private const val publisherUrlInfo = "${Prompts.optional} Enter the Publisher Url."
 
     private fun originalUrlRetained(url: String?) = "Original URL Retained - Proceeding with $url"
 
