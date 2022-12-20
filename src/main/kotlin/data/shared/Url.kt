@@ -14,6 +14,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.InstallerManifestData
+import data.locale.PublisherUrl
 import hashing.Hashing
 import hashing.Hashing.hash
 import input.PromptType
@@ -91,35 +92,22 @@ object Url : KoinComponent {
         println("Sha256: ${installerManifestData.installerSha256}")
     }
 
-    suspend fun Terminal.publisherUrlPrompt(promptType: PromptType) {
+    suspend fun Terminal.publisherUrlPrompt(publisherUrl: PublisherUrl) {
         val schemasImpl: SchemasImpl by inject()
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         do {
-            println(
-                brightYellow(
-                    when (promptType) {
-                        PromptType.PublisherSupportUrl -> publisherSupportUrlInfo
-                        else -> publisherUrlInfo
-                    }
-                )
-            )
-            val input = prompt(
-                brightWhite(
-                    when (promptType) {
-                        PromptType.PublisherSupportUrl -> PromptType.PublisherSupportUrl.toString()
-                        else -> PromptType.PublisherUrl.toString()
-                    }
-                )
-            )?.trim()
+            println(brightYellow(publisherUrlInfo(publisherUrl, schemasImpl.defaultLocaleSchema)))
+            val input = prompt(brightWhite(publisherUrl.toString()))?.trim()
             val (publisherUrlValid, error) = isUrlValid(
                 url = input,
                 schema = schemasImpl.defaultLocaleSchema,
                 canBeBlank = true
             )
             if (publisherUrlValid == Validation.Success) {
-                when (promptType) {
-                    PromptType.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
-                    else -> defaultLocaleManifestData.publisherUrl = input
+                when (publisherUrl) {
+                    PublisherUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
+                    PublisherUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
+                    PublisherUrl.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
                 }
             }
             error?.let { println(red(it)) }
@@ -127,11 +115,7 @@ object Url : KoinComponent {
         } while (publisherUrlValid != Validation.Success)
     }
 
-    suspend fun isUrlValid(
-        url: String?,
-        schema: RemoteSchema,
-        canBeBlank: Boolean
-    ): Pair<Validation, String?> {
+    suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): Pair<Validation, String?> {
         val maxLength = when (schema) {
             is InstallerSchema -> schema.definitions.url.maxLength
             is DefaultLocaleSchema -> schema.definitions.url.maxLength
@@ -166,9 +150,14 @@ object Url : KoinComponent {
         }
     }
 
-    private const val publisherUrlInfo = "${Prompts.optional} Enter the Publisher Url."
-
-    private const val publisherSupportUrlInfo = "${Prompts.optional} Enter the Publisher Support Url."
+    private fun publisherUrlInfo(publisherUrl: PublisherUrl, defaultLocaleSchema: DefaultLocaleSchema): String {
+        val description = when (publisherUrl) {
+            PublisherUrl.PublisherUrl -> defaultLocaleSchema.properties.publisherUrl.description
+            PublisherUrl.PublisherSupportUrl -> defaultLocaleSchema.properties.publisherSupportUrl.description
+            PublisherUrl.PublisherPrivacyUrl -> defaultLocaleSchema.properties.privacyUrl.description
+        }
+        return "${Prompts.optional} Enter ${description.lowercase()}"
+    }
 
     private fun originalUrlRetained(url: String?) = "Original URL Retained - Proceeding with $url"
 
