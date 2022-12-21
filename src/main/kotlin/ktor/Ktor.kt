@@ -1,4 +1,4 @@
-
+package ktor
 import com.github.ajalt.mordant.animation.progressAnimation
 import data.InstallerManifestData
 import data.SharedManifestData
@@ -65,6 +65,14 @@ object Ktor : KoinComponent {
             }
         }
         return file
+    }
+
+    fun getDirectoryUrl(packageIdentifier: String): String {
+        return buildString {
+            append("https://api.github.com/repos/Microsoft/winget-pkgs/contents/manifests/")
+            append(packageIdentifier.first().lowercase())
+            packageIdentifier.split(".").forEach { append("/$it") }
+        }
     }
 
     private fun getURLExtension(url: String?): String {

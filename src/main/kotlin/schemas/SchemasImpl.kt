@@ -1,6 +1,5 @@
 package schemas
 
-import Ktor
 import com.github.ajalt.mordant.animation.progressAnimation
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -14,6 +13,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import ktor.Ktor
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject

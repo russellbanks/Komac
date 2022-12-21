@@ -8,4 +8,5 @@ class SharedManifestData : KoinComponent {
     lateinit var packageIdentifier: String
     lateinit var packageVersion: String
     lateinit var defaultLocale: String
+    var isNewPackage = false
 }

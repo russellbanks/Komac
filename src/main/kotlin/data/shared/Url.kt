@@ -1,10 +1,6 @@
 package data.shared
 
 import Errors
-import Ktor
-import Ktor.downloadInstallerFromUrl
-import Ktor.getRedirectedUrl
-import Ktor.isRedirect
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -25,6 +21,10 @@ import io.ktor.client.plugins.UserAgent
 import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
+import ktor.Ktor
+import ktor.Ktor.downloadInstallerFromUrl
+import ktor.Ktor.getRedirectedUrl
+import ktor.Ktor.isRedirect
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject

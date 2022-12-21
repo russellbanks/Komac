@@ -6,6 +6,7 @@ import io.ktor.client.plugins.UserAgent
 import io.ktor.client.request.get
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import ktor.Ktor
 import schemas.InstallerSchema
 import schemas.Schemas
 

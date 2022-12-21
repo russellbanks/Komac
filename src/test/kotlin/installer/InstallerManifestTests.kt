@@ -1,5 +1,4 @@
 package installer
-import Ktor
 import Validation
 import data.installer.InstallerScope.isInstallerScopeValid
 import data.installer.UpgradeBehaviour.isUpgradeBehaviourValid
@@ -17,6 +16,7 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import ktor.Ktor
 import org.koin.core.context.startKoin
 import org.koin.ksp.generated.defaultModule
 import schemas.DefaultLocaleSchema
