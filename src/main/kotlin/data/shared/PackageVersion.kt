@@ -65,6 +65,11 @@ object PackageVersion : KoinComponent {
     }
 
     fun getHighestVersion(versions: List<String>): String {
+        val toNatural: (String) -> String = {
+            Regex("\\d+").replace(it) { matchResult ->
+                matchResult.value.padStart(20)
+            }
+        }
         data class VersionPart(val value: Int, val supplement: String, val original: String)
 
         fun parseVersionPart(part: String): VersionPart {
@@ -87,13 +92,15 @@ object PackageVersion : KoinComponent {
             return left.zip(right).map { compareVersionParts(it.first, it.second) }.firstOrNull { it != 0 } ?: 0
         }
 
-        return versions.map { version ->
-            version.split(".").map { versionPart ->
-                parseVersionPart(versionPart)
-            }
-        }.sortedWith { left, right ->
-            compareVersions(left, right)
-        }.last().joinToString(".") { it.original }
+        return versions.asSequence()
+            .sortedWith(compareBy(toNatural))
+            .map { version ->
+                version.split(".").map { versionPart ->
+                    parseVersionPart(versionPart)
+                }
+            }.sortedWith { left, right ->
+                compareVersions(left, right)
+            }.last().joinToString(".") { it.original }
     }
 
     private const val packageVersionInfo = "${Prompts.required} Enter the version. For example: 1.33.7"
