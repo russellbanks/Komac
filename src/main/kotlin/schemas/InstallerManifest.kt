@@ -50,9 +50,9 @@ data class InstallerManifest(
     @SerialName("ManifestType") val manifestType: String = "",
     @SerialName("ManifestVersion") val manifestVersion: String = ""
 ) {
-    enum class Platform(val value: String) {
-        WindowsDesktop("Windows.Desktop"),
-        WindowsUniversal("Windows.Universal");
+    enum class Platform {
+        @SerialName("Windows.Desktop") WindowsDesktop,
+        @SerialName("Windows.Universal") WindowsUniversal;
     }
 
     /**

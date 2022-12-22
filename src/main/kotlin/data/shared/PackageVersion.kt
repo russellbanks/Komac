@@ -2,32 +2,20 @@ package data.shared
 
 import Errors
 import Validation
-import com.charleskorn.kaml.Yaml
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.SharedManifestData
 import input.PromptType
 import input.Prompts
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
-import ktor.Clients
-import ktor.Ktor
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.DefaultLocaleManifest
-import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.SchemasImpl
-import schemas.VersionManifest
 
 object PackageVersion : KoinComponent {
     suspend fun Terminal.packageVersionPrompt() {
@@ -40,44 +28,11 @@ object PackageVersion : KoinComponent {
             if (packageVersionValid == Validation.Success && input != null) {
                 sharedManifestData.packageVersion = input
                 if (!sharedManifestData.isNewPackage) {
-                    val client: HttpClient = get<Clients>().httpClient
-                    val githubDirectory = client.config {
-                        install(ContentNegotiation) {
-                            json()
+                    coroutineScope {
+                        launch {
+                            sharedManifestData.getPreviousManifestData()
                         }
-                    }.use {
-                        it.get(Ktor.getDirectoryUrl(sharedManifestData.packageIdentifier))
-                            .body<ArrayList<GitHubDirectory.GitHubDirectoryItem>>()
                     }
-                    val latestVersion = githubDirectory.getLatestVersion()
-                    println(cyan("Found latest version: $latestVersion"))
-                    val json = Json { ignoreUnknownKeys = true }
-                    val subDirectory: ArrayList<GitHubDirectory.GitHubDirectoryItem> = json.decodeFromString(
-                        client.get(githubDirectory.first { it.name == latestVersion }.links.self).body()
-                    )
-                    sharedManifestData.remoteInstallerData = subDirectory
-                        .first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }.downloadUrl
-                        ?.let { Yaml.default.decodeFromString(InstallerManifest.serializer(), client.get(it).body()) }
-                    sharedManifestData.remoteVersionData = subDirectory
-                        .first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }.downloadUrl
-                        ?.let { Yaml.default.decodeFromString(VersionManifest.serializer(), client.get(it).body()) }
-                    sharedManifestData.remoteDefaultLocaleData = subDirectory
-                        .first {
-                            it.name == buildString {
-                                append(sharedManifestData.packageIdentifier)
-                                append(".locale.")
-                                append(sharedManifestData.remoteVersionData?.defaultLocale)
-                                append(".yaml")
-                            }
-                        }.downloadUrl
-                        ?.let {
-                            Yaml.default.decodeFromString(DefaultLocaleManifest.serializer(), client.get(it).body())
-                        }
-                    /* subDirectory.filter {
-                        it.name.matches(
-                            Regex("${Regex.escape(sharedManifestData.packageIdentifier)}.locale\\..*\\.yaml")
-                        )
-                    } */
                 }
             }
             println()
@@ -101,7 +56,7 @@ object PackageVersion : KoinComponent {
         }
     }
 
-    private fun ArrayList<GitHubDirectory.GitHubDirectoryItem>.getLatestVersion(
+    fun ArrayList<GitHubDirectory.GitHubDirectoryItem>.getLatestVersion(
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): String {
         filter { it.name.matches(Regex(installerSchema.definitions.packageVersion.pattern)) }
@@ -109,7 +64,7 @@ object PackageVersion : KoinComponent {
             .also { return getHighestVersion(it) }
     }
 
-    fun getHighestVersion(versions: List<String>): String {
+    private fun getHighestVersion(versions: List<String>): String {
         data class VersionPart(val value: Int, val supplement: String, val original: String)
 
         fun parseVersionPart(part: String): VersionPart {

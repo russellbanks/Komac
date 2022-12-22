@@ -15,6 +15,6 @@ object LocalDateSerializer : KSerializer<LocalDate> {
     }
 
     override fun deserialize(decoder: Decoder): LocalDate {
-        return LocalDate.parse(decoder.decodeString())
+        return LocalDate.parse(decoder.beginStructure(descriptor).decodeStringElement(descriptor, 0))
     }
 }
