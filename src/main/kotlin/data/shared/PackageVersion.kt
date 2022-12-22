@@ -64,7 +64,7 @@ object PackageVersion : KoinComponent {
             .also { return getHighestVersion(it) }
     }
 
-    private fun getHighestVersion(versions: List<String>): String {
+    fun getHighestVersion(versions: List<String>): String {
         data class VersionPart(val value: Int, val supplement: String, val original: String)
 
         fun parseVersionPart(part: String): VersionPart {
