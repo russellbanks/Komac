@@ -28,8 +28,7 @@ import data.locale.LocaleUrl
 import data.locale.Moniker.monikerPrompt
 import data.locale.Publisher.publisherPrompt
 import data.locale.Tags.tagsPrompt
-import data.shared.Locale.installerLocalePrompt
-import data.shared.Locale.packageLocalePrompt
+import data.shared.Locale.localePrompt
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageName.packageNamePrompt
 import data.shared.PackageVersion.packageVersionPrompt
@@ -37,6 +36,7 @@ import data.shared.Url.installerDownloadPrompt
 import data.shared.Url.localeUrlPrompt
 import input.InstallerSwitch
 import input.Polar
+import input.PromptType
 import input.Prompts
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -60,7 +60,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                     architecturePrompt()
                     installerTypePrompt()
                     InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
-                    installerLocalePrompt()
+                    localePrompt(PromptType.InstallerLocale)
                     productCodePrompt()
                     installerScopePrompt()
                     upgradeBehaviourPrompt()
@@ -73,7 +73,7 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
                 commandsPrompt()
                 installerSuccessCodesPrompt()
                 installModesPrompt()
-                packageLocalePrompt()
+                localePrompt(PromptType.PackageLocale)
                 publisherPrompt()
                 packageNamePrompt()
                 monikerPrompt()

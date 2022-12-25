@@ -12,8 +12,8 @@ import java.time.LocalDate
 @Suppress("unused")
 @Serializable
 data class InstallerManifest(
-    @SerialName("PackageIdentifier") val packageIdentifier: String = "",
-    @SerialName("PackageVersion") val packageVersion: String = "",
+    @SerialName("PackageIdentifier") val packageIdentifier: String,
+    @SerialName("PackageVersion") val packageVersion: String,
     @SerialName("Channel") val channel: String? = null,
     @SerialName("InstallerLocale") val installerLocale: String? = null,
     @SerialName("Platform") val platform: List<Platform>? = null,
@@ -47,8 +47,8 @@ data class InstallerManifest(
     @SerialName("ElevationRequirement") val elevationRequirement: ElevationRequirement? = null,
     @SerialName("InstallationMetadata") val installationMetadata: InstallationMetadata? = null,
     @SerialName("Installers") val installers: List<Installer> = listOf(),
-    @SerialName("ManifestType") val manifestType: String = "",
-    @SerialName("ManifestVersion") val manifestVersion: String = ""
+    @SerialName("ManifestType") val manifestType: String,
+    @SerialName("ManifestVersion") val manifestVersion: String
 ) {
     enum class Platform {
         @SerialName("Windows.Desktop") WindowsDesktop,
@@ -71,6 +71,24 @@ data class InstallerManifest(
         @SerialName("burn") BURN,
         @SerialName("pwa") PWA,
         @SerialName("portable") PORTABLE;
+
+        override fun toString() = name.lowercase()
+
+        fun toPerInstallerType(): Installer.InstallerType {
+            return when (this) {
+                MSIX -> Installer.InstallerType.MSIX
+                MSI -> Installer.InstallerType.MSI
+                APPX -> Installer.InstallerType.APPX
+                EXE -> Installer.InstallerType.EXE
+                ZIP -> Installer.InstallerType.ZIP
+                INNO -> Installer.InstallerType.INNO
+                NULLSOFT -> Installer.InstallerType.NULLSOFT
+                WIX -> Installer.InstallerType.WIX
+                BURN -> Installer.InstallerType.BURN
+                PWA -> Installer.InstallerType.PWA
+                PORTABLE -> Installer.InstallerType.PORTABLE
+            }
+        }
     }
 
     /**
@@ -87,6 +105,8 @@ data class InstallerManifest(
         @SerialName("wix") WIX,
         @SerialName("burn") BURN,
         @SerialName("portable") PORTABLE;
+
+        override fun toString() = name.lowercase()
     }
 
     /**
@@ -94,7 +114,7 @@ data class InstallerManifest(
      */
     @Serializable
     data class NestedInstallerFiles(
-        @SerialName("RelativeFilePath") val relativeFilePath: String = "",
+        @SerialName("RelativeFilePath") val relativeFilePath: String,
         @SerialName("PortableCommandAlias") val portableCommandAlias: String? = null
     )
 
@@ -104,6 +124,13 @@ data class InstallerManifest(
     enum class Scope {
         @SerialName("user") User,
         @SerialName("machine") Machine;
+
+        fun toPerScopeInstallerType(): Installer.Scope {
+            return when (this) {
+                User -> Installer.Scope.User
+                Machine -> Installer.Scope.Machine
+            }
+        }
     }
 
     enum class InstallModes {
@@ -126,6 +153,18 @@ data class InstallerManifest(
             return listOf(silent, silentWithProgress, interactive, installLocation, log, upgrade, custom).all {
                 it == null
             }
+        }
+
+        fun toPerInstallerType(): Installer.InstallerSwitches {
+            return Installer.InstallerSwitches(
+                silent = silent,
+                silentWithProgress = silentWithProgress,
+                interactive = interactive,
+                installLocation = installLocation,
+                log = log,
+                upgrade = upgrade,
+                custom = custom
+            )
         }
     }
 
@@ -164,6 +203,13 @@ data class InstallerManifest(
     enum class UpgradeBehavior {
         @SerialName("install") Install,
         @SerialName("uninstallPrevious") UninstallPrevious;
+
+        fun toPerInstallerType(): Installer.UpgradeBehavior {
+            return when (this) {
+                Install -> Installer.UpgradeBehavior.Install
+                UninstallPrevious -> Installer.UpgradeBehavior.UninstallPrevious
+            }
+        }
     }
 
     @Serializable
@@ -175,18 +221,15 @@ data class InstallerManifest(
     ) {
         @Serializable
         data class PackageDependencies(
-            @SerialName("PackageIdentifier") val packageIdentifier: String = "",
+            @SerialName("PackageIdentifier") val packageIdentifier: String,
             @SerialName("MinimumVersion") val minimumVersion: String? = null
         )
     }
 
     enum class UnsupportedOSArchitectures {
         @SerialName("x86") X86,
-
         @SerialName("x64") X64,
-
         @SerialName("arm") ARM,
-
         @SerialName("arm64") ARM64;
     }
 
@@ -206,16 +249,34 @@ data class InstallerManifest(
         @SerialName("ProductCode") val productCode: String? = null,
         @SerialName("UpgradeCode") val upgradeCode: String? = null,
         @SerialName("InstallerType") val installerType: InstallerType? = null
-    )
+    ) {
+        /**
+         * Enumeration of supported installer types.
+         * InstallerType is required in either root level or individual Installer level
+         */
+        enum class InstallerType {
+            @SerialName("msix") MSIX,
+            @SerialName("msi") MSI,
+            @SerialName("appx") APPX,
+            @SerialName("exe") EXE,
+            @SerialName("zip") ZIP,
+            @SerialName("inno") INNO,
+            @SerialName("nullsoft") NULLSOFT,
+            @SerialName("wix") WIX,
+            @SerialName("burn") BURN,
+            @SerialName("pwa") PWA,
+            @SerialName("portable") PORTABLE;
+
+            override fun toString() = name.lowercase()
+        }
+    }
 
     /**
      * The installer's elevation requirement
      */
     enum class ElevationRequirement {
         @SerialName("elevationRequired") ElevationRequired,
-
         @SerialName("elevationProhibited") ElevationProhibited,
-
         @SerialName("elevatesSelf") ElevatesSelf;
     }
 
@@ -232,7 +293,7 @@ data class InstallerManifest(
          */
         @Serializable
         data class Files(
-            @SerialName("RelativeFilePath") val relativeFilePath: String = "",
+            @SerialName("RelativeFilePath") val relativeFilePath: String,
             @SerialName("FileSha256") val fileSha256: String? = null,
             @SerialName("FileType") val fileType: FileType? = null,
             @SerialName("InvocationParameter") val invocationParameter: String? = null,
@@ -288,6 +349,11 @@ data class InstallerManifest(
         @SerialName("ElevationRequirement") val elevationRequirement: ElevationRequirement? = null,
         @SerialName("InstallationMetadata") val installationMetadata: InstallationMetadata? = null
     ) {
+        enum class Platform {
+            @SerialName("Windows.Desktop") WindowsDesktop,
+            @SerialName("Windows.Universal") WindowsUniversal;
+        }
+
         /**
          * The installer target architecture
          */
@@ -299,6 +365,209 @@ data class InstallerManifest(
             @SerialName("neutral") NEUTRAL;
 
             override fun toString() = name.lowercase()
+        }
+
+        /**
+         * Enumeration of supported installer types.
+         * InstallerType is required in either root level or individual Installer level
+         */
+        enum class InstallerType {
+            @SerialName("msix") MSIX,
+            @SerialName("msi") MSI,
+            @SerialName("appx") APPX,
+            @SerialName("exe") EXE,
+            @SerialName("zip") ZIP,
+            @SerialName("inno") INNO,
+            @SerialName("nullsoft") NULLSOFT,
+            @SerialName("wix") WIX,
+            @SerialName("burn") BURN,
+            @SerialName("pwa") PWA,
+            @SerialName("portable") PORTABLE;
+
+            override fun toString() = name.lowercase()
+        }
+
+        /**
+         * Enumeration of supported nested installer types contained inside an archive file
+         */
+        enum class NestedInstallerType {
+            @SerialName("msix") MSIX,
+            @SerialName("msi") MSI,
+            @SerialName("appx") APPX,
+            @SerialName("exe") EXE,
+            @SerialName("zip") ZIP,
+            @SerialName("inno") INNO,
+            @SerialName("nullsoft") NULLSOFT,
+            @SerialName("wix") WIX,
+            @SerialName("burn") BURN,
+            @SerialName("portable") PORTABLE;
+        }
+
+        /**
+         * A nested installer file contained inside an archive
+         */
+        @Serializable
+        data class NestedInstallerFiles(
+            @SerialName("RelativeFilePath") val relativeFilePath: String,
+            @SerialName("PortableCommandAlias") val portableCommandAlias: String? = null
+        )
+
+        /**
+         * Scope indicates if the installer is per user or per machine
+         */
+        enum class Scope {
+            @SerialName("user") User,
+            @SerialName("machine") Machine;
+        }
+
+        enum class InstallModes {
+            @SerialName("interactive") Interactive,
+            @SerialName("silent") Silent,
+            @SerialName("silentWithProgress") SilentWithProgress;
+        }
+
+        @Serializable
+        data class InstallerSwitches(
+            @SerialName("Silent") val silent: String? = null,
+            @SerialName("SilentWithProgress") val silentWithProgress: String? = null,
+            @SerialName("Interactive") val interactive: String? = null,
+            @SerialName("InstallLocation") val installLocation: String? = null,
+            @SerialName("Log") val log: String? = null,
+            @SerialName("Upgrade") val upgrade: String? = null,
+            @SerialName("Custom") val custom: String? = null
+        )
+
+        @Serializable
+        data class ExpectedReturnCodes(
+            @SerialName("InstallerReturnCode") val installerReturnCode: Int? = null,
+            @SerialName("ReturnResponse") val returnResponse: ReturnResponse,
+            @SerialName("ReturnResponseUrl") val returnResponseUrl: String? = null
+        ) {
+            enum class ReturnResponse {
+                @SerialName("packageInUse") PackageInUse,
+                @SerialName("packageInUseByApplication") PackageInUseByApplication,
+                @SerialName("installInProgress") InstallInProgress,
+                @SerialName("fileInUse") FileInUse,
+                @SerialName("missingDependency") MissingDependency,
+                @SerialName("diskFull") DiskFull,
+                @SerialName("insufficientMemory") InsufficientMemory,
+                @SerialName("invalidParameter") InvalidParameter,
+                @SerialName("noNetwork") NoNetwork,
+                @SerialName("contactSupport") ContactSupport,
+                @SerialName("rebootRequiredToFinish") RebootRequiredToFinish,
+                @SerialName("rebootRequiredForInstall") RebootRequiredForInstall,
+                @SerialName("rebootInitiated") RebootInitiated,
+                @SerialName("cancelledByUser") CancelledByUser,
+                @SerialName("alreadyInstalled") AlreadyInstalled,
+                @SerialName("downgrade") Downgrade,
+                @SerialName("blockedByPolicy") BlockedByPolicy,
+                @SerialName("systemNotSupported") SystemNotSupported,
+                @SerialName("custom") Custom;
+            }
+        }
+
+        /**
+         * The upgrade method
+         */
+        enum class UpgradeBehavior {
+            @SerialName("install") Install,
+            @SerialName("uninstallPrevious") UninstallPrevious;
+        }
+
+        @Serializable
+        data class Dependencies(
+            @SerialName("WindowsFeatures") val windowsFeatures: List<String>? = null,
+            @SerialName("WindowsLibraries") val windowsLibraries: List<String>? = null,
+            @SerialName("PackageDependencies") val packageDependencies: List<PackageDependencies>? = null,
+            @SerialName("ExternalDependencies") val externalDependencies: List<String>? = null
+        ) {
+            @Serializable
+            data class PackageDependencies(
+                @SerialName("PackageIdentifier") val packageIdentifier: String,
+                @SerialName("MinimumVersion") val minimumVersion: String? = null
+            )
+        }
+
+        enum class UnsupportedOSArchitectures {
+            @SerialName("x86") X86,
+            @SerialName("x64") X64,
+            @SerialName("arm") ARM,
+            @SerialName("arm64") ARM64;
+        }
+
+        enum class UnsupportedArguments {
+            @SerialName("log") Log,
+            @SerialName("location") Location;
+        }
+
+        /**
+         * Various key values under installer's ARP entry
+         */
+        @Serializable
+        data class AppsAndFeaturesEntry(
+            @SerialName("DisplayName") val displayName: String? = null,
+            @SerialName("Publisher") val publisher: String? = null,
+            @SerialName("DisplayVersion") val displayVersion: String? = null,
+            @SerialName("ProductCode") val productCode: String? = null,
+            @SerialName("UpgradeCode") val upgradeCode: String? = null,
+            @SerialName("InstallerType") val installerType: InstallerType? = null
+        ) {
+            /**
+             * Enumeration of supported installer types.
+             * InstallerType is required in either root level or individual Installer level
+             */
+            enum class InstallerType {
+                @SerialName("msix") MSIX,
+                @SerialName("msi") MSI,
+                @SerialName("appx") APPX,
+                @SerialName("exe") EXE,
+                @SerialName("zip") ZIP,
+                @SerialName("inno") INNO,
+                @SerialName("nullsoft") NULLSOFT,
+                @SerialName("wix") WIX,
+                @SerialName("burn") BURN,
+                @SerialName("pwa") PWA,
+                @SerialName("portable") PORTABLE;
+            }
+        }
+
+        /**
+         * The installer's elevation requirement
+         */
+        enum class ElevationRequirement {
+            @SerialName("elevationRequired") ElevationRequired,
+            @SerialName("elevationProhibited") ElevationProhibited,
+            @SerialName("elevatesSelf") ElevatesSelf;
+        }
+
+        /**
+         * Details about the installation. Used for deeper installation detection.
+         */
+        @Serializable
+        data class InstallationMetadata(
+            @SerialName("DefaultInstallLocation") val defaultInstallLocation: String? = null,
+            @SerialName("Files") val files: List<Files>? = null
+        ) {
+            /**
+             * Represents an installed file.
+             */
+            @Serializable
+            data class Files(
+                @SerialName("RelativeFilePath") val relativeFilePath: String,
+                @SerialName("FileSha256") val fileSha256: String? = null,
+                @SerialName("FileType") val fileType: FileType? = null,
+                @SerialName("InvocationParameter") val invocationParameter: String? = null,
+                @SerialName("DisplayName") val displayName: String? = null
+            ) {
+                /**
+                 * The optional installed file type. If not specified, the file is treated as other.
+                 */
+                enum class FileType {
+                    @SerialName("launch") Launch,
+                    @SerialName("uninstall") Uninstall,
+                    @SerialName("other") Other;
+                }
+            }
         }
     }
 }

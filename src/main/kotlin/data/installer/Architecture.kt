@@ -2,8 +2,11 @@ package data.installer
 
 import Errors
 import Validation
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
@@ -18,20 +21,18 @@ import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object Architecture : KoinComponent {
+    private val installerManifestData: InstallerManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val schemasImpl: SchemasImpl by inject()
+    private val architectureSchema = schemasImpl.installerSchema.definitions.architecture
 
     suspend fun Terminal.architecturePrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        val sharedManifestData: SharedManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        val architectureSchema = schemasImpl.installerSchema.definitions.architecture
         do {
-            println(brightGreen(architectureInfo(architectureSchema)))
+            architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
+            println(cyan("Options: ${architectureSchema.enum.joinToString(", ")}"))
             val input = prompt(
                 prompt = brightWhite(PromptType.Architecture.toString()),
-                default = sharedManifestData.remoteInstallerData.await()?.installers
-                    ?.get(installerManifestData.installers.size)?.architecture?.also {
-                        println(gray("Previous value: $it"))
-                    }?.toString()
+                default = getPreviousValue()?.also { println(gray("Previous value: $it")) }
             )?.trim()?.lowercase()
             val (architectureValid, error) = isArchitectureValid(input, architectureSchema)
             error?.let { println(red(it)) }
@@ -65,7 +66,15 @@ object Architecture : KoinComponent {
         throw IllegalArgumentException("Invalid architecture: $this")
     }
 
-    private fun architectureInfo(architectureSchema: InstallerSchema.Definitions.Architecture): String {
-        return "${Prompts.required} Enter the architecture. Options: ${architectureSchema.enum.joinToString(", ")}"
+    private suspend fun getPreviousValue(): String? {
+        return sharedManifestData.remoteInstallerData.await()?.installers
+            ?.get(installerManifestData.installers.size)?.architecture?.toString()
+    }
+
+    private suspend fun architectureInfo(): Pair<String, TextColors> {
+        return buildString {
+            append(if (getPreviousValue() == null) Prompts.required else Prompts.optional)
+            append(" Enter the architecture")
+        } to if (getPreviousValue() == null) brightGreen else brightYellow
     }
 }

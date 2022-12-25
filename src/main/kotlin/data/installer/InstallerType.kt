@@ -2,28 +2,38 @@ package data.installer
 
 import Errors
 import Validation
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object InstallerType : KoinComponent {
-    fun Terminal.installerTypePrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        val schemasImpl: SchemasImpl = get()
-        val installerTypeSchema = schemasImpl.installerSchema.definitions.installerType
+    private val installerManifestData: InstallerManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val schemasImpl: SchemasImpl by inject()
+    private val installerTypeSchema = schemasImpl.installerSchema.definitions.installerType
+
+    suspend fun Terminal.installerTypePrompt() {
         do {
-            println(brightGreen(installerTypeInfo(installerTypeSchema)))
-            val input = prompt(brightWhite(PromptType.InstallerType.toString()))?.trim()?.lowercase()
+            installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
+            println(cyan("Options: ${installerTypeSchema.enum.joinToString(", ")}"))
+            val input = prompt(
+                prompt = brightWhite(PromptType.InstallerType.toString()),
+                default = getPreviousValue()?.also { println(gray("Previous value: $it")) }
+            )?.trim()?.lowercase()
             val (installerTypeValid, error) = isInstallerTypeValid(input, installerTypeSchema)
             error?.let { println(red(it)) }
             if (installerTypeValid == Validation.Success && input != null) {
@@ -35,15 +45,12 @@ object InstallerType : KoinComponent {
 
     fun isInstallerTypeValid(
         installerType: String?,
-        installerTypeSchema: InstallerSchema.Definitions.InstallerType
+        schema: InstallerSchema.Definitions.InstallerType = installerTypeSchema
     ): Pair<Validation, String?> {
         return when {
             installerType.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerType)
-            !installerTypeSchema.enum.contains(installerType) -> {
-                Validation.InvalidInstallerType to Errors.invalidEnum(
-                    Validation.InvalidInstallerType,
-                    installerTypeSchema.enum
-                )
+            !schema.enum.contains(installerType) -> {
+                Validation.InvalidInstallerType to Errors.invalidEnum(Validation.InvalidInstallerType, schema.enum)
             }
             else -> Validation.Success to null
         }
@@ -56,10 +63,17 @@ object InstallerType : KoinComponent {
         throw IllegalArgumentException("Invalid installer type: $this")
     }
 
-    private fun installerTypeInfo(installerTypeSchema: InstallerSchema.Definitions.InstallerType): String {
-        return buildString {
-            append("${Prompts.required} Enter the installer type. Options: ")
-            append(installerTypeSchema.enum.joinToString(", "))
+    private suspend fun getPreviousValue(): String? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.installerType?.toString() ?: it?.installers
+                ?.get(installerManifestData.installers.size)?.installerType?.toString()
         }
+    }
+
+    private suspend fun installerTypeInfo(): Pair<String, TextColors> {
+        return buildString {
+            append(if (getPreviousValue() == null) Prompts.required else Prompts.optional)
+            append(" Enter the installer type")
+        } to if (getPreviousValue() == null) brightGreen else brightYellow
     }
 }

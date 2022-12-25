@@ -54,7 +54,7 @@ object InstallerScope : KoinComponent {
             error?.let { println(red(it)) }
             println()
         } while (installerScopeValid != Validation.Success)
-        installerManifestData.installerScope = installerScopeSchema.enum.firstOrNull {
+        installerManifestData.scope = installerScopeSchema.enum.firstOrNull {
             it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
         }?.toScope()
     }

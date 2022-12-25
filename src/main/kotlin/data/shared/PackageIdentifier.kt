@@ -32,7 +32,7 @@ object PackageIdentifier : KoinComponent {
                 sharedManifestData.packageIdentifier = input
                 if (sharedManifestData.doesPackageAlreadyExist(input).also { sharedManifestData.isNewPackage = !it }) {
                     println(cyan("Found $input in the winget-pkgs repository"))
-                    sharedManifestData.githubDirectory.getLatestVersion().also {
+                    sharedManifestData.githubDirectory?.getLatestVersion()?.let {
                         sharedManifestData.latestVersion = it
                         println(cyan("Found latest version: $it"))
                     }

@@ -2,9 +2,12 @@ package data.shared
 
 import Errors
 import Validation
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -16,39 +19,38 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleSchema
 import schemas.InstallerSchema
-import schemas.Schema
 import schemas.SchemasImpl
 
 object Locale : KoinComponent {
-    fun Terminal.installerLocalePrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        do {
-            println(brightYellow(localeInfo(PromptType.InstallerLocale)))
-            installerManifestData.installerLocale = prompt(brightWhite(PromptType.InstallerLocale.toString()))?.trim()
-            val (installerLocaleValid, error) = isInstallerLocaleValid(installerManifestData.installerLocale)
-            error?.let { println(red(it)) }
-            println()
-        } while (installerLocaleValid != Validation.Success)
-    }
+    val installerManifestData: InstallerManifestData by inject()
+    val sharedManifestData: SharedManifestData by inject()
 
-    suspend fun Terminal.packageLocalePrompt() {
-        val sharedManifestData: SharedManifestData by inject()
-        val schemasImpl: SchemasImpl = get()
-        schemasImpl.awaitSchema(Schema.DefaultLocale)
-        val packageLocaleSchema = schemasImpl.defaultLocaleSchema.properties.packageLocale
+    suspend fun Terminal.localePrompt(promptType: PromptType) {
         do {
-            println(brightGreen(localeInfo(PromptType.PackageLocale)))
+            localeInfo(promptType).also { (info, infoColor) -> println(infoColor(info)) }
+            if (promptType == PromptType.InstallerLocale) println(cyan("Example: en-US"))
             val input = prompt(
-                prompt = brightWhite(PromptType.PackageLocale.toString()),
-                default = packageLocaleSchema.default
-            )?.trim()
-            val (packageLocaleValid, error) = isPackageLocaleValid(input)
-            if (packageLocaleValid == Validation.Success && input != null) {
-                sharedManifestData.defaultLocale = input
+                prompt = brightWhite(promptType.toString()),
+                default = when (promptType) {
+                    PromptType.InstallerType -> getPreviousValue()?.also { println(gray("Previous value: $it")) }
+                    else -> null
+                }
+            )?.trim()?.lowercase()
+            val (localeValid, error) = if (promptType == PromptType.InstallerLocale) {
+                isInstallerLocaleValid(input)
+            } else {
+                isPackageLocaleValid(input)
             }
             error?.let { println(red(it)) }
+            if (localeValid == Validation.Success && input != null) {
+                if (promptType == PromptType.InstallerLocale) {
+                    installerManifestData.installerLocale = input
+                } else {
+                    sharedManifestData.defaultLocale = input
+                }
+            }
             println()
-        } while (packageLocaleValid != Validation.Success)
+        } while (localeValid != Validation.Success)
     }
 
     fun isInstallerLocaleValid(
@@ -64,6 +66,12 @@ object Locale : KoinComponent {
                 Validation.InvalidLength to Errors.invalidLength(max = installerLocale.maxLength)
             }
             else -> Validation.Success to null
+        }
+    }
+
+    private suspend fun getPreviousValue(): String? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.installerLocale ?: it?.installers?.get(installerManifestData.installers.size)?.installerLocale
         }
     }
 
@@ -84,10 +92,10 @@ object Locale : KoinComponent {
         }
     }
 
-    private fun localeInfo(promptType: PromptType): String {
+    private fun localeInfo(promptType: PromptType): Pair<String, TextColors> {
         return buildString {
             append(if (promptType == PromptType.PackageLocale) Prompts.required else Prompts.optional)
-            append(" Enter the $promptType. For example: en-US, en-CA")
-        }
+            append(" Enter the $promptType")
+        } to if (promptType == PromptType.PackageLocale) brightGreen else brightYellow
     }
 }

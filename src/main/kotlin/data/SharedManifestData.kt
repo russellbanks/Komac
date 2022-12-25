@@ -35,9 +35,9 @@ class SharedManifestData : KoinComponent {
     lateinit var remoteDefaultLocaleData: Deferred<DefaultLocaleManifest?>
     lateinit var remoteLocaleData: Deferred<List<LocaleManifest>?>
     lateinit var remoteVersionData: Deferred<VersionManifest?>
-    lateinit var githubDirectory: ArrayList<GitHubDirectory.GitHubDirectoryItem>
+    var githubDirectory: ArrayList<GitHubDirectory.GitHubDirectoryItem>? = null
     lateinit var latestVersion: String
-    lateinit var subDirectory: Deferred<ArrayList<GitHubDirectory.GitHubDirectoryItem>>
+    var subDirectory: Deferred<ArrayList<GitHubDirectory.GitHubDirectoryItem>?>? = null
     private val client: HttpClient = get<Clients>().httpClient
     private val contentNegotiationClient = client.config { install(ContentNegotiation) { json() } }
 
@@ -45,7 +45,7 @@ class SharedManifestData : KoinComponent {
         val directoryResponse = contentNegotiationClient.get(Ktor.getDirectoryUrl(identifier))
         if (!directoryResponse.status.isSuccess()) return false
         githubDirectory = directoryResponse.body()
-        return githubDirectory.filterNot { it.name == ".validation" }.isNotEmpty()
+        return githubDirectory?.filterNot { it.name == ".validation" }?.isNotEmpty() == true
     }
 
     suspend fun getPreviousManifestData() = coroutineScope {
@@ -53,54 +53,56 @@ class SharedManifestData : KoinComponent {
 
         // Wait for the latest version to be found, then download the subdirectory in parallel
         subDirectory = async(Dispatchers.IO) {
-            contentNegotiationClient.get(githubDirectory.first { it.name == latestVersion }.links.self).body()
+            githubDirectory?.first { it.name == latestVersion }?.links?.self?.let {
+                contentNegotiationClient.get(it).body()
+            }
         }
         remoteInstallerData = async(Dispatchers.IO) {
-            val subDirectory = subDirectory.await()
+            val subDirectory = subDirectory?.await()
             subDirectory
-                .first { it.name == "$packageIdentifier.installer.yaml" }
-                .downloadUrl?.let {
+                ?.first { it.name == "$packageIdentifier.installer.yaml" }
+                ?.downloadUrl?.let {
                     yaml.decodeFromString(InstallerManifest.serializer(), client.get(it).body())
                 }
         }
         remoteVersionData = async(Dispatchers.IO) {
-            val subDirectory = subDirectory.await()
+            val subDirectory = subDirectory?.await()
             subDirectory
-                .first { it.name == "$packageIdentifier.yaml" }.downloadUrl?.let {
+                ?.first { it.name == "$packageIdentifier.yaml" }?.downloadUrl?.let {
                     yaml.decodeFromString(VersionManifest.serializer(), client.get(it).body())
                 }
         }
 
         remoteDefaultLocaleData = async(Dispatchers.IO) {
-            val subDirectory = subDirectory.await()
+            val subDirectory = subDirectory?.await()
             val remoteVersionData = remoteVersionData.await()
             subDirectory
-                .first {
+                ?.first {
                     it.name == buildString {
                         append(packageIdentifier)
                         append(".locale.")
                         append(remoteVersionData?.defaultLocale)
                         append(".yaml")
                     }
-                }.downloadUrl?.let {
+                }?.downloadUrl?.let {
                     yaml.decodeFromString(DefaultLocaleManifest.serializer(), client.get(it).body())
                 }
         }
 
         remoteLocaleData = async(Dispatchers.IO) {
-            val subDirectory = subDirectory.await()
+            val subDirectory = subDirectory?.await()
             val remoteVersionData = remoteVersionData.await()
-            subDirectory.filter { directoryItem ->
+            subDirectory?.filter { directoryItem ->
                 directoryItem.name.matches(
                     Regex("${Regex.escape(packageIdentifier)}.locale\\..*\\.yaml")
                 )
-            }.filterNot { directoryItem ->
+            }?.filterNot { directoryItem ->
                 remoteVersionData?.defaultLocale?.let { defaultLocale ->
                     directoryItem.name.contains(defaultLocale)
                 } == true
-            }.map {
+            }?.map {
                 it.downloadUrl?.let { url -> client.get(url).body<String>() }
-            }.mapNotNull { rawYamlData ->
+            }?.mapNotNull { rawYamlData ->
                 yaml.decodeFromString(LocaleManifest.serializer(), rawYamlData ?: return@mapNotNull null)
             }
         }

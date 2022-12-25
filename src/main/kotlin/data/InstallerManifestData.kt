@@ -25,7 +25,7 @@ class InstallerManifestData : KoinComponent {
     var customSwitch: String? = null
     var installerLocale: String? = null
     var productCode: String? = null
-    var installerScope: InstallerManifest.Scope? = null
+    var scope: InstallerManifest.Scope? = null
     var upgradeBehavior: InstallerManifest.UpgradeBehavior? = null
     var releaseDate: LocalDate? = null
     var installers = listOf<InstallerManifest.Installer>()
@@ -34,7 +34,6 @@ class InstallerManifestData : KoinComponent {
     var commands: List<String>? = null
     var installerSuccessCodes: List<Int>? = null
     var installModes: List<InstallerManifest.InstallModes>? = null
-
     private val terminalInstance: TerminalInstance by inject()
     private val schemaImpl: SchemasImpl by inject()
     private val sharedManifestData: SharedManifestData by inject()
@@ -45,16 +44,16 @@ class InstallerManifestData : KoinComponent {
         installers += InstallerManifest.Installer(
             installerLocale = installerLocale?.ifBlank { null },
             architecture = architecture,
-            installerType = installerType,
+            installerType = installerType.toPerInstallerType(),
             installerUrl = installerUrl,
             installerSha256 = installerSha256,
-            scope = installerScope,
+            scope = scope?.toPerScopeInstallerType(),
             installerSwitches = InstallerManifest.InstallerSwitches(
                 silent = silentSwitch?.ifBlank { null },
                 silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
                 custom = customSwitch?.ifBlank { null }
-            ).takeUnless { it.areAllNull() },
-            upgradeBehavior = upgradeBehavior,
+            ).takeUnless { it.areAllNull() }?.toPerInstallerType(),
+            upgradeBehavior = upgradeBehavior?.toPerInstallerType(),
             productCode = productCode?.ifBlank { null },
             releaseDate = releaseDate
         )
@@ -72,7 +71,7 @@ class InstallerManifestData : KoinComponent {
             packageVersion = sharedManifestData.packageVersion,
             installerLocale = if (installersLocaleDistinct) installerLocale?.ifBlank { null } else null,
             installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
-            scope = if (installerScopeDistinct) installerScope else null,
+            scope = if (installerScopeDistinct) scope else null,
             installModes = installModes?.ifEmpty { null },
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null },
             upgradeBehavior = if (upgradeBehaviourDistinct) upgradeBehavior else null,
