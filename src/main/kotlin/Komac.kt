@@ -18,7 +18,7 @@ import kotlin.system.exitProcess
 class Komac : CliktCommand(), KoinComponent {
     private val option: String? by argument().optional()
 
-    override fun run() = runBlocking {
+    override fun run(): Unit = runBlocking {
         val terminalInstance: TerminalInstance by inject()
         with(terminalInstance.terminal) {
             if (option?.lowercase() == Parameter.New.name.lowercase()) NewManifest(this).main()

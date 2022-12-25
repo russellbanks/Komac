@@ -297,6 +297,8 @@ data class InstallerManifest(
             @SerialName("arm") ARM,
             @SerialName("arm64") ARM64,
             @SerialName("neutral") NEUTRAL;
+
+            override fun toString() = name.lowercase()
         }
     }
 }

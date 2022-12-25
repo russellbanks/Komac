@@ -5,6 +5,7 @@ import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.InstallerManifestData
+import data.SharedManifestData
 import data.VersionManifestData
 import data.installer.Architecture.architecturePrompt
 import data.installer.Commands.commandsPrompt
@@ -37,6 +38,8 @@ import data.shared.Url.localeUrlPrompt
 import input.InstallerSwitch
 import input.Polar
 import input.Prompts
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -44,54 +47,58 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val defaultLocalManifestData: DefaultLocaleManifestData by inject()
     private val versionManifestData: VersionManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
 
-    suspend fun main() {
+    suspend fun main() = coroutineScope {
         with(terminal) {
             packageIdentifierPrompt()
-            packageVersionPrompt()
-            do {
-                installerDownloadPrompt()
-                architecturePrompt()
-                installerTypePrompt()
-                InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
-                installerLocalePrompt()
-                productCodePrompt()
-                installerScopePrompt()
-                upgradeBehaviourPrompt()
-                releaseDatePrompt()
-                installerManifestData.addInstaller()
-                val shouldContinue = shouldLoopPrompt()
-            } while (shouldContinue)
-            fileExtensionsPrompt()
-            protocolsPrompt()
-            commandsPrompt()
-            installerSuccessCodesPrompt()
-            installModesPrompt()
-            packageLocalePrompt()
-            publisherPrompt()
-            packageNamePrompt()
-            monikerPrompt()
-            localeUrlPrompt(LocaleUrl.PublisherUrl)
-            localeUrlPrompt(LocaleUrl.PublisherSupportUrl)
-            localeUrlPrompt(LocaleUrl.PublisherPrivacyUrl)
-            authorPrompt()
-            localeUrlPrompt(LocaleUrl.PackageUrl)
-            licensePrompt()
-            localeUrlPrompt(LocaleUrl.LicenseUrl)
-            copyrightPrompt()
-            localeUrlPrompt(LocaleUrl.CopyrightUrl)
-            tagsPrompt()
-            DescriptionType.values().forEach { descriptionPrompt(it) }
-            localeUrlPrompt(LocaleUrl.ReleaseNotesUrl)
-            installerManifestData.createInstallerManifest()
-            println()
-            defaultLocalManifestData.createDefaultLocaleManifest()
-            println()
-            versionManifestData.createVersionManifest()
+            launch { sharedManifestData.getPreviousManifestData() }
+            launch {
+                packageVersionPrompt()
+                do {
+                    installerDownloadPrompt()
+                    architecturePrompt()
+                    installerTypePrompt()
+                    InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
+                    installerLocalePrompt()
+                    productCodePrompt()
+                    installerScopePrompt()
+                    upgradeBehaviourPrompt()
+                    releaseDatePrompt()
+                    installerManifestData.addInstaller()
+                    val shouldContinue = shouldLoopPrompt()
+                } while (shouldContinue)
+                fileExtensionsPrompt()
+                protocolsPrompt()
+                commandsPrompt()
+                installerSuccessCodesPrompt()
+                installModesPrompt()
+                packageLocalePrompt()
+                publisherPrompt()
+                packageNamePrompt()
+                monikerPrompt()
+                localeUrlPrompt(LocaleUrl.PublisherUrl)
+                localeUrlPrompt(LocaleUrl.PublisherSupportUrl)
+                localeUrlPrompt(LocaleUrl.PublisherPrivacyUrl)
+                authorPrompt()
+                localeUrlPrompt(LocaleUrl.PackageUrl)
+                licensePrompt()
+                localeUrlPrompt(LocaleUrl.LicenseUrl)
+                copyrightPrompt()
+                localeUrlPrompt(LocaleUrl.CopyrightUrl)
+                tagsPrompt()
+                DescriptionType.values().forEach { descriptionPrompt(it) }
+                localeUrlPrompt(LocaleUrl.ReleaseNotesUrl)
+                installerManifestData.createInstallerManifest()
+                println()
+                defaultLocalManifestData.createDefaultLocaleManifest()
+                println()
+                versionManifestData.createVersionManifest()
+            }
         }
     }
 
-    private fun Terminal.shouldLoopPrompt(): Boolean {
+    private suspend fun Terminal.shouldLoopPrompt(): Boolean {
         var promptInput: Char?
         do {
             println(
@@ -113,7 +120,11 @@ class NewManifest(private val terminal: Terminal) : KoinComponent {
             )
             promptInput = prompt(
                 prompt = brightWhite(Prompts.enterChoice),
-                default = Polar.No.toString().first().toString()
+                default = when {
+                    (sharedManifestData.remoteInstallerData.await()?.installers?.size ?: 0) >
+                        installerManifestData.installers.size -> Polar.Yes.name.first().toString()
+                    else -> Polar.No.name.first().toString()
+                },
             )?.trim()?.lowercase()?.firstOrNull()
             println()
         } while (

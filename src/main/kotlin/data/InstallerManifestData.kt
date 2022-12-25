@@ -28,7 +28,7 @@ class InstallerManifestData : KoinComponent {
     var installerScope: InstallerManifest.Scope? = null
     var upgradeBehavior: InstallerManifest.UpgradeBehavior? = null
     var releaseDate: LocalDate? = null
-    private var installers = listOf<InstallerManifest.Installer>()
+    var installers = listOf<InstallerManifest.Installer>()
     var fileExtensions: List<String>? = null
     var protocols: List<String>? = null
     var commands: List<String>? = null

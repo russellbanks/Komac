@@ -8,12 +8,9 @@ import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.SharedManifestData
+import data.shared.PackageVersion.getLatestVersion
 import input.PromptType
 import input.Prompts
-import io.ktor.client.request.head
-import io.ktor.http.isSuccess
-import ktor.Clients
-import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -33,16 +30,16 @@ object PackageIdentifier : KoinComponent {
             error?.let { println(red(it)) }
             if (packageIdentifierValid == Validation.Success && input != null) {
                 sharedManifestData.packageIdentifier = input
-                if (doesPackageAlreadyExist(input).also { sharedManifestData.isNewPackage = !it }) {
+                if (sharedManifestData.doesPackageAlreadyExist(input).also { sharedManifestData.isNewPackage = !it }) {
                     println(cyan("Found $input in the winget-pkgs repository"))
+                    sharedManifestData.githubDirectory.getLatestVersion().also {
+                        sharedManifestData.latestVersion = it
+                        println(cyan("Found latest version: $it"))
+                    }
                 }
             }
             println()
         } while (packageIdentifierValid != Validation.Success)
-    }
-
-    private suspend fun doesPackageAlreadyExist(packageIdentifier: String): Boolean {
-        return get<Clients>().httpClient.head(Ktor.getDirectoryUrl(packageIdentifier)).status.isSuccess()
     }
 
     fun isPackageIdentifierValid(

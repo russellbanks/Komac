@@ -9,8 +9,6 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.SharedManifestData
 import input.PromptType
 import input.Prompts
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -18,7 +16,7 @@ import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object PackageVersion : KoinComponent {
-    suspend fun Terminal.packageVersionPrompt() {
+    fun Terminal.packageVersionPrompt() {
         val sharedManifestData: SharedManifestData by inject()
         do {
             println(brightGreen(packageVersionInfo))
@@ -27,13 +25,6 @@ object PackageVersion : KoinComponent {
             error?.let { println(red(it)) }
             if (packageVersionValid == Validation.Success && input != null) {
                 sharedManifestData.packageVersion = input
-                if (!sharedManifestData.isNewPackage) {
-                    coroutineScope {
-                        launch {
-                            sharedManifestData.getPreviousManifestData()
-                        }
-                    }
-                }
             }
             println()
         } while (packageVersionValid != Validation.Success)

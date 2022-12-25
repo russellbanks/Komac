@@ -1,13 +1,12 @@
 package data
 
 import com.charleskorn.kaml.Yaml
-import com.github.ajalt.mordant.rendering.TextColors.cyan
 import data.shared.GitHubDirectory
-import data.shared.PackageVersion.getLatestVersion
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
+import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -32,55 +31,49 @@ class SharedManifestData : KoinComponent {
     lateinit var packageVersion: String
     lateinit var defaultLocale: String
     var isNewPackage = false
-    var remoteInstallerData: InstallerManifest? = null
-    var remoteDefaultLocaleData: DefaultLocaleManifest? = null
-    var remoteLocaleData: List<LocaleManifest>? = null
-    var remoteVersionData: VersionManifest? = null
+    lateinit var remoteInstallerData: Deferred<InstallerManifest?>
+    lateinit var remoteDefaultLocaleData: Deferred<DefaultLocaleManifest?>
+    lateinit var remoteLocaleData: Deferred<List<LocaleManifest>?>
+    lateinit var remoteVersionData: Deferred<VersionManifest?>
     lateinit var githubDirectory: ArrayList<GitHubDirectory.GitHubDirectoryItem>
     lateinit var latestVersion: String
-    lateinit var subDirectory: ArrayList<GitHubDirectory.GitHubDirectoryItem>
+    lateinit var subDirectory: Deferred<ArrayList<GitHubDirectory.GitHubDirectoryItem>>
+    private val client: HttpClient = get<Clients>().httpClient
+    private val contentNegotiationClient = client.config { install(ContentNegotiation) { json() } }
+
+    suspend fun doesPackageAlreadyExist(identifier: String = packageIdentifier): Boolean {
+        val directoryResponse = contentNegotiationClient.get(Ktor.getDirectoryUrl(identifier))
+        if (!directoryResponse.status.isSuccess()) return false
+        githubDirectory = directoryResponse.body()
+        return githubDirectory.filterNot { it.name == ".validation" }.isNotEmpty()
+    }
 
     suspend fun getPreviousManifestData() = coroutineScope {
-        val client: HttpClient = get<Clients>().httpClient
-        val contentNegotiationClient = client.config { install(ContentNegotiation) { json() } }
-
         val yaml = Yaml(SerializersModule { contextual(LocalDate::class, LocalDateSerializer) })
 
-        val directoryJob: Deferred<ArrayList<GitHubDirectory.GitHubDirectoryItem>> = async(Dispatchers.IO) {
-            contentNegotiationClient.get(Ktor.getDirectoryUrl(packageIdentifier)).body()
-        }
-        val latestVersionJob = async(Dispatchers.Default) {
-            val githubDirectory = directoryJob.await()
-            githubDirectory.getLatestVersion().also {
-                println(cyan("Found latest version: $it"))
-            }
-        }
-
         // Wait for the latest version to be found, then download the subdirectory in parallel
-        val subDirectoryJob: Deferred<ArrayList<GitHubDirectory.GitHubDirectoryItem>> = async(Dispatchers.IO) {
-            val latestVersion = latestVersionJob.await()
+        subDirectory = async(Dispatchers.IO) {
             contentNegotiationClient.get(githubDirectory.first { it.name == latestVersion }.links.self).body()
         }
-        val remoteInstallerDataJob = async(Dispatchers.IO) {
-            val subDirectory = subDirectoryJob.await()
+        remoteInstallerData = async(Dispatchers.IO) {
+            val subDirectory = subDirectory.await()
             subDirectory
                 .first { it.name == "$packageIdentifier.installer.yaml" }
                 .downloadUrl?.let {
                     yaml.decodeFromString(InstallerManifest.serializer(), client.get(it).body())
                 }
         }
-        val remoteVersionDataDeferred = async(Dispatchers.IO) {
-            val subDirectory = subDirectoryJob.await()
+        remoteVersionData = async(Dispatchers.IO) {
+            val subDirectory = subDirectory.await()
             subDirectory
                 .first { it.name == "$packageIdentifier.yaml" }.downloadUrl?.let {
                     yaml.decodeFromString(VersionManifest.serializer(), client.get(it).body())
                 }
         }
 
-        // Wait for the subdirectory to be downloaded, then download the default locale data in parallel
-        val remoteDefaultLocaleDataJob = async(Dispatchers.IO) {
-            val subDirectory = subDirectoryJob.await()
-            val remoteVersionData = remoteVersionDataDeferred.await()
+        remoteDefaultLocaleData = async(Dispatchers.IO) {
+            val subDirectory = subDirectory.await()
+            val remoteVersionData = remoteVersionData.await()
             subDirectory
                 .first {
                     it.name == buildString {
@@ -94,9 +87,9 @@ class SharedManifestData : KoinComponent {
                 }
         }
 
-        val remoteLocaleDataJob = async(Dispatchers.IO) {
-            val subDirectory = subDirectoryJob.await()
-            val remoteVersionData = remoteVersionDataDeferred.await()
+        remoteLocaleData = async(Dispatchers.IO) {
+            val subDirectory = subDirectory.await()
+            val remoteVersionData = remoteVersionData.await()
             subDirectory.filter { directoryItem ->
                 directoryItem.name.matches(
                     Regex("${Regex.escape(packageIdentifier)}.locale\\..*\\.yaml")
@@ -112,16 +105,6 @@ class SharedManifestData : KoinComponent {
             }
         }
 
-        // Assign the results of the async jobs to the global variables
-        githubDirectory = directoryJob.await()
-        latestVersion = latestVersionJob.await()
-        subDirectory = subDirectoryJob.await()
-        remoteInstallerData = remoteInstallerDataJob.await()
-        remoteVersionData = remoteVersionDataDeferred.await()
-        remoteDefaultLocaleData = remoteDefaultLocaleDataJob.await()
-        remoteLocaleData = remoteLocaleDataJob.await()
-
-        // Close the HTTP client
         contentNegotiationClient.close()
     }
 }
