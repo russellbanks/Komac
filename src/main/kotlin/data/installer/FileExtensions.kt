@@ -4,9 +4,11 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -17,18 +19,22 @@ import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object FileExtensions : KoinComponent {
-    fun Terminal.fileExtensionsPrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        val fileExtensionsSchema = schemasImpl.installerSchema.definitions.fileExtensions
+    private val installerManifestData: InstallerManifestData by inject()
+    private val schemasImpl: SchemasImpl by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val fileExtensionsSchema = schemasImpl.installerSchema.definitions.fileExtensions
+
+    suspend fun Terminal.fileExtensionsPrompt() {
         do {
             println(
                 brightYellow(
                     "${Prompts.optional} ${fileExtensionsSchema.description} (Max ${fileExtensionsSchema.maxItems})"
                 )
             )
-            val input = prompt(brightWhite(PromptType.FileExtensions.toString()))
-                ?.trim()?.convertToYamlList(fileExtensionsSchema.uniqueItems)
+            val input = prompt(
+                prompt = brightWhite(PromptType.FileExtensions.toString()),
+                default = getPreviousValue()?.joinToString(", ")?.also { println(gray("Previous value: $it")) }
+            )?.trim()?.convertToYamlList(fileExtensionsSchema.uniqueItems)
             val (fileExtensionsValid, error) = areFileExtensionsValid(input)
             if (fileExtensionsValid == Validation.Success) installerManifestData.fileExtensions = input
             error?.let { println(red(it)) }
@@ -58,6 +64,12 @@ object FileExtensions : KoinComponent {
                 )
             }
             else -> Validation.Success to null
+        }
+    }
+
+    private suspend fun getPreviousValue(): List<String>? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.fileExtensions ?: it?.installers?.get(installerManifestData.installers.size)?.fileExtensions
         }
     }
 }

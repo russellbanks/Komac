@@ -4,9 +4,12 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -14,12 +17,17 @@ import org.koin.core.component.inject
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import kotlin.random.Random
 
 object ReleaseDate : KoinComponent {
-    fun Terminal.releaseDatePrompt() {
-        val installerManifestData: InstallerManifestData by inject()
+    private val installerManifestData: InstallerManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+
+    suspend fun Terminal.releaseDatePrompt() {
         do {
             println(brightYellow(releaseDateInfo))
+            println(cyan(releaseDateExample))
+            getPreviousValue()?.let { println(gray("Previous release date: $it")) }
             val input = prompt(brightWhite(PromptType.ReleaseDate.toString()))?.trim()
             val (releaseDateValid, error) = isReleaseDateValid(input)
             error?.let { println(red(it)) }
@@ -44,6 +52,19 @@ object ReleaseDate : KoinComponent {
         return Validation.Success to null
     }
 
+    private suspend fun getPreviousValue(): LocalDate? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.releaseDate ?: it?.installers?.get(installerManifestData.installers.size)?.releaseDate
+        }
+    }
+
+    private fun generateRandomLocalDate(startInclusive: LocalDate, endExclusive: LocalDate): LocalDate {
+        val startEpochDay = startInclusive.toEpochDay()
+        val endEpochDay = endExclusive.toEpochDay()
+        val randomDay = Random.nextLong(startEpochDay, endEpochDay)
+        return LocalDate.ofEpochDay(randomDay)
+    }
+
     private fun invalidReleaseDate(dateTimeParseException: DateTimeParseException): String {
         return "${Errors.error} Invalid Date - ${
         dateTimeParseException.cause?.message
@@ -52,7 +73,12 @@ object ReleaseDate : KoinComponent {
         }"
     }
 
+    private val releaseDateExample = "Example: ${generateRandomLocalDate(
+        startInclusive = LocalDate.now().minusYears(/* yearsToSubtract = */ 100),
+        endExclusive = LocalDate.now()
+    )}"
+
     const val releaseDatePattern = "yyyy-MM-dd"
     private const val releaseDateInfo = "${Prompts.optional} Enter the application release date in the format " +
-        "$releaseDatePattern. Example: 2022-11-17"
+        releaseDatePattern
 }

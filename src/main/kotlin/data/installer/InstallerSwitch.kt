@@ -35,7 +35,9 @@ object InstallerSwitch : KoinComponent {
             println(cyan(switchExample(installerSwitch)))
             val input: String? = prompt(
                 prompt = brightWhite(installerSwitch.toString()),
-                default = getPreviousValue(installerSwitch)?.also { println(gray("Previous value: $it")) }
+                default = getPreviousValue(installerSwitch)?.also {
+                    println(gray("Previous $installerSwitch: $it"))
+                }
             )?.trim()
             val (switchValid, error) = isInstallerSwitchValid(
                 switch = input,

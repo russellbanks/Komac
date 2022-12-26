@@ -50,7 +50,7 @@ object InstallerScope : KoinComponent {
             )
             val input = prompt(
                 prompt = brightWhite(Prompts.enterChoice),
-                default = previousValue?.toString()?.first().toString()
+                default = previousValue?.toString()?.first()?.toString()
             )?.trim()
             val (installerScopeValid, error) = isInstallerScopeValid(input?.firstOrNull(), installerScopeSchema)
             if (installerScopeValid == Validation.Success) {

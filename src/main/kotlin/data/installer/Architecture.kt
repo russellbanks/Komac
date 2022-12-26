@@ -32,7 +32,7 @@ object Architecture : KoinComponent {
             println(cyan("Options: ${architectureSchema.enum.joinToString(", ")}"))
             val input = prompt(
                 prompt = brightWhite(PromptType.Architecture.toString()),
-                default = getPreviousValue()?.also { println(gray("Previous value: $it")) }
+                default = getPreviousValue()?.also { println(gray("Previous architecture: $it")) }
             )?.trim()?.lowercase()
             val (architectureValid, error) = isArchitectureValid(input, architectureSchema)
             error?.let { println(red(it)) }
