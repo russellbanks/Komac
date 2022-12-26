@@ -20,9 +20,8 @@ import schemas.SchemasImpl
 
 object FileExtensions : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val schemasImpl: SchemasImpl by inject()
     private val sharedManifestData: SharedManifestData by inject()
-    private val fileExtensionsSchema = schemasImpl.installerSchema.definitions.fileExtensions
+    private val fileExtensionsSchema = get<SchemasImpl>().installerSchema.definitions.fileExtensions
 
     suspend fun Terminal.fileExtensionsPrompt() {
         do {

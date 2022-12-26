@@ -4,9 +4,11 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -17,14 +19,18 @@ import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object Commands : KoinComponent {
-    fun Terminal.commandsPrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        val commandsSchema = schemasImpl.installerSchema.definitions.commands
+    private val installerManifestData: InstallerManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val commandsSchema = get<SchemasImpl>().installerSchema.definitions.commands
+    suspend fun Terminal.commandsPrompt() {
         do {
             println(brightYellow("${Prompts.optional} ${commandsSchema.description} (Max ${commandsSchema.maxItems})"))
-            val input = prompt(brightWhite(PromptType.Commands.toString()))
-                ?.trim()?.convertToYamlList(commandsSchema.uniqueItems)
+            val input = prompt(
+                prompt = brightWhite(PromptType.Commands.toString()),
+                default = getPreviousValue()?.joinToString(", ")?.also {
+                    println(gray("Previous commands: $it"))
+                }
+            )?.trim()?.convertToYamlList(commandsSchema.uniqueItems)
             val (commandsValid, error) = areCommandsValid(input)
             if (commandsValid == Validation.Success) installerManifestData.commands = input
             error?.let { println(red(it)) }
@@ -49,6 +55,12 @@ object Commands : KoinComponent {
                 )
             }
             else -> Validation.Success to null
+        }
+    }
+
+    private suspend fun getPreviousValue(): List<String>? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.commands ?: it?.installers?.get(installerManifestData.installers.size)?.commands
         }
     }
 }

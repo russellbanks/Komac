@@ -20,9 +20,8 @@ import schemas.SchemasImpl
 
 object Protocols : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val schemasImpl: SchemasImpl by inject()
     private val sharedManifestData: SharedManifestData by inject()
-    private val protocolsSchema = schemasImpl.installerSchema.definitions.protocols
+    private val protocolsSchema = get<SchemasImpl>().installerSchema.definitions.protocols
 
     suspend fun Terminal.protocolsPrompt() {
         do {

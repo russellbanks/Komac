@@ -15,6 +15,7 @@ import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerManifest
 import schemas.InstallerSchema
@@ -23,8 +24,7 @@ import schemas.SchemasImpl
 object InstallerType : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
-    private val schemasImpl: SchemasImpl by inject()
-    private val installerTypeSchema = schemasImpl.installerSchema.definitions.installerType
+    private val installerTypeSchema = get<SchemasImpl>().installerSchema.definitions.installerType
 
     suspend fun Terminal.installerTypePrompt() {
         do {
