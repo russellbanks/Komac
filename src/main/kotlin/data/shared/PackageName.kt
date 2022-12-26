@@ -3,23 +3,33 @@ package data.shared
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.SharedManifestData
+import data.locale.Publisher
 import input.PromptType
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
 
 object PackageName : KoinComponent {
-    fun Terminal.packageNamePrompt() {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        val packageNameSchema = schemasImpl.defaultLocaleSchema.properties.packageName
+    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val packageNameSchema = get<SchemasImpl>().defaultLocaleSchema.properties.packageName
+
+    suspend fun Terminal.packageNamePrompt() {
         do {
-            println(brightGreen(packageNameInfo(packageNameSchema)))
-            val input = prompt(brightWhite(PromptType.PackageName.toString()))?.trim()
+            println(brightGreen(packageNameInfo))
+            println(cyan(packageNameExample))
+            val input = prompt(
+                prompt = brightWhite(PromptType.PackageName.toString()),
+                default = getPreviousValue()?.also { println(gray("Previous package name: $it")) }
+            )?.trim()
             val (packageNameValid, error) = packageNameValid(input, packageNameSchema)
             if (packageNameValid == Validation.Success && input != null) {
                 defaultLocaleManifestData.packageName = input
@@ -45,7 +55,10 @@ object PackageName : KoinComponent {
         }
     }
 
-    private fun packageNameInfo(packageNameSchema: DefaultLocaleSchema.Properties.PackageName): String {
-        return "Enter ${packageNameSchema.description.lowercase()}. For example, Microsoft Teams"
+    private suspend fun getPreviousValue(): String? {
+        return sharedManifestData.remoteDefaultLocaleData.await().let { it?.packageName }
     }
+
+    private val packageNameInfo = "Enter ${packageNameSchema.description.lowercase()}"
+    private const val packageNameExample = "For example, Microsoft Teams"
 }
