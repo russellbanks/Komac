@@ -4,9 +4,11 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -17,16 +19,20 @@ import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object Protocols : KoinComponent {
-    fun Terminal.protocolsPrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        val protocolsSchema = schemasImpl.installerSchema.definitions.protocols
+    private val installerManifestData: InstallerManifestData by inject()
+    private val schemasImpl: SchemasImpl by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val protocolsSchema = schemasImpl.installerSchema.definitions.protocols
+
+    suspend fun Terminal.protocolsPrompt() {
         do {
             println(
                 brightYellow("${Prompts.optional} ${protocolsSchema.description} (Max ${protocolsSchema.maxItems})")
             )
-            val input = prompt(brightWhite(PromptType.Protocols.toString()))
-                ?.trim()?.convertToYamlList(protocolsSchema.uniqueItems)
+            val input = prompt(
+                prompt = brightWhite(PromptType.Protocols.toString()),
+                default = getPreviousValue()?.joinToString(", ")?.also { println(gray("Previous protocols: $it")) }
+            )?.trim()?.convertToYamlList(protocolsSchema.uniqueItems)
             val (protocolsValid, error) = areProtocolsValid(input)
             if (protocolsValid == Validation.Success) installerManifestData.protocols = input
             error?.let { println(red(it)) }
@@ -50,6 +56,12 @@ object Protocols : KoinComponent {
                 )
             }
             else -> Validation.Success to null
+        }
+    }
+
+    private suspend fun getPreviousValue(): List<String>? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.protocols ?: it?.installers?.get(installerManifestData.installers.size)?.protocols
         }
     }
 }

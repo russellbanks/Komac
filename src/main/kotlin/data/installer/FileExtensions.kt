@@ -33,7 +33,9 @@ object FileExtensions : KoinComponent {
             )
             val input = prompt(
                 prompt = brightWhite(PromptType.FileExtensions.toString()),
-                default = getPreviousValue()?.joinToString(", ")?.also { println(gray("Previous value: $it")) }
+                default = getPreviousValue()?.joinToString(", ")?.also {
+                    println(gray("Previous file extensions: $it"))
+                }
             )?.trim()?.convertToYamlList(fileExtensionsSchema.uniqueItems)
             val (fileExtensionsValid, error) = areFileExtensionsValid(input)
             if (fileExtensionsValid == Validation.Success) installerManifestData.fileExtensions = input
