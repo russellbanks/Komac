@@ -5,62 +5,70 @@ import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object UpgradeBehaviour : KoinComponent {
-    fun Terminal.upgradeBehaviourPrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        val schemasImpl: SchemasImpl = get()
-        val upgradeBehaviourSchema = schemasImpl.installerSchema.definitions.upgradeBehavior
-        var promptInput: String?
+    private val installerManifestData: InstallerManifestData by inject()
+    private val schemasImpl: SchemasImpl by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val upgradeBehaviourSchema = schemasImpl.installerSchema.definitions.upgradeBehavior
+
+    suspend fun Terminal.upgradeBehaviourPrompt() {
         do {
+            val previousValue = getPreviousValue()
             println(
                 verticalLayout {
                     cell(brightYellow(upgradeBehaviourInfo))
-                    upgradeBehaviourSchema.enum.forEach { behaviour ->
+                    InstallerManifest.UpgradeBehavior.values().forEach { behaviour ->
                         val textColour = when {
-                            behaviour.first().titlecase() ==
-                                upgradeBehaviourSchema.enum.first().first().titlecase() -> {
-                                brightGreen
-                            }
+                            previousValue == behaviour || previousValue == behaviour.toPerInstallerType() -> brightGreen
+                            behaviour == InstallerManifest.UpgradeBehavior.Install -> brightGreen
                             else -> brightWhite
                         }
                         cell(
                             textColour(
                                 buildString {
                                     append(" ".repeat(Prompts.optionIndent))
-                                    append("[${behaviour.first().titlecase()}] ")
-                                    append(behaviour.replaceFirstChar { it.titlecase() })
+                                    append("[${behaviour.toString().first().titlecase()}] ")
+                                    append(behaviour.toString().replaceFirstChar { it.titlecase() })
                                 }
                             )
                         )
                     }
+                    previousValue?.let { cell(gray("Previous upgrade behaviour: $previousValue")) }
                 }
             )
-            promptInput = prompt(
+            val input = prompt(
                 prompt = brightWhite(Prompts.enterChoice),
-                default = upgradeBehaviourSchema.enum.first().first().titlecase()
+                default = previousValue?.toString()?.firstOrNull()?.toString()
+                    ?: InstallerManifest.UpgradeBehavior.Install.toString().first().toString()
             )?.trim()
-            val (upgradeBehaviourValid, error) = isUpgradeBehaviourValid(
-                promptInput?.firstOrNull(),
-                upgradeBehaviourSchema
-            )
+            val (upgradeBehaviourValid, error) = isUpgradeBehaviourValid(input?.firstOrNull(), upgradeBehaviourSchema)
+            if (upgradeBehaviourValid == Validation.Success) {
+                installerManifestData.upgradeBehavior = InstallerManifest.UpgradeBehavior.values().firstOrNull {
+                    it.name.firstOrNull()?.titlecase() == input?.firstOrNull()?.titlecase()
+                }
+            }
             error?.let { println(red(it)) }
             println()
         } while (upgradeBehaviourValid != Validation.Success)
-        installerManifestData.upgradeBehavior = upgradeBehaviourSchema.enum.firstOrNull {
-            it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
-        }?.toUpgradeBehaviour()
+    }
+
+    private suspend fun getPreviousValue(): Enum<*>? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.upgradeBehavior ?: it?.installers?.get(installerManifestData.installers.size)?.upgradeBehavior
+        }
     }
 
     fun isUpgradeBehaviourValid(
@@ -76,10 +84,6 @@ object UpgradeBehaviour : KoinComponent {
             )
             else -> Validation.Success to null
         }
-    }
-
-    private fun String.toUpgradeBehaviour(): InstallerManifest.UpgradeBehavior? {
-        return InstallerManifest.UpgradeBehavior.values().firstOrNull { it.name.lowercase() == lowercase() }
     }
 
     private const val upgradeBehaviourInfo = "${Prompts.optional} Enter the Upgrade Behavior"

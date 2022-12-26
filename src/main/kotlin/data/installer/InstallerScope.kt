@@ -20,8 +20,8 @@ import schemas.SchemasImpl
 
 object InstallerScope : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val schemaImpl: SchemasImpl by inject()
-    private val installerScopeSchema = schemaImpl.installerSchema.definitions.scope
+    private val schemasImpl: SchemasImpl by inject()
+    private val installerScopeSchema = schemasImpl.installerSchema.definitions.scope
     private val sharedManifestData: SharedManifestData by inject()
 
     suspend fun Terminal.installerScopePrompt() {
@@ -39,13 +39,13 @@ object InstallerScope : KoinComponent {
                             textColour(
                                 buildString {
                                     append(" ".repeat(Prompts.optionIndent))
-                                    append("[${scope.name.first().titlecase()}] ")
-                                    append(scope.name.replaceFirstChar { it.titlecase() })
+                                    append("[${scope.toString().first().titlecase()}] ")
+                                    append(scope.toString().replaceFirstChar { it.titlecase() })
                                 }
                             )
                         )
                     }
-                    cell(gray("Previous value: $previousValue"))
+                    previousValue?.let { cell(gray("Previous value: $previousValue")) }
                 }
             )
             val input = prompt(
@@ -53,9 +53,9 @@ object InstallerScope : KoinComponent {
                 default = previousValue?.toString()?.first().toString()
             )?.trim()
             val (installerScopeValid, error) = isInstallerScopeValid(input?.firstOrNull(), installerScopeSchema)
-            if (installerScopeValid == Validation.Success && input != null) {
+            if (installerScopeValid == Validation.Success) {
                 installerManifestData.scope = InstallerManifest.Scope.values().firstOrNull {
-                    it.name.firstOrNull()?.titlecase() == input.firstOrNull()?.titlecase()
+                    it.name.firstOrNull()?.titlecase() == input?.firstOrNull()?.titlecase()
                 }
             }
             error?.let { println(red(it)) }
