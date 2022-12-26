@@ -4,23 +4,33 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.SharedManifestData
 import input.PromptType
+import input.Prompts
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
 
 object Publisher : KoinComponent {
-    fun Terminal.publisherPrompt() {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        val publisherSchema = schemasImpl.defaultLocaleSchema.properties.publisher
+    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val publisherSchema = get<SchemasImpl>().defaultLocaleSchema.properties.publisher
+
+    suspend fun Terminal.publisherPrompt() {
         do {
-            println(brightGreen(publisherInfo(publisherSchema)))
-            val input = prompt(brightWhite(PromptType.Publisher.toString()))?.trim()
+            println(brightGreen(publisherInfo))
+            println(cyan(publisherExample))
+            val input = prompt(
+                prompt = brightWhite(PromptType.Publisher.toString()),
+                default = getPreviousValue()?.also { println(gray("Previous publisher: $it")) }
+            )?.trim()
             val (publisherValid, error) = publisherValid(input, publisherSchema)
             if (publisherValid == Validation.Success && input != null) {
                 defaultLocaleManifestData.publisher = input
@@ -46,7 +56,10 @@ object Publisher : KoinComponent {
         }
     }
 
-    private fun publisherInfo(publisherSchema: DefaultLocaleSchema.Properties.Publisher): String {
-        return "Enter ${publisherSchema.description.lowercase()}. For example: Microsoft Corporation"
+    private suspend fun getPreviousValue(): String? {
+        return sharedManifestData.remoteDefaultLocaleData.await().let { it?.publisher }
     }
+
+    private val publisherInfo = "${Prompts.required} Enter ${publisherSchema.description.lowercase()}"
+    private const val publisherExample = "Example: Microsoft Corporation"
 }
