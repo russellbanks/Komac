@@ -5,58 +5,68 @@ import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object InstallerScope : KoinComponent {
-    fun Terminal.installerScopePrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        val schemaImpl: SchemasImpl = get()
-        var promptInput: String?
-        val installerScopeSchema = schemaImpl.installerSchema.definitions.scope
+    private val installerManifestData: InstallerManifestData by inject()
+    private val schemaImpl: SchemasImpl by inject()
+    private val installerScopeSchema = schemaImpl.installerSchema.definitions.scope
+    private val sharedManifestData: SharedManifestData by inject()
+
+    suspend fun Terminal.installerScopePrompt() {
         do {
+            val previousValue = getPreviousValue()
             println(
                 verticalLayout {
                     cell(brightYellow(installerScopeInfo))
-                    installerScopeSchema.enum.forEach { scope ->
+                    InstallerManifest.Scope.values().forEach { scope ->
+                        val textColour = when (previousValue) {
+                            scope, scope.toPerScopeInstallerType() -> brightGreen
+                            else -> brightWhite
+                        }
                         cell(
-                            brightWhite(
+                            textColour(
                                 buildString {
                                     append(" ".repeat(Prompts.optionIndent))
-                                    append("[${scope.first().titlecase()}] ")
-                                    append(scope.replaceFirstChar { it.titlecase() })
+                                    append("[${scope.name.first().titlecase()}] ")
+                                    append(scope.name.replaceFirstChar { it.titlecase() })
                                 }
                             )
                         )
                     }
-                    cell(
-                        brightGreen(
-                            buildString {
-                                append(" ".repeat(Prompts.optionIndent))
-                                append("[${Prompts.noIdea.first().titlecase()}] ")
-                                append(Prompts.noIdea)
-                            }
-                        )
-                    )
+                    cell(gray("Previous value: $previousValue"))
                 }
             )
-            promptInput = prompt(brightWhite(Prompts.enterChoice), default = Prompts.noIdea.first().titlecase())?.trim()
-            val (installerScopeValid, error) = isInstallerScopeValid(promptInput?.firstOrNull(), installerScopeSchema)
+            val input = prompt(
+                prompt = brightWhite(Prompts.enterChoice),
+                default = previousValue?.toString()?.first().toString()
+            )?.trim()
+            val (installerScopeValid, error) = isInstallerScopeValid(input?.firstOrNull(), installerScopeSchema)
+            if (installerScopeValid == Validation.Success && input != null) {
+                installerManifestData.scope = InstallerManifest.Scope.values().firstOrNull {
+                    it.name.firstOrNull()?.titlecase() == input.firstOrNull()?.titlecase()
+                }
+            }
             error?.let { println(red(it)) }
             println()
         } while (installerScopeValid != Validation.Success)
-        installerManifestData.scope = installerScopeSchema.enum.firstOrNull {
-            it.firstOrNull()?.titlecase() == promptInput?.firstOrNull()?.titlecase()
-        }?.toScope()
+    }
+
+    private suspend fun getPreviousValue(): Enum<*>? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.scope ?: it?.installers?.get(installerManifestData.installers.size)?.scope
+        }
     }
 
     fun isInstallerScopeValid(
@@ -71,12 +81,6 @@ object InstallerScope : KoinComponent {
                 installerScopeSchema.enum
             )
             else -> Validation.Success to null
-        }
-    }
-
-    private fun String.toScope(): InstallerManifest.Scope? {
-        return InstallerManifest.Scope.values().firstOrNull {
-            it.name.lowercase() == this.lowercase()
         }
     }
 
