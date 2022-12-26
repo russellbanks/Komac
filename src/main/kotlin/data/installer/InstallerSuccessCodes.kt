@@ -4,9 +4,11 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -17,15 +19,21 @@ import schemas.InstallerSchema
 import schemas.SchemasImpl
 
 object InstallerSuccessCodes : KoinComponent {
-    fun Terminal.installerSuccessCodesPrompt() {
-        val installerManifestData: InstallerManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        val installerSuccessCodesSchema = schemasImpl.installerSchema.definitions.installerSuccessCodes
-        val installerReturnCodeSchema = schemasImpl.installerSchema.definitions.installerReturnCode
+    private val installerManifestData: InstallerManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val schemasImpl: SchemasImpl by inject()
+    private val installerSuccessCodesSchema = schemasImpl.installerSchema.definitions.installerSuccessCodes
+    private val installerReturnCodeSchema = schemasImpl.installerSchema.definitions.installerReturnCode
+
+    suspend fun Terminal.installerSuccessCodesPrompt() {
         do {
-            println(brightYellow(installerSuccessCodeInfo(installerSuccessCodesSchema)))
-            val input = prompt(brightWhite(PromptType.InstallerSuccessCodes.toString()))
-                ?.trim()
+            println(brightYellow(installerSuccessCodeInfo))
+            val input = prompt(
+                prompt = brightWhite(PromptType.InstallerSuccessCodes.toString()),
+                default = getPreviousValue()?.joinToString(", ")?.also {
+                    println(gray("Previous commands: $it"))
+                }
+            )?.trim()
                 ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
                 ?.mapNotNull { it.toIntOrNull() }
                 ?.filterNot { it in installerReturnCodeSchema.not.enum }
@@ -63,9 +71,13 @@ object InstallerSuccessCodes : KoinComponent {
         }
     }
 
-    private fun installerSuccessCodeInfo(
-        successCodesDefinitions: InstallerSchema.Definitions.InstallerSuccessCodes
-    ): String {
-        return "${Prompts.optional} ${successCodesDefinitions.description} (Max ${successCodesDefinitions.maxItems})"
+    private suspend fun getPreviousValue(): List<Int>? {
+        return sharedManifestData.remoteInstallerData.await().let {
+            it?.installerSuccessCodes
+                ?: it?.installers?.get(installerManifestData.installers.size)?.installerSuccessCodes
+        }
     }
+
+    val installerSuccessCodeInfo = "${Prompts.optional} ${installerSuccessCodesSchema.description} " +
+            "(Max ${installerSuccessCodesSchema.maxItems})"
 }

@@ -22,6 +22,7 @@ object Commands : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private val commandsSchema = get<SchemasImpl>().installerSchema.definitions.commands
+
     suspend fun Terminal.commandsPrompt() {
         do {
             println(brightYellow("${Prompts.optional} ${commandsSchema.description} (Max ${commandsSchema.maxItems})"))
