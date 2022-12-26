@@ -79,5 +79,5 @@ object InstallerSuccessCodes : KoinComponent {
     }
 
     val installerSuccessCodeInfo = "${Prompts.optional} ${installerSuccessCodesSchema.description} " +
-            "(Max ${installerSuccessCodesSchema.maxItems})"
+        "(Max ${installerSuccessCodesSchema.maxItems})"
 }

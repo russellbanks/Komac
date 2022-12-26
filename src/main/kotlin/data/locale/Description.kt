@@ -8,6 +8,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.SharedManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -16,13 +17,20 @@ import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
 
 object Description : KoinComponent {
-    fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val propertiesSchema: DefaultLocaleSchema.Properties = get<SchemasImpl>().defaultLocaleSchema.properties
+    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val propertiesSchema: DefaultLocaleSchema.Properties = get<SchemasImpl>().defaultLocaleSchema.properties
+
+    suspend fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
         do {
             val textColour = if (descriptionType == DescriptionType.Short) brightGreen else brightYellow
-            println(textColour(descriptionInfo(descriptionType, propertiesSchema)))
-            val input = prompt(brightWhite(descriptionType.promptName))?.trim()
+            println(textColour(descriptionInfo(descriptionType)))
+            val input = prompt(
+                prompt = brightWhite(descriptionType.promptName),
+                default = getPreviousValue(descriptionType)?.also {
+                    println(brightWhite("Previous ${descriptionType.name.lowercase()}: $it"))
+                }
+            )?.trim()
             val (descriptionValid, error) = descriptionValid(
                 description = input,
                 descriptionType = descriptionType,
@@ -64,10 +72,15 @@ object Description : KoinComponent {
         }
     }
 
-    private fun descriptionInfo(
-        descriptionType: DescriptionType,
-        propertiesSchema: DefaultLocaleSchema.Properties
-    ): String {
+    private suspend fun getPreviousValue(descriptionType: DescriptionType): String? {
+        val remoteDefaultLocaleData = sharedManifestData.remoteDefaultLocaleData.await()
+        return when (descriptionType) {
+            DescriptionType.Short -> remoteDefaultLocaleData?.shortDescription
+            DescriptionType.Long -> remoteDefaultLocaleData?.description
+        }
+    }
+
+    private fun descriptionInfo(descriptionType: DescriptionType): String {
         val description = when (descriptionType) {
             DescriptionType.Short -> propertiesSchema.shortDescription.description
             DescriptionType.Long -> propertiesSchema.description.description

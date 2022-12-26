@@ -57,7 +57,7 @@ object Publisher : KoinComponent {
     }
 
     private suspend fun getPreviousValue(): String? {
-        return sharedManifestData.remoteDefaultLocaleData.await().let { it?.publisher }
+        return sharedManifestData.remoteDefaultLocaleData.await()?.publisher
     }
 
     private val publisherInfo = "${Prompts.required} Enter ${publisherSchema.description.lowercase()}"

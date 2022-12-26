@@ -6,10 +6,12 @@ import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.InstallerManifestData
+import data.SharedManifestData
 import data.locale.LocaleUrl
 import hashing.Hashing
 import hashing.Hashing.hash
@@ -98,7 +100,10 @@ object Url : KoinComponent {
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         do {
             println(brightYellow(publisherUrlInfo(localeUrl, defaultLocaleSchema.properties)))
-            val input = prompt(brightWhite(localeUrl.toString()))?.trim()
+            val input = prompt(
+                prompt = brightWhite(localeUrl.toString()),
+                default = getPreviousValue(localeUrl)?.also { println(gray("Previous $localeUrl: $it")) }
+            )?.trim()
             val (publisherUrlValid, error) = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true)
             if (publisherUrlValid == Validation.Success) {
                 when (localeUrl) {
@@ -148,6 +153,19 @@ object Url : KoinComponent {
                     Validation.Success to null
                 }
             }
+        }
+    }
+
+    private suspend fun getPreviousValue(localeUrl: LocaleUrl): String? {
+        val remoteDefaultLocaleData = get<SharedManifestData>().remoteDefaultLocaleData.await()
+        return when (localeUrl) {
+            LocaleUrl.CopyrightUrl -> remoteDefaultLocaleData?.copyrightUrl
+            LocaleUrl.LicenseUrl -> remoteDefaultLocaleData?.licenseUrl
+            LocaleUrl.PackageUrl -> remoteDefaultLocaleData?.packageUrl
+            LocaleUrl.PublisherUrl -> remoteDefaultLocaleData?.publisherUrl
+            LocaleUrl.PublisherSupportUrl -> remoteDefaultLocaleData?.publisherSupportUrl
+            LocaleUrl.PublisherPrivacyUrl -> remoteDefaultLocaleData?.privacyUrl
+            LocaleUrl.ReleaseNotesUrl -> remoteDefaultLocaleData?.releaseNotesUrl
         }
     }
 

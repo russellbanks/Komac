@@ -4,24 +4,33 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
 
 object Moniker : KoinComponent {
-    fun Terminal.monikerPrompt() {
-        val schemasImpl: SchemasImpl by inject()
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val monikerSchema = schemasImpl.defaultLocaleSchema.definitions.tag
+    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val monikerSchema = get<SchemasImpl>().defaultLocaleSchema.definitions.tag
+
+    suspend fun Terminal.monikerPrompt() {
         do {
             println(brightYellow(monikerInfo))
-            val input = prompt(brightWhite(PromptType.Moniker.toString()))?.trim()
+            println(cyan(monikerExample))
+            val input = prompt(
+                prompt = brightWhite(PromptType.Moniker.toString()),
+                default = getPreviousValue()?.also { println(gray("Previous moniker: $it")) }
+            )?.trim()
             val (packageLocaleValid, error) = isMonikerValid(input, monikerSchema)
             if (packageLocaleValid == Validation.Success && input != null) {
                 defaultLocaleManifestData.moniker = input
@@ -47,5 +56,10 @@ object Moniker : KoinComponent {
         }
     }
 
-    private const val monikerInfo = "${Prompts.optional} Enter the Moniker (friendly name/alias). For example: vscode"
+    private suspend fun getPreviousValue(): String? {
+        return sharedManifestData.remoteDefaultLocaleData.await()?.moniker
+    }
+
+    private const val monikerInfo = "${Prompts.optional} Enter the Moniker (friendly name/alias)."
+    private const val monikerExample = "Example: vscode"
 }

@@ -1,5 +1,6 @@
 package data.shared
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -9,7 +10,6 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.SharedManifestData
-import data.locale.Publisher
 import input.PromptType
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -56,7 +56,7 @@ object PackageName : KoinComponent {
     }
 
     private suspend fun getPreviousValue(): String? {
-        return sharedManifestData.remoteDefaultLocaleData.await().let { it?.packageName }
+        return sharedManifestData.remoteDefaultLocaleData.await()?.packageName
     }
 
     private val packageNameInfo = "Enter ${packageNameSchema.description.lowercase()}"

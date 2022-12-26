@@ -5,9 +5,11 @@ import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -17,16 +19,22 @@ import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
 
 object Tags : KoinComponent {
-    fun Terminal.tagsPrompt() {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        val tagsSchema = schemasImpl.defaultLocaleSchema.properties.tags
-        val tagSchema = schemasImpl.defaultLocaleSchema.definitions.tag
+    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val schemasImpl: SchemasImpl by inject()
+    private val tagsSchema = schemasImpl.defaultLocaleSchema.properties.tags
+    private val tagSchema = schemasImpl.defaultLocaleSchema.definitions.tag
+
+    suspend fun Terminal.tagsPrompt() {
         do {
-            println(brightYellow(tagsInfo(tagsSchema)))
+            println(brightYellow(tagsInfo))
             println(cyan(tagsExample))
-            val input = prompt(brightWhite(PromptType.Tags.toString()))
-                ?.trim()?.convertToYamlList(tagsSchema.uniqueItems)
+            val input = prompt(
+                prompt = brightWhite(PromptType.Tags.toString()),
+                default = sharedManifestData.remoteDefaultLocaleData.await()?.tags?.joinToString(", ").also {
+                    println(gray("Previous tags: $it"))
+                }
+            )?.trim()?.convertToYamlList(tagsSchema.uniqueItems)
             val (commandsValid, error) = areTagsValid(input, tagsSchema, tagSchema)
             if (commandsValid == Validation.Success) {
                 defaultLocaleManifestData.tags = input
@@ -56,12 +64,10 @@ object Tags : KoinComponent {
         }
     }
 
-    private fun tagsInfo(tagsSchema: DefaultLocaleSchema.Properties.Tags): String {
-        return buildString {
-            append(Prompts.optional)
-            append(" Enter any tags that would be useful to discover this tool. ")
-            append("(Max ${tagsSchema.maxItems})")
-        }
+    private val tagsInfo = buildString {
+        append(Prompts.optional)
+        append(" Enter any tags that would be useful to discover this tool. ")
+        append("(Max ${tagsSchema.maxItems})")
     }
 
     private const val tagsExample = "Example: zip, c++, photos, OBS"

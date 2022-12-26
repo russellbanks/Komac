@@ -3,9 +3,12 @@ package data.locale
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -15,12 +18,20 @@ import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
 
 object License : KoinComponent {
-    fun Terminal.licensePrompt() {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val licenseSchema = get<SchemasImpl>().defaultLocaleSchema.properties.license
+    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val licenseSchema = get<SchemasImpl>().defaultLocaleSchema.properties.license
+
+    suspend fun Terminal.licensePrompt() {
         do {
-            println(brightGreen(licenseInfo(licenseSchema)))
-            val input = prompt(brightWhite(PromptType.License.toString()))?.trim()
+            println(brightGreen(licenseInfo))
+            println(cyan(licenseExample))
+            val input = prompt(
+                prompt = brightWhite(PromptType.License.toString()),
+                default = sharedManifestData.remoteDefaultLocaleData.await()?.license?.also {
+                    println(gray("Previous license: $it"))
+                }
+            )?.trim()
             val (packageLocaleValid, error) = isLicenseValid(input, licenseSchema)
             if (packageLocaleValid == Validation.Success && input != null) {
                 defaultLocaleManifestData.license = input
@@ -46,12 +57,6 @@ object License : KoinComponent {
         }
     }
 
-    private fun licenseInfo(licenseSchema: DefaultLocaleSchema.Properties.License): String {
-        return buildString {
-            append(Prompts.required)
-            append(" Enter ")
-            append(licenseSchema.description.lowercase())
-            append(". For example: MIT, GPL, Freeware, Proprietary")
-        }
-    }
+    private val licenseInfo = "${Prompts.required} Enter ${licenseSchema.description.lowercase()}"
+    private const val licenseExample = "Example: MIT, GPL, Freeware, Proprietary"
 }

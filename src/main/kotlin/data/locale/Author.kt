@@ -3,9 +3,11 @@ package data.locale
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -15,12 +17,19 @@ import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
 
 object Author : KoinComponent {
-    fun Terminal.authorPrompt() {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val authorSchema = get<SchemasImpl>().defaultLocaleSchema.properties.author
+    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val authorSchema = get<SchemasImpl>().defaultLocaleSchema.properties.author
+
+    suspend fun Terminal.authorPrompt() {
         do {
-            println(brightYellow(authorInfo(authorSchema)))
-            val input = prompt(brightWhite(PromptType.Author.toString()))?.trim()
+            println(brightYellow(authorInfo))
+            val input = prompt(
+                prompt = brightWhite(PromptType.Author.toString()),
+                default = sharedManifestData.remoteDefaultLocaleData.await()?.author?.also {
+                    println(gray("Previous author: $it"))
+                }
+            )?.trim()
             val (packageLocaleValid, error) = isAuthorValid(input, authorSchema)
             if (packageLocaleValid == Validation.Success && input != null) {
                 defaultLocaleManifestData.author = input
@@ -46,7 +55,5 @@ object Author : KoinComponent {
         }
     }
 
-    private fun authorInfo(authorSchema: DefaultLocaleSchema.Properties.Author): String {
-        return "${Prompts.optional} Enter ${authorSchema.description.lowercase()}"
-    }
+    private val authorInfo = "${Prompts.optional} Enter ${authorSchema.description.lowercase()}"
 }
