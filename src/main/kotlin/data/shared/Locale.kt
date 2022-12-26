@@ -33,6 +33,7 @@ object Locale : KoinComponent {
                 prompt = brightWhite(promptType.toString()),
                 default = when (promptType) {
                     PromptType.InstallerType -> getPreviousValue()?.also { println(gray("Previous value: $it")) }
+                    PromptType.PackageLocale -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default
                     else -> null
                 }
             )?.trim()?.lowercase()
