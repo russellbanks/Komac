@@ -186,7 +186,7 @@ object Url : KoinComponent {
 
     private fun discoveredUrl(url: String?) = "Discovered URL: $url"
 
-    private const val installerUrlInfo = "${Prompts.required} Enter the download url to the installer."
+    private const val installerUrlInfo = "${Prompts.required} Enter the download url to the installer"
 
     private const val redirectFound = "The URL appears to be redirected. " +
         "Would you like to use the destination URL instead?"

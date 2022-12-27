@@ -27,12 +27,7 @@ class VersionManifestData : KoinComponent {
             manifestType = versionSchema.properties.manifestType.const,
             manifestVersion = versionSchema.properties.manifestVersion.default,
         ).also {
-            Yaml(
-                configuration = YamlConfiguration(
-                    encodeDefaults = false,
-                    singleLineStringStyle = SingleLineStringStyle.Plain
-                )
-            ).run {
+            YamlConfig.other.run {
                 buildString {
                     appendLine(Schemas.Comments.createdBy)
                     appendLine(Schemas.Comments.languageServer(versionSchema.id))

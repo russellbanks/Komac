@@ -60,12 +60,7 @@ class DefaultLocaleManifestData : KoinComponent {
             manifestType = defaultLocaleSchema.properties.manifestType.const,
             manifestVersion = defaultLocaleSchema.properties.manifestVersion.default,
         ).also {
-            Yaml(
-                configuration = YamlConfiguration(
-                    encodeDefaults = false,
-                    singleLineStringStyle = SingleLineStringStyle.Plain
-                )
-            ).run {
+            YamlConfig.other.run {
                 buildString {
                     appendLine(Schemas.Comments.createdBy)
                     appendLine(Schemas.Comments.languageServer(defaultLocaleSchema.id))

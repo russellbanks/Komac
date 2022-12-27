@@ -1,14 +1,9 @@
 package data
 
-import com.charleskorn.kaml.SingleLineStringStyle
-import com.charleskorn.kaml.Yaml
-import com.charleskorn.kaml.YamlConfiguration
-import kotlinx.serialization.modules.SerializersModule
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.InstallerManifest
-import schemas.LocalDateSerializer
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.TerminalInstance
@@ -92,15 +87,7 @@ class InstallerManifestData : KoinComponent {
             manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = installerSchema.properties.manifestVersion.default
         ).also {
-            Yaml(
-                serializersModule = SerializersModule {
-                    contextual(LocalDate::class, LocalDateSerializer)
-                },
-                configuration = YamlConfiguration(
-                    encodeDefaults = false,
-                    singleLineStringStyle = SingleLineStringStyle.Plain
-                )
-            ).run {
+            YamlConfig.installer.run {
                 buildString {
                     appendLine(Schemas.Comments.createdBy)
                     appendLine(Schemas.Comments.languageServer(installerSchema.id))

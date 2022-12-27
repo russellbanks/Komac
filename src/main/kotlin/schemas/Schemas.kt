@@ -9,6 +9,15 @@ object Schemas {
     const val localeSchema = "https://aka.ms/winget-manifest.locale.$manifestVersion.schema.json"
     const val versionSchema = "https://aka.ms/winget-manifest.version.$manifestVersion.schema.json"
 
+    fun manifestBuilder(schemaUrl: String, block: StringBuilder.() -> Unit): String {
+        return buildString {
+            appendLine(Comments.createdBy)
+            appendLine(Comments.languageServer(schemaUrl))
+            appendLine()
+            block()
+        }
+    }
+
     fun manifestType(installerSchema: InstallerSchema): String {
         return installerSchema.properties.manifestType.const
     }

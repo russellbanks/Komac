@@ -21,7 +21,10 @@ class Komac : CliktCommand(), KoinComponent {
     override fun run(): Unit = runBlocking {
         val terminalInstance: TerminalInstance by inject()
         with(terminalInstance.terminal) {
-            if (option?.lowercase() == Parameter.New.name.lowercase()) NewManifest(this).main()
+            when(option?.lowercase()) {
+                Parameter.New.name.lowercase() -> NewManifest(this).main()
+                Parameter.Update.name.lowercase() -> QuickUpdate(this).main()
+            }
             println(
                 verticalLayout {
                     cell(brightYellow("Select mode:"))
@@ -36,7 +39,7 @@ class Komac : CliktCommand(), KoinComponent {
             println()
             when (selection?.lowercase()) {
                 Mode.NewManifest.key.toString() -> NewManifest(this).main()
-                Mode.QuickUpdate.key.toString() -> TODO()
+                Mode.QuickUpdate.key.toString() -> QuickUpdate(this).main()
                 Mode.UpdateMetadata.key.toString() -> TODO()
                 Mode.NewLocale.key.toString() -> TODO()
                 Mode.RemoveManifest.key.toString() -> TODO()
