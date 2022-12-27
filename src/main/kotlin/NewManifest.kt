@@ -1,3 +1,4 @@
+import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -38,19 +39,21 @@ import input.InstallerSwitch
 import input.Polar
 import input.PromptType
 import input.Prompts
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.TerminalInstance
 
-class NewManifest(private val terminal: Terminal) : KoinComponent {
+class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val defaultLocalManifestData: DefaultLocaleManifestData by inject()
     private val versionManifestData: VersionManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
 
-    suspend fun main() = coroutineScope {
-        with(terminal) {
+    override fun run(): Unit = runBlocking {
+        with(get<TerminalInstance>().terminal) {
             packageIdentifierPrompt()
             launch { sharedManifestData.getPreviousManifestData() }
             launch {
