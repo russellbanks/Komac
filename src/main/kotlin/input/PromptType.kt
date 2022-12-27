@@ -22,6 +22,7 @@ enum class PromptType {
     Protocols,
     Publisher,
     ReleaseDate,
+    Scope,
     SilentSwitch,
     SilentWithProgressSwitch,
     Tags;

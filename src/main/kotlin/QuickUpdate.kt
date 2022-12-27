@@ -10,6 +10,7 @@ import data.YamlConfig
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
+import input.PromptType
 import input.Prompts
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -43,43 +44,17 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                             println(
                                 verticalLayout {
                                     cell(brightGreen("Installer Entry #${index.inc()}"))
-                                    cell(
-                                        brightYellow(
-                                            buildString {
-                                                append(" ".repeat(Prompts.optionIndent))
-                                                append("Architecture: ${installer.architecture}")
-                                            }
-                                        )
-                                    )
-                                    installer.installerType?.let {
-                                        cell(
-                                            brightYellow(
-                                                buildString {
-                                                    append(" ".repeat(Prompts.optionIndent))
-                                                    append("Installer Type ${installer.installerType}")
-                                                }
+                                    listOf(
+                                        PromptType.Architecture to installer.architecture,
+                                        PromptType.InstallerType to installer.installerType,
+                                        PromptType.Scope to installer.scope,
+                                        PromptType.InstallerLocale to installer.installerLocale
+                                    ).forEach { (promptType, value) ->
+                                        if (value != null) {
+                                            cell(
+                                                brightYellow("${" ".repeat(Prompts.optionIndent)} $promptType: $value")
                                             )
-                                        )
-                                    }
-                                    installer.scope?.let {
-                                        cell(
-                                            brightYellow(
-                                                buildString {
-                                                    append(" ".repeat(Prompts.optionIndent))
-                                                    append("Scope ${installer.scope}")
-                                                }
-                                            )
-                                        )
-                                    }
-                                    installer.installerLocale?.let {
-                                        cell(
-                                            brightYellow(
-                                                buildString {
-                                                    append(" ".repeat(Prompts.optionIndent))
-                                                    append("Locale ${installer.installerLocale}")
-                                                }
-                                            )
-                                        )
+                                        }
                                     }
                                     cell("")
                                 }
