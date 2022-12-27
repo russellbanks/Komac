@@ -14,27 +14,31 @@ import kotlin.system.exitProcess
 
 class Komac : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
     override fun run(): Unit = runBlocking {
-        val terminalInstance: TerminalInstance by inject()
-        with(terminalInstance.terminal) {
-            println(
-                verticalLayout {
-                    cell(brightYellow("Select mode:"))
-                    cell("")
-                    Mode.values().forEach { mode ->
-                        cell(optionCell(mode, mode.key))
+        if (currentContext.invokedSubcommand == null) {
+            val terminalInstance: TerminalInstance by inject()
+            with(terminalInstance.terminal) {
+                println(
+                    verticalLayout {
+                        cell(brightYellow("Select mode:"))
+                        cell("")
+                        Mode.values().forEach { mode ->
+                            cell(optionCell(mode, mode.key))
+                        }
+                        cell("")
                     }
-                    cell("")
+                )
+                val selection = prompt(
+                    prompt = brightWhite("Selection"), default = Mode.Exit.key.toString(), showDefault = false
+                )
+                println()
+                when (selection?.lowercase()) {
+                    Mode.NewManifest.key.toString() -> NewManifest().run()
+                    Mode.QuickUpdate.key.toString() -> QuickUpdate().run()
+                    Mode.UpdateMetadata.key.toString() -> TODO()
+                    Mode.NewLocale.key.toString() -> TODO()
+                    Mode.RemoveManifest.key.toString() -> TODO()
+                    else -> exitProcess(0)
                 }
-            )
-            val selection = prompt(brightWhite("Selection"), default = Mode.Exit.key.toString(), showDefault = false)
-            println()
-            when (selection?.lowercase()) {
-                Mode.NewManifest.key.toString() -> NewManifest().run()
-                Mode.QuickUpdate.key.toString() -> QuickUpdate().run()
-                Mode.UpdateMetadata.key.toString() -> TODO()
-                Mode.NewLocale.key.toString() -> TODO()
-                Mode.RemoveManifest.key.toString() -> TODO()
-                else -> exitProcess(0)
             }
         }
     }
