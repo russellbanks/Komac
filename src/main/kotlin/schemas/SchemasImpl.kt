@@ -5,9 +5,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import ktor.Clients
@@ -21,16 +20,16 @@ class SchemasImpl : KoinComponent {
     private val terminalInstance: TerminalInstance by inject()
     private val client: HttpClient = get<Clients>().httpClient
     private val json = Json { ignoreUnknownKeys = true }
-    private var installerSchemaJob: Deferred<Unit> = CoroutineScope(Dispatchers.Default).async {
+    private var installerSchemaJob = CoroutineScope(Dispatchers.Default).launch {
         installerSchema = json.decodeFromString(client.get(Schemas.installerSchema).body())
     }
-    private var defaultLocaleSchemaJob: Deferred<Unit> = CoroutineScope(Dispatchers.Default).async {
+    private var defaultLocaleSchemaJob = CoroutineScope(Dispatchers.Default).launch {
         defaultLocaleSchema = json.decodeFromString(client.get(Schemas.defaultLocaleSchema).body())
     }
-    private var localeSchemaJob: Deferred<Unit> = CoroutineScope(Dispatchers.Default).async {
+    private var localeSchemaJob = CoroutineScope(Dispatchers.Default).launch {
         localeSchema = json.decodeFromString(client.get(Schemas.localeSchema).body())
     }
-    private var versionSchemaJob: Deferred<Unit> = CoroutineScope(Dispatchers.Default).async {
+    private var versionSchemaJob = CoroutineScope(Dispatchers.Default).launch {
         versionSchema = json.decodeFromString(client.get(Schemas.versionSchema).body())
     }
     lateinit var installerSchema: InstallerSchema
@@ -56,7 +55,7 @@ class SchemasImpl : KoinComponent {
                         stop()
                         clear()
                     }
-                    await()
+                    join()
                 }
             }
         }

@@ -8,15 +8,14 @@ import input.Mode
 import input.Prompts
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import org.koin.core.component.get
 import schemas.TerminalInstance
 import kotlin.system.exitProcess
 
 class Komac : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
     override fun run(): Unit = runBlocking {
         if (currentContext.invokedSubcommand == null) {
-            val terminalInstance: TerminalInstance by inject()
-            with(terminalInstance.terminal) {
+            with(get<TerminalInstance>().terminal) {
                 println(
                     verticalLayout {
                         cell(brightYellow("Select mode:"))
@@ -28,7 +27,9 @@ class Komac : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
                     }
                 )
                 val selection = prompt(
-                    prompt = brightWhite("Selection"), default = Mode.Exit.key.toString(), showDefault = false
+                    prompt = brightWhite("Selection"),
+                    default = Mode.Exit.key.toString(),
+                    showDefault = false
                 )
                 println()
                 when (selection?.lowercase()) {

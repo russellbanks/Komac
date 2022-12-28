@@ -4,6 +4,7 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
@@ -27,6 +28,7 @@ object InstallModes : KoinComponent {
     suspend fun Terminal.installModesPrompt() {
         do {
             println(brightYellow(installModesInfo))
+            println(cyan(installModesExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.InstallModes.toString()),
                 default = getPreviousValue()?.joinToString(", ")?.also {
@@ -67,13 +69,8 @@ object InstallModes : KoinComponent {
         }
     }
 
-    private val installModesInfo = buildString {
-        append(Prompts.optional)
-        append(" ")
-        append(installModesSchema.description)
-        append(". Options: ")
-        append(InstallerManifest.InstallModes.values().joinToString(", "))
-    }
+    private val installModesInfo = "${Prompts.optional} ${installModesSchema.description}"
+    private val installModesExample = "Options: ${InstallerManifest.InstallModes.values().joinToString(", ")}"
 
     private fun List<String>.toInstallModes(): List<InstallerManifest.InstallModes>? {
         return mapNotNull { string ->

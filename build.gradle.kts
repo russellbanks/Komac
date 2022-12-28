@@ -25,6 +25,9 @@ dependencies {
     // Commons IO - https://commons.apache.org/proper/commons-io/
     implementation(libs.commons.io)
 
+    // GitHub API - https://github.com/hub4j/github-api
+    implementation(libs.github.api)
+
     // Kotlin Coroutines - https://github.com/Kotlin/kotlinx.coroutines
     implementation(libs.coroutines.core)
 
@@ -39,11 +42,11 @@ dependencies {
     implementation(libs.koin.annotations)
     ksp(libs.koin.ksp.compiler)
 
-    // Kotest - https://github.com/kotest/kotest
+    /* Kotest - https://github.com/kotest/kotest
     testImplementation(libs.kotest.junit5)
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.framework.datatest)
-    testImplementation(libs.kotest.extensions.assertions.ktor)
+    testImplementation(libs.kotest.extensions.assertions.ktor) */
 
     // KotlinX Serialization - https://github.com/Kotlin/kotlinx.serialization
     implementation(libs.kotlinx.serialization.json)
@@ -58,9 +61,9 @@ dependencies {
     implementation(libs.mordant)
 }
 
-tasks.withType<Test>().configureEach {
+/* tasks.withType<Test>().configureEach {
     useJUnitPlatform()
-}
+} */
 
 sourceSets.main {
     java.srcDirs("build/generated/ksp/main/kotlin")

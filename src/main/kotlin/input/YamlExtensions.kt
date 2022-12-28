@@ -5,7 +5,7 @@ object YamlExtensions {
         return if (isNullOrBlank()) {
             null
         } else {
-            split("\\W+".toRegex()).let { if (uniqueItems) it.distinct() else it }.sorted().filterNot { it.isBlank() }
+            split(Regex("\\W+")).let { if (uniqueItems) it.distinct() else it }.sorted().filterNot { it.isBlank() }
         }
     }
 }

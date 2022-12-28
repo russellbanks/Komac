@@ -23,6 +23,7 @@ import io.ktor.client.plugins.UserAgent
 import io.ktor.client.request.head
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.isSuccess
+import ktor.Clients
 import ktor.Ktor
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
@@ -34,7 +35,6 @@ import schemas.DefaultLocaleSchema
 import schemas.InstallerSchema
 import schemas.RemoteSchema
 import schemas.SchemasImpl
-import java.io.File
 
 object Url : KoinComponent {
     suspend fun Terminal.installerDownloadPrompt() {
@@ -84,15 +84,10 @@ object Url : KoinComponent {
             }
         }
 
-        lateinit var downloadedFile: File
-        HttpClient(Java) {
-            install(UserAgent) {
-                agent = Ktor.userAgent
-            }
-        }.use { downloadedFile = it.downloadInstallerFromUrl() }
-        installerManifestData.installerSha256 = downloadedFile.hash(Hashing.Algorithms.SHA256).uppercase()
-        downloadedFile.delete()
-        println("Sha256: ${installerManifestData.installerSha256}")
+        get<Clients>().httpClient.downloadInstallerFromUrl().apply {
+            installerManifestData.installerSha256 = hash(Hashing.Algorithms.SHA256).uppercase()
+            delete()
+        }
     }
 
     suspend fun Terminal.localeUrlPrompt(localeUrl: LocaleUrl) {

@@ -109,15 +109,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     cell(brightYellow(additionalInstallerInfo))
                     Polar.values().forEach {
                         val textColour = if (it == Polar.No) brightGreen else brightWhite
-                        cell(
-                            textColour(
-                                buildString {
-                                    append(" ".repeat(Prompts.optionIndent))
-                                    append("[${it.name.first()}] ")
-                                    append(it.name)
-                                }
-                            )
-                        )
+                        cell(textColour("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
                     }
                 }
             )
