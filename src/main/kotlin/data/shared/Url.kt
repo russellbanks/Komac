@@ -8,6 +8,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
+import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.InstallerManifestData
@@ -17,14 +18,10 @@ import hashing.Hashing
 import hashing.Hashing.hash
 import input.PromptType
 import input.Prompts
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.java.Java
-import io.ktor.client.plugins.UserAgent
 import io.ktor.client.request.head
-import io.ktor.client.statement.HttpResponse
+import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import ktor.Clients
-import ktor.Ktor
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
@@ -48,9 +45,7 @@ object Url : KoinComponent {
                 schema = schemasImpl.installerSchema,
                 canBeBlank = false
             )
-            if (installerUrlValid == Validation.Success && input != null) {
-                installerManifestData.installerUrl = input
-            }
+            if (installerUrlValid == Validation.Success && input != null) installerManifestData.installerUrl = input
             error?.let { println(red(it)) }
             println()
         } while (installerUrlValid != Validation.Success)
@@ -60,10 +55,14 @@ object Url : KoinComponent {
             redirectedUrl != installerManifestData.installerUrl &&
             redirectedUrl?.contains(other = "github", ignoreCase = true) != true
         ) {
-            println(brightYellow(redirectFound))
-            println(cyan(discoveredUrl(redirectedUrl)))
-            println((brightGreen(useDetectedUrl)))
-            println(brightWhite(useOriginalUrl))
+            println(
+                verticalLayout {
+                    cell(brightYellow(redirectFound))
+                    cell(cyan("Discovered URL: $redirectedUrl"))
+                    cell(brightGreen(useDetectedUrl))
+                    cell(brightWhite(useOriginalUrl))
+                }
+            )
             if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(brightYellow(urlChanged))
                 val (redirectedUrlValid, error) = isUrlValid(
@@ -80,13 +79,19 @@ object Url : KoinComponent {
                 }
                 println()
             } else {
-                println(brightGreen(originalUrlRetained(installerManifestData.installerUrl)))
+                println(brightGreen("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}"))
             }
         }
 
-        get<Clients>().httpClient.downloadInstallerFromUrl().apply {
-            installerManifestData.installerSha256 = hash(Hashing.Algorithms.SHA256).uppercase()
-            delete()
+        if (installerManifestData.installers.map { it.installerUrl }.contains(installerManifestData.installerUrl)) {
+            installerManifestData.installerSha256 = installerManifestData.installers.first {
+                it.installerUrl == installerManifestData.installerUrl
+            }.installerSha256
+        } else {
+            get<Clients>().httpClient.downloadInstallerFromUrl().apply {
+                installerManifestData.installerSha256 = hash(Hashing.Algorithms.SHA256).uppercase()
+                delete()
+            }
         }
     }
 
@@ -135,17 +140,13 @@ object Url : KoinComponent {
             url.length > maxLength -> Validation.InvalidLength to Errors.invalidLength(max = maxLength)
             !url.matches(pattern) -> Validation.InvalidPattern to Errors.invalidRegex(pattern)
             else -> {
-                lateinit var installerUrlResponse: HttpResponse
-                HttpClient(Java) {
-                    install(UserAgent) {
-                        agent = Ktor.userAgent
+                get<Clients>().httpClient.config { followRedirects = false }.use {
+                    val installerUrlResponse = it.head(url)
+                    if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {
+                        Validation.UnsuccessfulResponseCode to Errors.unsuccessfulUrlResponse(installerUrlResponse)
+                    } else {
+                        Validation.Success to null
                     }
-                    followRedirects = false
-                }.use { installerUrlResponse = it.head(url) }
-                if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {
-                    Validation.UnsuccessfulResponseCode to Errors.unsuccessfulUrlResponse(installerUrlResponse)
-                } else {
-                    Validation.Success to null
                 }
             }
         }
@@ -176,10 +177,6 @@ object Url : KoinComponent {
         }
         return "${Prompts.optional} Enter ${description.lowercase()}"
     }
-
-    private fun originalUrlRetained(url: String?) = "Original URL Retained - Proceeding with $url"
-
-    private fun discoveredUrl(url: String?) = "Discovered URL: $url"
 
     private const val installerUrlInfo = "${Prompts.required} Enter the download url to the installer"
 

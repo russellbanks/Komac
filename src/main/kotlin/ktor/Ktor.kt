@@ -4,8 +4,6 @@ import data.InstallerManifestData
 import data.SharedManifestData
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.engine.java.Java
-import io.ktor.client.plugins.UserAgent
 import io.ktor.client.request.head
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.HttpResponse
@@ -19,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.io.FilenameUtils
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.TerminalInstance
 import java.io.File
@@ -85,12 +84,7 @@ object Ktor : KoinComponent {
     }
 
     suspend fun getRedirectedUrl(installerUrl: String?): String? {
-        val noRedirectClient = HttpClient(Java) {
-            install(UserAgent) {
-                agent = userAgent
-            }
-            followRedirects = false
-        }
+        val noRedirectClient = get<Clients>().httpClient.config { followRedirects = false }
         var redirectedInstallerUrl: String? = installerUrl
         var response: HttpResponse? = installerUrl?.let { noRedirectClient.head(it) }
 

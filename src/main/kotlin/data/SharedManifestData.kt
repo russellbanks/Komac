@@ -1,12 +1,10 @@
 package data
 
-import com.charleskorn.kaml.Yaml
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.modules.SerializersModule
 import ktor.Ktor
 import org.kohsuke.github.GHContent
 import org.kohsuke.github.GHRepository
@@ -15,12 +13,10 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.DefaultLocaleManifest
 import schemas.InstallerManifest
-import schemas.LocalDateSerializer
 import schemas.LocaleManifest
 import schemas.VersionManifest
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.time.LocalDate
 
 @Single
 class SharedManifestData : KoinComponent {
@@ -37,39 +33,46 @@ class SharedManifestData : KoinComponent {
     var remoteVersionData: VersionManifest? = null
     var remoteVersionDataJob: Job? = null
     lateinit var latestVersion: String
-    private val yaml = Yaml(SerializersModule { contextual(LocalDate::class, LocalDateSerializer) })
 
     suspend fun getPreviousManifestData() = coroutineScope {
-        val github = get<GitHubImpl>().github
+        val githubImpl = get<GitHubImpl>()
         runCatching {
-            val repository = github.getRepository("Microsoft/winget-pkgs")
+            val repository = githubImpl.getMicrosoftWingetPkgs()
             val directoryPath = repository
-                .getDirectoryContent("${Ktor.getDirectoryPath(packageIdentifier)}/$latestVersion")
-            (directoryPath.first { it.name == "$packageIdentifier.installer.yaml" }.path)
+                ?.getDirectoryContent("${Ktor.getDirectoryPath(packageIdentifier)}/$latestVersion")
+            (directoryPath?.first { it.name == "$packageIdentifier.installer.yaml" }?.path)
             remoteInstallerDataJob = launch(Dispatchers.IO) {
-                repository.getFileContent(directoryPath.first { it.name == "$packageIdentifier.installer.yaml" }.path)
-                    .read()
-                    .let { BufferedReader(InputStreamReader(it)) }
-                    .use { reader ->
+                repository?.getFileContent(
+                    directoryPath?.first { it.name == "$packageIdentifier.installer.yaml" }?.path
+                )?.read()
+                    ?.let { BufferedReader(InputStreamReader(it)) }
+                    ?.use { reader ->
                         var line: String?
                         buildString {
                             while (reader.readLine().also { line = it } != null) {
                                 appendLine(line)
                             }
-                        }.let { remoteInstallerData = yaml.decodeFromString(InstallerManifest.serializer(), it) }
+                        }.let {
+                            remoteInstallerData = YamlConfig.installer.decodeFromString(
+                                InstallerManifest.serializer(),
+                                it
+                            )
+                        }
                     }
             }
             remoteVersionDataJob = launch(Dispatchers.IO) {
-                repository.getFileContent(directoryPath.first { it.name == "$packageIdentifier.yaml" }.path)
-                    .read()
-                    .let { BufferedReader(InputStreamReader(it)) }
-                    .use { reader ->
+                repository?.getFileContent(directoryPath?.first { it.name == "$packageIdentifier.yaml" }?.path)
+                    ?.read()
+                    ?.let { BufferedReader(InputStreamReader(it)) }
+                    ?.use { reader ->
                         var line: String?
                         buildString {
                             while (reader.readLine().also { line = it } != null) {
                                 appendLine(line)
                             }
-                        }.let { remoteVersionData = yaml.decodeFromString(VersionManifest.serializer(), it) }
+                        }.let {
+                            remoteVersionData = YamlConfig.other.decodeFromString(VersionManifest.serializer(), it)
+                        }
                     }
             }.also { job ->
                 job.invokeOnCompletion {
@@ -86,46 +89,52 @@ class SharedManifestData : KoinComponent {
     }
 
     private suspend fun getRemoteDefaultLocaleData(
-        repository: GHRepository,
-        directoryPath: List<GHContent>
+        repository: GHRepository?,
+        directoryPath: List<GHContent>?
     ) = coroutineScope {
         remoteDefaultLocaleDataJob = launch(Dispatchers.IO, CoroutineStart.LAZY) {
-            repository.getFileContent(
-                directoryPath.first { it.name == "$packageIdentifier.locale.$defaultLocale.yaml" }.path
-            ).read()
-                .let { BufferedReader(InputStreamReader(it)) }
-                .use { reader ->
+            repository?.getFileContent(
+                directoryPath?.first { it.name == "$packageIdentifier.locale.$defaultLocale.yaml" }?.path
+            )?.read()
+                ?.let { BufferedReader(InputStreamReader(it)) }
+                ?.use { reader ->
                     var line: String?
                     buildString {
                         while (reader.readLine().also { line = it } != null) {
                             appendLine(line)
                         }
-                    }.let { remoteDefaultLocaleData = yaml.decodeFromString(DefaultLocaleManifest.serializer(), it) }
+                    }.let {
+                        remoteDefaultLocaleData = YamlConfig.other.decodeFromString(
+                            DefaultLocaleManifest.serializer(),
+                            it
+                        )
+                    }
                 }
         }
     }
 
     private suspend fun getRemoteLocaleData(
-        repository: GHRepository,
-        directoryPath: List<GHContent>
+        repository: GHRepository?,
+        directoryPath: List<GHContent>?
     ) = coroutineScope {
         remoteLocaleDataJob = launch(Dispatchers.IO, CoroutineStart.LAZY) {
             directoryPath
-                .filter { it.name.matches(Regex("${Regex.escape(packageIdentifier)}.locale\\..*\\.yaml")) }
-                .filterNot { it.name.contains(defaultLocale) }
-                .forEach { file ->
-                    repository.getFileContent(file.path)
-                        .read()
-                        .let { BufferedReader(InputStreamReader(it)) }
-                        .use { reader ->
+                ?.filter { it.name.matches(Regex("${Regex.escape(packageIdentifier)}.locale\\..*\\.yaml")) }
+                ?.filterNot { it.name.contains(defaultLocale) }
+                ?.forEach { file ->
+                    repository?.getFileContent(file.path)
+                        ?.read()
+                        ?.let { BufferedReader(InputStreamReader(it)) }
+                        ?.use { reader ->
                             var line: String?
                             buildString {
                                 while (reader.readLine().also { line = it } != null) {
                                     appendLine(line)
                                 }
                             }.let {
-                                remoteLocaleData =
-                                    remoteLocaleData?.plus(yaml.decodeFromString(LocaleManifest.serializer(), it))
+                                remoteLocaleData = remoteLocaleData?.plus(
+                                    YamlConfig.other.decodeFromString(LocaleManifest.serializer(), it)
+                                )
                             }
                         }
                 }
