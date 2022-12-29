@@ -67,8 +67,8 @@ object InstallerSwitch : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(installerSwitch: InstallerSwitch): String? {
-        return sharedManifestData.remoteInstallerData.await()?.let {
+    private fun getPreviousValue(installerSwitch: InstallerSwitch): String? {
+        return sharedManifestData.remoteInstallerData?.let {
             when (installerSwitch) {
                 InstallerSwitch.Silent -> {
                     it.installerSwitches?.silent ?: it.installers[installerManifestData.installers.size]

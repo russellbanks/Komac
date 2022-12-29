@@ -55,7 +55,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     override fun run(): Unit = runBlocking {
         with(get<TerminalInstance>().terminal) {
             packageIdentifierPrompt()
-            launch { sharedManifestData.getPreviousManifestData() }
+            launch { if (!sharedManifestData.isNewPackage) sharedManifestData.getPreviousManifestData() }
             launch {
                 packageVersionPrompt()
                 do {
@@ -101,7 +101,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
         }
     }
 
-    private suspend fun Terminal.shouldLoopPrompt(): Boolean {
+    private fun Terminal.shouldLoopPrompt(): Boolean {
         var promptInput: Char?
         do {
             println(
@@ -116,7 +116,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
             promptInput = prompt(
                 prompt = brightWhite(Prompts.enterChoice),
                 default = when {
-                    (sharedManifestData.remoteInstallerData.await()?.installers?.size ?: 0) >
+                    (sharedManifestData.remoteInstallerData?.installers?.size ?: 0) >
                         installerManifestData.installers.size -> Polar.Yes.name.first().toString()
                     else -> Polar.No.name.first().toString()
                 },

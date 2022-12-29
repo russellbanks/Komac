@@ -63,9 +63,9 @@ object InstallerScope : KoinComponent {
         } while (installerScopeValid != Validation.Success)
     }
 
-    private suspend fun getPreviousValue(): Enum<*>? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.scope ?: it?.installers?.get(installerManifestData.installers.size)?.scope
+    private fun getPreviousValue(): Enum<*>? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.scope ?: it.installers[installerManifestData.installers.size].scope
         }
     }
 

@@ -63,10 +63,10 @@ object InstallerType : KoinComponent {
         throw IllegalArgumentException("Invalid installer type: $this")
     }
 
-    private suspend fun getPreviousValue(): String? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.installerType?.toString() ?: it?.installers
-                ?.get(installerManifestData.installers.size)?.installerType?.toString()
+    private fun getPreviousValue(): String? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.installerType?.toString()
+                ?: it.installers[installerManifestData.installers.size].installerType?.toString()
         }
     }
 

@@ -65,9 +65,9 @@ object UpgradeBehaviour : KoinComponent {
         } while (upgradeBehaviourValid != Validation.Success)
     }
 
-    private suspend fun getPreviousValue(): Enum<*>? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.upgradeBehavior ?: it?.installers?.get(installerManifestData.installers.size)?.upgradeBehavior
+    private fun getPreviousValue(): Enum<*>? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.upgradeBehavior ?: it.installers[installerManifestData.installers.size].upgradeBehavior
         }
     }
 

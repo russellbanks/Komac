@@ -67,18 +67,17 @@ object Ktor : KoinComponent {
         return file
     }
 
-    fun getDirectoryUrl(packageIdentifier: String): String {
+    fun getDirectoryPath(packageIdentifier: String): String {
         return buildString {
-            append("https://api.github.com/repos/Microsoft/winget-pkgs/contents/manifests/")
+            append("manifests/")
             append(packageIdentifier.first().lowercase())
             packageIdentifier.split(".").forEach { append("/$it") }
         }
     }
 
-    private fun getURLExtension(url: String?): String {
-        var urlExtension: String? = FilenameUtils.getExtension(url)
-        if (urlExtension.isNullOrBlank()) urlExtension = "winget-tmp"
-        return urlExtension
+    private fun getURLExtension(url: String): String {
+        val index = url.lastIndexOf('.')
+        return if (index == -1) "winget-tmp" else url.substring(index + 1)
     }
 
     fun HttpStatusCode.isRedirect(): Boolean {

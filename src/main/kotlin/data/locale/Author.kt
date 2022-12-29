@@ -21,12 +21,12 @@ object Author : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val authorSchema = get<SchemasImpl>().defaultLocaleSchema.properties.author
 
-    suspend fun Terminal.authorPrompt() {
+    fun Terminal.authorPrompt() {
         do {
             println(brightYellow(authorInfo))
             val input = prompt(
                 prompt = brightWhite(PromptType.Author.toString()),
-                default = sharedManifestData.remoteDefaultLocaleData.await()?.author?.also {
+                default = sharedManifestData.remoteDefaultLocaleData?.author?.also {
                     println(gray("Previous author: $it"))
                 }
             )?.trim()

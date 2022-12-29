@@ -22,13 +22,13 @@ object License : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val licenseSchema = get<SchemasImpl>().defaultLocaleSchema.properties.license
 
-    suspend fun Terminal.licensePrompt() {
+    fun Terminal.licensePrompt() {
         do {
             println(brightGreen(licenseInfo))
             println(cyan(licenseExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.License.toString()),
-                default = sharedManifestData.remoteDefaultLocaleData.await()?.license?.also {
+                default = sharedManifestData.remoteDefaultLocaleData?.license?.also {
                     println(gray("Previous license: $it"))
                 }
             )?.trim()

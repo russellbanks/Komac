@@ -66,12 +66,12 @@ object Architecture : KoinComponent {
         throw IllegalArgumentException("Invalid architecture: $this")
     }
 
-    private suspend fun getPreviousValue(): String? {
-        return sharedManifestData.remoteInstallerData.await()?.installers
+    private fun getPreviousValue(): String? {
+        return sharedManifestData.remoteInstallerData?.installers
             ?.get(installerManifestData.installers.size)?.architecture?.toString()
     }
 
-    private suspend fun architectureInfo(): Pair<String, TextColors> {
+    private fun architectureInfo(): Pair<String, TextColors> {
         return buildString {
             append(if (getPreviousValue() == null) Prompts.required else Prompts.optional)
             append(" Enter the architecture")

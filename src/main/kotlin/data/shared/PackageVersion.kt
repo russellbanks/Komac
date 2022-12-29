@@ -4,6 +4,7 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.SharedManifestData
@@ -14,12 +15,14 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.SchemasImpl
+import kotlin.random.Random
 
 object PackageVersion : KoinComponent {
     fun Terminal.packageVersionPrompt() {
         val sharedManifestData: SharedManifestData by inject()
         do {
             println(brightGreen(packageVersionInfo))
+            println(cyan(packageVersionExample))
             val input = prompt(brightWhite(PromptType.PackageVersion.toString()))?.trim()
             val (packageVersionValid, error) = isPackageVersionValid(input)
             error?.let { println(red(it)) }
@@ -45,14 +48,6 @@ object PackageVersion : KoinComponent {
             }
             else -> Validation.Success to null
         }
-    }
-
-    fun ArrayList<GitHubDirectory.GitHubDirectoryItem>.getLatestVersion(
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): String {
-        filter { it.name.matches(Regex(installerSchema.definitions.packageVersion.pattern)) }
-            .map { it.name }
-            .also { return getHighestVersion(it) }
     }
 
     fun getHighestVersion(versions: List<String>): String {
@@ -94,5 +89,13 @@ object PackageVersion : KoinComponent {
             }.last().joinToString(".") { it.original }
     }
 
-    private const val packageVersionInfo = "${Prompts.required} Enter the version. For example: 1.33.7"
+    private fun generateRandomVersion(): String {
+        val major = Random.nextInt(1, 10)
+        val minor = Random.nextInt(0, 100)
+        val patch = Random.nextInt(0, 10)
+        return "$major.$minor.$patch"
+    }
+
+    private const val packageVersionInfo = "${Prompts.required} Enter the version."
+    private val packageVersionExample = "Example: ${generateRandomVersion()}"
 }

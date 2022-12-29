@@ -151,8 +151,8 @@ object Url : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(localeUrl: LocaleUrl): String? {
-        val remoteDefaultLocaleData = get<SharedManifestData>().remoteDefaultLocaleData.await()
+    private fun getPreviousValue(localeUrl: LocaleUrl): String? {
+        val remoteDefaultLocaleData = get<SharedManifestData>().remoteDefaultLocaleData
         return when (localeUrl) {
             LocaleUrl.CopyrightUrl -> remoteDefaultLocaleData?.copyrightUrl
             LocaleUrl.LicenseUrl -> remoteDefaultLocaleData?.licenseUrl

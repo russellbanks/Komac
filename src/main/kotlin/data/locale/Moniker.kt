@@ -23,13 +23,15 @@ object Moniker : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val monikerSchema = get<SchemasImpl>().defaultLocaleSchema.definitions.tag
 
-    suspend fun Terminal.monikerPrompt() {
+    fun Terminal.monikerPrompt() {
         do {
             println(brightYellow(monikerInfo))
             println(cyan(monikerExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.Moniker.toString()),
-                default = getPreviousValue()?.also { println(gray("Previous moniker: $it")) }
+                default = sharedManifestData.remoteDefaultLocaleData?.moniker?.also {
+                    println(gray("Previous moniker: $it"))
+                }
             )?.trim()
             val (packageLocaleValid, error) = isMonikerValid(input, monikerSchema)
             if (packageLocaleValid == Validation.Success && input != null) {
@@ -54,10 +56,6 @@ object Moniker : KoinComponent {
             }
             else -> Validation.Success to null
         }
-    }
-
-    private suspend fun getPreviousValue(): String? {
-        return sharedManifestData.remoteDefaultLocaleData.await()?.moniker
     }
 
     private const val monikerInfo = "${Prompts.optional} Enter the Moniker (friendly name/alias)."

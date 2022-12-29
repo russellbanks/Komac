@@ -59,9 +59,9 @@ object Commands : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(): List<String>? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.commands ?: it?.installers?.get(installerManifestData.installers.size)?.commands
+    private fun getPreviousValue(): List<String>? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.commands ?: it.installers[installerManifestData.installers.size].commands
         }
     }
 }

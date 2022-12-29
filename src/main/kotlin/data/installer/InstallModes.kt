@@ -63,9 +63,9 @@ object InstallModes : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(): List<Enum<*>>? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.installModes ?: it?.installers?.get(installerManifestData.installers.size)?.installModes
+    private fun getPreviousValue(): List<Enum<*>>? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.installModes ?: it.installers[installerManifestData.installers.size].installModes
         }
     }
 

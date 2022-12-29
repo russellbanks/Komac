@@ -68,9 +68,9 @@ object FileExtensions : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(): List<String>? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.fileExtensions ?: it?.installers?.get(installerManifestData.installers.size)?.fileExtensions
+    private fun getPreviousValue(): List<String>? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.fileExtensions ?: it.installers[installerManifestData.installers.size].fileExtensions
         }
     }
 }

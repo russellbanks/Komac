@@ -71,10 +71,9 @@ object InstallerSuccessCodes : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(): List<Int>? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.installerSuccessCodes
-                ?: it?.installers?.get(installerManifestData.installers.size)?.installerSuccessCodes
+    private fun getPreviousValue(): List<Int>? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.installerSuccessCodes ?: it.installers[installerManifestData.installers.size].installerSuccessCodes
         }
     }
 

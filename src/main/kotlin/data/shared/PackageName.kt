@@ -22,13 +22,15 @@ object PackageName : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val packageNameSchema = get<SchemasImpl>().defaultLocaleSchema.properties.packageName
 
-    suspend fun Terminal.packageNamePrompt() {
+    fun Terminal.packageNamePrompt() {
         do {
             println(brightGreen(packageNameInfo))
             println(cyan(packageNameExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.PackageName.toString()),
-                default = getPreviousValue()?.also { println(gray("Previous package name: $it")) }
+                default = sharedManifestData.remoteDefaultLocaleData?.packageName?.also {
+                    println(gray("Previous package name: $it"))
+                }
             )?.trim()
             val (packageNameValid, error) = packageNameValid(input, packageNameSchema)
             if (packageNameValid == Validation.Success && input != null) {
@@ -53,10 +55,6 @@ object PackageName : KoinComponent {
             }
             else -> Validation.Success to null
         }
-    }
-
-    private suspend fun getPreviousValue(): String? {
-        return sharedManifestData.remoteDefaultLocaleData.await()?.packageName
     }
 
     private val packageNameInfo = "Enter ${packageNameSchema.description.lowercase()}"

@@ -23,13 +23,15 @@ object Publisher : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val publisherSchema = get<SchemasImpl>().defaultLocaleSchema.properties.publisher
 
-    suspend fun Terminal.publisherPrompt() {
+    fun Terminal.publisherPrompt() {
         do {
             println(brightGreen(publisherInfo))
             println(cyan(publisherExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.Publisher.toString()),
-                default = getPreviousValue()?.also { println(gray("Previous publisher: $it")) }
+                default = sharedManifestData.remoteDefaultLocaleData?.publisher?.also {
+                    println(gray("Previous publisher: $it"))
+                }
             )?.trim()
             val (publisherValid, error) = publisherValid(input, publisherSchema)
             if (publisherValid == Validation.Success && input != null) {
@@ -54,10 +56,6 @@ object Publisher : KoinComponent {
             }
             else -> Validation.Success to null
         }
-    }
-
-    private suspend fun getPreviousValue(): String? {
-        return sharedManifestData.remoteDefaultLocaleData.await()?.publisher
     }
 
     private val publisherInfo = "${Prompts.required} Enter ${publisherSchema.description.lowercase()}"

@@ -21,7 +21,7 @@ object Description : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val propertiesSchema: DefaultLocaleSchema.Properties = get<SchemasImpl>().defaultLocaleSchema.properties
 
-    suspend fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
+    fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
         do {
             val textColour = if (descriptionType == DescriptionType.Short) brightGreen else brightYellow
             println(textColour(descriptionInfo(descriptionType)))
@@ -72,8 +72,8 @@ object Description : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(descriptionType: DescriptionType): String? {
-        val remoteDefaultLocaleData = sharedManifestData.remoteDefaultLocaleData.await()
+    private fun getPreviousValue(descriptionType: DescriptionType): String? {
+        val remoteDefaultLocaleData = sharedManifestData.remoteDefaultLocaleData
         return when (descriptionType) {
             DescriptionType.Short -> remoteDefaultLocaleData?.shortDescription
             DescriptionType.Long -> remoteDefaultLocaleData?.description

@@ -52,9 +52,9 @@ object ReleaseDate : KoinComponent {
         return Validation.Success to null
     }
 
-    private suspend fun getPreviousValue(): LocalDate? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.releaseDate ?: it?.installers?.get(installerManifestData.installers.size)?.releaseDate
+    private fun getPreviousValue(): LocalDate? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.releaseDate ?: it.installers[installerManifestData.installers.size].releaseDate
         }
     }
 

@@ -25,13 +25,13 @@ object Tags : KoinComponent {
     private val tagsSchema = schemasImpl.defaultLocaleSchema.properties.tags
     private val tagSchema = schemasImpl.defaultLocaleSchema.definitions.tag
 
-    suspend fun Terminal.tagsPrompt() {
+    fun Terminal.tagsPrompt() {
         do {
             println(brightYellow(tagsInfo))
             println(cyan(tagsExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.Tags.toString()),
-                default = sharedManifestData.remoteDefaultLocaleData.await()?.tags?.joinToString(", ").also {
+                default = sharedManifestData.remoteDefaultLocaleData?.tags?.joinToString(", ")?.also {
                     println(gray("Previous tags: $it"))
                 }
             )?.trim()?.convertToYamlList(tagsSchema.uniqueItems)

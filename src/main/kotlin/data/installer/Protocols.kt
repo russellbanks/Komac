@@ -23,7 +23,7 @@ object Protocols : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val protocolsSchema = get<SchemasImpl>().installerSchema.definitions.protocols
 
-    suspend fun Terminal.protocolsPrompt() {
+    fun Terminal.protocolsPrompt() {
         do {
             println(
                 brightYellow("${Prompts.optional} ${protocolsSchema.description} (Max ${protocolsSchema.maxItems})")
@@ -58,9 +58,9 @@ object Protocols : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(): List<String>? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.protocols ?: it?.installers?.get(installerManifestData.installers.size)?.protocols
+    private fun getPreviousValue(): List<String>? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.protocols ?: it.installers[installerManifestData.installers.size].protocols
         }
     }
 }

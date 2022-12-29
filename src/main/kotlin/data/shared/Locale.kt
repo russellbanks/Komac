@@ -70,9 +70,9 @@ object Locale : KoinComponent {
         }
     }
 
-    private suspend fun getPreviousValue(): String? {
-        return sharedManifestData.remoteInstallerData.await().let {
-            it?.installerLocale ?: it?.installers?.get(installerManifestData.installers.size)?.installerLocale
+    private fun getPreviousValue(): String? {
+        return sharedManifestData.remoteInstallerData?.let {
+            it.installerLocale ?: it.installers[installerManifestData.installers.size].installerLocale
         }
     }
 

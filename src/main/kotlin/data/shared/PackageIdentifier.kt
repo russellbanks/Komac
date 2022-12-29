@@ -7,16 +7,18 @@ import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
+import data.GitHubImpl
 import data.SharedManifestData
-import data.shared.PackageVersion.getLatestVersion
 import input.PromptType
 import input.Prompts
+import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.Schema
 import schemas.SchemasImpl
+import java.io.IOException
 
 object PackageIdentifier : KoinComponent {
     suspend fun Terminal.packageIdentifierPrompt() {
@@ -31,12 +33,30 @@ object PackageIdentifier : KoinComponent {
             error?.let { println(red(it)) }
             if (packageIdentifierValid == Validation.Success && input != null) {
                 sharedManifestData.packageIdentifier = input
-                if (sharedManifestData.doesPackageAlreadyExist(input).also { sharedManifestData.isNewPackage = !it }) {
-                    println(cyan("Found $input in the winget-pkgs repository"))
-                    sharedManifestData.githubDirectory?.getLatestVersion()?.let {
-                        sharedManifestData.latestVersion = it
-                        println(cyan("Found latest version: $it"))
-                    }
+                try {
+                    sharedManifestData.latestVersion = get<GitHubImpl>().github
+                        .getRepository("microsoft/winget-pkgs")
+                        .getDirectoryContent(Ktor.getDirectoryPath(input))
+                        .filter {
+                            it.name.matches(
+                                Regex(get<SchemasImpl>().installerSchema.definitions.packageIdentifier.pattern)
+                            )
+                        }
+                        .filter { it.isDirectory }
+                        .also {
+                            if (it.isNotEmpty()) {
+                                println(cyan("Found $input in the winget-pkgs repository"))
+                                sharedManifestData.isNewPackage = false
+                            }
+                        }
+                        .map { it.name }
+                        .let { PackageVersion.getHighestVersion(it) }
+                        .also {
+                            sharedManifestData.latestVersion = it
+                            println(cyan("Found latest version: $it"))
+                        }
+                } catch (_: IOException) {
+                    sharedManifestData.isNewPackage = true
                 }
             }
             println()
