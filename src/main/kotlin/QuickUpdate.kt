@@ -20,8 +20,6 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.ManifestBuilder
-import schemas.ManifestBuilder.writeManifestsToFiles
 import schemas.TerminalInstance
 import kotlin.system.exitProcess
 
@@ -72,21 +70,25 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 )
                 previousManifestData.remoteVersionDataJob.join()
                 sharedManifestData.defaultLocale = previousManifestData.remoteVersionData!!.defaultLocale
-                val (komacTemp, versionDirectory) = ManifestBuilder.createTempDirectories()
                 previousManifestData.remoteLocaleDataJob.join()
                 previousManifestData.remoteDefaultLocaleDataJob.join()
-                versionDirectory.writeManifestsToFiles(
+                val githubImpl = get<GitHubImpl>()
+                val repository = githubImpl.getWingetPkgsFork(this@with)
+                val ref = githubImpl.createBranch(repository)
+                githubImpl.commitFiles(
+                    repository = repository,
+                    branch = ref,
                     installerManifest = previousManifestData.remoteInstallerData?.copy(
                         packageIdentifier = sharedManifestData.packageIdentifier,
                         packageVersion = sharedManifestData.packageVersion,
                         installers = installerManifestData.installers,
                         manifestVersion = "1.4.0"
-                    ),
+                    )!!,
                     defaultLocaleManifest = previousManifestData.remoteDefaultLocaleData?.copy(
                         packageIdentifier = sharedManifestData.packageIdentifier,
                         packageVersion = sharedManifestData.packageVersion,
                         manifestVersion = "1.4.0"
-                    ),
+                    )!!,
                     localeManifests = previousManifestData.remoteLocaleData?.map {
                         it.copy(
                             packageIdentifier = sharedManifestData.packageIdentifier,
@@ -98,16 +100,8 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                         packageIdentifier = sharedManifestData.packageIdentifier,
                         packageVersion = sharedManifestData.packageVersion,
                         manifestVersion = "1.4.0"
-                    )
+                    )!!
                 )
-                try {
-                    val githubImpl = get<GitHubImpl>()
-                    val repository = githubImpl.getWingetPkgsFork(this@with)
-                    val ref = githubImpl.createBranch(repository)
-                    githubImpl.commitFiles(repository = repository, branch = ref, versionDirectory = versionDirectory)
-                } finally {
-                    komacTemp.toFile().deleteRecursively()
-                }
             }
         }
     }

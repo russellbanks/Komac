@@ -10,10 +10,16 @@ import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.DefaultLocaleManifest
+import schemas.InstallerManifest
+import schemas.LocaleManifest
 import schemas.ManifestBuilder
+import schemas.Schemas
+import schemas.SchemasImpl
+import schemas.VersionManifest
 import java.io.IOException
-import java.nio.file.Path
 
 @Single
 class GitHubImpl : KoinComponent {
@@ -63,7 +69,14 @@ class GitHubImpl : KoinComponent {
         )
     }
 
-    fun commitFiles(repository: GHRepository?, branch: GHRef?, versionDirectory: Path) {
+    fun commitFiles(
+        repository: GHRepository?,
+        branch: GHRef?,
+        installerManifest: InstallerManifest,
+        defaultLocaleManifest: DefaultLocaleManifest,
+        localeManifests: List<LocaleManifest>? = null,
+        versionManifest: VersionManifest,
+    ) {
         repository?.createCommit()
             ?.message("This is a test commit for Komac")
             ?.parent(branch?.getObject()?.sha)
@@ -73,32 +86,49 @@ class GitHubImpl : KoinComponent {
                     .baseTree(repository.getBranch(branch?.ref).shA1)
                     .add(
                         ManifestBuilder.installerManifestGitHubPath,
-                        versionDirectory.resolve(ManifestBuilder.installerManifestName).toFile().readBytes(),
+                        buildManifestString(get<SchemasImpl>().installerSchema.id) {
+                            appendLine(
+                                YamlConfig.installer.encodeToString(
+                                    InstallerManifest.serializer(),
+                                    installerManifest
+                                )
+                            )
+                        },
                         false
                     )
                     .add(
                         ManifestBuilder.defaultLocaleManifestGitHubPath,
-                        versionDirectory.resolve(ManifestBuilder.defaultLocaleManifestName).toFile().readBytes(),
+                        buildManifestString(get<SchemasImpl>().defaultLocaleSchema.id) {
+                            appendLine(
+                                YamlConfig.other.encodeToString(
+                                    DefaultLocaleManifest.serializer(),
+                                    defaultLocaleManifest
+                                )
+                            )
+                        },
                         false
                     )
                     .add(
                         ManifestBuilder.versionManifestGitHubPath,
-                        versionDirectory.resolve(ManifestBuilder.versionManifestName).toFile().readBytes(),
+                        buildManifestString(get<SchemasImpl>().versionSchema.id) {
+                            appendLine(
+                                YamlConfig.other.encodeToString(
+                                    VersionManifest.serializer(),
+                                    versionManifest
+                                )
+                            )
+                        },
                         false
                     )
                     .apply {
-                        val regex = Regex("${Regex.escape(sharedManifestData.packageIdentifier)}.locale\\.(.*)\\.yaml")
-                        versionDirectory.toFile().listFiles { _, name ->
-                            name.matches(regex) && !name.contains(sharedManifestData.defaultLocale)
-                        }?.forEach { file ->
-                            regex.find(file.name)?.groupValues?.get(1)?.let {
-                                println(it)
-                                add(
-                                    ManifestBuilder.getLocaleManifestGitHubPath(it),
-                                    file.readBytes(),
-                                    false
-                                )
-                            }
+                        localeManifests?.forEach {
+                            add(
+                                ManifestBuilder.getLocaleManifestGitHubPath(it.packageLocale),
+                                buildManifestString(get<SchemasImpl>().localeSchema.id) {
+                                    appendLine(YamlConfig.other.encodeToString(LocaleManifest.serializer(), it))
+                                },
+                                false
+                            )
                         }
                     }
                     .create()
@@ -106,6 +136,15 @@ class GitHubImpl : KoinComponent {
             )
             ?.create()
             ?.also { branch?.updateTo(it.shA1) }
+    }
+
+    private fun buildManifestString(schemaUrl: String, block: StringBuilder.() -> Unit): String {
+        return buildString {
+            appendLine(Schemas.Comments.createdBy)
+            appendLine(Schemas.Comments.languageServer(schemaUrl))
+            appendLine()
+            block()
+        }
     }
 
     companion object {
