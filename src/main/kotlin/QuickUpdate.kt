@@ -27,7 +27,6 @@ import schemas.LocaleManifest
 import schemas.SchemasImpl
 import schemas.TerminalInstance
 import schemas.VersionManifest
-import kotlin.system.exitProcess
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val urls: List<String>? by argument("--urls").multiple().optional()
@@ -40,7 +39,19 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         with(get<TerminalInstance>().terminal) {
             packageIdentifierPrompt()
             previousManifestData = get()
-            exitIfNotInWingetPkgs()
+            if (sharedManifestData.isNewPackage) {
+                println(
+                    verticalLayout {
+                        cell(
+                            brightYellow(
+                                "${sharedManifestData.packageIdentifier} is not in the ${GitHubImpl.wingetpkgs} repository."
+                            )
+                        )
+                        cell(brightYellow("Please use the 'new' command to create a new manifest."))
+                    }
+                )
+                return@runBlocking
+            }
             launch {
                 packageVersionPrompt()
                 previousManifestData.remoteInstallerDataJob.join()
@@ -131,21 +142,5 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 }
             } as List<Pair<String, String?>>
         )
-    }
-
-    private fun Terminal.exitIfNotInWingetPkgs() {
-        if (sharedManifestData.isNewPackage) {
-            println(
-                verticalLayout {
-                    cell(
-                        brightYellow(
-                            "${sharedManifestData.packageIdentifier} is not in the ${GitHubImpl.wingetpkgs} repository."
-                        )
-                    )
-                    cell(brightYellow("Please use the 'new' command to create a new manifest."))
-                }
-            )
-            exitProcess(0)
-        }
     }
 }
