@@ -8,7 +8,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -20,10 +20,10 @@ import schemas.SchemasImpl
 
 object Commands : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val commandsSchema = get<SchemasImpl>().installerSchema.definitions.commands
 
-    suspend fun Terminal.commandsPrompt() {
+    fun Terminal.commandsPrompt() {
         do {
             println(brightYellow("${Prompts.optional} ${commandsSchema.description} (Max ${commandsSchema.maxItems})"))
             val input = prompt(
@@ -60,7 +60,7 @@ object Commands : KoinComponent {
     }
 
     private fun getPreviousValue(): List<String>? {
-        return sharedManifestData.remoteInstallerData?.let {
+        return previousManifestData.remoteInstallerData?.let {
             it.commands ?: it.installers[installerManifestData.installers.size].commands
         }
     }

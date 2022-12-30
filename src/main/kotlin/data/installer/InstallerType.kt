@@ -11,7 +11,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -23,7 +23,7 @@ import schemas.SchemasImpl
 
 object InstallerType : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val installerTypeSchema = get<SchemasImpl>().installerSchema.definitions.installerType
 
     suspend fun Terminal.installerTypePrompt() {
@@ -64,13 +64,13 @@ object InstallerType : KoinComponent {
     }
 
     private fun getPreviousValue(): String? {
-        return sharedManifestData.remoteInstallerData?.let {
+        return previousManifestData.remoteInstallerData?.let {
             it.installerType?.toString()
                 ?: it.installers[installerManifestData.installers.size].installerType?.toString()
         }
     }
 
-    private suspend fun installerTypeInfo(): Pair<String, TextColors> {
+    private fun installerTypeInfo(): Pair<String, TextColors> {
         return buildString {
             append(if (getPreviousValue() == null) Prompts.required else Prompts.optional)
             append(" Enter the installer type")

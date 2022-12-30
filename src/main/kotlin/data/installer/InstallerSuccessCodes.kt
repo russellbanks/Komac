@@ -8,7 +8,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -20,12 +20,12 @@ import schemas.SchemasImpl
 
 object InstallerSuccessCodes : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
     private val installerSuccessCodesSchema = schemasImpl.installerSchema.definitions.installerSuccessCodes
     private val installerReturnCodeSchema = schemasImpl.installerSchema.definitions.installerReturnCode
 
-    suspend fun Terminal.installerSuccessCodesPrompt() {
+    fun Terminal.installerSuccessCodesPrompt() {
         do {
             println(brightYellow(installerSuccessCodeInfo))
             val input = prompt(
@@ -72,7 +72,7 @@ object InstallerSuccessCodes : KoinComponent {
     }
 
     private fun getPreviousValue(): List<Int>? {
-        return sharedManifestData.remoteInstallerData?.let {
+        return previousManifestData.remoteInstallerData?.let {
             it.installerSuccessCodes ?: it.installers[installerManifestData.installers.size].installerSuccessCodes
         }
     }

@@ -11,7 +11,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.InstallerSwitch
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -23,7 +23,7 @@ import schemas.SchemasImpl
 
 object InstallerSwitch : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
 
     suspend fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
         val isRequired = installerManifestData.installerType == InstallerManifest.InstallerType.EXE &&
@@ -68,7 +68,7 @@ object InstallerSwitch : KoinComponent {
     }
 
     private fun getPreviousValue(installerSwitch: InstallerSwitch): String? {
-        return sharedManifestData.remoteInstallerData?.let {
+        return previousManifestData.remoteInstallerData?.let {
             when (installerSwitch) {
                 InstallerSwitch.Silent -> {
                     it.installerSwitches?.silent ?: it.installers[installerManifestData.installers.size]
@@ -86,7 +86,7 @@ object InstallerSwitch : KoinComponent {
         }
     }
 
-    private suspend fun switchInfo(
+    private fun switchInfo(
         installerType: InstallerManifest.InstallerType?,
         installerSwitch: InstallerSwitch
     ): Pair<String, TextColors> {

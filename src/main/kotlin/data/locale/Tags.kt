@@ -9,7 +9,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -20,7 +20,7 @@ import schemas.SchemasImpl
 
 object Tags : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
     private val tagsSchema = schemasImpl.defaultLocaleSchema.properties.tags
     private val tagSchema = schemasImpl.defaultLocaleSchema.definitions.tag
@@ -31,7 +31,7 @@ object Tags : KoinComponent {
             println(cyan(tagsExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.Tags.toString()),
-                default = sharedManifestData.remoteDefaultLocaleData?.tags?.joinToString(", ")?.also {
+                default = previousManifestData.remoteDefaultLocaleData?.tags?.joinToString(", ")?.also {
                     println(gray("Previous tags: $it"))
                 }
             )?.trim()?.convertToYamlList(tagsSchema.uniqueItems)

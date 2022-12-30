@@ -8,6 +8,7 @@ import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.GitHubImpl
 import data.InstallerManifestData
+import data.PreviousManifestData
 import data.SharedManifestData
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
@@ -19,7 +20,6 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.InstallerManifest
 import schemas.ManifestBuilder
 import schemas.ManifestBuilder.writeManifestsToFiles
 import schemas.TerminalInstance
@@ -30,16 +30,18 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
 
     private val installerManifestData: InstallerManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
+    private lateinit var previousManifestData: PreviousManifestData
 
     override fun run(): Unit = runBlocking {
         with(get<TerminalInstance>().terminal) {
             packageIdentifierPrompt()
+            previousManifestData = get()
             exitIfNotInWingetPkgs()
-            launch { sharedManifestData.getPreviousManifestData() }
             launch {
                 packageVersionPrompt()
+                previousManifestData.remoteInstallerDataJob.join()
+                val remoteInstallers = previousManifestData.remoteInstallerData?.installers
                 do {
-                    val remoteInstallers = sharedManifestData.remoteInstallerData?.installers
                     remoteInstallers?.forEachIndexed { index, installer ->
                         println(
                             verticalLayout {
@@ -65,29 +67,34 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                         )
                     }
                 } while (
-                    (sharedManifestData.remoteInstallerData?.installers?.size ?: 0) <
+                    (previousManifestData.remoteInstallerData?.installers?.size ?: 0) <
                     installerManifestData.installers.size
                 )
-                sharedManifestData.defaultLocale = sharedManifestData.remoteVersionData!!.defaultLocale
+                previousManifestData.remoteVersionDataJob.join()
+                sharedManifestData.defaultLocale = previousManifestData.remoteVersionData!!.defaultLocale
                 val (komacTemp, versionDirectory) = ManifestBuilder.createTempDirectories()
-                sharedManifestData.remoteInstallerDataJob?.join()
-                sharedManifestData.remoteDefaultLocaleDataJob?.join()
-                sharedManifestData.remoteLocaleDataJob?.join()
-                sharedManifestData.remoteVersionDataJob?.join()
+                previousManifestData.remoteLocaleDataJob.join()
+                previousManifestData.remoteDefaultLocaleDataJob.join()
                 versionDirectory.writeManifestsToFiles(
-                    installerManifest = sharedManifestData.remoteInstallerData?.copy(
+                    installerManifest = previousManifestData.remoteInstallerData?.copy(
                         packageIdentifier = sharedManifestData.packageIdentifier,
                         packageVersion = sharedManifestData.packageVersion,
                         installers = installerManifestData.installers,
                         manifestVersion = "1.4.0"
                     ),
-                    defaultLocaleManifest = sharedManifestData.remoteDefaultLocaleData?.copy(
+                    defaultLocaleManifest = previousManifestData.remoteDefaultLocaleData?.copy(
                         packageIdentifier = sharedManifestData.packageIdentifier,
                         packageVersion = sharedManifestData.packageVersion,
                         manifestVersion = "1.4.0"
                     ),
-                    localeManifests = sharedManifestData.remoteLocaleData,
-                    versionManifest = sharedManifestData.remoteVersionData?.copy(
+                    localeManifests = previousManifestData.remoteLocaleData?.map {
+                        it.copy(
+                            packageIdentifier = sharedManifestData.packageIdentifier,
+                            packageVersion = sharedManifestData.packageVersion,
+                            manifestVersion = "1.4.0"
+                        )
+                    },
+                    versionManifest = previousManifestData.remoteVersionData?.copy(
                         packageIdentifier = sharedManifestData.packageIdentifier,
                         packageVersion = sharedManifestData.packageVersion,
                         manifestVersion = "1.4.0"

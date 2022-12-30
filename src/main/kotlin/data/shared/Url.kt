@@ -12,14 +12,13 @@ import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import data.locale.LocaleUrl
 import hashing.Hashing
 import hashing.Hashing.hash
 import input.PromptType
 import input.Prompts
 import io.ktor.client.request.head
-import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
@@ -153,7 +152,7 @@ object Url : KoinComponent {
     }
 
     private fun getPreviousValue(localeUrl: LocaleUrl): String? {
-        val remoteDefaultLocaleData = get<SharedManifestData>().remoteDefaultLocaleData
+        val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
         return when (localeUrl) {
             LocaleUrl.CopyrightUrl -> remoteDefaultLocaleData?.copyrightUrl
             LocaleUrl.LicenseUrl -> remoteDefaultLocaleData?.licenseUrl

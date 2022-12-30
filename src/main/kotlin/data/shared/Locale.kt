@@ -11,6 +11,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.PreviousManifestData
 import data.SharedManifestData
 import input.PromptType
 import input.Prompts
@@ -24,8 +25,9 @@ import schemas.SchemasImpl
 object Locale : KoinComponent {
     val installerManifestData: InstallerManifestData by inject()
     val sharedManifestData: SharedManifestData by inject()
+    val previousManifestData: PreviousManifestData by inject()
 
-    suspend fun Terminal.localePrompt(promptType: PromptType) {
+    fun Terminal.localePrompt(promptType: PromptType) {
         do {
             localeInfo(promptType).also { (info, infoColor) -> println(infoColor(info)) }
             if (promptType == PromptType.InstallerLocale) println(cyan("Example: en-US"))
@@ -71,7 +73,7 @@ object Locale : KoinComponent {
     }
 
     private fun getPreviousValue(): String? {
-        return sharedManifestData.remoteInstallerData?.let {
+        return previousManifestData.remoteInstallerData?.let {
             it.installerLocale ?: it.installers[installerManifestData.installers.size].installerLocale
         }
     }

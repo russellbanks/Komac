@@ -5,7 +5,6 @@ import data.SharedManifestData
 import data.YamlConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -19,7 +18,8 @@ object ManifestBuilder : KoinComponent {
     val sharedManifestData: SharedManifestData by inject()
     val installerManifestData: InstallerManifestData by inject()
     val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
-    val defaultLocaleManifestName = "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
+    val defaultLocaleManifestName
+        get() = "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
     val versionManifestName = "${sharedManifestData.packageIdentifier}.version.yaml"
     private const val komacTemp = "komac-tmp"
 
@@ -35,6 +35,10 @@ object ManifestBuilder : KoinComponent {
     val defaultLocaleManifestGitHubPath = "$baseGitHubPath/$defaultLocaleManifestName"
 
     val versionManifestGitHubPath = "$baseGitHubPath/$versionManifestName"
+
+    fun getLocaleManifestGitHubPath(locale: String): String {
+        return "$baseGitHubPath/${sharedManifestData.packageIdentifier}.locale.$locale.yaml"
+    }
 
     private fun buildManifestString(schemaUrl: String, block: StringBuilder.() -> Unit): String {
         return buildString {

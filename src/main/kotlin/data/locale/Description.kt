@@ -8,7 +8,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -18,7 +18,7 @@ import schemas.SchemasImpl
 
 object Description : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val propertiesSchema: DefaultLocaleSchema.Properties = get<SchemasImpl>().defaultLocaleSchema.properties
 
     fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
@@ -73,7 +73,7 @@ object Description : KoinComponent {
     }
 
     private fun getPreviousValue(descriptionType: DescriptionType): String? {
-        val remoteDefaultLocaleData = sharedManifestData.remoteDefaultLocaleData
+        val remoteDefaultLocaleData = previousManifestData.remoteDefaultLocaleData
         return when (descriptionType) {
             DescriptionType.Short -> remoteDefaultLocaleData?.shortDescription
             DescriptionType.Long -> remoteDefaultLocaleData?.description

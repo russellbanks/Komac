@@ -9,7 +9,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -21,9 +21,9 @@ import kotlin.random.Random
 
 object ReleaseDate : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
 
-    suspend fun Terminal.releaseDatePrompt() {
+    fun Terminal.releaseDatePrompt() {
         do {
             println(brightYellow(releaseDateInfo))
             println(cyan(releaseDateExample))
@@ -53,7 +53,7 @@ object ReleaseDate : KoinComponent {
     }
 
     private fun getPreviousValue(): LocalDate? {
-        return sharedManifestData.remoteInstallerData?.let {
+        return previousManifestData.remoteInstallerData?.let {
             it.releaseDate ?: it.installers[installerManifestData.installers.size].releaseDate
         }
     }

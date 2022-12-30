@@ -10,7 +10,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -22,9 +22,9 @@ object InstallerScope : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
     private val installerScopeSchema = schemasImpl.installerSchema.definitions.scope
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
 
-    suspend fun Terminal.installerScopePrompt() {
+    fun Terminal.installerScopePrompt() {
         do {
             val previousValue = getPreviousValue()
             println(
@@ -64,7 +64,7 @@ object InstallerScope : KoinComponent {
     }
 
     private fun getPreviousValue(): Enum<*>? {
-        return sharedManifestData.remoteInstallerData?.let {
+        return previousManifestData.remoteInstallerData?.let {
             it.scope ?: it.installers[installerManifestData.installers.size].scope
         }
     }

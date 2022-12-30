@@ -86,6 +86,21 @@ class GitHubImpl : KoinComponent {
                         versionDirectory.resolve(ManifestBuilder.versionManifestName).toFile().readBytes(),
                         false
                     )
+                    .apply {
+                        val regex = Regex("${Regex.escape(sharedManifestData.packageIdentifier)}.locale\\.(.*)\\.yaml")
+                        versionDirectory.toFile().listFiles { _, name ->
+                            name.matches(regex) && !name.contains(sharedManifestData.defaultLocale)
+                        }?.forEach { file ->
+                            regex.find(file.name)?.groupValues?.get(1)?.let {
+                                println(it)
+                                add(
+                                    ManifestBuilder.getLocaleManifestGitHubPath(it),
+                                    file.readBytes(),
+                                    false
+                                )
+                            }
+                        }
+                    }
                     .create()
                     .sha
             )

@@ -11,7 +11,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -22,11 +22,11 @@ import schemas.SchemasImpl
 
 object Architecture : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
     private val architectureSchema = schemasImpl.installerSchema.definitions.architecture
 
-    suspend fun Terminal.architecturePrompt() {
+    fun Terminal.architecturePrompt() {
         do {
             architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
             println(cyan("Options: ${architectureSchema.enum.joinToString(", ")}"))
@@ -67,7 +67,7 @@ object Architecture : KoinComponent {
     }
 
     private fun getPreviousValue(): String? {
-        return sharedManifestData.remoteInstallerData?.installers
+        return previousManifestData.remoteInstallerData?.installers
             ?.get(installerManifestData.installers.size)?.architecture?.toString()
     }
 

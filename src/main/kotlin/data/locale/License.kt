@@ -1,5 +1,6 @@
 package data.locale
 
+import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -8,7 +9,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -19,7 +20,7 @@ import schemas.SchemasImpl
 
 object License : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val licenseSchema = get<SchemasImpl>().defaultLocaleSchema.properties.license
 
     fun Terminal.licensePrompt() {
@@ -28,7 +29,7 @@ object License : KoinComponent {
             println(cyan(licenseExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.License.toString()),
-                default = sharedManifestData.remoteDefaultLocaleData?.license?.also {
+                default = previousManifestData.remoteDefaultLocaleData?.license?.also {
                     println(gray("Previous license: $it"))
                 }
             )?.trim()

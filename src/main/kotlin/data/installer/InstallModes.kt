@@ -9,7 +9,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -22,10 +22,10 @@ import schemas.SchemasImpl
 
 object InstallModes : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val installModesSchema = get<SchemasImpl>().installerSchema.definitions.installModes
 
-    suspend fun Terminal.installModesPrompt() {
+    fun Terminal.installModesPrompt() {
         do {
             println(brightYellow(installModesInfo))
             println(cyan(installModesExample))
@@ -64,7 +64,7 @@ object InstallModes : KoinComponent {
     }
 
     private fun getPreviousValue(): List<Enum<*>>? {
-        return sharedManifestData.remoteInstallerData?.let {
+        return previousManifestData.remoteInstallerData?.let {
             it.installModes ?: it.installers[installerManifestData.installers.size].installModes
         }
     }

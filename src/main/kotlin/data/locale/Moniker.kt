@@ -9,7 +9,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
-import data.SharedManifestData
+import data.PreviousManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -20,7 +20,7 @@ import schemas.SchemasImpl
 
 object Moniker : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val monikerSchema = get<SchemasImpl>().defaultLocaleSchema.definitions.tag
 
     fun Terminal.monikerPrompt() {
@@ -29,7 +29,7 @@ object Moniker : KoinComponent {
             println(cyan(monikerExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.Moniker.toString()),
-                default = sharedManifestData.remoteDefaultLocaleData?.moniker?.also {
+                default = previousManifestData.remoteDefaultLocaleData?.moniker?.also {
                     println(gray("Previous moniker: $it"))
                 }
             )?.trim()

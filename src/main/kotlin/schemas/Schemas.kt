@@ -17,8 +17,4 @@ object Schemas {
         const val createdBy = "# Created using ${BuildConfig.appName} ${BuildConfig.appVersion}"
         fun languageServer(schemaUrl: String) = "# yaml-language-server: \$schema=$schemaUrl"
     }
-
-    object InstallerType {
-        const val exe = "exe"
-    }
 }
