@@ -34,27 +34,28 @@ object PackageIdentifier : KoinComponent {
             if (packageIdentifierValid == Validation.Success && input != null) {
                 sharedManifestData.packageIdentifier = input
                 try {
-                    sharedManifestData.latestVersion = get<GitHubImpl>().github
-                        .getRepository("microsoft/winget-pkgs")
-                        .getDirectoryContent(Ktor.getDirectoryPath(input))
-                        .filter {
+                    val githubImpl = get<GitHubImpl>()
+                    sharedManifestData.latestVersion = githubImpl
+                        .getMicrosoftWingetPkgs()
+                        ?.getDirectoryContent(Ktor.getDirectoryPath(input))
+                        ?.filter {
                             it.name.matches(
                                 Regex(get<SchemasImpl>().installerSchema.definitions.packageIdentifier.pattern)
                             )
                         }
-                        .filter { it.isDirectory }
-                        .also {
+                        ?.filter { it.isDirectory }
+                        ?.also {
                             if (it.isNotEmpty()) {
                                 println(cyan("Found $input in the winget-pkgs repository"))
                                 sharedManifestData.isNewPackage = false
                             }
                         }
-                        .map { it.name }
-                        .let { PackageVersion.getHighestVersion(it) }
-                        .also {
+                        ?.map { it.name }
+                        ?.let { PackageVersion.getHighestVersion(it) }
+                        ?.also {
                             sharedManifestData.latestVersion = it
                             println(cyan("Found latest version: $it"))
-                        }
+                        }.toString()
                 } catch (_: IOException) {
                     sharedManifestData.isNewPackage = true
                 }

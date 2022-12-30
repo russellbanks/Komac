@@ -4,6 +4,7 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
@@ -28,6 +29,7 @@ object InstallerSuccessCodes : KoinComponent {
     fun Terminal.installerSuccessCodesPrompt() {
         do {
             println(brightYellow(installerSuccessCodeInfo))
+            println(cyan(installerSuccessCodesExample))
             val input = prompt(
                 prompt = brightWhite(PromptType.InstallerSuccessCodes.toString()),
                 default = getPreviousValue()?.joinToString(", ")?.also {
@@ -71,12 +73,19 @@ object InstallerSuccessCodes : KoinComponent {
         }
     }
 
+    private fun generateRandomInstallerSuccessCodes(): List<Int> {
+        val installerSuccessCodes = listOf(13, 87, 120, 1259, 3010) + IntRange(1601, 1616) + IntRange(1618, 1654)
+        return installerSuccessCodes.shuffled().take(3).sorted()
+    }
+
     private fun getPreviousValue(): List<Int>? {
         return previousManifestData.remoteInstallerData?.let {
             it.installerSuccessCodes ?: it.installers[installerManifestData.installers.size].installerSuccessCodes
         }
     }
 
-    val installerSuccessCodeInfo = "${Prompts.optional} ${installerSuccessCodesSchema.description} " +
-        "(Max ${installerSuccessCodesSchema.maxItems})"
+    private val installerSuccessCodeInfo =
+        "${Prompts.optional} ${installerSuccessCodesSchema.description} (Max ${installerSuccessCodesSchema.maxItems})"
+    private val installerSuccessCodesExample =
+        "Example: ${generateRandomInstallerSuccessCodes().joinToString(", ")}"
 }

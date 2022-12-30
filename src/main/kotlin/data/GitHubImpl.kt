@@ -18,6 +18,32 @@ import java.io.IOException
 class GitHubImpl : KoinComponent {
     val github: GitHub = GitHubBuilder().withOAuthToken(token).build()
     private val sharedManifestData: SharedManifestData by inject()
+    private val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
+    private val defaultLocaleManifestName
+        get() = "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
+    private val versionManifestName = "${sharedManifestData.packageIdentifier}.version.yaml"
+
+    private val baseGitHubPath
+        get() = buildString {
+            append("manifests/")
+            append("${sharedManifestData.packageIdentifier.first().lowercase()}/")
+            append("${sharedManifestData.packageIdentifier.replace(".", "/")}/")
+            append(sharedManifestData.packageVersion)
+        }
+
+    val installerManifestGitHubPath
+        get() = "$baseGitHubPath/$installerManifestName"
+
+    val defaultLocaleManifestGitHubPath
+        get() = "$baseGitHubPath/$defaultLocaleManifestName"
+
+    val versionManifestGitHubPath
+        get() = "$baseGitHubPath/$versionManifestName"
+
+    fun getLocaleManifestGitHubPath(locale: String): String {
+        return "$baseGitHubPath/${sharedManifestData.packageIdentifier}.locale.$locale.yaml"
+    }
+
     private val branchName: String
         get() = buildString {
             append(sharedManifestData.packageIdentifier)

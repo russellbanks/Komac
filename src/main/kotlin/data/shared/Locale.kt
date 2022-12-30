@@ -21,6 +21,7 @@ import org.koin.core.component.inject
 import schemas.DefaultLocaleSchema
 import schemas.InstallerSchema
 import schemas.SchemasImpl
+import java.util.Locale
 
 object Locale : KoinComponent {
     val installerManifestData: InstallerManifestData by inject()
@@ -30,7 +31,9 @@ object Locale : KoinComponent {
     fun Terminal.localePrompt(promptType: PromptType) {
         do {
             localeInfo(promptType).also { (info, infoColor) -> println(infoColor(info)) }
-            if (promptType == PromptType.InstallerLocale) println(cyan("Example: en-US"))
+            if (promptType == PromptType.InstallerLocale) {
+                println(cyan("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}"))
+            }
             val input = prompt(
                 prompt = brightWhite(promptType.toString()),
                 default = when (promptType) {

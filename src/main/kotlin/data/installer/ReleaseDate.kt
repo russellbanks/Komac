@@ -74,7 +74,7 @@ object ReleaseDate : KoinComponent {
     }
 
     private val releaseDateExample = "Example: ${generateRandomLocalDate(
-        startInclusive = LocalDate.now().minusYears(/* yearsToSubtract = */ 100),
+        startInclusive = LocalDate.now().minusYears(/* yearsToSubtract = */ 30),
         endExclusive = LocalDate.now()
     )}"
 

@@ -70,8 +70,8 @@ object Url : KoinComponent {
                     canBeBlank = false
                 )
                 error?.let { println(it) }
-                if (redirectedUrlValid == Validation.Success) {
-                    installerManifestData.installerUrl = redirectedUrl.toString()
+                if (redirectedUrlValid == Validation.Success && redirectedUrl != null) {
+                    installerManifestData.installerUrl = redirectedUrl
                 } else {
                     println()
                     println(brightYellow(detectedUrlValidationFailed))

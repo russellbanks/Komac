@@ -25,7 +25,7 @@ object InstallerSwitch : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
-    suspend fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
+    fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
         val isRequired = installerManifestData.installerType == InstallerManifest.InstallerType.EXE &&
             installerSwitch != InstallerSwitch.Custom
         do {

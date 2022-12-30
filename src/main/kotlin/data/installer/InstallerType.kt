@@ -26,7 +26,7 @@ object InstallerType : KoinComponent {
     private val previousManifestData: PreviousManifestData by inject()
     private val installerTypeSchema = get<SchemasImpl>().installerSchema.definitions.installerType
 
-    suspend fun Terminal.installerTypePrompt() {
+    fun Terminal.installerTypePrompt() {
         do {
             installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
             println(cyan("Options: ${installerTypeSchema.enum.joinToString(", ")}"))

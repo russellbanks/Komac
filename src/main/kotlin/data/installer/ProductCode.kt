@@ -4,6 +4,7 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -13,6 +14,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.SchemasImpl
+import java.util.UUID
 
 object ProductCode : KoinComponent {
     fun Terminal.productCodePrompt() {
@@ -21,6 +23,7 @@ object ProductCode : KoinComponent {
         val productCodeSchema = schemasImpl.installerSchema.definitions.productCode
         do {
             println(brightYellow(productCodeInfo))
+            println(cyan(productCodeExample))
             installerManifestData.productCode = prompt(brightWhite(PromptType.ProductCode.toString()))?.trim()
             val (productCodeValid, error) = isProductCodeValid(installerManifestData.productCode, productCodeSchema)
             error?.let { println(red(it)) }
@@ -43,6 +46,6 @@ object ProductCode : KoinComponent {
         }
     }
 
-    private const val productCodeInfo = "${Prompts.optional} Enter the application product code. " +
-        "Looks like {CF8E6E00-9C03-4440-81C0-21FACB921A6B}"
+    private const val productCodeInfo = "${Prompts.optional} Enter the application product code."
+    private val productCodeExample = "Looks like: {${UUID.randomUUID().toString().uppercase()}}"
 }
