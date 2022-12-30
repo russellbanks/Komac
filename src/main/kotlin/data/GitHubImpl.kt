@@ -10,15 +10,8 @@ import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.DefaultLocaleManifest
-import schemas.InstallerManifest
-import schemas.LocaleManifest
-import schemas.ManifestBuilder
 import schemas.Schemas
-import schemas.SchemasImpl
-import schemas.VersionManifest
 import java.io.IOException
 
 @Single
@@ -72,10 +65,7 @@ class GitHubImpl : KoinComponent {
     fun commitFiles(
         repository: GHRepository?,
         branch: GHRef?,
-        installerManifest: InstallerManifest,
-        defaultLocaleManifest: DefaultLocaleManifest,
-        localeManifests: List<LocaleManifest>? = null,
-        versionManifest: VersionManifest,
+        files: List<Pair<String, String?>>
     ) {
         repository?.createCommit()
             ?.message("This is a test commit for Komac")
@@ -84,51 +74,11 @@ class GitHubImpl : KoinComponent {
                 repository
                     .createTree()
                     .baseTree(repository.getBranch(branch?.ref).shA1)
-                    .add(
-                        ManifestBuilder.installerManifestGitHubPath,
-                        buildManifestString(get<SchemasImpl>().installerSchema.id) {
-                            appendLine(
-                                YamlConfig.installer.encodeToString(
-                                    InstallerManifest.serializer(),
-                                    installerManifest
-                                )
-                            )
-                        },
-                        false
-                    )
-                    .add(
-                        ManifestBuilder.defaultLocaleManifestGitHubPath,
-                        buildManifestString(get<SchemasImpl>().defaultLocaleSchema.id) {
-                            appendLine(
-                                YamlConfig.other.encodeToString(
-                                    DefaultLocaleManifest.serializer(),
-                                    defaultLocaleManifest
-                                )
-                            )
-                        },
-                        false
-                    )
-                    .add(
-                        ManifestBuilder.versionManifestGitHubPath,
-                        buildManifestString(get<SchemasImpl>().versionSchema.id) {
-                            appendLine(
-                                YamlConfig.other.encodeToString(
-                                    VersionManifest.serializer(),
-                                    versionManifest
-                                )
-                            )
-                        },
-                        false
-                    )
                     .apply {
-                        localeManifests?.forEach {
-                            add(
-                                ManifestBuilder.getLocaleManifestGitHubPath(it.packageLocale),
-                                buildManifestString(get<SchemasImpl>().localeSchema.id) {
-                                    appendLine(YamlConfig.other.encodeToString(LocaleManifest.serializer(), it))
-                                },
-                                false
-                            )
+                        files.forEach { (path, content) ->
+                            if (content != null) {
+                                add(path, content, false)
+                            }
                         }
                     }
                     .create()
@@ -138,7 +88,7 @@ class GitHubImpl : KoinComponent {
             ?.also { branch?.updateTo(it.shA1) }
     }
 
-    private fun buildManifestString(schemaUrl: String, block: StringBuilder.() -> Unit): String {
+    fun buildManifestString(schemaUrl: String, block: StringBuilder.() -> Unit): String {
         return buildString {
             appendLine(Schemas.Comments.createdBy)
             appendLine(Schemas.Comments.languageServer(schemaUrl))

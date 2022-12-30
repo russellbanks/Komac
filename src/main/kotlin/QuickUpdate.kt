@@ -10,6 +10,7 @@ import data.GitHubImpl
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
+import data.YamlConfig
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
@@ -20,7 +21,13 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.DefaultLocaleManifest
+import schemas.InstallerManifest
+import schemas.LocaleManifest
+import schemas.ManifestBuilder
+import schemas.SchemasImpl
 import schemas.TerminalInstance
+import schemas.VersionManifest
 import kotlin.system.exitProcess
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
@@ -78,29 +85,46 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 githubImpl.commitFiles(
                     repository = repository,
                     branch = ref,
-                    installerManifest = previousManifestData.remoteInstallerData?.copy(
-                        packageIdentifier = sharedManifestData.packageIdentifier,
-                        packageVersion = sharedManifestData.packageVersion,
-                        installers = installerManifestData.installers,
-                        manifestVersion = "1.4.0"
-                    )!!,
-                    defaultLocaleManifest = previousManifestData.remoteDefaultLocaleData?.copy(
-                        packageIdentifier = sharedManifestData.packageIdentifier,
-                        packageVersion = sharedManifestData.packageVersion,
-                        manifestVersion = "1.4.0"
-                    )!!,
-                    localeManifests = previousManifestData.remoteLocaleData?.map {
-                        it.copy(
+                    files = listOf(
+                        ManifestBuilder.installerManifestGitHubPath to previousManifestData.remoteInstallerData?.copy(
+                            packageIdentifier = sharedManifestData.packageIdentifier,
+                            packageVersion = sharedManifestData.packageVersion,
+                            installers = installerManifestData.installers,
+                            manifestVersion = "1.4.0"
+                        )?.let {
+                            githubImpl.buildManifestString(get<SchemasImpl>().installerSchema.id) {
+                                appendLine(YamlConfig.installer.encodeToString(InstallerManifest.serializer(), it))
+                            }
+                        },
+                        ManifestBuilder.defaultLocaleManifestGitHubPath to previousManifestData.remoteDefaultLocaleData?.copy(
                             packageIdentifier = sharedManifestData.packageIdentifier,
                             packageVersion = sharedManifestData.packageVersion,
                             manifestVersion = "1.4.0"
-                        )
-                    },
-                    versionManifest = previousManifestData.remoteVersionData?.copy(
-                        packageIdentifier = sharedManifestData.packageIdentifier,
-                        packageVersion = sharedManifestData.packageVersion,
-                        manifestVersion = "1.4.0"
-                    )!!
+                        )?.let {
+                            githubImpl.buildManifestString(get<SchemasImpl>().defaultLocaleSchema.id) {
+                                appendLine(YamlConfig.other.encodeToString(DefaultLocaleManifest.serializer(), it))
+                            }
+                        },
+                        ManifestBuilder.versionManifestGitHubPath to previousManifestData.remoteVersionData?.copy(
+                            packageIdentifier = sharedManifestData.packageIdentifier,
+                            packageVersion = sharedManifestData.packageVersion,
+                            manifestVersion = "1.4.0"
+                        )?.let {
+                            githubImpl.buildManifestString(get<SchemasImpl>().versionSchema.id) {
+                                appendLine(YamlConfig.other.encodeToString(VersionManifest.serializer(), it))
+                            }
+                        }
+                    ) + previousManifestData.remoteLocaleData?.map { localeManifest ->
+                        ManifestBuilder.getLocaleManifestGitHubPath(localeManifest.packageLocale) to localeManifest.copy(
+                            packageIdentifier = sharedManifestData.packageIdentifier,
+                            packageVersion = sharedManifestData.packageVersion,
+                            manifestVersion = "1.4.0"
+                        ).let {
+                            githubImpl.buildManifestString(get<SchemasImpl>().localeSchema.id) {
+                                appendLine(YamlConfig.other.encodeToString(LocaleManifest.serializer(), it))
+                            }
+                        }
+                    } as List<Pair<String, String?>>
                 )
             }
         }
