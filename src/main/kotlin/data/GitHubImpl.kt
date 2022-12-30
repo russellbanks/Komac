@@ -23,13 +23,15 @@ class GitHubImpl : KoinComponent {
         get() = "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
     private val versionManifestName = "${sharedManifestData.packageIdentifier}.version.yaml"
 
-    val baseGitHubPath
+    val packageVersionsPath
         get() = buildString {
             append("manifests/")
             append("${sharedManifestData.packageIdentifier.first().lowercase()}/")
-            append("${sharedManifestData.packageIdentifier.replace(".", "/")}/")
-            append(sharedManifestData.packageVersion)
+            append(sharedManifestData.packageIdentifier.replace(".", "/"))
         }
+
+    val baseGitHubPath
+        get() = "$packageVersionsPath/${sharedManifestData.packageVersion}"
 
     val installerManifestGitHubPath
         get() = "$baseGitHubPath/$installerManifestName"
