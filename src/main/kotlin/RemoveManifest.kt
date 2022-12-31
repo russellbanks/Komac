@@ -14,10 +14,12 @@ import input.Polar
 import input.PromptType
 import input.Prompts
 import kotlinx.coroutines.runBlocking
+import org.kohsuke.github.GHContent
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.TerminalInstance
+import java.io.IOException
 
 class RemoveManifest : CliktCommand(name = "remove"), KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
@@ -82,31 +84,33 @@ class RemoveManifest : CliktCommand(name = "remove"), KoinComponent {
             )?.trim()?.firstOrNull()
             println()
             if (input == Polar.Yes.toString().first()) {
-                val forkRepository = githubImpl.getWingetPkgsFork(this)
-                val ref = githubImpl.createBranch(forkRepository)
-                val directoryContent = forkRepository?.getDirectoryContent(githubImpl.baseGitHubPath, ref?.ref)
+                val forkRepository = githubImpl.getWingetPkgsFork() ?: return@runBlocking
+                val ref = githubImpl.createBranchFromDefaultBranch(forkRepository) ?: return@runBlocking
+                val directoryContent: MutableList<GHContent> =
+                    forkRepository.getDirectoryContent(githubImpl.baseGitHubPath, ref.ref)
                 val progress = progressAnimation {
                     text("Deleting files")
                     percentage()
                     progressBar()
                     completed()
                 }
-                directoryContent?.forEachIndexed { index, ghContent ->
+                directoryContent.forEachIndexed { index, ghContent ->
                     progress.update(index.inc().toLong(), directoryContent.size.toLong())
                     ghContent.delete("Remove: ${ghContent.name}", ref?.ref)
                 }
                 progress.clear()
-                githubImpl.getMicrosoftWingetPkgs()?.let { ghRepository ->
-                    val pullRequestTitle =
-                        "Remove: ${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}"
+                val ghRepository = githubImpl.getMicrosoftWingetPkgs() ?: return@runBlocking
+                val pullRequestTitle =
+                    "Remove: ${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}"
+                try {
                     ghRepository.createPullRequest(
                         /* title = */ pullRequestTitle,
-                        /* head = */ "${githubImpl.github.myself.login}:${ref?.ref}",
+                        /* head = */ "${githubImpl.github.myself.login}:${ref.ref}",
                         /* base = */ ghRepository.defaultBranch,
                         /* body = */ "## $deletionReason"
-                    ).also {
-                        println(it.htmlUrl)
-                    }
+                    ).also { println(brightGreen("Pull request created: ${it.htmlUrl}")) }
+                } catch (ioException: IOException) {
+                    println(red(ioException.message ?: "Failed to create pull request"))
                 }
             }
         }

@@ -28,13 +28,13 @@ class PreviousManifestData : KoinComponent {
         repository?.getFileContent(
             directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }?.path
         )?.read()?.use {
-            remoteInstallerData = YamlConfig.installer.decodeFromStream(InstallerManifest.serializer(), it)
+            remoteInstallerData = YamlConfig.defaultWithLocalDataSerializer.decodeFromStream(InstallerManifest.serializer(), it)
         }
     }
     var remoteVersionDataJob: Job = CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
         repository?.getFileContent(
             directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }?.path
-        )?.read()?.use { remoteVersionData = YamlConfig.other.decodeFromStream(VersionManifest.serializer(), it) }
+        )?.read()?.use { remoteVersionData = YamlConfig.default.decodeFromStream(VersionManifest.serializer(), it) }
     }.also { job ->
         job.invokeOnCompletion {
             remoteVersionData?.defaultLocale?.let {
@@ -50,7 +50,7 @@ class PreviousManifestData : KoinComponent {
                 it.name == "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
             }?.path
         )?.read()?.use {
-            remoteDefaultLocaleData = YamlConfig.other.decodeFromStream(DefaultLocaleManifest.serializer(), it)
+            remoteDefaultLocaleData = YamlConfig.default.decodeFromStream(DefaultLocaleManifest.serializer(), it)
         }
     }
     var remoteLocaleData: List<LocaleManifest>? = null
@@ -66,9 +66,9 @@ class PreviousManifestData : KoinComponent {
                     ?.read()
                     ?.use {
                         remoteLocaleData = if (remoteLocaleData == null) {
-                            listOf(YamlConfig.other.decodeFromStream(LocaleManifest.serializer(), it))
+                            listOf(YamlConfig.default.decodeFromStream(LocaleManifest.serializer(), it))
                         } else {
-                            remoteLocaleData!! + YamlConfig.other.decodeFromStream(LocaleManifest.serializer(), it)
+                            remoteLocaleData!! + YamlConfig.default.decodeFromStream(LocaleManifest.serializer(), it)
                         }
                     }
             }

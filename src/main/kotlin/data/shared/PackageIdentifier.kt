@@ -1,7 +1,6 @@
 package data.shared
 
 import Errors
-import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.cyan
@@ -21,66 +20,74 @@ import schemas.SchemasImpl
 import java.io.IOException
 
 object PackageIdentifier : KoinComponent {
+    private val sharedManifestData: SharedManifestData by inject()
+    private lateinit var installerSchema: InstallerSchema
+
     suspend fun Terminal.packageIdentifierPrompt() {
-        val sharedManifestData: SharedManifestData by inject()
         val schemasImpl: SchemasImpl by inject()
         do {
             println(brightGreen(packageIdentifierInfo))
             println(cyan(packageIdentifierExample))
             val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
             schemasImpl.awaitSchema(Schema.Installer)
-            val (packageIdentifierValid, error) = isPackageIdentifierValid(input)
-            error?.let { println(red(it)) }
-            if (packageIdentifierValid == Validation.Success && input != null) {
-                sharedManifestData.packageIdentifier = input
-                try {
-                    val githubImpl = get<GitHubImpl>()
-                    sharedManifestData.latestVersion = githubImpl
-                        .getMicrosoftWingetPkgs()
-                        ?.getDirectoryContent(Ktor.getDirectoryPath(input))
-                        ?.filter {
-                            it.name.matches(
-                                Regex(get<SchemasImpl>().installerSchema.definitions.packageIdentifier.pattern)
-                            )
-                        }
-                        ?.filter { it.isDirectory }
-                        ?.also {
-                            if (it.isNotEmpty()) {
-                                println(cyan("Found $input in the winget-pkgs repository"))
-                                sharedManifestData.isNewPackage = false
-                            }
-                        }
-                        ?.map { it.name }
-                        ?.let { PackageVersion.getHighestVersion(it) }
-                        ?.also {
-                            sharedManifestData.latestVersion = it
-                            println(cyan("Found latest version: $it"))
-                        }.toString()
-                } catch (_: IOException) {
-                    sharedManifestData.isNewPackage = true
+            installerSchema = get<SchemasImpl>().installerSchema
+            val error = isPackageIdentifierValid(input).also {
+                if (it == null) {
+                    if (input != null) {
+                        sharedManifestData.packageIdentifier = input
+                        findPreviousVersions()
+                    }
+                } else {
+                    println(red(it))
                 }
             }
             println()
-        } while (packageIdentifierValid != Validation.Success)
+        } while (error != null)
     }
 
-    fun isPackageIdentifierValid(
-        identifier: String?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
+    private fun findPreviousVersions() {
+        try {
+            val githubImpl = get<GitHubImpl>()
+            sharedManifestData.latestVersion = githubImpl
+                .getMicrosoftWingetPkgs()
+                ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
+                ?.filter {
+                    it.name.matches(
+                        Regex(get<SchemasImpl>().installerSchema.definitions.packageIdentifier.pattern)
+                    )
+                }
+                ?.filter { it.isDirectory }
+                ?.also {
+                    if (it.isNotEmpty()) {
+                        println(cyan("Found ${sharedManifestData.packageIdentifier} in the winget-pkgs repository"))
+                        sharedManifestData.isNewPackage = false
+                    }
+                }
+                ?.map { it.name }
+                ?.let { PackageVersion.getHighestVersion(it) }
+                ?.also {
+                    sharedManifestData.latestVersion = it
+                    println(cyan("Found latest version: $it"))
+                }.toString()
+        } catch (_: IOException) {
+            sharedManifestData.isNewPackage = true
+        }
+    }
+
+    fun isPackageIdentifierValid(identifier: String?): String? {
         val packageIdentifierSchema = installerSchema.definitions.packageIdentifier
         return when {
-            identifier.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.PackageIdentifier)
+            identifier.isNullOrBlank() -> Errors.blankInput(PromptType.PackageIdentifier)
             identifier.length > packageIdentifierSchema.maxLength -> {
-                Validation.InvalidLength to Errors.invalidLength(
+                Errors.invalidLength(
                     min = packageIdentifierMinLength,
                     max = packageIdentifierSchema.maxLength
                 )
             }
             !identifier.matches(Regex(packageIdentifierSchema.pattern)) -> {
-                Validation.InvalidPattern to Errors.invalidRegex(Regex(packageIdentifierSchema.pattern))
+                Errors.invalidRegex(Regex(packageIdentifierSchema.pattern))
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 

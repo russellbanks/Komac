@@ -1,7 +1,6 @@
 package data.shared
 
 import Errors
-import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -39,15 +38,15 @@ object Url : KoinComponent {
         do {
             println(brightGreen(installerUrlInfo))
             val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
-            val (installerUrlValid, error) = isUrlValid(
-                url = input,
-                schema = schemasImpl.installerSchema,
-                canBeBlank = false
-            )
-            if (installerUrlValid == Validation.Success && input != null) installerManifestData.installerUrl = input
-            error?.let { println(red(it)) }
+            val error = isUrlValid(url = input, schema = schemasImpl.installerSchema, canBeBlank = false).also {
+                if (it == null) {
+                    if (input != null) installerManifestData.installerUrl = input
+                } else {
+                    println(red(it))
+                }
+            }
             println()
-        } while (installerUrlValid != Validation.Success)
+        } while (error != null)
 
         val redirectedUrl = getRedirectedUrl(installerManifestData.installerUrl)
         if (
@@ -64,17 +63,17 @@ object Url : KoinComponent {
             )
             if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(brightYellow(urlChanged))
-                val (redirectedUrlValid, error) = isUrlValid(
-                    url = redirectedUrl,
-                    schema = schemasImpl.installerSchema,
-                    canBeBlank = false
-                )
-                error?.let { println(it) }
-                if (redirectedUrlValid == Validation.Success && redirectedUrl != null) {
+                val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
+                if (error.isNullOrBlank() && !redirectedUrl.isNullOrBlank()) {
                     installerManifestData.installerUrl = redirectedUrl
                 } else {
-                    println()
-                    println(brightYellow(detectedUrlValidationFailed))
+                    println(
+                        verticalLayout {
+                            cell(error)
+                            cell("")
+                            cell(brightYellow(detectedUrlValidationFailed))
+                        }
+                    )
                 }
                 println()
             } else {
@@ -103,24 +102,26 @@ object Url : KoinComponent {
                 prompt = brightWhite(localeUrl.toString()),
                 default = getPreviousValue(localeUrl)?.also { println(gray("Previous $localeUrl: $it")) }
             )?.trim()
-            val (publisherUrlValid, error) = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true)
-            if (publisherUrlValid == Validation.Success) {
-                when (localeUrl) {
-                    LocaleUrl.CopyrightUrl -> defaultLocaleManifestData.copyrightUrl = input
-                    LocaleUrl.LicenseUrl -> defaultLocaleManifestData.licenseUrl = input
-                    LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
-                    LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
-                    LocaleUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
-                    LocaleUrl.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
-                    LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
+            val error = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true).also {
+                if (it.isNullOrBlank()) {
+                    when (localeUrl) {
+                        LocaleUrl.CopyrightUrl -> defaultLocaleManifestData.copyrightUrl = input
+                        LocaleUrl.LicenseUrl -> defaultLocaleManifestData.licenseUrl = input
+                        LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
+                        LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
+                        LocaleUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
+                        LocaleUrl.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
+                        LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
+                    }
+                } else {
+                    println(red(it))
                 }
             }
-            error?.let { println(red(it)) }
             println()
-        } while (publisherUrlValid != Validation.Success)
+        } while (!error.isNullOrBlank())
     }
 
-    suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): Pair<Validation, String?> {
+    suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): String? {
         val maxLength = when (schema) {
             is InstallerSchema -> schema.definitions.url.maxLength
             is DefaultLocaleSchema -> schema.definitions.url.maxLength
@@ -134,17 +135,17 @@ object Url : KoinComponent {
             }
         )
         return when {
-            url.isNullOrBlank() && canBeBlank -> Validation.Success to null
-            url.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerUrl)
-            url.length > maxLength -> Validation.InvalidLength to Errors.invalidLength(max = maxLength)
-            !url.matches(pattern) -> Validation.InvalidPattern to Errors.invalidRegex(pattern)
+            url.isNullOrBlank() && canBeBlank -> null
+            url.isNullOrBlank() -> Errors.blankInput(PromptType.InstallerUrl)
+            url.length > maxLength -> Errors.invalidLength(max = maxLength)
+            !url.matches(pattern) -> Errors.invalidRegex(pattern)
             else -> {
                 get<Clients>().httpClient.config { followRedirects = false }.use {
                     val installerUrlResponse = it.head(url)
                     if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {
-                        Validation.UnsuccessfulResponseCode to Errors.unsuccessfulUrlResponse(installerUrlResponse)
+                        Errors.unsuccessfulUrlResponse(installerUrlResponse)
                     } else {
-                        Validation.Success to null
+                        null
                     }
                 }
             }

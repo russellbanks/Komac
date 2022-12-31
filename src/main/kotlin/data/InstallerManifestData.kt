@@ -87,7 +87,7 @@ class InstallerManifestData : KoinComponent {
             manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = installerSchema.properties.manifestVersion.default
         ).also {
-            YamlConfig.installer.run {
+            YamlConfig.defaultWithLocalDataSerializer.run {
                 buildString {
                     appendLine(Schemas.Comments.createdBy)
                     appendLine(Schemas.Comments.languageServer(installerSchema.id))

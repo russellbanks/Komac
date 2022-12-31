@@ -3,6 +3,7 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
@@ -14,6 +15,7 @@ import data.YamlConfig
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
+import input.Polar
 import input.PromptType
 import input.Prompts
 import kotlinx.coroutines.launch
@@ -44,7 +46,8 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     verticalLayout {
                         cell(
                             brightYellow(
-                                "${sharedManifestData.packageIdentifier} is not in the ${GitHubImpl.wingetpkgs} repository."
+                                "${sharedManifestData.packageIdentifier} is not in the " +
+                                    "${GitHubImpl.wingetpkgs} repository."
                             )
                         )
                         cell(brightYellow("Please use the 'new' command to create a new manifest."))
@@ -85,19 +88,36 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     (previousManifestData.remoteInstallerData?.installers?.size ?: 0) <
                     installerManifestData.installers.size
                 )
-                promptToCommit()
+                println(
+                    verticalLayout {
+                        cell(
+                            brightYellow(
+                                "Would you like to make a pull request to add " +
+                                    "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
+                            )
+                        )
+                        Polar.values().forEach {
+                            cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
+                        }
+                    }
+                )
+                prompt(
+                    prompt = brightWhite(Prompts.enterChoice),
+                    showChoices = false,
+                    choices = Polar.values().map { it.name.first().toString() },
+                )?.trim()?.firstOrNull().also { if (it == Polar.Yes.toString().first()) commitAndPullRequest() }
             }
         }
     }
 
-    private suspend fun Terminal.promptToCommit() {
+    private suspend fun Terminal.commitAndPullRequest() {
         previousManifestData.remoteVersionDataJob.join()
         sharedManifestData.defaultLocale = previousManifestData.remoteVersionData!!.defaultLocale
         previousManifestData.remoteLocaleDataJob.join()
         previousManifestData.remoteDefaultLocaleDataJob.join()
         val githubImpl = get<GitHubImpl>()
-        val repository = githubImpl.getWingetPkgsFork(this)
-        val ref = githubImpl.createBranch(repository)
+        val repository = githubImpl.getWingetPkgsFork() ?: return
+        val ref = githubImpl.createBranchFromDefaultBranch(repository) ?: return
         githubImpl.commitFiles(
             repository = repository,
             branch = ref,
@@ -109,7 +129,9 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     manifestVersion = "1.4.0"
                 )?.let {
                     githubImpl.buildManifestString(get<SchemasImpl>().installerSchema.id) {
-                        appendLine(YamlConfig.installer.encodeToString(InstallerManifest.serializer(), it))
+                        appendLine(
+                            YamlConfig.defaultWithLocalDataSerializer.encodeToString(InstallerManifest.serializer(), it)
+                        )
                     }
                 },
                 githubImpl.defaultLocaleManifestGitHubPath to previousManifestData.remoteDefaultLocaleData?.copy(
@@ -118,7 +140,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     manifestVersion = "1.4.0"
                 )?.let {
                     githubImpl.buildManifestString(get<SchemasImpl>().defaultLocaleSchema.id) {
-                        appendLine(YamlConfig.other.encodeToString(DefaultLocaleManifest.serializer(), it))
+                        appendLine(YamlConfig.default.encodeToString(DefaultLocaleManifest.serializer(), it))
                     }
                 },
                 githubImpl.versionManifestGitHubPath to previousManifestData.remoteVersionData?.copy(
@@ -127,7 +149,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     manifestVersion = "1.4.0"
                 )?.let {
                     githubImpl.buildManifestString(get<SchemasImpl>().versionSchema.id) {
-                        appendLine(YamlConfig.other.encodeToString(VersionManifest.serializer(), it))
+                        appendLine(YamlConfig.default.encodeToString(VersionManifest.serializer(), it))
                     }
                 }
             ) + previousManifestData.remoteLocaleData?.map { localeManifest ->
@@ -137,7 +159,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     manifestVersion = "1.4.0"
                 ).let {
                     githubImpl.buildManifestString(get<SchemasImpl>().localeSchema.id) {
-                        appendLine(YamlConfig.other.encodeToString(LocaleManifest.serializer(), it))
+                        appendLine(YamlConfig.default.encodeToString(LocaleManifest.serializer(), it))
                     }
                 }
             }.orEmpty()

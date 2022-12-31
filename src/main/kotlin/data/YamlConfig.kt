@@ -8,20 +8,17 @@ import schemas.LocalDateSerializer
 import java.time.LocalDate
 
 object YamlConfig {
-    val installer = Yaml(
+    private val sharedConfiguration = YamlConfiguration(
+        encodeDefaults = false,
+        singleLineStringStyle = SingleLineStringStyle.Plain
+    )
+
+    val defaultWithLocalDataSerializer = Yaml(
         serializersModule = SerializersModule {
             contextual(LocalDate::class, LocalDateSerializer)
         },
-        configuration = YamlConfiguration(
-            encodeDefaults = false,
-            singleLineStringStyle = SingleLineStringStyle.Plain
-        )
+        configuration = sharedConfiguration
     )
 
-    val other = Yaml(
-        configuration = YamlConfiguration(
-            encodeDefaults = false,
-            singleLineStringStyle = SingleLineStringStyle.Plain
-        )
-    )
+    val default = Yaml(configuration = sharedConfiguration)
 }

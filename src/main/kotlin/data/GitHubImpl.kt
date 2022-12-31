@@ -3,15 +3,16 @@ package data
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.red
-import com.github.ajalt.mordant.terminal.Terminal
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schemas
+import schemas.TerminalInstance
 import java.io.IOException
 
 @Single
@@ -21,7 +22,8 @@ class GitHubImpl : KoinComponent {
     private val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
     private val defaultLocaleManifestName
         get() = "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
-    private val versionManifestName = "${sharedManifestData.packageIdentifier}.version.yaml"
+    private val versionManifestName = "${sharedManifestData.packageIdentifier}.yaml"
+    private val terminal = get<TerminalInstance>().terminal
 
     val packageVersionsPath
         get() = buildString {
@@ -55,7 +57,7 @@ class GitHubImpl : KoinComponent {
             append(List(uniqueBranchIdentifierLength) { (('A'..'Z') + ('0'..'9')).random() }.joinToString(""))
         }
 
-    fun getWingetPkgsFork(terminal: Terminal): GHRepository? {
+    fun getWingetPkgsFork(): GHRepository? {
         with(terminal) {
             return try {
                 github.getRepository("${github.myself.login}/$wingetpkgs").also {
@@ -67,8 +69,10 @@ class GitHubImpl : KoinComponent {
                     github.getRepository("$Microsoft/$wingetpkgs").fork().also {
                         println(brightGreen("Forked winget-pkgs repository: ${it.fullName}"))
                     }
-                } catch (_: IOException) {
-                    println(red("Failed to fork winget-pkgs. Please try again or fork it manually."))
+                } catch (ioException: IOException) {
+                    println(
+                        red(ioException.message ?: "Failed to fork winget-pkgs. Please try again or fork it manually.")
+                    )
                     null
                 }
             }
@@ -78,16 +82,22 @@ class GitHubImpl : KoinComponent {
     fun getMicrosoftWingetPkgs(): GHRepository? {
         return try {
             github.getRepository("$Microsoft/$wingetpkgs")
-        } catch (_: IOException) {
+        } catch (ioException: IOException) {
+            terminal.println(red(ioException.message ?: "Failed to get Microsoft winget-pkgs repository."))
             null
         }
     }
 
-    fun createBranch(repository: GHRepository?): GHRef? {
-        return repository?.createRef(
-            /* name = */ "refs/heads/$branchName",
-            /* sha = */ repository.getBranch(repository.defaultBranch).shA1
-        )
+    fun createBranchFromDefaultBranch(repository: GHRepository): GHRef? {
+        return try {
+            repository.createRef(
+                /* name = */ "refs/heads/$branchName",
+                /* sha = */ repository.getBranch(repository.defaultBranch).shA1
+            )
+        } catch (ioException: IOException) {
+            terminal.println(red(ioException.message ?: "Failed to create branch."))
+            null
+        }
     }
 
     fun commitFiles(
