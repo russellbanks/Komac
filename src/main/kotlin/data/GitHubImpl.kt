@@ -105,7 +105,7 @@ class GitHubImpl : KoinComponent {
                     .apply {
                         files.forEach { (path, content) ->
                             if (content != null) {
-                                add(path, content, false)
+                                add(path, content.replace("\n", "\r\n"), false)
                             }
                         }
                     }
