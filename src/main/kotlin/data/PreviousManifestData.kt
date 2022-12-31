@@ -27,14 +27,14 @@ class PreviousManifestData : KoinComponent {
     var remoteInstallerDataJob: Job = CoroutineScope(Dispatchers.IO).launch {
         repository?.getFileContent(
             directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }?.path
-        )?.read()?.let {
+        )?.read()?.use {
             remoteInstallerData = YamlConfig.installer.decodeFromStream(InstallerManifest.serializer(), it)
         }
     }
     var remoteVersionDataJob: Job = CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
         repository?.getFileContent(
             directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }?.path
-        )?.read()?.let { remoteVersionData = YamlConfig.other.decodeFromStream(VersionManifest.serializer(), it) }
+        )?.read()?.use { remoteVersionData = YamlConfig.other.decodeFromStream(VersionManifest.serializer(), it) }
     }.also { job ->
         job.invokeOnCompletion {
             remoteVersionData?.defaultLocale?.let {
@@ -49,7 +49,7 @@ class PreviousManifestData : KoinComponent {
             directoryPath?.first {
                 it.name == "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
             }?.path
-        )?.read()?.let {
+        )?.read()?.use {
             remoteDefaultLocaleData = YamlConfig.other.decodeFromStream(DefaultLocaleManifest.serializer(), it)
         }
     }
@@ -64,7 +64,7 @@ class PreviousManifestData : KoinComponent {
             ?.forEach { ghContent ->
                 repository?.getFileContent(ghContent.path)
                     ?.read()
-                    ?.let {
+                    ?.use {
                         remoteLocaleData = if (remoteLocaleData == null) {
                             listOf(YamlConfig.other.decodeFromStream(LocaleManifest.serializer(), it))
                         } else {
