@@ -13,8 +13,6 @@ import schemas.DefaultLocaleManifest
 import schemas.InstallerManifest
 import schemas.LocaleManifest
 import schemas.VersionManifest
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 @Single
 class PreviousManifestData : KoinComponent {
@@ -29,38 +27,14 @@ class PreviousManifestData : KoinComponent {
     var remoteInstallerDataJob: Job = CoroutineScope(Dispatchers.IO).launch {
         repository?.getFileContent(
             directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }?.path
-        )?.read()
-            ?.let { BufferedReader(InputStreamReader(it)) }
-            ?.use { reader ->
-                var line: String?
-                buildString {
-                    while (reader.readLine().also { line = it } != null) {
-                        appendLine(line)
-                    }
-                }.let {
-                    remoteInstallerData = YamlConfig.installer.decodeFromString(
-                        InstallerManifest.serializer(),
-                        it
-                    )
-                }
-            }
+        )?.read()?.let {
+            remoteInstallerData = YamlConfig.installer.decodeFromStream(InstallerManifest.serializer(), it)
+        }
     }
     var remoteVersionDataJob: Job = CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
         repository?.getFileContent(
             directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }?.path
-        )
-            ?.read()
-            ?.let { BufferedReader(InputStreamReader(it)) }
-            ?.use { reader ->
-                var line: String?
-                buildString {
-                    while (reader.readLine().also { line = it } != null) {
-                        appendLine(line)
-                    }
-                }.let {
-                    remoteVersionData = YamlConfig.other.decodeFromString(VersionManifest.serializer(), it)
-                }
-            }
+        )?.read()?.let { remoteVersionData = YamlConfig.other.decodeFromStream(VersionManifest.serializer(), it) }
     }.also { job ->
         job.invokeOnCompletion {
             remoteVersionData?.defaultLocale?.let {
@@ -75,21 +49,9 @@ class PreviousManifestData : KoinComponent {
             directoryPath?.first {
                 it.name == "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
             }?.path
-        )?.read()
-            ?.let { BufferedReader(InputStreamReader(it)) }
-            ?.use { reader ->
-                var line: String?
-                buildString {
-                    while (reader.readLine().also { line = it } != null) {
-                        appendLine(line)
-                    }
-                }.let {
-                    remoteDefaultLocaleData = YamlConfig.other.decodeFromString(
-                        DefaultLocaleManifest.serializer(),
-                        it
-                    )
-                }
-            }
+        )?.read()?.let {
+            remoteDefaultLocaleData = YamlConfig.other.decodeFromStream(DefaultLocaleManifest.serializer(), it)
+        }
     }
     var remoteLocaleData: List<LocaleManifest>? = null
     var remoteLocaleDataJob: Job = CoroutineScope(Dispatchers.IO).launch {
@@ -102,24 +64,11 @@ class PreviousManifestData : KoinComponent {
             ?.forEach { ghContent ->
                 repository?.getFileContent(ghContent.path)
                     ?.read()
-                    ?.let { BufferedReader(InputStreamReader(it)) }
-                    ?.use { reader ->
-                        var line: String?
-                        buildString {
-                            while (reader.readLine().also { line = it } != null) {
-                                appendLine(line)
-                            }
-                        }.let {
-                            remoteLocaleData = if (remoteLocaleData == null) {
-                                listOf(
-                                    YamlConfig.other.decodeFromString(LocaleManifest.serializer(), it)
-                                )
-                            } else {
-                                remoteLocaleData!! + YamlConfig.other.decodeFromString(
-                                    LocaleManifest.serializer(),
-                                    it
-                                )
-                            }
+                    ?.let {
+                        remoteLocaleData = if (remoteLocaleData == null) {
+                            listOf(YamlConfig.other.decodeFromStream(LocaleManifest.serializer(), it))
+                        } else {
+                            remoteLocaleData!! + YamlConfig.other.decodeFromStream(LocaleManifest.serializer(), it)
                         }
                     }
             }
