@@ -140,7 +140,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                         appendLine(YamlConfig.other.encodeToString(LocaleManifest.serializer(), it))
                     }
                 }
-            } as List<Pair<String, String?>>
+            }.orEmpty()
         )
     }
 }
