@@ -28,7 +28,8 @@ class PreviousManifestData : KoinComponent {
         repository?.getFileContent(
             directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }?.path
         )?.read()?.use {
-            remoteInstallerData = YamlConfig.defaultWithLocalDataSerializer.decodeFromStream(InstallerManifest.serializer(), it)
+            remoteInstallerData =
+                YamlConfig.defaultWithLocalDataSerializer.decodeFromStream(InstallerManifest.serializer(), it)
         }
     }
     var remoteVersionDataJob: Job = CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {

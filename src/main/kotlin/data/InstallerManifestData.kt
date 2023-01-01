@@ -2,11 +2,11 @@ package data
 
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerManifest
 import schemas.Schemas
 import schemas.SchemasImpl
-import schemas.TerminalInstance
 import java.time.LocalDate
 
 @Single
@@ -29,7 +29,6 @@ class InstallerManifestData : KoinComponent {
     var commands: List<String>? = null
     var installerSuccessCodes: List<Int>? = null
     var installModes: List<InstallerManifest.InstallModes>? = null
-    private val terminalInstance: TerminalInstance by inject()
     private val schemaImpl: SchemasImpl by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private val installerSchema
@@ -54,14 +53,14 @@ class InstallerManifestData : KoinComponent {
         )
     }
 
-    fun createInstallerManifest() {
+    fun createInstallerManifest(): String {
         val installersLocaleDistinct = installers.distinctBy { it.installerLocale }.size == 1
         val releaseDateDistinct = installers.distinctBy { it.releaseDate }.size == 1
         val installerScopeDistinct = installers.distinctBy { it.scope }.size == 1
         val upgradeBehaviourDistinct = installers.distinctBy { it.upgradeBehavior }.size == 1
         val installerSwitchesDistinct = installers.distinctBy { it.installerSwitches }.size == 1
         val installerTypeDistinct = installers.distinctBy { it.installerType }.size == 1
-        InstallerManifest(
+        return InstallerManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             installerLocale = if (installersLocaleDistinct) installerLocale?.ifBlank { null } else null,
@@ -86,14 +85,11 @@ class InstallerManifestData : KoinComponent {
             },
             manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = installerSchema.properties.manifestVersion.default
-        ).also {
-            YamlConfig.defaultWithLocalDataSerializer.run {
-                buildString {
-                    appendLine(Schemas.Comments.createdBy)
-                    appendLine(Schemas.Comments.languageServer(installerSchema.id))
-                    appendLine()
-                    appendLine(encodeToString(InstallerManifest.serializer(), it))
-                }.let(terminalInstance.terminal::print)
+        ).let {
+            get<GitHubImpl>().buildManifestString(get<SchemasImpl>().installerSchema.id) {
+                appendLine(
+                    YamlConfig.defaultWithLocalDataSerializer.encodeToString(InstallerManifest.serializer(), it)
+                )
             }
         }
     }

@@ -2,11 +2,10 @@ package data
 
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleManifest
-import schemas.Schemas
 import schemas.SchemasImpl
-import schemas.TerminalInstance
 
 @Single
 class DefaultLocaleManifestData : KoinComponent {
@@ -27,14 +26,13 @@ class DefaultLocaleManifestData : KoinComponent {
     var description: String? = null
     var releaseNotesUrl: String? = null
 
-    private val terminalInstance: TerminalInstance by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
     private val defaultLocaleSchema
         get() = schemasImpl.defaultLocaleSchema
 
-    fun createDefaultLocaleManifest() {
-        DefaultLocaleManifest(
+    fun createDefaultLocaleManifest(): String {
+        return DefaultLocaleManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
@@ -56,14 +54,11 @@ class DefaultLocaleManifestData : KoinComponent {
             releaseNotesUrl = releaseNotesUrl?.ifBlank { null },
             manifestType = defaultLocaleSchema.properties.manifestType.const,
             manifestVersion = defaultLocaleSchema.properties.manifestVersion.default,
-        ).also {
-            YamlConfig.default.run {
-                buildString {
-                    appendLine(Schemas.Comments.createdBy)
-                    appendLine(Schemas.Comments.languageServer(defaultLocaleSchema.id))
-                    appendLine()
-                    appendLine(encodeToString(DefaultLocaleManifest.serializer(), it))
-                }.let(terminalInstance.terminal::print)
+        ).let {
+            get<GitHubImpl>().buildManifestString(get<SchemasImpl>().defaultLocaleSchema.id) {
+                appendLine(
+                    YamlConfig.defaultWithLocalDataSerializer.encodeToString(DefaultLocaleManifest.serializer(), it)
+                )
             }
         }
     }

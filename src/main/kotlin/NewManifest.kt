@@ -5,10 +5,12 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.GitHubImpl
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
+import data.YamlConfig
 import data.installer.Architecture.architecturePrompt
 import data.installer.Commands.commandsPrompt
 import data.installer.FileExtensions.fileExtensionsPrompt
@@ -45,6 +47,8 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.LocaleManifest
+import schemas.SchemasImpl
 import schemas.TerminalInstance
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
@@ -94,13 +98,56 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 tagsPrompt()
                 DescriptionType.values().forEach { descriptionPrompt(it) }
                 localeUrlPrompt(LocaleUrl.ReleaseNotesUrl)
-                installerManifestData.createInstallerManifest()
-                println()
-                defaultLocalManifestData.createDefaultLocaleManifest()
-                println()
-                versionManifestData.createVersionManifest()
+                println(
+                    verticalLayout {
+                        cell(
+                            brightYellow(
+                                "Would you like to make a pull request to add " +
+                                    "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
+                            )
+                        )
+                        Polar.values().forEach {
+                            cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
+                        }
+                    }
+                )
+                prompt(
+                    prompt = brightWhite(Prompts.enterChoice),
+                    showChoices = false,
+                    choices = Polar.values().map { it.name.first().toString() },
+                )?.trim()?.firstOrNull().also { if (it == Polar.Yes.toString().first()) commitAndPullRequest() }
             }
         }
+    }
+
+    private suspend fun commitAndPullRequest() {
+        previousManifestData.remoteVersionDataJob.join()
+        sharedManifestData.defaultLocale = previousManifestData.remoteVersionData!!.defaultLocale
+        previousManifestData.remoteLocaleDataJob.join()
+        previousManifestData.remoteDefaultLocaleDataJob.join()
+        val githubImpl = get<GitHubImpl>()
+        val repository = githubImpl.getWingetPkgsFork() ?: return
+        val ref = githubImpl.createBranchFromDefaultBranch(repository) ?: return
+        githubImpl.commitFiles(
+            repository = repository,
+            branch = ref,
+            files = listOf(
+                githubImpl.installerManifestGitHubPath to installerManifestData.createInstallerManifest(),
+                githubImpl.defaultLocaleManifestGitHubPath to
+                    defaultLocalManifestData.createDefaultLocaleManifest(),
+                githubImpl.versionManifestGitHubPath to versionManifestData.createVersionManifest(),
+            ) + previousManifestData.remoteLocaleData?.map { localeManifest ->
+                githubImpl.getLocaleManifestGitHubPath(localeManifest.packageLocale) to localeManifest.copy(
+                    packageIdentifier = sharedManifestData.packageIdentifier,
+                    packageVersion = sharedManifestData.packageVersion,
+                    manifestVersion = "1.4.0"
+                ).let {
+                    githubImpl.buildManifestString(get<SchemasImpl>().localeSchema.id) {
+                        appendLine(YamlConfig.default.encodeToString(LocaleManifest.serializer(), it))
+                    }
+                }
+            }.orEmpty()
+        )
     }
 
     private fun Terminal.shouldLoopPrompt(): Boolean {

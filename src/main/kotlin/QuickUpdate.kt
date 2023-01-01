@@ -58,36 +58,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             launch {
                 packageVersionPrompt()
                 previousManifestData.remoteInstallerDataJob.join()
-                val remoteInstallers = previousManifestData.remoteInstallerData?.installers
-                do {
-                    remoteInstallers?.forEachIndexed { index, installer ->
-                        println(
-                            verticalLayout {
-                                cell(brightGreen("Installer Entry ${index.inc()}/${remoteInstallers.size}"))
-                                listOf(
-                                    PromptType.Architecture to installer.architecture,
-                                    PromptType.InstallerType to installer.installerType,
-                                    PromptType.Scope to installer.scope,
-                                    PromptType.InstallerLocale to installer.installerLocale
-                                ).forEach { (promptType, value) ->
-                                    value?.let {
-                                        cell(brightYellow("${" ".repeat(Prompts.optionIndent)} $promptType: $it"))
-                                    }
-                                }
-                                cell("")
-                            }
-                        )
-                        installerDownloadPrompt()
-                        installerManifestData.installers += installer.copy(
-                            installerUrl = installerManifestData.installerUrl,
-                            installerSha256 = installerManifestData.installerSha256,
-                            productCode = installerManifestData.productCode,
-                        )
-                    }
-                } while (
-                    (previousManifestData.remoteInstallerData?.installers?.size ?: 0) <
-                    installerManifestData.installers.size
-                )
+                loopThroughInstallers()
                 println(
                     verticalLayout {
                         cell(
@@ -110,7 +81,40 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         }
     }
 
-    private suspend fun Terminal.commitAndPullRequest() {
+    private suspend fun Terminal.loopThroughInstallers() {
+        val remoteInstallers = previousManifestData.remoteInstallerData?.installers
+        do {
+            remoteInstallers?.forEachIndexed { index, installer ->
+                println(
+                    verticalLayout {
+                        cell(brightGreen("Installer Entry ${index.inc()}/${remoteInstallers.size}"))
+                        listOf(
+                            PromptType.Architecture to installer.architecture,
+                            PromptType.InstallerType to installer.installerType,
+                            PromptType.Scope to installer.scope,
+                            PromptType.InstallerLocale to installer.installerLocale
+                        ).forEach { (promptType, value) ->
+                            value?.let {
+                                cell(brightYellow("${" ".repeat(Prompts.optionIndent)} $promptType: $it"))
+                            }
+                        }
+                        cell("")
+                    }
+                )
+                installerDownloadPrompt()
+                installerManifestData.installers += installer.copy(
+                    installerUrl = installerManifestData.installerUrl,
+                    installerSha256 = installerManifestData.installerSha256,
+                    productCode = installerManifestData.productCode,
+                )
+            }
+        } while (
+            (previousManifestData.remoteInstallerData?.installers?.size ?: 0) <
+            installerManifestData.installers.size
+        )
+    }
+
+    private suspend fun commitAndPullRequest() {
         previousManifestData.remoteVersionDataJob.join()
         sharedManifestData.defaultLocale = previousManifestData.remoteVersionData!!.defaultLocale
         previousManifestData.remoteLocaleDataJob.join()
