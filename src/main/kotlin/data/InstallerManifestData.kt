@@ -15,6 +15,7 @@ class InstallerManifestData : KoinComponent {
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
     lateinit var installerType: InstallerManifest.InstallerType
+    var signatureSha256: String? = null
     var silentSwitch: String? = null
     var silentWithProgressSwitch: String? = null
     var customSwitch: String? = null
@@ -41,6 +42,7 @@ class InstallerManifestData : KoinComponent {
             installerType = installerType.toPerInstallerType(),
             installerUrl = installerUrl,
             installerSha256 = installerSha256,
+            signatureSha256 = signatureSha256?.ifBlank { null },
             scope = scope?.toPerScopeInstallerType(),
             installerSwitches = InstallerManifest.InstallerSwitches(
                 silent = silentSwitch?.ifBlank { null },

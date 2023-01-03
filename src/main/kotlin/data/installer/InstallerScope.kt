@@ -74,8 +74,9 @@ object InstallerScope : KoinComponent {
         installerScopeSchema: InstallerSchema.Definitions.Scope
     ): Pair<Validation, String?> {
         return when {
+            option == null || option.isWhitespace() -> Validation.Success to null
             option != Prompts.noIdea.first() && installerScopeSchema.enum.all {
-                it.first().titlecase() != option?.titlecase()
+                it.first().titlecase() != option.titlecase()
             } -> Validation.InvalidInstallerScope to Errors.invalidEnum(
                 Validation.InvalidInstallerScope,
                 installerScopeSchema.enum

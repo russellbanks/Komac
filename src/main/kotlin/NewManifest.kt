@@ -122,7 +122,6 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
 
     private suspend fun commitAndPullRequest() {
         previousManifestData.remoteVersionDataJob.join()
-        sharedManifestData.defaultLocale = previousManifestData.remoteVersionData!!.defaultLocale
         previousManifestData.remoteLocaleDataJob.join()
         previousManifestData.remoteDefaultLocaleDataJob.join()
         val githubImpl = get<GitHubImpl>()

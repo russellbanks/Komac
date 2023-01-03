@@ -13,8 +13,8 @@ import data.DefaultLocaleManifestData
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.locale.LocaleUrl
-import hashing.Hashing
 import hashing.Hashing.hash
+import hashing.Hashing.hashMsixSignature
 import input.PromptType
 import input.Prompts
 import io.ktor.client.request.head
@@ -81,13 +81,20 @@ object Url : KoinComponent {
             }
         }
 
+        downloadInstaller(installerManifestData)
+    }
+
+    private suspend fun downloadInstaller(installerManifestData: InstallerManifestData) {
         if (installerManifestData.installers.map { it.installerUrl }.contains(installerManifestData.installerUrl)) {
             installerManifestData.installerSha256 = installerManifestData.installers.first {
                 it.installerUrl == installerManifestData.installerUrl
             }.installerSha256
         } else {
             get<Clients>().httpClient.downloadInstallerFromUrl().apply {
-                installerManifestData.installerSha256 = hash(Hashing.Algorithms.SHA256).uppercase()
+                installerManifestData.installerSha256 = hash().uppercase()
+                if (extension.lowercase() == "msix") {
+                    installerManifestData.signatureSha256 = hashMsixSignature().uppercase()
+                }
                 delete()
             }
         }

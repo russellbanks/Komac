@@ -62,7 +62,7 @@ tasks.withType<Test>().configureEach {
 }
 
 sourceSets.main {
-    java.srcDirs("build/generated/ksp/main/kotlin")
+    kotlin.srcDirs("build/generated/ksp/main/kotlin")
 }
 
 buildConfig {
