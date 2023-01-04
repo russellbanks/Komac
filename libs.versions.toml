@@ -13,7 +13,7 @@ kotest-extensions-ktor = "1.0.3"
 kotlin = "1.8.0"
 kotlinx-serialization = "1.4.1"
 ksp = "1.8.0-1.0.8"
-ktor = "2.2.1"
+ktor = "2.2.2"
 mordant = "2.0.0-beta10"
 shadow = "7.1.2"
 
