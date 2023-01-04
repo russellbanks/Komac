@@ -39,9 +39,11 @@ import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
 import data.shared.Url.localeUrlPrompt
 import input.InstallerSwitch
+import input.ManifestResultOption
 import input.Polar
 import input.PromptType
 import input.Prompts
+import input.Prompts.pullRequestPrompt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
@@ -98,24 +100,13 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 tagsPrompt()
                 DescriptionType.values().forEach { descriptionPrompt(it) }
                 localeUrlPrompt(LocaleUrl.ReleaseNotesUrl)
-                println(
-                    verticalLayout {
-                        cell(
-                            brightYellow(
-                                "Would you like to make a pull request to add " +
-                                    "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
-                            )
-                        )
-                        Polar.values().forEach {
-                            cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
-                        }
+                pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
+                    when (manifestResultOption) {
+                        ManifestResultOption.PullRequest -> commitAndPullRequest()
+                        ManifestResultOption.WriteToFiles -> println(brightWhite("Writing files"))
+                        else -> println(brightWhite("Exiting"))
                     }
-                )
-                prompt(
-                    prompt = brightWhite(Prompts.enterChoice),
-                    showChoices = false,
-                    choices = Polar.values().map { it.name.first().toString() },
-                )?.trim()?.firstOrNull().also { if (it == Polar.Yes.toString().first()) commitAndPullRequest() }
+                }
             }
         }
     }

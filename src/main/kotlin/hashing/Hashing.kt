@@ -41,17 +41,21 @@ object Hashing {
             var entry = zip.nextEntry
             while (entry != null) {
                 if (entry.name == "AppxSignature.p7x") {
-                    val buffer = ByteArray(size = 1_024)
-                    var bytesCount = zip.read(buffer)
-                    while (bytesCount > 0) {
-                        digest.update(buffer, 0, bytesCount)
-                        bytesCount = zip.read(buffer)
-                    }
+                    updateDigest(zip, digest)
                 }
                 entry = zip.nextEntry
             }
         }
         return buildHash(digest.digest())
+    }
+
+    private fun updateDigest(zip: ZipInputStream, digest: MessageDigest) {
+        val buffer = ByteArray(size = 1_024)
+        var bytesCount = zip.read(buffer)
+        while (bytesCount > 0) {
+            digest.update(buffer, 0, bytesCount)
+            bytesCount = zip.read(buffer)
+        }
     }
 
     private fun buildHash(bytes: ByteArray) = buildString {

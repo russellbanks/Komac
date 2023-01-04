@@ -1,18 +1,16 @@
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextStyles.bold
-import com.github.ajalt.mordant.table.verticalLayout
 import data.GitHubImpl
 import data.SharedManifestData
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
-import input.Polar
 import input.PromptType
 import input.Prompts
+import input.Prompts.removeManifestPullRequestPrompt
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHContent
 import org.koin.core.component.KoinComponent
@@ -64,53 +62,37 @@ class RemoveManifest : CliktCommand(name = "remove"), KoinComponent {
                 error?.let { println(red(it)) }
                 println()
             } while (isReasonValid != Validation.Success)
-            println(
-                verticalLayout {
-                    cell(
-                        brightYellow(
-                            "Would you like to make a pull request to remove " +
-                                "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
-                        )
-                    )
-                    Polar.values().forEach {
-                        cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
+            removeManifestPullRequestPrompt(sharedManifestData = sharedManifestData).also { shouldRemoveManifest ->
+                println()
+                if (shouldRemoveManifest) {
+                    val forkRepository = githubImpl.getWingetPkgsFork() ?: return@runBlocking
+                    val ref = githubImpl.createBranchFromDefaultBranch(forkRepository) ?: return@runBlocking
+                    val directoryContent: MutableList<GHContent> =
+                        forkRepository.getDirectoryContent(githubImpl.baseGitHubPath, ref.ref)
+                    val progress = progressAnimation {
+                        text("Deleting files")
+                        percentage()
+                        progressBar()
+                        completed()
                     }
-                }
-            )
-            val input: Char? = prompt(
-                prompt = brightWhite(Prompts.enterChoice),
-                showChoices = false,
-                choices = Polar.values().map { it.name.first().toString() },
-            )?.trim()?.firstOrNull()
-            println()
-            if (input == Polar.Yes.toString().first()) {
-                val forkRepository = githubImpl.getWingetPkgsFork() ?: return@runBlocking
-                val ref = githubImpl.createBranchFromDefaultBranch(forkRepository) ?: return@runBlocking
-                val directoryContent: MutableList<GHContent> =
-                    forkRepository.getDirectoryContent(githubImpl.baseGitHubPath, ref.ref)
-                val progress = progressAnimation {
-                    text("Deleting files")
-                    percentage()
-                    progressBar()
-                    completed()
-                }
-                directoryContent.forEachIndexed { index, ghContent ->
-                    progress.update(index.inc().toLong(), directoryContent.size.toLong())
-                    ghContent.delete("Remove: ${ghContent.name}", ref?.ref)
-                }
-                progress.clear()
-                val ghRepository = githubImpl.getMicrosoftWingetPkgs() ?: return@runBlocking
-                val pullRequestTitle =
-                    "Remove: ${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}"
-                try {
-                    ghRepository.createPullRequest(
-                        /* title = */ pullRequestTitle,
-                        /* head = */ "${githubImpl.github.myself.login}:${ref.ref}",
-                        /* base = */ ghRepository.defaultBranch,
-                        /* body = */ "## $deletionReason"
-                    ).also { println(brightGreen("Pull request created: ${it.htmlUrl}")) }
-                } catch (ioException: IOException) {
-                    println(red(ioException.message ?: "Failed to create pull request"))
+                    directoryContent.forEachIndexed { index, ghContent ->
+                        progress.update(index.inc().toLong(), directoryContent.size.toLong())
+                        ghContent.delete("Remove: ${ghContent.name}", ref.ref)
+                    }
+                    progress.clear()
+                    val ghRepository = githubImpl.getMicrosoftWingetPkgs() ?: return@runBlocking
+                    val pullRequestTitle =
+                        "Remove: ${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}"
+                    try {
+                        ghRepository.createPullRequest(
+                            /* title = */ pullRequestTitle,
+                            /* head = */ "${githubImpl.github.myself.login}:${ref.ref}",
+                            /* base = */ ghRepository.defaultBranch,
+                            /* body = */ "## $deletionReason"
+                        ).also { println(brightGreen("Pull request created: ${it.htmlUrl}")) }
+                    } catch (ioException: IOException) {
+                        println(red(ioException.message ?: "Failed to create pull request"))
+                    }
                 }
             }
         }

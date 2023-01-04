@@ -15,9 +15,10 @@ import data.YamlConfig
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
-import input.Polar
+import input.ManifestResultOption
 import input.PromptType
 import input.Prompts
+import input.Prompts.pullRequestPrompt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
@@ -59,24 +60,13 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 packageVersionPrompt()
                 previousManifestData.remoteInstallerDataJob.join()
                 loopThroughInstallers()
-                println(
-                    verticalLayout {
-                        cell(
-                            brightYellow(
-                                "Would you like to make a pull request to add " +
-                                    "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
-                            )
-                        )
-                        Polar.values().forEach {
-                            cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
-                        }
+                pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
+                    when (manifestResultOption) {
+                        ManifestResultOption.PullRequest -> commitAndPullRequest()
+                        ManifestResultOption.WriteToFiles -> println(brightWhite("Writing files"))
+                        else -> println(brightWhite("Exiting"))
                     }
-                )
-                prompt(
-                    prompt = brightWhite(Prompts.enterChoice),
-                    showChoices = false,
-                    choices = Polar.values().map { it.name.first().toString() },
-                )?.trim()?.firstOrNull().also { if (it == Polar.Yes.toString().first()) commitAndPullRequest() }
+                }
             }
         }
     }
