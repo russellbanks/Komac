@@ -1,13 +1,15 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.panteleyev.jpackage.ImageType
+import java.util.Calendar
 
 plugins {
     alias(libs.plugins.buildconfig)
-    alias(libs.plugins.conveyor)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.shadow)
+    id("org.panteleyev.jpackageplugin") version "1.5.0"
     application
 }
 
@@ -57,6 +59,45 @@ dependencies {
     implementation(libs.mordant)
 }
 
+task("copyDependencies", Copy::class) {
+    from(configurations.runtimeClasspath).into("$buildDir/jars")
+}
+
+task("copyJar", Copy::class) {
+    from(tasks.jar).into("$buildDir/jars")
+}
+
+tasks.jpackage {
+    dependsOn("build", "copyDependencies", "copyJar")
+
+    input  = "$buildDir/jars"
+    destination = "$buildDir/distributions"
+
+    appName = project.name
+    appVersion = project.version.toString()
+
+    copyright = "Copyright (c) ${Calendar.getInstance().get(Calendar.YEAR)} Russell Banks"
+
+    licenseFile = "$projectDir/src/main/resources/gpl-3.0.txt"
+
+    vendor = "Russell Banks"
+
+    mainJar = tasks.jar.get().archiveFileName.get()
+    mainClass = "${project.group}.${application.mainClass}"
+
+    javaOptions = listOf("-Dfile.encoding=UTF-8")
+
+    windows {
+        type = ImageType.MSI
+        winConsole = true
+        winUpgradeUuid = "2D35545F-9065-48C3-A345-42244A3E9FBF"
+    }
+
+    linux {
+        type = ImageType.DEB
+    }
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
@@ -76,11 +117,4 @@ tasks.withType<KotlinCompile> {
 
 application {
     mainClass.set("MainKt")
-}
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-        vendor.set(JvmVendorSpec.ADOPTIUM)
-    }
 }

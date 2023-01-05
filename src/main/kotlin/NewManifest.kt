@@ -123,8 +123,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
             branch = ref,
             files = listOf(
                 githubImpl.installerManifestGitHubPath to installerManifestData.createInstallerManifest(),
-                githubImpl.defaultLocaleManifestGitHubPath to
-                    defaultLocalManifestData.createDefaultLocaleManifest(),
+                githubImpl.defaultLocaleManifestGitHubPath to defaultLocalManifestData.createDefaultLocaleManifest(),
                 githubImpl.versionManifestGitHubPath to versionManifestData.createVersionManifest(),
             ) + previousManifestData.remoteLocaleData?.map { localeManifest ->
                 githubImpl.getLocaleManifestGitHubPath(localeManifest.packageLocale) to localeManifest.copy(
