@@ -14,7 +14,7 @@ object Schemas {
     }
 
     object Comments {
-        const val createdBy = "# Created using ${BuildConfig.appName} ${BuildConfig.appVersion}"
+        const val createdBy = "# Created with ${BuildConfig.appName} ${BuildConfig.appVersion}"
         fun languageServer(schemaUrl: String) = "# yaml-language-server: \$schema=$schemaUrl"
     }
 }

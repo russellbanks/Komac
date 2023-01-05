@@ -7,7 +7,7 @@ import org.koin.core.component.KoinComponent
 class SharedManifestData : KoinComponent {
     lateinit var packageIdentifier: String
     lateinit var packageVersion: String
-    lateinit var defaultLocale: String
+    var defaultLocale: String = ""
     var isNewPackage = false
     lateinit var latestVersion: String
 }
