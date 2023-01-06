@@ -9,7 +9,9 @@ import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Url
 import io.ktor.http.contentLength
+import io.ktor.http.fullPath
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
@@ -33,7 +35,7 @@ object Ktor : KoinComponent {
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
                 "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
-                ".${getURLExtension(installerManifestData.installerUrl)}"
+                ".${getURLExtension(Url(installerManifestData.installerUrl))}"
             )
         }
 
@@ -74,19 +76,18 @@ object Ktor : KoinComponent {
         }
     }
 
-    private fun getURLExtension(url: String): String {
-        val index = url.lastIndexOf('.')
-        return if (index == -1) "winget-tmp" else url.substring(index + 1)
+    private fun getURLExtension(url: Url): String {
+        return url.fullPath.substringAfterLast(".").split(Regex("[^A-Za-z0-9]")).firstOrNull() ?: "winget-tmp"
     }
 
     fun HttpStatusCode.isRedirect(): Boolean {
         return value in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value
     }
 
-    suspend fun getRedirectedUrl(installerUrl: String?): String? {
+    suspend fun getRedirectedUrl(installerUrl: String): String? {
         val noRedirectClient = get<Clients>().httpClient.config { followRedirects = false }
         var redirectedInstallerUrl: String? = installerUrl
-        var response: HttpResponse? = installerUrl?.let { noRedirectClient.head(it) }
+        var response: HttpResponse? = noRedirectClient.head(installerUrl)
 
         var status: HttpStatusCode? = response?.status
         var location: String? = response?.headers?.get("Location")
