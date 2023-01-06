@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.io.InputStream
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 
@@ -36,7 +37,10 @@ object Hashing {
     }
 
     fun File.hashMsixSignature(digest: MessageDigest = Algorithms.SHA256): String {
-        require(extension.lowercase() == "msix") { "File must be an MSIX file" }
+        val validExtensions = listOf("appx", "appxbundle", "msix", "msixbundle")
+        require(extension.lowercase() in validExtensions) {
+            "File extension must be one of the following: ${validExtensions.joinToString()}"
+        }
         ZipInputStream(inputStream()).use { zip ->
             var entry = zip.nextEntry
             while (entry != null) {
@@ -49,16 +53,16 @@ object Hashing {
         return buildHash(digest.digest())
     }
 
-    private fun updateDigest(zip: ZipInputStream, digest: MessageDigest) {
+    fun updateDigest(inputStream: InputStream, digest: MessageDigest) {
         val buffer = ByteArray(size = 1_024)
-        var bytesCount = zip.read(buffer)
+        var bytesCount = inputStream.read(buffer)
         while (bytesCount > 0) {
             digest.update(buffer, 0, bytesCount)
-            bytesCount = zip.read(buffer)
+            bytesCount = inputStream.read(buffer)
         }
     }
 
-    private fun buildHash(bytes: ByteArray) = buildString {
+    fun buildHash(bytes: ByteArray) = buildString {
         bytes.forEach { byte ->
             append(((byte.toInt() and hex255) + hex256).toString(radix = 16).substring(startIndex = 1))
         }

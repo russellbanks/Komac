@@ -5,10 +5,12 @@ import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -20,11 +22,13 @@ object Description : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val propertiesSchema: DefaultLocaleSchema.Properties = get<SchemasImpl>().defaultLocaleSchema.properties
+    private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
         do {
             val textColour = if (descriptionType == DescriptionType.Short) brightGreen else brightYellow
             println(textColour(descriptionInfo(descriptionType)))
+            sharedManifestData.msix?.description?.let { println(cyan("Description from installer: $it")) }
             val input = prompt(
                 prompt = brightWhite(descriptionType.promptName),
                 default = getPreviousValue(descriptionType)?.also {

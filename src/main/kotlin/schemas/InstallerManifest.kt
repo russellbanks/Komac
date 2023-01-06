@@ -53,6 +53,13 @@ data class InstallerManifest(
     enum class Platform {
         @SerialName("Windows.Desktop") WindowsDesktop,
         @SerialName("Windows.Universal") WindowsUniversal;
+
+        fun toPerInstallerPlatform(): Installer.Platform {
+            return when (this) {
+                WindowsDesktop -> Installer.Platform.WindowsDesktop
+                WindowsUniversal -> Installer.Platform.WindowsUniversal
+            }
+        }
     }
 
     /**

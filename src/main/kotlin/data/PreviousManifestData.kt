@@ -20,38 +20,41 @@ class PreviousManifestData : KoinComponent {
     var remoteInstallerData: InstallerManifest? = null
     private val githubImpl = get<GitHubImpl>()
     private val repository = githubImpl.getMicrosoftWingetPkgs()
-    private val directoryPath: MutableList<GHContent>? = repository
-        ?.getDirectoryContent(
-            "${Ktor.getDirectoryPath(sharedManifestData.packageIdentifier)}/${sharedManifestData.latestVersion}"
-        )
+    private val directoryPath: MutableList<GHContent>? = sharedManifestData.latestVersion?.let {
+        repository?.getDirectoryContent("${Ktor.getDirectoryPath(sharedManifestData.packageIdentifier)}/$it")
+    }
     var remoteInstallerDataJob: Job = CoroutineScope(Dispatchers.IO).launch {
-        repository?.getFileContent(
-            directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }?.path
-        )?.read()?.use {
-            remoteInstallerData =
-                YamlConfig.defaultWithLocalDataSerializer.decodeFromStream(InstallerManifest.serializer(), it)
+        directoryPath?.let { nonNullDirectoryPath ->
+            repository?.getFileContent(
+                nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }.path
+            )?.read()?.use {
+                remoteInstallerData =
+                    YamlConfig.defaultWithLocalDataSerializer.decodeFromStream(InstallerManifest.serializer(), it)
+            }
         }
     }
     var remoteVersionDataJob: Job = CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
-        repository?.getFileContent(
-            directoryPath?.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }?.path
-        )?.read()?.use { remoteVersionData = YamlConfig.default.decodeFromStream(VersionManifest.serializer(), it) }
+        directoryPath?.let { nonNullDirectoryPath ->
+            repository?.getFileContent(
+                nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }.path
+            )?.read()?.use { remoteVersionData = YamlConfig.default.decodeFromStream(VersionManifest.serializer(), it) }
+        }
     }.also { job ->
         job.invokeOnCompletion {
-            remoteVersionData?.defaultLocale?.let {
-                sharedManifestData.defaultLocale = it
-            }
+            remoteVersionData?.defaultLocale?.let { sharedManifestData.defaultLocale = it }
         }
     }
     var remoteDefaultLocaleData: DefaultLocaleManifest? = null
     var remoteDefaultLocaleDataJob: Job = CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
         remoteVersionDataJob.join()
-        repository?.getFileContent(
-            directoryPath?.first {
-                it.name == "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
-            }?.path
-        )?.read()?.use {
-            remoteDefaultLocaleData = YamlConfig.default.decodeFromStream(DefaultLocaleManifest.serializer(), it)
+        directoryPath?.let { nonNullDirectoryPath ->
+            repository?.getFileContent(
+                nonNullDirectoryPath.first {
+                    it.name == "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
+                }.path
+            )?.read()?.use {
+                remoteDefaultLocaleData = YamlConfig.default.decodeFromStream(DefaultLocaleManifest.serializer(), it)
+            }
         }
     }
     var remoteLocaleData: List<LocaleManifest>? = null

@@ -10,6 +10,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -22,8 +23,13 @@ object Publisher : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val publisherSchema = get<SchemasImpl>().defaultLocaleSchema.properties.publisher
+    private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.publisherPrompt() {
+        sharedManifestData.msix?.publisherDisplayName?.let {
+            defaultLocaleManifestData.publisher = it
+            return
+        }
         do {
             println(brightGreen(publisherInfo))
             println(cyan(publisherExample))

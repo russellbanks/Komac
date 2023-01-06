@@ -12,9 +12,9 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.InstallerManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import data.locale.LocaleUrl
 import hashing.Hashing.hash
-import hashing.Hashing.hashMsixSignature
 import input.PromptType
 import input.Prompts
 import io.ktor.client.request.head
@@ -23,6 +23,7 @@ import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
+import msix.Msix
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -85,6 +86,7 @@ object Url : KoinComponent {
     }
 
     private suspend fun downloadInstaller(installerManifestData: InstallerManifestData) {
+        val sharedManifestData: SharedManifestData by inject()
         if (installerManifestData.installers.map { it.installerUrl }.contains(installerManifestData.installerUrl)) {
             installerManifestData.installerSha256 = installerManifestData.installers.first {
                 it.installerUrl == installerManifestData.installerUrl
@@ -93,7 +95,7 @@ object Url : KoinComponent {
             get<Clients>().httpClient.downloadInstallerFromUrl().apply {
                 installerManifestData.installerSha256 = hash().uppercase()
                 if (extension.lowercase() == "msix") {
-                    installerManifestData.signatureSha256 = hashMsixSignature().uppercase()
+                    sharedManifestData.msix = Msix(this)
                 }
                 delete()
             }

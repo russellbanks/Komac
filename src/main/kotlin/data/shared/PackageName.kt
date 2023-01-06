@@ -10,6 +10,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import input.PromptType
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -21,8 +22,13 @@ object PackageName : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val packageNameSchema = get<SchemasImpl>().defaultLocaleSchema.properties.packageName
+    private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.packageNamePrompt() {
+        sharedManifestData.msix?.displayName?.let {
+            defaultLocaleManifestData.packageName = it
+            return
+        }
         do {
             println(brightGreen(packageNameInfo))
             println(cyan(packageNameExample))

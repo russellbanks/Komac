@@ -12,6 +12,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -25,8 +26,13 @@ object Architecture : KoinComponent {
     private val previousManifestData: PreviousManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
     private val architectureSchema = schemasImpl.installerSchema.definitions.architecture
+    private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.architecturePrompt() {
+        sharedManifestData.msix?.processorArchitecture?.let {
+            installerManifestData.architecture = it
+            return
+        }
         do {
             architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
             println(cyan("Options: ${architectureSchema.enum.joinToString(", ")}"))

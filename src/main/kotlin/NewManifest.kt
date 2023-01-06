@@ -58,7 +58,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val defaultLocalManifestData: DefaultLocaleManifestData by inject()
     private val versionManifestData: VersionManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
-    private lateinit var previousManifestData: PreviousManifestData
+    private var previousManifestData: PreviousManifestData? = null
 
     override fun run(): Unit = runBlocking {
         with(get<TerminalInstance>().terminal) {
@@ -112,9 +112,11 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     }
 
     private suspend fun commitAndPullRequest() {
-        previousManifestData.remoteVersionDataJob.join()
-        previousManifestData.remoteLocaleDataJob.join()
-        previousManifestData.remoteDefaultLocaleDataJob.join()
+        previousManifestData?.apply {
+            remoteVersionDataJob.join()
+            remoteLocaleDataJob.join()
+            remoteDefaultLocaleDataJob.join()
+        }
         val githubImpl = get<GitHubImpl>()
         val repository = githubImpl.getWingetPkgsFork() ?: return
         val ref = githubImpl.createBranchFromDefaultBranch(repository) ?: return
@@ -125,7 +127,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 githubImpl.installerManifestGitHubPath to installerManifestData.createInstallerManifest(),
                 githubImpl.defaultLocaleManifestGitHubPath to defaultLocalManifestData.createDefaultLocaleManifest(),
                 githubImpl.versionManifestGitHubPath to versionManifestData.createVersionManifest(),
-            ) + previousManifestData.remoteLocaleData?.map { localeManifest ->
+            ) + previousManifestData?.remoteLocaleData?.map { localeManifest ->
                 githubImpl.getLocaleManifestGitHubPath(localeManifest.packageLocale) to localeManifest.copy(
                     packageIdentifier = sharedManifestData.packageIdentifier,
                     packageVersion = sharedManifestData.packageVersion,
@@ -154,7 +156,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
             promptInput = prompt(
                 prompt = brightWhite(Prompts.enterChoice),
                 default = when {
-                    (previousManifestData.remoteInstallerData?.installers?.size ?: 0) >
+                    (previousManifestData?.remoteInstallerData?.installers?.size ?: 0) >
                         installerManifestData.installers.size -> Polar.Yes.name.first().toString()
                     else -> Polar.No.name.first().toString()
                 },

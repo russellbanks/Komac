@@ -62,10 +62,14 @@ class InstallerManifestData : KoinComponent {
         val upgradeBehaviourDistinct = installers.distinctBy { it.upgradeBehavior }.size == 1
         val installerSwitchesDistinct = installers.distinctBy { it.installerSwitches }.size == 1
         val installerTypeDistinct = installers.distinctBy { it.installerType }.size == 1
+        val platformDistinct = installers.distinctBy { it.platform }.size == 1
+        val minimumOSVersionDistinct = installers.distinctBy { it.minimumOSVersion }.size == 1
         return InstallerManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             installerLocale = if (installersLocaleDistinct) installerLocale?.ifBlank { null } else null,
+            platform = if (platformDistinct) sharedManifestData.msix?.targetDeviceFamily?.let { listOf(it) } else null,
+            minimumOSVersion = if (minimumOSVersionDistinct) sharedManifestData.msix?.minVersion else null,
             installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
             scope = if (installerScopeDistinct) scope else null,
             installModes = installModes?.ifEmpty { null },
@@ -77,6 +81,12 @@ class InstallerManifestData : KoinComponent {
             releaseDate = if (releaseDateDistinct) releaseDate else null,
             installers = installers.map { installer ->
                 installer.copy(
+                    platform = if (platformDistinct) {
+                        null
+                    } else {
+                        sharedManifestData.msix?.targetDeviceFamily?.let { listOf(it.toPerInstallerPlatform()) }
+                    },
+                    minimumOSVersion = if (minimumOSVersionDistinct) null else installer.minimumOSVersion,
                     installerLocale = if (installersLocaleDistinct) null else installer.installerLocale,
                     scope = if (installerScopeDistinct) null else installer.scope,
                     releaseDate = if (releaseDateDistinct) null else installer.releaseDate,
