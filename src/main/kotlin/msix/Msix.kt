@@ -21,6 +21,7 @@ data class Msix(
     var minVersion: String? = null,
     var description: String? = null,
     var processorArchitecture: InstallerManifest.Installer.Architecture? = null,
+    var packageFamilyName: String? = null,
 ) {
     init {
         val validExtensions = listOf("appx", "appxbundle", "msix", "msixbundle")
@@ -66,6 +67,7 @@ data class Msix(
                     )
                     .takeIf { it.isNotBlank() }
                     ?.let { InstallerManifest.Installer.Architecture.valueOf(it.uppercase()) }
+                getPackageFamilyName(xPath, xmlDocument)
             }
             zip.getEntry(appxSignatureP7x)?.let { appxSignature ->
                 val digest = Hashing.Algorithms.SHA256
@@ -73,6 +75,24 @@ data class Msix(
                 signatureSha256 = Hashing.buildHash(digest.digest())
             }
         }
+    }
+
+    fun getPackageFamilyName(xPath: XPath, xmlDocument: Document) {
+        val identityName =
+            xPath.compile("/Package/Identity/@Name").evaluate(xmlDocument, XPathConstants.STRING) as String
+        val identityPublisher =
+            xPath.compile("/Package/Identity/@Publisher").evaluate(xmlDocument, XPathConstants.STRING) as String
+        val hashPart = Hashing.Algorithms.SHA256
+            .digest(identityPublisher.toByteArray(Charsets.UTF_16))
+            .take(8)
+            .flatMap { Integer.toBinaryString(it.toInt() and 0xff).padStart(8, '0').asIterable() }
+            .toMutableList()
+            .apply { add(0, '0') }
+            .chunked(5)
+            .map { "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[it.joinToString("").toInt(2)] }
+            .joinToString("")
+            .lowercase()
+        packageFamilyName = "${identityName}_$hashPart"
     }
 
     private fun ZipFile.getAppxManifestXml(file: File): ZipEntry? {

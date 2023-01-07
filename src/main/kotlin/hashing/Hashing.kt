@@ -7,7 +7,6 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.security.MessageDigest
-import java.util.zip.ZipInputStream
 
 object Hashing {
 
@@ -31,23 +30,6 @@ object Hashing {
                     hashProgressCallback(count++ / totalRuns)
                 }
                 hashProgressCallback(count / totalRuns)
-            }
-        }
-        return buildHash(digest.digest())
-    }
-
-    fun File.hashMsixSignature(digest: MessageDigest = Algorithms.SHA256): String {
-        val validExtensions = listOf("appx", "appxbundle", "msix", "msixbundle")
-        require(extension.lowercase() in validExtensions) {
-            "File extension must be one of the following: ${validExtensions.joinToString()}"
-        }
-        ZipInputStream(inputStream()).use { zip ->
-            var entry = zip.nextEntry
-            while (entry != null) {
-                if (entry.name == "AppxSignature.p7x") {
-                    updateDigest(zip, digest)
-                }
-                entry = zip.nextEntry
             }
         }
         return buildHash(digest.digest())
