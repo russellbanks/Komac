@@ -6,6 +6,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextStyles.bold
 import data.GitHubImpl
 import data.SharedManifestData
+import data.VersionUpdateState
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import input.PromptType
@@ -28,7 +29,7 @@ class RemoveManifest : CliktCommand(name = "remove"), KoinComponent {
             println((bold + brightYellow)("Packages should only be removed when necessary."))
             println()
             packageIdentifierPrompt()
-            if (sharedManifestData.isNewPackage) {
+            if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
                 println(
                     brightYellow(
                         "${sharedManifestData.packageIdentifier} is not in the ${GitHubImpl.wingetpkgs} repository."

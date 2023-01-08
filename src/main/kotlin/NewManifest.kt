@@ -10,6 +10,7 @@ import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
+import data.VersionUpdateState
 import data.YamlConfig
 import data.installer.Architecture.architecturePrompt
 import data.installer.Commands.commandsPrompt
@@ -67,7 +68,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     override fun run(): Unit = runBlocking {
         with(get<TerminalInstance>().terminal) {
             packageIdentifierPrompt()
-            launch { if (!sharedManifestData.isNewPackage) previousManifestData = get() }
+            launch { if (sharedManifestData.updateState != VersionUpdateState.NewPackage) previousManifestData = get() }
             launch {
                 packageVersionPrompt()
                 do {

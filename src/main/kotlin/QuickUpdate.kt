@@ -12,6 +12,7 @@ import data.GitHubImpl
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
+import data.VersionUpdateState
 import data.YamlConfig
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
@@ -46,7 +47,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         with(get<TerminalInstance>().terminal) {
             packageIdentifierPrompt()
             previousManifestData = get()
-            if (sharedManifestData.isNewPackage) {
+            if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
                 println(
                     verticalLayout {
                         cell(

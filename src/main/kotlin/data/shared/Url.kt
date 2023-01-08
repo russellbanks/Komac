@@ -159,7 +159,7 @@ object Url : KoinComponent {
         val defaultLocaleSchema: DefaultLocaleSchema = get<SchemasImpl>().defaultLocaleSchema
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         do {
-            println(brightYellow(publisherUrlInfo(localeUrl, defaultLocaleSchema.properties)))
+            println(brightYellow(localeUrlInfo(localeUrl, defaultLocaleSchema.properties)))
             val input = prompt(
                 prompt = brightWhite(localeUrl.toString()),
                 default = getPreviousValue(localeUrl)?.also { println(gray("Previous $localeUrl: $it")) }
@@ -227,7 +227,7 @@ object Url : KoinComponent {
         }
     }
 
-    private fun publisherUrlInfo(publisherUrl: LocaleUrl, schemaProperties: DefaultLocaleSchema.Properties): String {
+    private fun localeUrlInfo(publisherUrl: LocaleUrl, schemaProperties: DefaultLocaleSchema.Properties): String {
         val description = when (publisherUrl) {
             LocaleUrl.CopyrightUrl -> schemaProperties.copyrightUrl.description
             LocaleUrl.LicenseUrl -> schemaProperties.licenseUrl.description

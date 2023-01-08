@@ -8,6 +8,7 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.GitHubImpl
 import data.SharedManifestData
+import data.VersionUpdateState
 import input.PromptType
 import input.Prompts
 import ktor.Ktor
@@ -60,7 +61,6 @@ object PackageIdentifier : KoinComponent {
                 ?.also {
                     if (it.isNotEmpty()) {
                         println(cyan("Found ${sharedManifestData.packageIdentifier} in the winget-pkgs repository"))
-                        sharedManifestData.isNewPackage = false
                     }
                 }
                 ?.map { it.name }
@@ -70,7 +70,7 @@ object PackageIdentifier : KoinComponent {
                     println(cyan("Found latest version: $it"))
                 }.toString()
         } catch (_: IOException) {
-            sharedManifestData.isNewPackage = true
+            sharedManifestData.updateState = VersionUpdateState.NewPackage
         }
     }
 

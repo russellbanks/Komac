@@ -67,30 +67,28 @@ class InstallerManifestData : KoinComponent {
         return InstallerManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
-            installerLocale = if (installersLocaleDistinct) {
-                installers.map { it.installerLocale }.first()?.ifBlank { null }
-            } else {
-                null
+            installerLocale = when {
+                installersLocaleDistinct -> installers.map { it.installerLocale }.first()?.ifBlank { null }
+                else -> null
             },
-            platform = if (platformDistinct) {
-                installers.map { it.platform }.first()?.map { it.toManifestPlatform() }
-            } else {
-                null
+            platform = when {
+                platformDistinct -> installers.map { it.platform }.first()?.map { it.toManifestPlatform() }
+                else -> null
             },
             minimumOSVersion = if (minimumOSVersionDistinct) installers.map { it.minimumOSVersion }.first() else null,
             installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
             scope = if (installerScopeDistinct) installers.map { it.scope }.first()?.toManifestScope() else null,
             installModes = installModes?.ifEmpty { null },
-            installerSwitches = if (installerSwitchesDistinct) {
-                installers.map { it.installerSwitches }.first()?.toManifestInstallerSwitches()
-            } else {
-                null
+            installerSwitches = when {
+                installerSwitchesDistinct -> {
+                    installers.map { it.installerSwitches }.first()?.toManifestInstallerSwitches()
+                }
+                else -> null
             },
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null },
-            upgradeBehavior = if (upgradeBehaviourDistinct) {
-                installers.map { it.upgradeBehavior }.first()?.toManifestUpgradeBehaviour()
-            } else {
-                null
+            upgradeBehavior = when {
+                upgradeBehaviourDistinct -> installers.map { it.upgradeBehavior }.first()?.toManifestUpgradeBehaviour()
+                else -> null
             },
             commands = commands?.ifEmpty { null },
             protocols = protocols?.ifEmpty { null },

@@ -104,13 +104,21 @@ class GitHubImpl : KoinComponent {
         }
     }
 
+    private fun getCommitMessage() = buildString {
+        append(sharedManifestData.updateState)
+        append(": ")
+        append(sharedManifestData.packageIdentifier)
+        append(" ")
+        append(sharedManifestData.packageVersion)
+    }
+
     fun commitFiles(
         repository: GHRepository?,
         branch: GHRef?,
         files: List<Pair<String, String?>>
     ) {
         repository?.createCommit()
-            ?.message("This is a test commit for Komac")
+            ?.message(getCommitMessage())
             ?.parent(branch?.getObject()?.sha)
             ?.tree(
                 repository
