@@ -37,7 +37,7 @@ class Komac : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
                 when (selection?.lowercase()) {
                     Mode.NewManifest.key.toString() -> NewManifest().run()
                     Mode.QuickUpdate.key.toString() -> QuickUpdate().run()
-                    Mode.RemoveManifest.key.toString() -> RemoveManifest().run()
+                    Mode.RemoveVersion.key.toString() -> RemoveVersion().run()
                     Mode.Token.key.toString() -> ChangeToken().run()
                     else -> exitProcess(0)
                 }

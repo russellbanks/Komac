@@ -20,7 +20,7 @@ import org.koin.core.component.inject
 import schemas.TerminalInstance
 import java.io.IOException
 
-class RemoveManifest : CliktCommand(name = "remove"), KoinComponent {
+class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val githubImpl by inject<GitHubImpl>()
 
