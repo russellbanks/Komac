@@ -10,12 +10,14 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.TerminalInstance
+import token.TokenStore
 import kotlin.system.exitProcess
 
 class Komac : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
     override fun run(): Unit = runBlocking {
         if (currentContext.invokedSubcommand == null) {
             with(get<TerminalInstance>().terminal) {
+                get<TokenStore>().getToken(this)
                 println(
                     verticalLayout {
                         cell(brightYellow("Select mode:"))

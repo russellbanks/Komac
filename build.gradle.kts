@@ -33,8 +33,11 @@ dependencies {
     // Detekt Formatting Plugin - https://github.com/detekt/detekt
     detektPlugins(libs.detekt.formatting)
 
-    // Implementation - https://github.com/charleskorn/kaml
+    // Kaml - https://github.com/charleskorn/kaml
     implementation(libs.kaml)
+
+    // Klogging SLF4J = https://github.com/klogging/slf4j-klogging
+    implementation(libs.klogging.slf4j)
 
     // Koin - https://github.com/InsertKoinIO/koin
     implementation(libs.koin.core)
@@ -57,6 +60,14 @@ dependencies {
 
     // Mordant - https://github.com/ajalt/mordant
     implementation(libs.mordant)
+
+    implementation(libs.auth.secure.storage) {
+        exclude(group = "org.slf4j")
+        constraints {
+            implementation(libs.jna)
+            implementation(libs.jna.platform)
+        }
+    }
 }
 
 task("copyDependencies", Copy::class) {

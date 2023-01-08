@@ -13,11 +13,12 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schemas
 import schemas.TerminalInstance
+import token.TokenStore
 import java.io.IOException
 
 @Single
 class GitHubImpl : KoinComponent {
-    val github: GitHub = GitHubBuilder().withOAuthToken(token).build()
+    val github: GitHub = GitHubBuilder().withOAuthToken(get<TokenStore>().token).build()
     private val sharedManifestData: SharedManifestData by inject()
     val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
     val defaultLocaleManifestName
@@ -148,7 +149,6 @@ class GitHubImpl : KoinComponent {
     }
 
     companion object {
-        private const val token = "TOKEN"
         const val Microsoft = "Microsoft"
         const val wingetpkgs = "winget-pkgs"
         private const val uniqueBranchIdentifierLength = 14
