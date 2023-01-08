@@ -5,16 +5,16 @@ import java.util.Calendar
 plugins {
     alias(libs.plugins.buildconfig)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.jpackage)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.shadow)
-    id("org.panteleyev.jpackageplugin") version "1.5.0"
     application
 }
 
 group = "com.russellbanks"
-version = "0.6.0"
+version = "0.7.0"
 
 repositories {
     mavenCentral()

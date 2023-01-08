@@ -44,11 +44,11 @@ class InstallerManifestData : KoinComponent {
             installerSha256 = installerSha256.uppercase(),
             signatureSha256 = signatureSha256?.uppercase()?.ifBlank { null },
             scope = scope?.toPerScopeInstallerType(),
-            installerSwitches = InstallerManifest.InstallerSwitches(
+            installerSwitches = InstallerManifest.Installer.InstallerSwitches(
                 silent = silentSwitch?.ifBlank { null },
                 silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
                 custom = customSwitch?.ifBlank { null }
-            ).takeUnless { it.areAllNull() }?.toPerInstallerType(),
+            ).takeUnless { it.areAllNull() },
             upgradeBehavior = upgradeBehavior?.toPerInstallerType(),
             productCode = productCode?.ifBlank { null },
             releaseDate = releaseDate
@@ -67,25 +67,38 @@ class InstallerManifestData : KoinComponent {
         return InstallerManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
-            installerLocale = if (installersLocaleDistinct) installerLocale?.ifBlank { null } else null,
-            platform = if (platformDistinct) sharedManifestData.msix?.targetDeviceFamily?.let { listOf(it) } else null,
-            minimumOSVersion = if (minimumOSVersionDistinct) sharedManifestData.msix?.minVersion else null,
+            installerLocale = if (installersLocaleDistinct) {
+                installers.map { it.installerLocale }.first()?.ifBlank { null }
+            } else {
+                null
+            },
+            platform = if (platformDistinct) {
+                installers.map { it.platform }.first()?.map { it.toManifestPlatform() }
+            } else {
+                null
+            },
+            minimumOSVersion = if (minimumOSVersionDistinct) installers.map { it.minimumOSVersion }.first() else null,
             installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
-            scope = if (installerScopeDistinct) scope else null,
+            scope = if (installerScopeDistinct) installers.map { it.scope }.first()?.toManifestScope() else null,
             installModes = installModes?.ifEmpty { null },
+            installerSwitches = if (installerSwitchesDistinct) {
+                installers.map { it.installerSwitches }.first()?.toManifestInstallerSwitches()
+            } else {
+                null
+            },
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null },
-            upgradeBehavior = if (upgradeBehaviourDistinct) upgradeBehavior else null,
+            upgradeBehavior = if (upgradeBehaviourDistinct) {
+                installers.map { it.upgradeBehavior }.first()?.toManifestUpgradeBehaviour()
+            } else {
+                null
+            },
             commands = commands?.ifEmpty { null },
             protocols = protocols?.ifEmpty { null },
             fileExtensions = fileExtensions?.ifEmpty { null },
-            releaseDate = if (releaseDateDistinct) releaseDate else null,
+            releaseDate = if (releaseDateDistinct) installers.map { it.releaseDate }.first() else null,
             installers = installers.map { installer ->
                 installer.copy(
-                    platform = if (platformDistinct) {
-                        null
-                    } else {
-                        sharedManifestData.msix?.targetDeviceFamily?.let { listOf(it.toPerInstallerPlatform()) }
-                    },
+                    platform = if (platformDistinct) null else installer.platform,
                     minimumOSVersion = if (minimumOSVersionDistinct) null else installer.minimumOSVersion,
                     installerLocale = if (installersLocaleDistinct) null else installer.installerLocale,
                     scope = if (installerScopeDistinct) null else installer.scope,

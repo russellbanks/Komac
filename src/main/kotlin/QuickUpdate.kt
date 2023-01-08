@@ -1,3 +1,4 @@
+
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.multiple
@@ -5,7 +6,6 @@ import com.github.ajalt.clikt.parameters.arguments.optional
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.GitHubImpl
@@ -16,6 +16,7 @@ import data.YamlConfig
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
+import input.FileWriter.writeFiles
 import input.ManifestResultOption
 import input.PromptType
 import input.Prompts
@@ -31,7 +32,6 @@ import schemas.LocaleManifest
 import schemas.SchemasImpl
 import schemas.TerminalInstance
 import schemas.VersionManifest
-import java.io.File
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val urls: List<String>? by argument("--urls").multiple().optional()
@@ -68,46 +68,10 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                     when (manifestResultOption) {
                         ManifestResultOption.PullRequest -> commitAndPullRequest()
-                        ManifestResultOption.WriteToFiles -> writeFiles()
+                        ManifestResultOption.WriteToFiles -> writeFiles(files)
                         else -> println(brightWhite("Exiting"))
                     }
                 }
-            }
-        }
-    }
-
-    private fun Terminal.writeFiles() {
-        do {
-            println()
-            println(brightYellow("Enter a directory to write the files to:"))
-            val directory = prompt(brightWhite("Directory"))?.let { File(it) }
-            if (directory?.isDirectory == true) {
-                writeFilesToDirectory(directory)
-            } else {
-                println("The directory entered is not a valid directory")
-            }
-        } while (directory?.isDirectory != true)
-    }
-
-    private fun writeFilesToDirectory(directory: File) {
-        files.forEach { file ->
-            file.second?.let { manifestText ->
-                writeFileToDirectory(directory, file.first, manifestText)
-            }
-        }
-    }
-
-    private fun writeFileToDirectory(directory: File, fileName: String, fileText: String) {
-        File(directory, fileName).apply {
-            if (canWrite()) {
-                writeText(fileText)
-                if (exists()) {
-                    println(brightGreen("Successfully written $name to ${directory.path}"))
-                } else {
-                    println(red("Failed to write $name"))
-                }
-            } else {
-                println(red("Cannot write to $name"))
             }
         }
     }

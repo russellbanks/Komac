@@ -37,7 +37,7 @@ object InstallerType : KoinComponent {
             InstallerManifest.Installer.InstallerType.ZIP.toString() -> {
                 installerManifestData.installerType = InstallerManifest.InstallerType.ZIP
             }
-            InstallerManifest.InstallerType.APPX.toString(), "appxbundle" -> {
+            InstallerManifest.InstallerType.APPX.toString(), MsixBundle.appxBundleConst -> {
                 installerManifestData.installerType = InstallerManifest.InstallerType.APPX
             }
             else -> do {

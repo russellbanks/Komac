@@ -13,6 +13,9 @@ data class MsixBundle(
     var packages: List<IndividualPackage>? = null
 ) {
     init {
+        require(msixBundleFile.extension.lowercase() in listOf(appxBundleConst, msixBundleConst)) {
+            "File must be an ${InstallerManifest.InstallerType.MSIX}"
+        }
         require(msixBundleFile.extension.lowercase() == msixBundleConst) { "File must be an $msixBundleConst" }
         ZipFile(msixBundleFile).use { zip ->
             zip.getEntry("$appxManifestFolder/$appxBundleManifestXml")?.let { appxManifest ->
@@ -66,5 +69,6 @@ data class MsixBundle(
         const val appxBundleManifestXml = "AppxBundleManifest.xml"
         const val appxSignatureP7x = "AppxSignature.p7x"
         const val msixBundleConst = "msixbundle"
+        const val appxBundleConst = "appxbundle"
     }
 }

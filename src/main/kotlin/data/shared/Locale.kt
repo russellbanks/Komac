@@ -31,9 +31,7 @@ object Locale : KoinComponent {
     fun Terminal.localePrompt(promptType: PromptType) {
         do {
             localeInfo(promptType).also { (info, infoColor) -> println(infoColor(info)) }
-            if (promptType == PromptType.InstallerLocale) {
-                println(cyan("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}"))
-            }
+            println(cyan("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}"))
             val input = prompt(
                 prompt = brightWhite(promptType.toString()),
                 default = when (promptType) {
@@ -41,7 +39,7 @@ object Locale : KoinComponent {
                     PromptType.PackageLocale -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default
                     else -> null
                 }
-            )?.trim()?.lowercase()
+            )?.trim()
             val (localeValid, error) = if (promptType == PromptType.InstallerLocale) {
                 isInstallerLocaleValid(input)
             } else {

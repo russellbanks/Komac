@@ -164,7 +164,7 @@ data class InstallerManifest(
             }
         }
 
-        fun toPerInstallerType(): Installer.InstallerSwitches {
+        fun toPerInstallerSwitches(): Installer.InstallerSwitches {
             return Installer.InstallerSwitches(
                 silent = silent,
                 silentWithProgress = silentWithProgress,
@@ -363,6 +363,11 @@ data class InstallerManifest(
             @SerialName("Windows.Universal") WindowsUniversal;
 
             override fun toString() = name.split("(?<=[a-z])(?=[A-Z])".toRegex()).joinToString(".")
+
+            fun toManifestPlatform() = when (this) {
+                WindowsDesktop -> InstallerManifest.Platform.WindowsDesktop
+                WindowsUniversal -> InstallerManifest.Platform.WindowsUniversal
+            }
         }
 
         /**
@@ -431,6 +436,11 @@ data class InstallerManifest(
         enum class Scope {
             @SerialName("user") User,
             @SerialName("machine") Machine;
+
+            fun toManifestScope() = when (this) {
+                User -> InstallerManifest.Scope.User
+                Machine -> InstallerManifest.Scope.Machine
+            }
         }
 
         enum class InstallModes {
@@ -448,7 +458,25 @@ data class InstallerManifest(
             @SerialName("Log") val log: String? = null,
             @SerialName("Upgrade") val upgrade: String? = null,
             @SerialName("Custom") val custom: String? = null
-        )
+        ) {
+            fun areAllNull(): Boolean {
+                return listOf(silent, silentWithProgress, interactive, installLocation, log, upgrade, custom).all {
+                    it == null
+                }
+            }
+
+            fun toManifestInstallerSwitches(): InstallerManifest.InstallerSwitches {
+                return InstallerManifest.InstallerSwitches(
+                    silent = silent,
+                    silentWithProgress = silentWithProgress,
+                    interactive = interactive,
+                    installLocation = installLocation,
+                    log = log,
+                    upgrade = upgrade,
+                    custom = custom
+                )
+            }
+        }
 
         @Serializable
         data class ExpectedReturnCodes(
@@ -485,6 +513,11 @@ data class InstallerManifest(
         enum class UpgradeBehavior {
             @SerialName("install") Install,
             @SerialName("uninstallPrevious") UninstallPrevious;
+
+            fun toManifestUpgradeBehaviour() = when (this) {
+                Install -> InstallerManifest.UpgradeBehavior.Install
+                UninstallPrevious -> InstallerManifest.UpgradeBehavior.UninstallPrevious
+            }
         }
 
         @Serializable

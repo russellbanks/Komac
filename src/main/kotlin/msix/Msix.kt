@@ -23,8 +23,10 @@ data class Msix(
     var packageFamilyName: String? = null,
 ) {
     init {
-        require(msixFile.extension.lowercase() == InstallerManifest.InstallerType.MSIX.toString()) {
-            "File must be an ${InstallerManifest.InstallerType.MSIX}"
+        val validExtensions = listOf(InstallerManifest.InstallerType.APPX, InstallerManifest.InstallerType.MSIX)
+            .map { it.toString() }
+        require(msixFile.extension.lowercase() in validExtensions) {
+            "File extension must be one of the following: ${validExtensions.joinToString(", ")}"
         }
         ZipFile(msixFile).use { zip ->
             zip.getEntry(appxManifestXml)?.let { appxManifest ->

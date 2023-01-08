@@ -38,6 +38,7 @@ import data.shared.PackageName.packageNamePrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
 import data.shared.Url.localeUrlPrompt
+import input.FileWriter.writeFiles
 import input.InstallerSwitch
 import input.ManifestResultOption
 import input.Polar
@@ -60,6 +61,8 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val versionManifestData: VersionManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private var previousManifestData: PreviousManifestData? = null
+    private lateinit var files: List<Pair<String, String?>>
+    private val githubImpl: GitHubImpl by inject()
 
     override fun run(): Unit = runBlocking {
         with(get<TerminalInstance>().terminal) {
@@ -103,10 +106,11 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 tagsPrompt()
                 DescriptionType.values().forEach { descriptionPrompt(it) }
                 localeUrlPrompt(LocaleUrl.ReleaseNotesUrl)
+                createFiles()
                 pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                     when (manifestResultOption) {
                         ManifestResultOption.PullRequest -> commitAndPullRequest()
-                        ManifestResultOption.WriteToFiles -> println(brightWhite("Writing files"))
+                        ManifestResultOption.WriteToFiles -> writeFiles(files)
                         else -> println(brightWhite("Exiting"))
                     }
                 }
@@ -131,6 +135,24 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
         }
     }
 
+    private fun createFiles() {
+        files = listOf(
+            githubImpl.installerManifestName to installerManifestData.createInstallerManifest(),
+            githubImpl.defaultLocaleManifestName to defaultLocalManifestData.createDefaultLocaleManifest(),
+            githubImpl.versionManifestName to versionManifestData.createVersionManifest(),
+        ) + previousManifestData?.remoteLocaleData?.map { localeManifest ->
+            githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
+                packageIdentifier = sharedManifestData.packageIdentifier,
+                packageVersion = sharedManifestData.packageVersion,
+                manifestVersion = "1.4.0"
+            ).let {
+                githubImpl.buildManifestString(get<SchemasImpl>().localeSchema.id) {
+                    appendLine(YamlConfig.default.encodeToString(LocaleManifest.serializer(), it))
+                }
+            }
+        }.orEmpty()
+    }
+
     private suspend fun commitAndPullRequest() {
         previousManifestData?.apply {
             remoteVersionDataJob.join()
@@ -143,21 +165,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
         githubImpl.commitFiles(
             repository = repository,
             branch = ref,
-            files = listOf(
-                githubImpl.installerManifestGitHubPath to installerManifestData.createInstallerManifest(),
-                githubImpl.defaultLocaleManifestGitHubPath to defaultLocalManifestData.createDefaultLocaleManifest(),
-                githubImpl.versionManifestGitHubPath to versionManifestData.createVersionManifest(),
-            ) + previousManifestData?.remoteLocaleData?.map { localeManifest ->
-                githubImpl.getLocaleManifestGitHubPath(localeManifest.packageLocale) to localeManifest.copy(
-                    packageIdentifier = sharedManifestData.packageIdentifier,
-                    packageVersion = sharedManifestData.packageVersion,
-                    manifestVersion = "1.4.0"
-                ).let {
-                    githubImpl.buildManifestString(get<SchemasImpl>().localeSchema.id) {
-                        appendLine(YamlConfig.default.encodeToString(LocaleManifest.serializer(), it))
-                    }
-                }
-            }.orEmpty()
+            files = files.map { "${githubImpl.baseGitHubPath}/${it.first}" to it.second }
         )
     }
 

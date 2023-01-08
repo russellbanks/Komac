@@ -21,6 +21,7 @@ import org.apache.commons.io.FilenameUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.InstallerManifest
 import schemas.TerminalInstance
 import java.io.File
 import java.time.LocalDateTime
@@ -82,6 +83,22 @@ object Ktor : KoinComponent {
             .split(Regex("[^A-Za-z0-9]"))
             .firstOrNull()
             .also { get<SharedManifestData>().fileExtension = it } ?: "winget-tmp"
+    }
+
+    fun detectArchitectureFromUrl(url: Url): InstallerManifest.Installer.Architecture? {
+        var archInUrl = Regex("(x86_64|i[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?)")
+            .find(url.fullPath.lowercase())?.groupValues?.last()
+        when (archInUrl) {
+            "aarch" -> archInUrl = InstallerManifest.Installer.Architecture.ARM.toString()
+            "aarch64" -> archInUrl = InstallerManifest.Installer.Architecture.ARM64.toString()
+            "x86_64" -> archInUrl = InstallerManifest.Installer.Architecture.X64.toString()
+            "i386", "i486", "i586", "i686" -> archInUrl = InstallerManifest.Installer.Architecture.X86.toString()
+        }
+        return try {
+            InstallerManifest.Installer.Architecture.valueOf(archInUrl?.uppercase() ?: "")
+        } catch (_: IllegalArgumentException) {
+            null
+        }
     }
 
     fun HttpStatusCode.isRedirect(): Boolean {

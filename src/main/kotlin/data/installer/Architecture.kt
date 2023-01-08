@@ -15,6 +15,8 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import input.PromptType
 import input.Prompts
+import io.ktor.http.Url
+import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.InstallerManifest
@@ -37,12 +39,16 @@ object Architecture : KoinComponent {
             installerManifestData.architecture = it
             return
         }
+        val detectedArchitectureFromUrl = Ktor.detectArchitectureFromUrl(Url(installerManifestData.installerUrl))
         do {
             architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
             println(cyan("Options: ${architectureSchema.enum.joinToString(", ")}"))
+            detectedArchitectureFromUrl?.let { println(brightYellow("Detected from Url: $it")) }
             val input = prompt(
                 prompt = brightWhite(PromptType.Architecture.toString()),
-                default = getPreviousValue()?.also { println(gray("Previous architecture: $it")) }
+                default = getPreviousValue()?.also {
+                    println(gray("Previous architecture: $it"))
+                } ?: detectedArchitectureFromUrl.toString()
             )?.trim()?.lowercase()
             val (architectureValid, error) = isArchitectureValid(input, architectureSchema)
             error?.let { println(red(it)) }
