@@ -7,6 +7,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
+import com.github.ajalt.mordant.rendering.TextStyles.bold
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
@@ -24,10 +25,12 @@ import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
 import msix.Msix
+import msix.MsixBundle
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleSchema
+import schemas.InstallerManifest
 import schemas.InstallerSchema
 import schemas.RemoteSchema
 import schemas.SchemasImpl
@@ -62,7 +65,7 @@ object Url : KoinComponent {
                     cell(brightWhite(useOriginalUrl))
                 }
             )
-            if (prompt(Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
+            if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(brightYellow(urlChanged))
                 val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
                 if (error.isNullOrBlank() && !redirectedUrl.isNullOrBlank()) {
@@ -81,8 +84,8 @@ object Url : KoinComponent {
                 println(brightGreen("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}"))
             }
         }
-
         downloadInstaller(installerManifestData)
+        msixBundleDetection()
     }
 
     private suspend fun downloadInstaller(installerManifestData: InstallerManifestData) {
@@ -93,12 +96,62 @@ object Url : KoinComponent {
             }.installerSha256
         } else {
             get<Clients>().httpClient.downloadInstallerFromUrl().apply {
-                installerManifestData.installerSha256 = hash().uppercase()
-                if (extension.lowercase() == "msix") {
-                    sharedManifestData.msix = Msix(this)
+                installerManifestData.installerSha256 = hash()
+                when {
+                    extension.lowercase() == InstallerManifest.InstallerType.MSIX.toString() -> {
+                        sharedManifestData.msix = Msix(this).also {
+                            installerManifestData.signatureSha256 = it.signatureSha256
+                        }
+                    }
+                    extension.lowercase() == MsixBundle.msixBundleConst -> {
+                        sharedManifestData.msixBundle = MsixBundle(this).also {
+                            installerManifestData.signatureSha256 = it.signatureSha256
+                        }
+                    }
                 }
                 delete()
             }
+        }
+    }
+
+    private fun Terminal.msixBundleDetection() {
+        val msixBundle = get<SharedManifestData>().msixBundle
+        if (msixBundle != null) {
+            println(
+                verticalLayout {
+                    cell(
+                        (brightGreen + bold)(
+                            "${msixBundle.packages?.size} packages have been detected inside the MSIX Bundle:"
+                        )
+                    )
+                    msixBundle.packages?.forEachIndexed { index, individualPackage ->
+                        cell(brightGreen("Package ${index.inc()}/${msixBundle.packages?.size}"))
+                        listOf(
+                            "Architecture" to individualPackage.processorArchitecture,
+                            "Version" to individualPackage.version,
+                            "Minimum version" to individualPackage.minVersion,
+                            "Platform" to individualPackage.targetDeviceFamily
+                        ).forEach { (text, value) ->
+                            if (value != null) {
+                                var newText = text
+                                var newValue = value
+                                if (value is List<*>) {
+                                    if (value.size > 1) newText = "${text}s"
+                                    newValue = value.joinToString(", ")
+                                }
+                                cell(brightWhite("${" ".repeat(Prompts.optionIndent)} $newText: $newValue"))
+                            }
+                        }
+                    }
+                }
+            )
+            println()
+            println(
+                (brightYellow + bold)(
+                    "All packages inside the MSIX Bundle will be added as separate installers in the manifest"
+                )
+            )
+            println()
         }
     }
 

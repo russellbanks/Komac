@@ -49,6 +49,7 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.InstallerManifest
 import schemas.LocaleManifest
 import schemas.SchemasImpl
 import schemas.TerminalInstance
@@ -76,7 +77,9 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     installerScopePrompt()
                     upgradeBehaviourPrompt()
                     releaseDatePrompt()
-                    installerManifestData.addInstaller()
+                    val installer = installerManifestData.createInstaller()
+                    addMsixBundlePackages(installer)
+                    installerManifestData.installers += installer
                     val shouldContinue = shouldLoopPrompt()
                 } while (shouldContinue)
                 fileExtensionsPrompt()
@@ -108,6 +111,23 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     }
                 }
             }
+        }
+    }
+
+    private fun addMsixBundlePackages(installer: InstallerManifest.Installer) {
+        sharedManifestData.msixBundle?.let { msixBundle ->
+            msixBundle.packages?.forEachIndexed { index, individualPackage ->
+                if (index == 0) return@forEachIndexed
+                individualPackage.processorArchitecture?.let { architecture ->
+                    installerManifestData.installers += installer.copy(
+                        architecture = architecture,
+                        platform = individualPackage.targetDeviceFamily?.map {
+                            it.toPerInstallerPlatform()
+                        },
+                    )
+                }
+            }
+            sharedManifestData.msixBundle = null
         }
     }
 

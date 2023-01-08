@@ -54,6 +54,8 @@ data class InstallerManifest(
         @SerialName("Windows.Desktop") WindowsDesktop,
         @SerialName("Windows.Universal") WindowsUniversal;
 
+        override fun toString() = name.split("(?<=[a-z])(?=[A-Z])".toRegex()).joinToString(".")
+
         fun toPerInstallerPlatform(): Installer.Platform {
             return when (this) {
                 WindowsDesktop -> Installer.Platform.WindowsDesktop
@@ -359,6 +361,8 @@ data class InstallerManifest(
         enum class Platform {
             @SerialName("Windows.Desktop") WindowsDesktop,
             @SerialName("Windows.Universal") WindowsUniversal;
+
+            override fun toString() = name.split("(?<=[a-z])(?=[A-Z])".toRegex()).joinToString(".")
         }
 
         /**
@@ -408,6 +412,8 @@ data class InstallerManifest(
             @SerialName("wix") WIX,
             @SerialName("burn") BURN,
             @SerialName("portable") PORTABLE;
+
+            override fun toString() = name.lowercase()
         }
 
         /**

@@ -35,14 +35,14 @@ class InstallerManifestData : KoinComponent {
     private val installerSchema
         get() = schemaImpl.installerSchema
 
-    fun addInstaller() {
-        installers += InstallerManifest.Installer(
+    fun createInstaller(): InstallerManifest.Installer {
+        return InstallerManifest.Installer(
             installerLocale = installerLocale?.ifBlank { null },
             architecture = architecture,
             installerType = installerType.toPerInstallerType(),
             installerUrl = installerUrl,
-            installerSha256 = installerSha256,
-            signatureSha256 = signatureSha256?.ifBlank { null },
+            installerSha256 = installerSha256.uppercase(),
+            signatureSha256 = signatureSha256?.uppercase()?.ifBlank { null },
             scope = scope?.toPerScopeInstallerType(),
             installerSwitches = InstallerManifest.InstallerSwitches(
                 silent = silentSwitch?.ifBlank { null },
@@ -94,7 +94,7 @@ class InstallerManifestData : KoinComponent {
                     installerSwitches = if (installerSwitchesDistinct) null else installer.installerSwitches,
                     installerType = if (installerTypeDistinct) null else installer.installerType,
                 )
-            },
+            }.sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope })),
             manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = installerSchema.properties.manifestVersion.default
         ).let {

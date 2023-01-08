@@ -4,7 +4,6 @@ import hashing.Hashing
 import org.w3c.dom.Document
 import schemas.InstallerManifest
 import java.io.File
-import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.xpath.XPath
@@ -24,12 +23,11 @@ data class Msix(
     var packageFamilyName: String? = null,
 ) {
     init {
-        val validExtensions = listOf("appx", "appxbundle", "msix", "msixbundle")
-        require(msixFile.extension.lowercase() in validExtensions) {
-            "File extension must be one of the following: ${validExtensions.joinToString(", ")}"
+        require(msixFile.extension.lowercase() == InstallerManifest.InstallerType.MSIX.toString()) {
+            "File must be an ${InstallerManifest.InstallerType.MSIX}"
         }
         ZipFile(msixFile).use { zip ->
-            zip.getAppxManifestXml(msixFile)?.let { appxManifest ->
+            zip.getEntry(appxManifestXml)?.let { appxManifest ->
                 val xPath: XPath = XPathFactory.newInstance().newXPath()
                 val xmlDocument: Document = zip.getInputStream(appxManifest).use {
                     DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(it)
@@ -77,7 +75,7 @@ data class Msix(
         }
     }
 
-    fun getPackageFamilyName(xPath: XPath, xmlDocument: Document) {
+    private fun getPackageFamilyName(xPath: XPath, xmlDocument: Document) {
         val identityName =
             xPath.compile("/Package/Identity/@Name").evaluate(xmlDocument, XPathConstants.STRING) as String
         val identityPublisher =
@@ -95,18 +93,8 @@ data class Msix(
         packageFamilyName = "${identityName}_$hashPart"
     }
 
-    private fun ZipFile.getAppxManifestXml(file: File): ZipEntry? {
-        return when (file.extension) {
-            "msix" -> getEntry(appxManifestXml)
-            "msixbundle" -> getEntry("$appxManifestFolder/$appxBundleManifestXml")
-            else -> null
-        }
-    }
-
     companion object {
         const val appxManifestXml = "AppxManifest.xml"
-        const val appxManifestFolder = "AppxMetadata"
-        const val appxBundleManifestXml = "AppxBundleManifest.xml"
         const val appxSignatureP7x = "AppxSignature.p7x"
     }
 }

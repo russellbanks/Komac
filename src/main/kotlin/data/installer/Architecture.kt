@@ -33,6 +33,10 @@ object Architecture : KoinComponent {
             installerManifestData.architecture = it
             return
         }
+        sharedManifestData.msixBundle?.packages?.first()?.processorArchitecture?.let {
+            installerManifestData.architecture = it
+            return
+        }
         do {
             architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
             println(cyan("Options: ${architectureSchema.enum.joinToString(", ")}"))

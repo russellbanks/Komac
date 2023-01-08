@@ -77,7 +77,11 @@ object Ktor : KoinComponent {
     }
 
     private fun getURLExtension(url: Url): String {
-        return url.fullPath.substringAfterLast(".").split(Regex("[^A-Za-z0-9]")).firstOrNull() ?: "winget-tmp"
+        return url.fullPath
+            .substringAfterLast(".")
+            .split(Regex("[^A-Za-z0-9]"))
+            .firstOrNull()
+            .also { get<SharedManifestData>().fileExtension = it } ?: "winget-tmp"
     }
 
     fun HttpStatusCode.isRedirect(): Boolean {

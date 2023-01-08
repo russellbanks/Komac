@@ -1,6 +1,7 @@
 package data
 
 import msix.Msix
+import msix.MsixBundle
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 
@@ -12,4 +13,6 @@ class SharedManifestData : KoinComponent {
     var isNewPackage = false
     var latestVersion: String? = null
     var msix: Msix? = null
+    var msixBundle: MsixBundle? = null
+    var fileExtension: String? = null
 }

@@ -43,7 +43,6 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val githubImpl: GitHubImpl by inject()
 
     override fun run(): Unit = runBlocking {
-        val githubImpl: GitHubImpl by inject()
         with(get<TerminalInstance>().terminal) {
             packageIdentifierPrompt()
             previousManifestData = get()

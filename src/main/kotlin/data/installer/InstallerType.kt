@@ -12,8 +12,10 @@ import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
+import msix.MsixBundle
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -25,22 +27,34 @@ object InstallerType : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val installerTypeSchema = get<SchemasImpl>().installerSchema.definitions.installerType
+    private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.installerTypePrompt() {
-        do {
-            installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
-            println(cyan("Options: ${installerTypeSchema.enum.joinToString(", ")}"))
-            val input = prompt(
-                prompt = brightWhite(PromptType.InstallerType.toString()),
-                default = getPreviousValue()?.also { println(gray("Previous installer type: $it")) }
-            )?.trim()?.lowercase()
-            val (installerTypeValid, error) = isInstallerTypeValid(input, installerTypeSchema)
-            error?.let { println(red(it)) }
-            if (installerTypeValid == Validation.Success && input != null) {
-                installerManifestData.installerType = input.toInstallerType()
+        when (sharedManifestData.fileExtension) {
+            InstallerManifest.InstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
+                installerManifestData.installerType = InstallerManifest.InstallerType.MSIX
             }
-            println()
-        } while (installerTypeValid != Validation.Success)
+            InstallerManifest.Installer.InstallerType.ZIP.toString() -> {
+                installerManifestData.installerType = InstallerManifest.InstallerType.ZIP
+            }
+            InstallerManifest.InstallerType.APPX.toString(), "appxbundle" -> {
+                installerManifestData.installerType = InstallerManifest.InstallerType.APPX
+            }
+            else -> do {
+                installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
+                println(cyan("Options: ${installerTypeSchema.enum.joinToString(", ")}"))
+                val input = prompt(
+                    prompt = brightWhite(PromptType.InstallerType.toString()),
+                    default = getPreviousValue()?.also { println(gray("Previous installer type: $it")) }
+                )?.trim()?.lowercase()
+                val (installerTypeValid, error) = isInstallerTypeValid(input, installerTypeSchema)
+                error?.let { println(red(it)) }
+                if (installerTypeValid == Validation.Success && input != null) {
+                    installerManifestData.installerType = input.toInstallerType()
+                }
+                println()
+            } while (installerTypeValid != Validation.Success)
+        }
     }
 
     fun isInstallerTypeValid(
