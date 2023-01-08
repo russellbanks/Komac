@@ -36,21 +36,8 @@ class GitHubImpl : KoinComponent {
     val baseGitHubPath
         get() = "$packageVersionsPath/${sharedManifestData.packageVersion}"
 
-    val installerManifestGitHubPath
-        get() = "$baseGitHubPath/$installerManifestName"
-
-    val defaultLocaleManifestGitHubPath
-        get() = "$baseGitHubPath/$defaultLocaleManifestName"
-
-    val versionManifestGitHubPath
-        get() = "$baseGitHubPath/$versionManifestName"
-
     fun getLocaleManifestName(locale: String): String {
         return "${sharedManifestData.packageIdentifier}.locale.$locale.yaml"
-    }
-
-    fun getLocaleManifestGitHubPath(locale: String): String {
-        return "$baseGitHubPath/${sharedManifestData.packageIdentifier}.locale.$locale.yaml"
     }
 
     private val branchName: String

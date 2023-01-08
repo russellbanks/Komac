@@ -20,13 +20,21 @@ class TokenStore {
     fun getToken(terminal: Terminal) {
         val credentialStore = getCredentialStore()
         if (credentialStore[credentialKey] == null) {
-            terminal.promptForToken().also {
-                credentialStore.add(credentialKey, Token(it, TokenType.Personal))
-                token = it
-            }
+            promptForToken(terminal).also { putToken(it, credentialStore) }
         } else {
-            token = credentialStore[credentialKey].Value
+            val credentialToken = credentialStore[credentialKey].Value
+            if (checkIfTokenValid(credentialToken)) {
+                token = credentialToken
+            } else {
+                terminal.println(red("Token is invalid. Please enter a new token."))
+                promptForToken(terminal).also { putToken(it, credentialStore) }
+            }
         }
+    }
+
+    fun putToken(tokenString: String, credentialStore: SecretStore<Token> = getCredentialStore()) {
+        credentialStore.add(credentialKey, Token(tokenString, TokenType.Personal))
+        token = tokenString
     }
 
     private fun getCredentialStore(): SecretStore<Token> {
@@ -39,20 +47,28 @@ class TokenStore {
         }
     }
 
-    private fun Terminal.promptForToken(): String {
+    fun promptForToken(terminal: Terminal): String {
         var token: String?
         do {
             println(brightGreen("Please enter your GitHub personal access token:"))
-            token = prompt(brightWhite("Token"))
-            val isValid = try {
-                GitHubBuilder().withOAuthToken(token).build()
+            token = terminal.prompt(brightWhite("Token"))
+            val isValid = token?.let { checkIfTokenValid(it) }
+        } while (token == null || isValid == false)
+        return token
+    }
+
+    private fun checkIfTokenValid(tokenString: String): Boolean {
+        return try {
+            if (GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid) {
                 true
-            } catch (_: IOException) {
+            } else {
                 println(red("Invalid token. Please try again."))
                 false
             }
-        } while (token == null || !isValid)
-        return token
+        } catch (ioException: IOException) {
+            println(red(ioException.message ?: "Invalid token. Please try again."))
+            false
+        }
     }
 
     companion object {
@@ -60,7 +76,6 @@ class TokenStore {
         private const val windows = "Windows"
         private const val linux = "Linux"
         private const val mac = "Mac"
-        private const val credentialUsername = "github-access-token"
-        private const val credentialKey = "komac/$credentialUsername"
+        private const val credentialKey = "komac/github-access-token"
     }
 }
