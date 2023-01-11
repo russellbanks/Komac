@@ -4,6 +4,7 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
@@ -29,13 +30,10 @@ object PackageName : KoinComponent {
             defaultLocaleManifestData.packageName = it
             return
         }
-        sharedManifestData.msi?.productName?.let {
-            defaultLocaleManifestData.packageName = it
-            return
-        }
         do {
             println(brightGreen(packageNameInfo))
             println(cyan(packageNameExample))
+            sharedManifestData.msi?.productName?.let { println(brightYellow("Detected from MSI: $it")) }
             val input = prompt(
                 prompt = brightWhite(PromptType.PackageName.toString()),
                 default = previousManifestData.remoteDefaultLocaleData?.packageName?.also {

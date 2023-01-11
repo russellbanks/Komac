@@ -63,7 +63,7 @@ object InstallerType : KoinComponent {
         }
     }
 
-    fun isInstallerTypeValid(
+    private fun isInstallerTypeValid(
         installerType: String?,
         schema: InstallerSchema.Definitions.InstallerType = installerTypeSchema
     ): Pair<Validation, String?> {
