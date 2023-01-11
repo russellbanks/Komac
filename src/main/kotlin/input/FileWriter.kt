@@ -31,7 +31,7 @@ object FileWriter {
 
     private fun writeFileToDirectory(directory: File, fileName: String, fileText: String) {
         File(directory, fileName).apply {
-            writeText(fileText)
+            writeText(fileText.replace("\n", "\r\n"))
             if (exists()) {
                 println(brightGreen("Successfully written $name to ${directory.path}"))
             } else {

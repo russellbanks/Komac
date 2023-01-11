@@ -8,6 +8,7 @@ import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -17,8 +18,14 @@ import schemas.SchemasImpl
 import java.util.UUID
 
 object ProductCode : KoinComponent {
+    val sharedManifestData: SharedManifestData by inject()
+    val installerManifestData: InstallerManifestData by inject()
+
     fun Terminal.productCodePrompt() {
-        val installerManifestData: InstallerManifestData by inject()
+        sharedManifestData.msi?.productCode?.let {
+            installerManifestData.productCode = it
+            return
+        }
         val schemasImpl: SchemasImpl by inject()
         val productCodeSchema = schemasImpl.installerSchema.definitions.productCode
         do {
@@ -31,7 +38,7 @@ object ProductCode : KoinComponent {
         } while (productCodeValid != Validation.Success)
     }
 
-    fun isProductCodeValid(
+    private fun isProductCodeValid(
         productCode: String?,
         productCodeSchema: InstallerSchema.Definitions.ProductCode
     ): Pair<Validation, String?> {

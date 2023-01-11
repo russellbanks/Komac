@@ -33,6 +33,10 @@ dependencies {
     // Detekt Formatting Plugin - https://github.com/detekt/detekt
     detektPlugins(libs.detekt.formatting)
 
+    // JNA - https://github.com/java-native-access/jna
+    implementation(libs.jna)
+    implementation(libs.jna.platform)
+
     // Kaml - https://github.com/charleskorn/kaml
     implementation(libs.kaml)
 
@@ -61,12 +65,9 @@ dependencies {
     // Mordant - https://github.com/ajalt/mordant
     implementation(libs.mordant)
 
+    // Secure Token Storage Library - https://github.com/microsoft/vsts-authentication-library-for-java
     implementation(libs.auth.secure.storage) {
         exclude(group = "org.slf4j")
-        constraints {
-            implementation(libs.jna)
-            implementation(libs.jna.platform)
-        }
     }
 }
 

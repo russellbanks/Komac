@@ -53,17 +53,17 @@ class GitHubImpl : KoinComponent {
         with(terminal) {
             return try {
                 github.getRepository("${github.myself.login}/$wingetpkgs").also {
-                    println(brightWhite("Found forked winget-pkgs repository: ${it.fullName}"))
+                    println(brightWhite("Found forked $wingetpkgs repository: ${it.fullName}"))
                 }
             } catch (_: IOException) {
-                println(brightWhite("Fork of winget-pkgs not found. Forking..."))
+                println(brightWhite("Fork of $wingetpkgs not found. Forking..."))
                 try {
                     github.getRepository("$Microsoft/$wingetpkgs").fork().also {
-                        println(brightGreen("Forked winget-pkgs repository: ${it.fullName}"))
+                        println(brightGreen("Forked $wingetpkgs repository: ${it.fullName}"))
                     }
                 } catch (ioException: IOException) {
                     println(
-                        red(ioException.message ?: "Failed to fork winget-pkgs. Please try again or fork it manually.")
+                        red(ioException.message ?: "Failed to fork $wingetpkgs. Please try again or fork it manually.")
                     )
                     null
                 }

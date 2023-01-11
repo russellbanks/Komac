@@ -30,6 +30,10 @@ object Publisher : KoinComponent {
             defaultLocaleManifestData.publisher = it
             return
         }
+        sharedManifestData.msi?.manufacturer?.let {
+            defaultLocaleManifestData.publisher = it
+            return
+        }
         do {
             println(brightGreen(publisherInfo))
             println(cyan(publisherExample))

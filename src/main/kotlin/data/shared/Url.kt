@@ -24,6 +24,7 @@ import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
+import msi.Msi
 import msix.Msix
 import msix.MsixBundle
 import org.koin.core.component.KoinComponent
@@ -99,14 +100,13 @@ object Url : KoinComponent {
                 installerManifestData.installerSha256 = hash()
                 when {
                     extension.lowercase() == InstallerManifest.InstallerType.MSIX.toString() -> {
-                        sharedManifestData.msix = Msix(this).also {
-                            installerManifestData.signatureSha256 = it.signatureSha256
-                        }
+                        sharedManifestData.msix = Msix(this)
                     }
                     extension.lowercase() == MsixBundle.msixBundleConst -> {
-                        sharedManifestData.msixBundle = MsixBundle(this).also {
-                            installerManifestData.signatureSha256 = it.signatureSha256
-                        }
+                        sharedManifestData.msixBundle = MsixBundle(this)
+                    }
+                    extension.lowercase() == InstallerManifest.InstallerType.MSI.toString() -> {
+                        sharedManifestData.msi = Msi(this)
                     }
                 }
                 delete()

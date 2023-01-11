@@ -64,6 +64,15 @@ data class MsixBundle(
         var processorArchitecture: InstallerManifest.Installer.Architecture? = null,
     )
 
+    fun resetExceptShared() {
+        signatureSha256 = null
+        packages?.forEach {
+            it.processorArchitecture = null
+            it.minVersion = null
+            it.targetDeviceFamily = null
+        }
+    }
+
     companion object {
         const val appxManifestFolder = "AppxMetadata"
         const val appxBundleManifestXml = "AppxBundleManifest.xml"

@@ -1,8 +1,10 @@
 package schemas
 
+import input.InstallerSwitch
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import schemas.InstallerManifest.AppsAndFeaturesEntry
 import java.time.LocalDate
 
 /**
@@ -451,17 +453,17 @@ data class InstallerManifest(
 
         @Serializable
         data class InstallerSwitches(
-            @SerialName("Silent") val silent: String? = null,
-            @SerialName("SilentWithProgress") val silentWithProgress: String? = null,
+            @SerialName("Silent") var silent: String? = null,
+            @SerialName("SilentWithProgress") var silentWithProgress: String? = null,
             @SerialName("Interactive") val interactive: String? = null,
             @SerialName("InstallLocation") val installLocation: String? = null,
             @SerialName("Log") val log: String? = null,
             @SerialName("Upgrade") val upgrade: String? = null,
-            @SerialName("Custom") val custom: String? = null
+            @SerialName("Custom") var custom: String? = null
         ) {
-            fun areAllNull(): Boolean {
+            fun areAllNullOrBlank(): Boolean {
                 return listOf(silent, silentWithProgress, interactive, installLocation, log, upgrade, custom).all {
-                    it == null
+                    it.isNullOrBlank()
                 }
             }
 
@@ -475,6 +477,14 @@ data class InstallerManifest(
                     upgrade = upgrade,
                     custom = custom
                 )
+            }
+
+            operator fun set(installerSwitch: InstallerSwitch, value: String?) {
+                when (installerSwitch) {
+                    InstallerSwitch.Silent -> silent = value
+                    InstallerSwitch.SilentWithProgress -> silentWithProgress = value
+                    InstallerSwitch.Custom -> custom = value
+                }
             }
         }
 
@@ -558,6 +568,21 @@ data class InstallerManifest(
             @SerialName("UpgradeCode") val upgradeCode: String? = null,
             @SerialName("InstallerType") val installerType: InstallerType? = null
         ) {
+
+            fun areAllNull(): Boolean {
+                return listOf(displayName, publisher, displayVersion, productCode, upgradeCode, installerType).all {
+                    it == null
+                }
+            }
+            fun toManifestARPEntry() = AppsAndFeaturesEntry(
+                displayName = displayName,
+                publisher = publisher,
+                displayVersion = displayVersion,
+                productCode = productCode,
+                upgradeCode = upgradeCode,
+                installerType = installerType?.toManifestARPInstallerType()
+            )
+
             /**
              * Enumeration of supported installer types.
              * InstallerType is required in either root level or individual Installer level
@@ -574,6 +599,8 @@ data class InstallerManifest(
                 @SerialName("burn") BURN,
                 @SerialName("pwa") PWA,
                 @SerialName("portable") PORTABLE;
+
+                fun toManifestARPInstallerType() = InstallerManifest.AppsAndFeaturesEntry.InstallerType.valueOf(name)
             }
         }
 

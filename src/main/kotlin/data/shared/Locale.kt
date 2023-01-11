@@ -15,6 +15,7 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import input.PromptType
 import input.Prompts
+import msi.ProductLanguage
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -29,13 +30,19 @@ object Locale : KoinComponent {
     val previousManifestData: PreviousManifestData by inject()
 
     fun Terminal.localePrompt(promptType: PromptType) {
+        if (promptType == PromptType.InstallerLocale) {
+            sharedManifestData.msi?.productLanguage?.let {
+                installerManifestData.installerLocale = ProductLanguage(it).locale
+                return
+            }
+        }
         do {
             localeInfo(promptType).also { (info, infoColor) -> println(infoColor(info)) }
             println(cyan("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}"))
             val input = prompt(
                 prompt = brightWhite(promptType.toString()),
                 default = when (promptType) {
-                    PromptType.InstallerType -> getPreviousValue()?.also { println(gray("Previous value: $it")) }
+                    PromptType.InstallerLocale -> getPreviousValue()?.also { println(gray("Previous value: $it")) }
                     PromptType.PackageLocale -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default
                     else -> null
                 }

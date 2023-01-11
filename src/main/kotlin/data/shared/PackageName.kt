@@ -29,6 +29,10 @@ object PackageName : KoinComponent {
             defaultLocaleManifestData.packageName = it
             return
         }
+        sharedManifestData.msi?.productName?.let {
+            defaultLocaleManifestData.packageName = it
+            return
+        }
         do {
             println(brightGreen(packageNameInfo))
             println(cyan(packageNameExample))

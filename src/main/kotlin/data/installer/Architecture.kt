@@ -48,7 +48,7 @@ object Architecture : KoinComponent {
                 prompt = brightWhite(PromptType.Architecture.toString()),
                 default = getPreviousValue()?.also {
                     println(gray("Previous architecture: $it"))
-                } ?: detectedArchitectureFromUrl.toString()
+                } ?: detectedArchitectureFromUrl?.toString()
             )?.trim()?.lowercase()
             val (architectureValid, error) = isArchitectureValid(input, architectureSchema)
             error?.let { println(red(it)) }

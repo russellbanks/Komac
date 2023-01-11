@@ -95,6 +95,15 @@ data class Msix(
         packageFamilyName = "${identityName}_$hashPart"
     }
 
+    fun resetExceptShared() {
+        signatureSha256 = null
+        targetDeviceFamily = null
+        minVersion = null
+        description = null
+        processorArchitecture = null
+        packageFamilyName = null
+    }
+
     companion object {
         const val appxManifestXml = "AppxManifest.xml"
         const val appxSignatureP7x = "AppxSignature.p7x"

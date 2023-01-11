@@ -45,6 +45,9 @@ object InstallerSwitch : KoinComponent {
                 canBeBlank = !isRequired
             )
             error?.let { println(red(it)) }
+            if (switchValid == Validation.Success) {
+                input?.let { installerManifestData.installerSwitches[installerSwitch] = it.ifBlank { null } }
+            }
             println()
         } while (switchValid != Validation.Success)
     }

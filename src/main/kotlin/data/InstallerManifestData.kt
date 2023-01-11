@@ -15,10 +15,7 @@ class InstallerManifestData : KoinComponent {
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
     lateinit var installerType: InstallerManifest.InstallerType
-    var signatureSha256: String? = null
-    var silentSwitch: String? = null
-    var silentWithProgressSwitch: String? = null
-    var customSwitch: String? = null
+    var installerSwitches = InstallerManifest.Installer.InstallerSwitches()
     var installerLocale: String? = null
     var productCode: String? = null
     var scope: InstallerManifest.Scope? = null
@@ -42,17 +39,20 @@ class InstallerManifestData : KoinComponent {
             installerType = installerType.toPerInstallerType(),
             installerUrl = installerUrl,
             installerSha256 = installerSha256.uppercase(),
-            signatureSha256 = signatureSha256?.uppercase()?.ifBlank { null },
+            signatureSha256 = when {
+                sharedManifestData.msix?.signatureSha256 != null -> sharedManifestData.msix?.signatureSha256
+                sharedManifestData.msixBundle?.signatureSha256 != null -> sharedManifestData.msixBundle?.signatureSha256
+                else -> null
+            },
             scope = scope?.toPerScopeInstallerType(),
-            installerSwitches = InstallerManifest.Installer.InstallerSwitches(
-                silent = silentSwitch?.ifBlank { null },
-                silentWithProgress = silentWithProgressSwitch?.ifBlank { null },
-                custom = customSwitch?.ifBlank { null }
-            ).takeUnless { it.areAllNull() },
+            installerSwitches = installerSwitches.takeUnless { it.areAllNullOrBlank() },
             upgradeBehavior = upgradeBehavior?.toPerInstallerType(),
             productCode = productCode?.ifBlank { null },
-            releaseDate = releaseDate
-        )
+            releaseDate = releaseDate,
+            appsAndFeaturesEntries = sharedManifestData.msi?.upgradeCode?.let {
+                listOf(InstallerManifest.Installer.AppsAndFeaturesEntry(upgradeCode = it))
+            },
+        ).also { resetValues() }
     }
 
     fun createInstallerManifest(): String {
@@ -64,6 +64,7 @@ class InstallerManifestData : KoinComponent {
         val installerTypeDistinct = installers.distinctBy { it.installerType }.size == 1
         val platformDistinct = installers.distinctBy { it.platform }.size == 1
         val minimumOSVersionDistinct = installers.distinctBy { it.minimumOSVersion }.size == 1
+        val arpDistinct = installers.distinctBy { it.appsAndFeaturesEntries }.size == 1
         return InstallerManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
@@ -94,6 +95,10 @@ class InstallerManifestData : KoinComponent {
             protocols = protocols?.ifEmpty { null },
             fileExtensions = fileExtensions?.ifEmpty { null },
             releaseDate = if (releaseDateDistinct) installers.map { it.releaseDate }.first() else null,
+            appsAndFeaturesEntries = when {
+                arpDistinct -> installers.map { it.appsAndFeaturesEntries }.first()?.map { it.toManifestARPEntry() }
+                else -> null
+            },
             installers = installers.map { installer ->
                 installer.copy(
                     platform = if (platformDistinct) null else installer.platform,
@@ -104,6 +109,7 @@ class InstallerManifestData : KoinComponent {
                     upgradeBehavior = if (upgradeBehaviourDistinct) null else installer.upgradeBehavior,
                     installerSwitches = if (installerSwitchesDistinct) null else installer.installerSwitches,
                     installerType = if (installerTypeDistinct) null else installer.installerType,
+                    appsAndFeaturesEntries = if (arpDistinct) null else installer.appsAndFeaturesEntries
                 )
             }.sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope })),
             manifestType = Schemas.manifestType(installerSchema),
@@ -115,5 +121,17 @@ class InstallerManifestData : KoinComponent {
                 )
             }
         }
+    }
+
+    private fun resetValues() {
+        installerLocale = null
+        scope = null
+        installerSwitches = InstallerManifest.Installer.InstallerSwitches()
+        upgradeBehavior = null
+        productCode = null
+        releaseDate = null
+        sharedManifestData.msi?.resetExceptShared()
+        sharedManifestData.msix?.resetExceptShared()
+        sharedManifestData.msixBundle?.resetExceptShared()
     }
 }
