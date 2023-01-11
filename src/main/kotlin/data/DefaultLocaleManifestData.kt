@@ -10,7 +10,6 @@ import schemas.SchemasImpl
 @Single
 class DefaultLocaleManifestData : KoinComponent {
     lateinit var publisher: String
-    lateinit var packageName: String
     lateinit var license: String
     lateinit var shortDescription: String
     var moniker: String? = null
@@ -41,7 +40,7 @@ class DefaultLocaleManifestData : KoinComponent {
             publisherSupportUrl = publisherSupportUrl?.ifBlank { null },
             privacyUrl = publisherPrivacyUrl?.ifBlank { null },
             author = author?.ifBlank { null },
-            packageName = packageName,
+            packageName = sharedManifestData.packageName,
             packageUrl = packageUrl?.ifBlank { null },
             license = license,
             licenseUrl = licenseUrl?.ifBlank { null },

@@ -15,6 +15,7 @@ data class Msi(val msiFile: File) : KoinComponent {
     var productVersion: String? = null
     var manufacturer: String? = null
     var productLanguage: Int? = null
+    var allUsers: String? = null
     var isWix: Boolean = false
 
     private val msiLibrary = MsiLibrary.INSTANCE
@@ -67,7 +68,8 @@ data class Msi(val msiFile: File) : KoinComponent {
                             productVersionConst -> productVersion = value
                             manufacturerConst -> manufacturer = value
                             productLanguageConst -> productLanguage = value.toIntOrNull()
-                            wixUiMode -> isWix = true
+                            wixUiModeConst -> isWix = true
+                            allUsersConst -> allUsers = value
                         }
                         msiLibrary.MsiCloseHandle(record)
                     } else {
@@ -129,6 +131,8 @@ data class Msi(val msiFile: File) : KoinComponent {
         productCode = null
         upgradeCode = null
         productLanguage = null
+        allUsers = null
+        isWix = false
     }
 
     companion object {
@@ -140,7 +144,8 @@ data class Msi(val msiFile: File) : KoinComponent {
         private const val productVersionConst = "ProductVersion"
         private const val manufacturerConst = "Manufacturer"
         private const val productLanguageConst = "ProductLanguage"
-        private const val wixUiMode = "WixUI_Mode"
+        private const val wixUiModeConst = "WixUI_Mode"
+        private const val allUsersConst = "ALLUSERS"
         val values = listOf(
             upgradeCodeConst,
             productCodeConst,
@@ -148,7 +153,8 @@ data class Msi(val msiFile: File) : KoinComponent {
             productVersionConst,
             manufacturerConst,
             productLanguageConst,
-            wixUiMode
+            wixUiModeConst,
+            allUsersConst
         )
     }
 }

@@ -9,7 +9,6 @@ import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
-import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import input.PromptType
@@ -20,14 +19,13 @@ import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
 
 object PackageName : KoinComponent {
-    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val packageNameSchema = get<SchemasImpl>().defaultLocaleSchema.properties.packageName
-    private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.packageNamePrompt() {
         sharedManifestData.msix?.displayName?.let {
-            defaultLocaleManifestData.packageName = it
+            sharedManifestData.packageName = it
             return
         }
         do {
@@ -42,7 +40,7 @@ object PackageName : KoinComponent {
             )?.trim()
             val (packageNameValid, error) = packageNameValid(input, packageNameSchema)
             if (packageNameValid == Validation.Success && input != null) {
-                defaultLocaleManifestData.packageName = input
+                sharedManifestData.packageName = input
             }
             error?.let { println(red(it)) }
             println()

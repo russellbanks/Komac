@@ -32,7 +32,7 @@ object UpgradeBehaviour : KoinComponent {
                     cell(brightYellow(upgradeBehaviourInfo))
                     InstallerManifest.UpgradeBehavior.values().forEach { behaviour ->
                         val textColour = when {
-                            previousValue == behaviour || previousValue == behaviour.toPerInstallerType() -> brightGreen
+                            previousValue == behaviour || previousValue == behaviour.toPerInstallerUpgradeBehaviour() -> brightGreen
                             behaviour == InstallerManifest.UpgradeBehavior.Install -> brightGreen
                             else -> brightWhite
                         }

@@ -215,7 +215,7 @@ data class InstallerManifest(
         @SerialName("install") Install,
         @SerialName("uninstallPrevious") UninstallPrevious;
 
-        fun toPerInstallerType(): Installer.UpgradeBehavior {
+        fun toPerInstallerUpgradeBehaviour(): Installer.UpgradeBehavior {
             return when (this) {
                 Install -> Installer.UpgradeBehavior.Install
                 UninstallPrevious -> Installer.UpgradeBehavior.UninstallPrevious
@@ -401,6 +401,22 @@ data class InstallerManifest(
             @SerialName("burn") BURN,
             @SerialName("pwa") PWA,
             @SerialName("portable") PORTABLE;
+
+            fun toManifestInstallerType(): InstallerManifest.InstallerType {
+                return when (this) {
+                    MSIX -> InstallerManifest.InstallerType.MSIX
+                    MSI -> InstallerManifest.InstallerType.MSI
+                    APPX -> InstallerManifest.InstallerType.APPX
+                    EXE -> InstallerManifest.InstallerType.EXE
+                    ZIP -> InstallerManifest.InstallerType.ZIP
+                    INNO -> InstallerManifest.InstallerType.INNO
+                    NULLSOFT -> InstallerManifest.InstallerType.NULLSOFT
+                    WIX -> InstallerManifest.InstallerType.WIX
+                    BURN -> InstallerManifest.InstallerType.BURN
+                    PWA -> InstallerManifest.InstallerType.PWA
+                    PORTABLE -> InstallerManifest.InstallerType.PORTABLE
+                }
+            }
 
             override fun toString() = name.lowercase()
         }

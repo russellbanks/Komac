@@ -2,15 +2,12 @@ package data.installer
 
 import Errors
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextColors.red
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -23,44 +20,59 @@ object InstallerScope : KoinComponent {
     private val schemasImpl: SchemasImpl by inject()
     private val installerScopeSchema = schemasImpl.installerSchema.definitions.scope
     private val previousManifestData: PreviousManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.installerScopePrompt() {
-        do {
-            val previousValue = getPreviousValue()
-            println(
-                verticalLayout {
-                    cell(brightYellow(installerScopeInfo))
-                    InstallerManifest.Scope.values().forEach { scope ->
-                        val textColour = when (previousValue) {
-                            scope, scope.toPerScopeInstallerType() -> brightGreen
-                            else -> brightWhite
-                        }
-                        cell(
-                            textColour(
-                                buildString {
-                                    append(" ".repeat(Prompts.optionIndent))
-                                    append("[${scope.toString().first().titlecase()}] ")
-                                    append(scope.toString().replaceFirstChar { it.titlecase() })
+        when (sharedManifestData.msi?.allUsers) {
+            "1" -> installerManifestData.scope =InstallerManifest.Installer.Scope.Machine
+            "" -> installerManifestData.scope = InstallerManifest.Installer.Scope.User
+            "2" ->  installerManifestData.scope = null
+            else -> {
+                if (
+                    installerManifestData.installerType == InstallerManifest.Installer.InstallerType.MSIX ||
+                    installerManifestData.installerType == InstallerManifest.Installer.InstallerType.APPX
+                ) {
+                    installerManifestData.scope = InstallerManifest.Installer.Scope.User
+                    return
+                }
+                do {
+                    val previousValue = getPreviousValue()
+                    println(
+                        verticalLayout {
+                            cell(TextColors.brightYellow(installerScopeInfo))
+                            InstallerManifest.Scope.values().forEach { scope ->
+                                val textColour = when (previousValue) {
+                                    scope, scope.toPerScopeInstallerType() -> TextColors.brightGreen
+                                    else -> TextColors.brightWhite
                                 }
-                            )
-                        )
+                                cell(
+                                    textColour(
+                                        buildString {
+                                            append(" ".repeat(Prompts.optionIndent))
+                                            append("[${scope.toString().first().titlecase()}] ")
+                                            append(scope.toString().replaceFirstChar { it.titlecase() })
+                                        }
+                                    )
+                                )
+                            }
+                            previousValue?.let { cell(TextColors.gray("Previous value: $previousValue")) }
+                        }
+                    )
+                    val input = prompt(
+                        prompt = TextColors.brightWhite(Prompts.enterChoice),
+                        default = previousValue?.toString()?.first()?.toString()
+                    )?.trim()
+                    val (installerScopeValid, error) = isInstallerScopeValid(input?.firstOrNull(), installerScopeSchema)
+                    if (installerScopeValid == Validation.Success) {
+                        installerManifestData.scope = InstallerManifest.Installer.Scope.values().firstOrNull {
+                            it.name.firstOrNull()?.titlecase() == input?.firstOrNull()?.titlecase()
+                        }
                     }
-                    previousValue?.let { cell(gray("Previous value: $previousValue")) }
-                }
-            )
-            val input = prompt(
-                prompt = brightWhite(Prompts.enterChoice),
-                default = previousValue?.toString()?.first()?.toString()
-            )?.trim()
-            val (installerScopeValid, error) = isInstallerScopeValid(input?.firstOrNull(), installerScopeSchema)
-            if (installerScopeValid == Validation.Success) {
-                installerManifestData.scope = InstallerManifest.Scope.values().firstOrNull {
-                    it.name.firstOrNull()?.titlecase() == input?.firstOrNull()?.titlecase()
-                }
+                    error?.let { println(TextColors.red(it)) }
+                    println()
+                } while (installerScopeValid != Validation.Success)
             }
-            error?.let { println(red(it)) }
-            println()
-        } while (installerScopeValid != Validation.Success)
+        }
     }
 
     private fun getPreviousValue(): Enum<*>? {
@@ -69,7 +81,7 @@ object InstallerScope : KoinComponent {
         }
     }
 
-    fun isInstallerScopeValid(
+    private fun isInstallerScopeValid(
         option: Char?,
         installerScopeSchema: InstallerSchema.Definitions.Scope
     ): Pair<Validation, String?> {

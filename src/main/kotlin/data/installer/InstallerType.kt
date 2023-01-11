@@ -32,19 +32,19 @@ object InstallerType : KoinComponent {
     fun Terminal.installerTypePrompt() {
         when (sharedManifestData.fileExtension) {
             InstallerManifest.InstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
-                installerManifestData.installerType = InstallerManifest.InstallerType.MSIX
+                installerManifestData.installerType = InstallerManifest.Installer.InstallerType.MSIX
             }
             InstallerManifest.InstallerType.MSI.toString() -> {
                 installerManifestData.installerType = when (sharedManifestData.msi?.isWix) {
-                    true -> InstallerManifest.InstallerType.WIX
-                    else -> InstallerManifest.InstallerType.MSI
+                    true -> InstallerManifest.Installer.InstallerType.WIX
+                    else -> InstallerManifest.Installer.InstallerType.MSI
                 }
             }
             InstallerManifest.Installer.InstallerType.ZIP.toString() -> {
-                installerManifestData.installerType = InstallerManifest.InstallerType.ZIP
+                installerManifestData.installerType = InstallerManifest.Installer.InstallerType.ZIP
             }
             InstallerManifest.InstallerType.APPX.toString(), MsixBundle.appxBundleConst -> {
-                installerManifestData.installerType = InstallerManifest.InstallerType.APPX
+                installerManifestData.installerType = InstallerManifest.Installer.InstallerType.APPX
             }
             else -> do {
                 installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
@@ -76,8 +76,8 @@ object InstallerType : KoinComponent {
         }
     }
 
-    private fun String.toInstallerType(): InstallerManifest.InstallerType {
-        InstallerManifest.InstallerType.values().forEach {
+    private fun String.toInstallerType(): InstallerManifest.Installer.InstallerType {
+        InstallerManifest.Installer.InstallerType.values().forEach {
             if (it.toString().lowercase() == this) return it
         }
         throw IllegalArgumentException("Invalid installer type: $this")

@@ -14,11 +14,11 @@ class InstallerManifestData : KoinComponent {
     lateinit var installerUrl: String
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
-    lateinit var installerType: InstallerManifest.InstallerType
+    lateinit var installerType: InstallerManifest.Installer.InstallerType
     var installerSwitches = InstallerManifest.Installer.InstallerSwitches()
     var installerLocale: String? = null
     var productCode: String? = null
-    var scope: InstallerManifest.Scope? = null
+    var scope: InstallerManifest.Installer.Scope? = null
     var upgradeBehavior: InstallerManifest.UpgradeBehavior? = null
     var releaseDate: LocalDate? = null
     var installers = listOf<InstallerManifest.Installer>()
@@ -36,7 +36,7 @@ class InstallerManifestData : KoinComponent {
         return InstallerManifest.Installer(
             installerLocale = installerLocale?.ifBlank { null },
             architecture = architecture,
-            installerType = installerType.toPerInstallerType(),
+            installerType = installerType,
             installerUrl = installerUrl,
             installerSha256 = installerSha256.uppercase(),
             signatureSha256 = when {
@@ -44,13 +44,22 @@ class InstallerManifestData : KoinComponent {
                 sharedManifestData.msixBundle?.signatureSha256 != null -> sharedManifestData.msixBundle?.signatureSha256
                 else -> null
             },
-            scope = scope?.toPerScopeInstallerType(),
+            scope = scope,
             installerSwitches = installerSwitches.takeUnless { it.areAllNullOrBlank() },
-            upgradeBehavior = upgradeBehavior?.toPerInstallerType(),
+            upgradeBehavior = upgradeBehavior?.toPerInstallerUpgradeBehaviour(),
             productCode = productCode?.ifBlank { null },
             releaseDate = releaseDate,
-            appsAndFeaturesEntries = sharedManifestData.msi?.upgradeCode?.let {
-                listOf(InstallerManifest.Installer.AppsAndFeaturesEntry(upgradeCode = it))
+            appsAndFeaturesEntries = sharedManifestData.msi?.let {
+                listOf(
+                    InstallerManifest.Installer.AppsAndFeaturesEntry(
+                        displayName = if (sharedManifestData.packageName != sharedManifestData.msi?.productName) {
+                            sharedManifestData.msi?.productName
+                        } else {
+                            null
+                        },
+                        upgradeCode = it.upgradeCode
+                    )
+                )
             },
         ).also { resetValues() }
     }
@@ -77,7 +86,11 @@ class InstallerManifestData : KoinComponent {
                 else -> null
             },
             minimumOSVersion = if (minimumOSVersionDistinct) installers.map { it.minimumOSVersion }.first() else null,
-            installerType = if (installers.distinctBy { it.installerType }.size == 1) installerType else null,
+            installerType = if (installers.distinctBy { it.installerType }.size == 1) {
+                installerType.toManifestInstallerType()
+            } else {
+                null
+            },
             scope = if (installerScopeDistinct) installers.map { it.scope }.first()?.toManifestScope() else null,
             installModes = installModes?.ifEmpty { null },
             installerSwitches = when {

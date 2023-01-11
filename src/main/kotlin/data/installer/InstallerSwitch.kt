@@ -26,7 +26,7 @@ object InstallerSwitch : KoinComponent {
     private val previousManifestData: PreviousManifestData by inject()
 
     fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
-        val isRequired = installerManifestData.installerType == InstallerManifest.InstallerType.EXE &&
+        val isRequired = installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE &&
             installerSwitch != InstallerSwitch.Custom
         do {
             switchInfo(installerManifestData.installerType, installerSwitch).also { (info, infoColor) ->
@@ -90,15 +90,15 @@ object InstallerSwitch : KoinComponent {
     }
 
     private fun switchInfo(
-        installerType: InstallerManifest.InstallerType?,
+        installerType: InstallerManifest.Installer.InstallerType?,
         installerSwitch: InstallerSwitch
     ): Pair<String, TextColors> {
-        val isRequired = installerManifestData.installerType == InstallerManifest.InstallerType.EXE &&
+        val isRequired = installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE &&
             installerSwitch != InstallerSwitch.Custom
         return buildString {
             append(
                 when {
-                    installerType == InstallerManifest.InstallerType.EXE &&
+                    installerType == InstallerManifest.Installer.InstallerType.EXE &&
                         installerSwitch != InstallerSwitch.Custom -> Prompts.required
                     else -> Prompts.optional
                 }
