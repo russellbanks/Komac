@@ -34,6 +34,12 @@ object InstallerType : KoinComponent {
             InstallerManifest.InstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
                 installerManifestData.installerType = InstallerManifest.InstallerType.MSIX
             }
+            InstallerManifest.InstallerType.MSI.toString() -> {
+                installerManifestData.installerType = when (sharedManifestData.msi?.isWix) {
+                    true -> InstallerManifest.InstallerType.WIX
+                    else -> InstallerManifest.InstallerType.MSI
+                }
+            }
             InstallerManifest.Installer.InstallerType.ZIP.toString() -> {
                 installerManifestData.installerType = InstallerManifest.InstallerType.ZIP
             }
