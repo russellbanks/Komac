@@ -19,8 +19,6 @@ import hashing.Hashing.hash
 import input.PromptType
 import input.Prompts
 import io.ktor.client.network.sockets.ConnectTimeoutException
-import io.ktor.client.network.sockets.SocketTimeoutException
-import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.head
 import io.ktor.http.isSuccess
 import ktor.Clients
@@ -213,11 +211,7 @@ object Url : KoinComponent {
                         } else {
                             null
                         }
-                    } catch (_: HttpRequestTimeoutException) {
-                        Errors.connectionTimeout
                     } catch (_: ConnectTimeoutException) {
-                        Errors.connectionTimeout
-                    } catch (_: SocketTimeoutException) {
                         Errors.connectionTimeout
                     }
                 }

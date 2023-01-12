@@ -2,8 +2,8 @@ package ktor
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.java.Java
-import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.UserAgent
 import org.koin.core.annotation.Single
 
 @Single
@@ -13,7 +13,7 @@ class Clients {
             agent = Ktor.userAgent
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = timeoutMillis
+            connectTimeoutMillis = timeoutMillis
         }
     }
 
