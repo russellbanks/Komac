@@ -1,4 +1,4 @@
-package msi
+package data.msi
 
 class SQLBuilder {
     private val statement = StringBuilder()

@@ -15,7 +15,7 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import input.PromptType
 import input.Prompts
-import msix.MsixBundle
+import data.msix.MsixBundle
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject

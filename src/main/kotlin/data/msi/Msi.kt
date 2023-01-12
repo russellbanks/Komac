@@ -1,4 +1,4 @@
-package msi
+package data.msi
 
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Native

@@ -1,8 +1,8 @@
 package data
 
-import msi.Msi
-import msix.Msix
-import msix.MsixBundle
+import data.msi.Msi
+import data.msix.Msix
+import data.msix.MsixBundle
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 

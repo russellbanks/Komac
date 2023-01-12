@@ -24,9 +24,9 @@ import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
-import msi.Msi
-import msix.Msix
-import msix.MsixBundle
+import data.msi.Msi
+import data.msix.Msix
+import data.msix.MsixBundle
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
