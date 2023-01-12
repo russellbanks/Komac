@@ -7,11 +7,10 @@ import java.io.File
 import java.util.zip.ZipFile
 import javax.xml.parsers.DocumentBuilderFactory
 
-data class MsixBundle(
-    val msixBundleFile: File,
-    var signatureSha256: String? = null,
+class MsixBundle(msixBundleFile: File) {
+    var signatureSha256: String? = null
     var packages: List<IndividualPackage>? = null
-) {
+
     init {
         require(msixBundleFile.extension.lowercase() in listOf(appxBundleConst, msixBundleConst)) {
             "File must be an ${InstallerManifest.InstallerType.MSIX}"

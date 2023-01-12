@@ -8,7 +8,7 @@ import org.koin.core.component.get
 import schemas.TerminalInstance
 import java.io.File
 
-data class Msi(val msiFile: File) : KoinComponent {
+class Msi(private val msiFile: File) : KoinComponent {
     var productCode: String? = null
     var upgradeCode: String? = null
     var productName: String? = null
