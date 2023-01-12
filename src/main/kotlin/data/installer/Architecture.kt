@@ -4,11 +4,11 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -51,7 +51,7 @@ object Architecture : KoinComponent {
                 } ?: detectedArchitectureFromUrl?.toString()
             )?.trim()?.lowercase()
             val (architectureValid, error) = isArchitectureValid(input, architectureSchema)
-            error?.let { println(red(it)) }
+            error?.let { println(brightRed(it)) }
             if (architectureValid == Validation.Success && input != null) {
                 installerManifestData.architecture = input.toArchitecture()
             }

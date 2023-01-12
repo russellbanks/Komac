@@ -4,11 +4,11 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -52,7 +52,7 @@ object Locale : KoinComponent {
             } else {
                 isPackageLocaleValid(input)
             }
-            error?.let { println(red(it)) }
+            error?.let { println(brightRed(it)) }
             if (localeValid == Validation.Success && input != null) {
                 if (promptType == PromptType.InstallerLocale) {
                     installerManifestData.installerLocale = input
@@ -64,7 +64,7 @@ object Locale : KoinComponent {
         } while (localeValid != Validation.Success)
     }
 
-    fun isInstallerLocaleValid(
+    private fun isInstallerLocaleValid(
         locale: String?,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {

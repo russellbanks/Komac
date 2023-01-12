@@ -1,9 +1,9 @@
 package input
 
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import java.io.File
 
@@ -35,7 +35,7 @@ object FileWriter {
             if (exists()) {
                 println(brightGreen("Successfully written $name to ${directory.path}"))
             } else {
-                println(red("Failed to write $name"))
+                println(brightRed("Failed to write $name"))
             }
         }
     }

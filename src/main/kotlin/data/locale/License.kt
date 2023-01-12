@@ -3,10 +3,10 @@ package data.locale
 import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
@@ -37,7 +37,7 @@ object License : KoinComponent {
             if (packageLocaleValid == Validation.Success && input != null) {
                 defaultLocaleManifestData.license = input
             }
-            error?.let { println(red(it)) }
+            error?.let { println(brightRed(it)) }
             println()
         } while (packageLocaleValid != Validation.Success)
     }

@@ -2,9 +2,9 @@ package data.shared
 
 import Errors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.GitHubImpl
 import data.SharedManifestData
@@ -39,7 +39,7 @@ object PackageIdentifier : KoinComponent {
                         findPreviousVersions()
                     }
                 } else {
-                    println(red(it))
+                    println(brightRed(it))
                 }
             }
             println()

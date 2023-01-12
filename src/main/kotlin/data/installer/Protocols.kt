@@ -2,10 +2,10 @@ package data.installer
 
 import Errors
 import Validation
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -34,12 +34,12 @@ object Protocols : KoinComponent {
             )?.trim()?.convertToYamlList(protocolsSchema.uniqueItems)
             val (protocolsValid, error) = areProtocolsValid(input)
             if (protocolsValid == Validation.Success) installerManifestData.protocols = input
-            error?.let { println(red(it)) }
+            error?.let { println(brightRed(it)) }
             println()
         } while (protocolsValid != Validation.Success)
     }
 
-    fun areProtocolsValid(
+    private fun areProtocolsValid(
         protocols: Iterable<String>?,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {

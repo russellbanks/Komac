@@ -2,11 +2,11 @@ package data.shared
 
 import Errors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextStyles.bold
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
@@ -50,7 +50,7 @@ object Url : KoinComponent {
                 if (it == null) {
                     if (input != null) installerManifestData.installerUrl = input
                 } else {
-                    println(red(it))
+                    println(brightRed(it))
                 }
             }
             println()
@@ -179,7 +179,7 @@ object Url : KoinComponent {
                         LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
                     }
                 } else {
-                    println(red(it))
+                    println(brightRed(it))
                 }
             }
             println()

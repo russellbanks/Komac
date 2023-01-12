@@ -1,8 +1,8 @@
 package token
 
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import com.microsoft.alm.secret.Token
 import com.microsoft.alm.secret.TokenType
@@ -26,7 +26,7 @@ class TokenStore {
             if (checkIfTokenValid(credentialToken)) {
                 token = credentialToken
             } else {
-                terminal.println(red("Token is invalid. Please enter a new token."))
+                terminal.println(brightRed("Token is invalid. Please enter a new token."))
                 promptForToken(terminal).also { putToken(it, credentialStore) }
             }
         }
@@ -62,11 +62,11 @@ class TokenStore {
             if (GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid) {
                 true
             } else {
-                println(red("Invalid token. Please try again."))
+                println(brightRed("Invalid token. Please try again."))
                 false
             }
         } catch (ioException: IOException) {
-            println(red(ioException.message ?: "Invalid token. Please try again."))
+            println(brightRed(ioException.message ?: "Invalid token. Please try again."))
             false
         }
     }

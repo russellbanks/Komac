@@ -1,8 +1,8 @@
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.rendering.TextStyles.bold
 import data.GitHubImpl
 import data.SharedManifestData
@@ -60,7 +60,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
                 println(brightGreen("${Prompts.required} Give a reason for removing this manifest"))
                 deletionReason = prompt("Reason")?.trim()
                 val (isReasonValid, error) = isReasonValid(deletionReason)
-                error?.let { println(red(it)) }
+                error?.let { println(brightRed(it)) }
                 println()
             } while (isReasonValid != Validation.Success)
             removeManifestPullRequestPrompt(sharedManifestData = sharedManifestData).also { shouldRemoveManifest ->
@@ -92,7 +92,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
                             /* body = */ "## $deletionReason"
                         ).also { println(brightGreen("Pull request created: ${it.htmlUrl}")) }
                     } catch (ioException: IOException) {
-                        println(red(ioException.message ?: "Failed to create pull request"))
+                        println(brightRed(ioException.message ?: "Failed to create pull request"))
                     }
                 }
             }

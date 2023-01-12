@@ -4,11 +4,11 @@ import Errors
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextColors.red
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -54,7 +54,7 @@ object InstallerType : KoinComponent {
                     default = getPreviousValue()?.also { println(gray("Previous installer type: $it")) }
                 )?.trim()?.lowercase()
                 val (installerTypeValid, error) = isInstallerTypeValid(input, installerTypeSchema)
-                error?.let { println(red(it)) }
+                error?.let { println(brightRed(it)) }
                 if (installerTypeValid == Validation.Success && input != null) {
                     installerManifestData.installerType = input.toInstallerType()
                 }

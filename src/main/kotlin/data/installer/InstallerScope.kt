@@ -2,7 +2,11 @@ package data.installer
 
 import Errors
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
+import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -24,7 +28,7 @@ object InstallerScope : KoinComponent {
 
     fun Terminal.installerScopePrompt() {
         when (sharedManifestData.msi?.allUsers) {
-            "1" -> installerManifestData.scope =InstallerManifest.Installer.Scope.Machine
+            "1" -> installerManifestData.scope = InstallerManifest.Installer.Scope.Machine
             "" -> installerManifestData.scope = InstallerManifest.Installer.Scope.User
             "2" ->  installerManifestData.scope = null
             else -> {
@@ -39,11 +43,11 @@ object InstallerScope : KoinComponent {
                     val previousValue = getPreviousValue()
                     println(
                         verticalLayout {
-                            cell(TextColors.brightYellow(installerScopeInfo))
+                            cell(brightYellow(installerScopeInfo))
                             InstallerManifest.Scope.values().forEach { scope ->
                                 val textColour = when (previousValue) {
-                                    scope, scope.toPerScopeInstallerType() -> TextColors.brightGreen
-                                    else -> TextColors.brightWhite
+                                    scope, scope.toPerScopeInstallerType() -> brightGreen
+                                    else -> brightWhite
                                 }
                                 cell(
                                     textColour(
@@ -55,11 +59,11 @@ object InstallerScope : KoinComponent {
                                     )
                                 )
                             }
-                            previousValue?.let { cell(TextColors.gray("Previous value: $previousValue")) }
+                            previousValue?.let { cell(gray("Previous value: $previousValue")) }
                         }
                     )
                     val input = prompt(
-                        prompt = TextColors.brightWhite(Prompts.enterChoice),
+                        prompt = brightWhite(Prompts.enterChoice),
                         default = previousValue?.toString()?.first()?.toString()
                     )?.trim()
                     val (installerScopeValid, error) = isInstallerScopeValid(input?.firstOrNull(), installerScopeSchema)
@@ -68,7 +72,7 @@ object InstallerScope : KoinComponent {
                             it.name.firstOrNull()?.titlecase() == input?.firstOrNull()?.titlecase()
                         }
                     }
-                    error?.let { println(TextColors.red(it)) }
+                    error?.let { println(brightRed(it)) }
                     println()
                 } while (installerScopeValid != Validation.Success)
             }

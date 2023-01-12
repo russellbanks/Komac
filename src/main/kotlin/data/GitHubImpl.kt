@@ -1,8 +1,8 @@
 package data
 
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
+import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.red
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
@@ -63,7 +63,9 @@ class GitHubImpl : KoinComponent {
                     }
                 } catch (ioException: IOException) {
                     println(
-                        red(ioException.message ?: "Failed to fork $wingetpkgs. Please try again or fork it manually.")
+                        brightRed(
+                            ioException.message ?: "Failed to fork $wingetpkgs. Please try again or fork it manually."
+                        )
                     )
                     null
                 }
@@ -75,7 +77,7 @@ class GitHubImpl : KoinComponent {
         return try {
             github.getRepository("$Microsoft/$wingetpkgs")
         } catch (ioException: IOException) {
-            terminal.println(red(ioException.message ?: "Failed to get Microsoft winget-pkgs repository."))
+            terminal.println(brightRed(ioException.message ?: "Failed to get Microsoft winget-pkgs repository."))
             null
         }
     }
@@ -87,7 +89,7 @@ class GitHubImpl : KoinComponent {
                 /* sha = */ repository.getBranch(repository.defaultBranch).shA1
             )
         } catch (ioException: IOException) {
-            terminal.println(red(ioException.message ?: "Failed to create branch."))
+            terminal.println(brightRed(ioException.message ?: "Failed to create branch."))
             null
         }
     }
