@@ -49,17 +49,8 @@ class InstallerManifestData : KoinComponent {
             upgradeBehavior = upgradeBehavior?.toPerInstallerUpgradeBehaviour(),
             productCode = productCode?.ifBlank { null },
             releaseDate = releaseDate,
-            appsAndFeaturesEntries = sharedManifestData.msi?.let {
-                listOf(
-                    InstallerManifest.Installer.AppsAndFeaturesEntry(
-                        displayName = if (sharedManifestData.packageName != sharedManifestData.msi?.productName) {
-                            sharedManifestData.msi?.productName
-                        } else {
-                            null
-                        },
-                        upgradeCode = it.upgradeCode
-                    )
-                )
+            appsAndFeaturesEntries = sharedManifestData.msi?.upgradeCode?.let {
+                listOf(InstallerManifest.Installer.AppsAndFeaturesEntry(upgradeCode = it))
             },
         ).also { resetValues() }
     }
@@ -109,7 +100,20 @@ class InstallerManifestData : KoinComponent {
             fileExtensions = fileExtensions?.ifEmpty { null },
             releaseDate = if (releaseDateDistinct) installers.map { it.releaseDate }.first() else null,
             appsAndFeaturesEntries = when {
-                arpDistinct -> installers.map { it.appsAndFeaturesEntries }.first()?.map { it.toManifestARPEntry() }
+                arpDistinct -> installers.map { installer ->
+                    installer.appsAndFeaturesEntries?.map {
+                        it.copy(
+                            displayName = if (
+                                sharedManifestData.msi?.productName != null &&
+                                sharedManifestData.packageName != sharedManifestData.msi?.productName
+                            ) {
+                                sharedManifestData.msi?.productName
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }.first()?.map { it.toManifestARPEntry() }
                 else -> null
             },
             installers = installers.map { installer ->
