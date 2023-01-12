@@ -1,7 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.panteleyev.jpackage.ImageType
-import java.util.Calendar
 
 plugins {
     alias(libs.plugins.buildconfig)
@@ -78,27 +77,29 @@ task("copyJar", Copy::class) {
     from(tasks.jar).into("$buildDir/jars")
 }
 
+application {
+    mainClass.set("MainKt")
+}
+
 tasks.jpackage {
     dependsOn("build", "copyDependencies", "copyJar")
-
     input  = "$buildDir/jars"
     destination = "$buildDir/distributions"
-
+    /* addModules = listOf(
+        "java.base", "java.desktop", "java.logging", "java.management", "java.net.http", "java.sql", "java.xml"
+    ) */
+    resourceDir = "$rootDir/config/wix"
     appName = project.name
     appVersion = project.version.toString()
-
-    copyright = "Copyright (c) ${Calendar.getInstance().get(Calendar.YEAR)} Russell Banks"
-
+    copyright = "Copyright (c) Russell Banks"
     licenseFile = "$projectDir/src/main/resources/gpl-3.0.txt"
-
     vendor = "Russell Banks"
-
     mainJar = tasks.jar.get().archiveFileName.get()
-    mainClass = "${project.group}.${application.mainClass}"
-
+    mainClass = application.mainClass.get()
     javaOptions = listOf("-Dfile.encoding=UTF-8")
 
     windows {
+        winPerUserInstall = true
         type = ImageType.MSI
         winConsole = true
         winUpgradeUuid = "2D35545F-9065-48C3-A345-42244A3E9FBF"
@@ -131,8 +132,4 @@ buildConfig {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
-}
-
-application {
-    mainClass.set("MainKt")
 }
