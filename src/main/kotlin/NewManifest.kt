@@ -81,9 +81,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     installerScopePrompt()
                     upgradeBehaviourPrompt()
                     releaseDatePrompt()
-                    val installer = installerManifestData.createInstaller()
-                    addMsixBundlePackages(installer)
-                    installerManifestData.installers += installer
+                    installerManifestData.addInstaller()
                     val shouldContinue = shouldLoopPrompt()
                 } while (shouldContinue)
                 fileExtensionsPrompt()

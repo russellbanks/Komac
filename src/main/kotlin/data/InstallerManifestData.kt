@@ -32,8 +32,8 @@ class InstallerManifestData : KoinComponent {
     private val installerSchema
         get() = schemaImpl.installerSchema
 
-    fun createInstaller(): InstallerManifest.Installer {
-        return InstallerManifest.Installer(
+    fun addInstaller() {
+        val installer = InstallerManifest.Installer(
             installerLocale = installerLocale?.ifBlank { null },
             architecture = architecture,
             installerType = installerType,
@@ -52,7 +52,21 @@ class InstallerManifestData : KoinComponent {
             appsAndFeaturesEntries = sharedManifestData.msi?.upgradeCode?.let {
                 listOf(InstallerManifest.Installer.AppsAndFeaturesEntry(upgradeCode = it))
             },
-        ).also { resetValues() }
+        )
+        when (sharedManifestData.msixBundle) {
+            null -> installers += installer
+            else -> {
+                sharedManifestData.msixBundle?.packages?.forEach { individualPackage ->
+                    individualPackage.processorArchitecture?.let { architecture ->
+                        installers += installer.copy(
+                            architecture = architecture,
+                            platform = individualPackage.targetDeviceFamily?.map { it.toPerInstallerPlatform() },
+                        )
+                    }
+                }
+            }
+        }
+        resetValues()
     }
 
     fun createInstallerManifest(): String {
