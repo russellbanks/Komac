@@ -18,6 +18,9 @@ import data.locale.LocaleUrl
 import hashing.Hashing.hash
 import input.PromptType
 import input.Prompts
+import io.ktor.client.network.sockets.ConnectTimeoutException
+import io.ktor.client.network.sockets.SocketTimeoutException
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.head
 import io.ktor.http.isSuccess
 import ktor.Clients
@@ -183,7 +186,7 @@ object Url : KoinComponent {
         } while (!error.isNullOrBlank())
     }
 
-    suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): String? {
+    private suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): String? {
         val maxLength = when (schema) {
             is InstallerSchema -> schema.definitions.url.maxLength
             is DefaultLocaleSchema -> schema.definitions.url.maxLength
@@ -203,11 +206,19 @@ object Url : KoinComponent {
             !url.matches(pattern) -> Errors.invalidRegex(pattern)
             else -> {
                 get<Clients>().httpClient.config { followRedirects = false }.use {
-                    val installerUrlResponse = it.head(url)
-                    if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {
-                        Errors.unsuccessfulUrlResponse(installerUrlResponse)
-                    } else {
-                        null
+                    try {
+                        val installerUrlResponse = it.head(url)
+                        if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {
+                            Errors.unsuccessfulUrlResponse(installerUrlResponse)
+                        } else {
+                            null
+                        }
+                    } catch (_: HttpRequestTimeoutException) {
+                        Errors.connectionTimeout
+                    } catch (_: ConnectTimeoutException) {
+                        Errors.connectionTimeout
+                    } catch (_: SocketTimeoutException) {
+                        Errors.connectionTimeout
                     }
                 }
             }

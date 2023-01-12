@@ -56,4 +56,6 @@ object Errors {
     fun invalidEnum(validation: Validation, enum: List<String>): String {
         return "$error $validation - Value must exist in the enum - ${enum.joinToString(", ")}"
     }
+
+    const val connectionTimeout = "$error Connection timed out"
 }
