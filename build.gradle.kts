@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.panteleyev.jpackage.ImageType
 import java.util.Calendar
@@ -40,9 +41,6 @@ dependencies {
     // Kaml - https://github.com/charleskorn/kaml
     implementation(libs.kaml)
 
-    // Klogging SLF4J = https://github.com/klogging/slf4j-klogging
-    implementation(libs.klogging.slf4j)
-
     // Koin - https://github.com/InsertKoinIO/koin
     implementation(libs.koin.core)
     implementation(libs.koin.annotations)
@@ -66,9 +64,10 @@ dependencies {
     implementation(libs.mordant)
 
     // Secure Token Storage Library - https://github.com/microsoft/vsts-authentication-library-for-java
-    implementation(libs.auth.secure.storage) {
-        exclude(group = "org.slf4j")
-    }
+    implementation(libs.auth.secure.storage)
+
+    // SLF4J No-operation implementation - https://github.com/qos-ch/slf4j
+    implementation(libs.slf4j.nop)
 }
 
 task("copyDependencies", Copy::class) {
@@ -107,6 +106,13 @@ tasks.jpackage {
 
     linux {
         type = ImageType.DEB
+    }
+}
+
+tasks.withType<ShadowJar> {
+    minimize {
+        exclude(dependency(libs.jna.asProvider().get().toString()))
+        exclude(dependency(libs.slf4j.nop.get().toString()))
     }
 }
 
