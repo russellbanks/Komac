@@ -1,13 +1,15 @@
 package data.msi
 
-import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Native
 import com.sun.jna.WString
+import com.sun.jna.ptr.IntByReference
+import com.sun.jna.ptr.PointerByReference
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.TerminalInstance
 import java.io.File
 
+@Suppress("LoopWithTooManyJumpStatements")
 class Msi(private val msiFile: File) : KoinComponent {
     var productCode: String? = null
     var upgradeCode: String? = null
@@ -26,104 +28,82 @@ class Msi(private val msiFile: File) : KoinComponent {
 
     private fun getValues() {
         with(get<TerminalInstance>().terminal) {
-            val database = openDatabase() ?: return
+            val phDatabase = PointerByReference()
+            var result = msiLibrary.MsiOpenDatabaseW(WString(msiFile.path), WString(msiDbOpenReadOnly), phDatabase)
+            if (result != 0) {
+                println("Error opening database: $result")
+                return
+            }
 
-            val view = executeQuery(
-                database = database,
-                query = SQLBuilder()
-                    .select(property, value)
-                    .from(property)
-                    .where(property, values)
-                    .toString()
-            ) ?: return
+            val phView = PointerByReference()
+            result = msiLibrary.MsiDatabaseOpenViewW(
+                phDatabase.value,
+                WString(
+                    SQLBuilder()
+                        .select(property, value)
+                        .from(property)
+                        .where(property, values)
+                        .toString()
+                ),
+                phView
+            )
+            if (result != 0) {
+                println("Error executing query: $result")
+                msiLibrary.MsiCloseHandle(phDatabase.value)
+                return
+            }
 
-            executeView(database = database, view = view) ?: return
+            result = msiLibrary.MsiViewExecute(phView.value, null)
+            if (result != 0) {
+                println("Error executing view: $result")
+                msiLibrary.MsiCloseHandle(phView.value)
+                msiLibrary.MsiCloseHandle(phDatabase.value)
+                return
+            }
 
-            // Fetch the records
-            var result: Int
-            val hRecord = LongArray(1)
+            val phRecord = PointerByReference()
             while (true) {
-                result = msiLibrary.MsiViewFetch(view, hRecord)
+                result = msiLibrary.MsiViewFetch(phView.value, phRecord)
                 if (result != 0) {
                     break
                 }
-                val record = hRecord.first()
 
-                // Get the property and value
-                val szPropertyBuf = CharArray(1024)
-                val pcchPropertyBuf = intArrayOf(szPropertyBuf.size)
-                result = msiLibrary.MsiRecordGetStringW(record, 1, szPropertyBuf, pcchPropertyBuf)
-                if (result == 0) {
-                    val property = Native.toString(szPropertyBuf)
-
-                    val szValueBuf = CharArray(1024)
-                    val pcchValueBuf = intArrayOf(szValueBuf.size)
-                    result = msiLibrary.MsiRecordGetStringW(record, 2, szValueBuf, pcchValueBuf)
-                    if (result == 0) {
-                        val value = Native.toString(szValueBuf)
-                        when (property) {
-                            upgradeCodeConst -> upgradeCode = value
-                            productCodeConst -> productCode = value
-                            productNameConst -> productName = value
-                            productVersionConst -> productVersion = value
-                            manufacturerConst -> manufacturer = value
-                            productLanguageConst -> productLanguage = value.toIntOrNull()
-                            wixUiModeConst -> isWix = true
-                            allUsersConst -> allUsers = value
-                        }
-                        msiLibrary.MsiCloseHandle(record)
-                    } else {
-                        msiLibrary.MsiCloseHandle(record)
-                    }
-                } else {
-                    msiLibrary.MsiCloseHandle(record)
-                }
-            }
-
-            // Close the view and database
-            msiLibrary.MsiViewClose(view)
-            msiLibrary.MsiCloseHandle(database)
-        }
-    }
-
-    private fun Terminal.openDatabase(): Long? {
-        return LongArray(1)
-            .let {
-                val result = msiLibrary.MsiOpenDatabaseW(WString(msiFile.path), 0, it)
+                val pcchPropertyBuf = IntByReference()
+                val szPropertyBuf = CharArray(propertyBufferSize)
+                pcchPropertyBuf.value = propertyBufferSize
+               result = msiLibrary.MsiRecordGetStringW(phRecord.value, 1, szPropertyBuf, pcchPropertyBuf)
                 if (result != 0) {
-                    println("Error opening database: $result")
-                    null
-                } else {
-                    it
+                    println("Error getting property: $result")
+                    msiLibrary.MsiCloseHandle(phRecord.value)
+                    continue
                 }
-            }
-            ?.first()
-    }
+                val property = Native.toString(szPropertyBuf)
 
-    private fun Terminal.executeQuery(database: Long, query: String): Long? {
-        return LongArray(1)
-            .let {
-                val result = msiLibrary.MsiDatabaseOpenViewW(database, WString(query), it)
+                val pcchValueBuf = IntByReference()
+                val szValueBuf = CharArray(valueBufferSize)
+                pcchValueBuf.value = valueBufferSize
+                result = msiLibrary.MsiRecordGetStringW(phRecord.value, 2, szValueBuf, pcchValueBuf)
                 if (result != 0) {
-                    println("Error executing query: $result")
-                    msiLibrary.MsiCloseHandle(database)
-                    null
-                } else {
-                    it
+                    println("Error getting value: $result")
+                    msiLibrary.MsiCloseHandle(phRecord.value)
+                    continue
                 }
-            }
-            ?.first()
-    }
 
-    private fun Terminal.executeView(database: Long, view: Long): Unit? {
-        val result = msiLibrary.MsiViewExecute(view, 0)
-        return if (result != 0) {
-            println("Error executing view: $result")
-            msiLibrary.MsiViewClose(view)
-            msiLibrary.MsiCloseHandle(database)
-            null
-        } else {
-            Unit
+                val value = Native.toString(szValueBuf)
+                when (property) {
+                    upgradeCodeConst -> upgradeCode = value
+                    productCodeConst -> productCode = value
+                    productNameConst -> productName = value
+                    productVersionConst -> productVersion = value
+                    manufacturerConst -> manufacturer = value
+                    productLanguageConst -> productLanguage = value.toIntOrNull()
+                    wixUiModeConst -> isWix = true
+                    allUsersConst -> allUsers = value
+                }
+                msiLibrary.MsiCloseHandle(phRecord.value)
+            }
+            msiLibrary.MsiCloseHandle(phView.value)
+            msiLibrary.MsiCloseHandle(phDatabase.value)
         }
     }
 
@@ -146,6 +126,9 @@ class Msi(private val msiFile: File) : KoinComponent {
         private const val productLanguageConst = "ProductLanguage"
         private const val wixUiModeConst = "WixUI_Mode"
         private const val allUsersConst = "ALLUSERS"
+        private const val msiDbOpenReadOnly = "MSIDBOPEN_READONLY"
+        private const val propertyBufferSize = 16 // Length of "ProductLanguage" + null terminator
+        private const val valueBufferSize = 39 // Length of ProductCode/UpgradeCode + null terminator
         val values = listOf(
             upgradeCodeConst,
             productCodeConst,
