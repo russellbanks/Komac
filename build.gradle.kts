@@ -85,9 +85,16 @@ tasks.jpackage {
     dependsOn("build", "copyDependencies", "copyJar")
     input  = "$buildDir/jars"
     destination = "$buildDir/distributions"
-    /* addModules = listOf(
-        "java.base", "java.desktop", "java.logging", "java.management", "java.net.http", "java.sql", "java.xml"
-    ) */
+    addModules = listOf(
+        "java.base",
+        "java.desktop",
+        "java.instrument",
+        "java.management",
+        "java.net.http",
+        "java.sql",
+        "jdk.crypto.cryptoki",
+        "jdk.unsupported"
+    )
     resourceDir = "$rootDir/config/wix"
     appName = project.name
     appVersion = project.version.toString()
