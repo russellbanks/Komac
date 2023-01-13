@@ -25,7 +25,7 @@ object PackageIdentifier : KoinComponent {
     private lateinit var installerSchema: InstallerSchema
 
     suspend fun Terminal.packageIdentifierPrompt() {
-        val schemasImpl: SchemasImpl by inject()
+        val schemasImpl: SchemasImpl = get()
         do {
             println(brightGreen(packageIdentifierInfo))
             println(cyan(packageIdentifierExample))
