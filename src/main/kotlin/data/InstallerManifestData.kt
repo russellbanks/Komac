@@ -15,6 +15,8 @@ class InstallerManifestData : KoinComponent {
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
     lateinit var installerType: InstallerManifest.Installer.InstallerType
+    var nestedInstallerType: InstallerManifest.Installer.NestedInstallerType? = null
+    var nestedInstallerFiles: List<InstallerManifest.Installer.NestedInstallerFiles>? = null
     var installerSwitches = InstallerManifest.Installer.InstallerSwitches()
     var installerLocale: String? = null
     var productCode: String? = null
@@ -37,6 +39,8 @@ class InstallerManifestData : KoinComponent {
             installerLocale = installerLocale?.ifBlank { null },
             architecture = architecture,
             installerType = installerType,
+            nestedInstallerType = nestedInstallerType,
+            nestedInstallerFiles = nestedInstallerFiles.takeIf { it?.isNotEmpty() == true },
             installerUrl = installerUrl,
             installerSha256 = installerSha256.uppercase(),
             signatureSha256 = when {

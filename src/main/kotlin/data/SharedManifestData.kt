@@ -1,8 +1,9 @@
 package data
 
-import msi.Msi
-import msix.Msix
-import msix.MsixBundle
+import data.msi.Msi
+import data.msix.Msix
+import data.msix.MsixBundle
+import data.zip.Zip
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 
@@ -17,5 +18,6 @@ class SharedManifestData : KoinComponent {
     var msix: Msix? = null
     var msixBundle: MsixBundle? = null
     var msi: Msi? = null
+    var zip: Zip? = null
     var fileExtension: String? = null
 }

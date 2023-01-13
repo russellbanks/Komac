@@ -1,4 +1,4 @@
-package msi
+package data.msi
 
 import com.sun.jna.Library
 import com.sun.jna.Native

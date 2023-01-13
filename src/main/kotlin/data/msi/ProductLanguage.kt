@@ -1,4 +1,4 @@
-package msi
+package data.msi
 
 @Suppress("MagicNumber")
 class ProductLanguage(languageCode: Int?) {
