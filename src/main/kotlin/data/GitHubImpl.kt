@@ -3,6 +3,8 @@ package data
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import ktor.Clients
+import ktor.KtorGitHubConnector
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
@@ -18,7 +20,10 @@ import java.io.IOException
 
 @Single
 class GitHubImpl : KoinComponent {
-    val github: GitHub = GitHubBuilder().withOAuthToken(get<TokenStore>().token).build()
+    val github: GitHub = GitHubBuilder()
+        .withConnector(KtorGitHubConnector(get<Clients>().httpClient))
+        .withOAuthToken(get<TokenStore>().token)
+        .build()
     private val sharedManifestData: SharedManifestData by inject()
     val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
     val defaultLocaleManifestName

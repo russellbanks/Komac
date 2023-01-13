@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.connector.GitHubConnector
 import org.kohsuke.github.connector.GitHubConnectorRequest
 import org.kohsuke.github.connector.GitHubConnectorResponse
+import org.kohsuke.github.connector.GitHubConnectorResponse.ByteArrayResponse
 import java.io.IOException
 import java.io.InputStream
 
@@ -40,13 +41,9 @@ class KtorGitHubConnector(private val client: HttpClient) : GitHubConnector {
     private class KtorGitHubConnectorResponse(
         request: GitHubConnectorRequest,
         private val response: HttpResponse
-    ) : GitHubConnectorResponse(request, response.status.value, response.headers.toMap()) {
-        override fun close() {
-            // Do nothing
-        }
-
-        override fun bodyStream(): InputStream = runBlocking {
-            response.body()
+    ) : ByteArrayResponse(request, response.status.value, response.headers.toMap()) {
+        override fun rawBodyStream(): InputStream? = runBlocking {
+            return@runBlocking response.body()
         }
     }
 }
