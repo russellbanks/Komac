@@ -30,7 +30,7 @@ object InstallerScope : KoinComponent {
         when (sharedManifestData.msi?.allUsers) {
             "1" -> installerManifestData.scope = InstallerManifest.Installer.Scope.Machine
             "" -> installerManifestData.scope = InstallerManifest.Installer.Scope.User
-            "2" ->  installerManifestData.scope = null
+            "2" -> installerManifestData.scope = null
             else -> {
                 if (
                     installerManifestData.installerType == InstallerManifest.Installer.InstallerType.MSIX ||

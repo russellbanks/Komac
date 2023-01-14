@@ -436,6 +436,19 @@ data class InstallerManifest(
             @SerialName("burn") BURN,
             @SerialName("portable") PORTABLE;
 
+            fun toManifestNestedInstallerType() = when (this) {
+                MSIX -> InstallerManifest.NestedInstallerType.MSIX
+                MSI -> InstallerManifest.NestedInstallerType.MSI
+                APPX -> InstallerManifest.NestedInstallerType.APPX
+                EXE -> InstallerManifest.NestedInstallerType.EXE
+                ZIP -> InstallerManifest.NestedInstallerType.ZIP
+                INNO -> InstallerManifest.NestedInstallerType.INNO
+                NULLSOFT -> InstallerManifest.NestedInstallerType.NULLSOFT
+                WIX -> InstallerManifest.NestedInstallerType.WIX
+                BURN -> InstallerManifest.NestedInstallerType.BURN
+                PORTABLE -> InstallerManifest.NestedInstallerType.PORTABLE
+            }
+
             override fun toString() = name.lowercase()
         }
 
@@ -446,7 +459,12 @@ data class InstallerManifest(
         data class NestedInstallerFiles(
             @SerialName("RelativeFilePath") val relativeFilePath: String,
             @SerialName("PortableCommandAlias") val portableCommandAlias: String? = null
-        )
+        ) {
+            fun toManifestNestedInstallerFiles() = InstallerManifest.NestedInstallerFiles(
+                relativeFilePath = relativeFilePath,
+                portableCommandAlias = portableCommandAlias
+            )
+        }
 
         /**
          * Scope indicates if the installer is per user or per machine

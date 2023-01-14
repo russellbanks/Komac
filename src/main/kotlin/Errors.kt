@@ -51,10 +51,15 @@ object Errors {
 
     fun blankInput(promptType: PromptType? = null) = blankInput(promptType.toString())
 
-    private fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
+    fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
 
-    fun invalidEnum(validation: Validation, enum: List<String>): String {
-        return "$error $validation - Value must exist in the enum - ${enum.joinToString(", ")}"
+    fun invalidEnum(validation: Validation?, enum: List<String>): String {
+        return buildString {
+            append(error)
+            if (validation != null) append(" $validation")
+            append(" - Value must exist in the enum - ")
+            append(enum.joinToString(", "))
+        }
     }
 
     const val connectionTimeout = "$error Connection timed out"

@@ -54,7 +54,7 @@ object PackageIdentifier : KoinComponent {
                 ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
                 ?.filter {
                     it.name.matches(
-                        Regex(get<SchemasImpl>().installerSchema.definitions.packageIdentifier.pattern)
+                        Regex(installerSchema.definitions.packageIdentifier.pattern)
                     )
                 }
                 ?.filter { it.isDirectory }
@@ -74,7 +74,7 @@ object PackageIdentifier : KoinComponent {
         }
     }
 
-    fun isPackageIdentifierValid(identifier: String?): String? {
+    private fun isPackageIdentifierValid(identifier: String?): String? {
         val packageIdentifierSchema = installerSchema.definitions.packageIdentifier
         return when {
             identifier.isNullOrBlank() -> Errors.blankInput(PromptType.PackageIdentifier)

@@ -37,6 +37,8 @@ class InstallerManifestData : KoinComponent {
             installerLocale = installerLocale?.ifBlank { null },
             architecture = architecture,
             installerType = installerType,
+            nestedInstallerType = sharedManifestData.zip?.nestedInstallerType,
+            nestedInstallerFiles = sharedManifestData.zip?.nestedInstallerFiles.takeIf { it?.isNotEmpty() == true },
             installerUrl = installerUrl,
             installerSha256 = installerSha256.uppercase(),
             signatureSha256 = when {
@@ -76,6 +78,8 @@ class InstallerManifestData : KoinComponent {
         val upgradeBehaviourDistinct = installers.distinctBy { it.upgradeBehavior }.size == 1
         val installerSwitchesDistinct = installers.distinctBy { it.installerSwitches }.size == 1
         val installerTypeDistinct = installers.distinctBy { it.installerType }.size == 1
+        val nestedInstallerTypeDistinct = installers.distinctBy { it.nestedInstallerType }.size == 1
+        val nestedInstallerFilesDistinct = installers.distinctBy { it.nestedInstallerFiles }.size == 1
         val platformDistinct = installers.distinctBy { it.platform }.size == 1
         val minimumOSVersionDistinct = installers.distinctBy { it.minimumOSVersion }.size == 1
         val arpDistinct = installers.distinctBy { it.appsAndFeaturesEntries }.size == 1
@@ -93,6 +97,16 @@ class InstallerManifestData : KoinComponent {
             minimumOSVersion = if (minimumOSVersionDistinct) installers.map { it.minimumOSVersion }.first() else null,
             installerType = if (installers.distinctBy { it.installerType }.size == 1) {
                 installerType.toManifestInstallerType()
+            } else {
+                null
+            },
+            nestedInstallerType = if (nestedInstallerTypeDistinct) {
+                installers.map { it.nestedInstallerType }.first()?.toManifestNestedInstallerType()
+            } else {
+                null
+            },
+            nestedInstallerFiles = if (nestedInstallerFilesDistinct) {
+                installers.map { it.nestedInstallerFiles }.first()?.map { it.toManifestNestedInstallerFiles() }
             } else {
                 null
             },
@@ -132,9 +146,11 @@ class InstallerManifestData : KoinComponent {
             },
             installers = installers.map { installer ->
                 installer.copy(
+                    installerLocale = if (installersLocaleDistinct) null else installer.installerLocale,
                     platform = if (platformDistinct) null else installer.platform,
                     minimumOSVersion = if (minimumOSVersionDistinct) null else installer.minimumOSVersion,
-                    installerLocale = if (installersLocaleDistinct) null else installer.installerLocale,
+                    nestedInstallerType = if (nestedInstallerTypeDistinct) null else installer.nestedInstallerType,
+                    nestedInstallerFiles = if (nestedInstallerFilesDistinct) null else installer.nestedInstallerFiles,
                     scope = if (installerScopeDistinct) null else installer.scope,
                     releaseDate = if (releaseDateDistinct) null else installer.releaseDate,
                     upgradeBehavior = if (upgradeBehaviourDistinct) null else installer.upgradeBehavior,

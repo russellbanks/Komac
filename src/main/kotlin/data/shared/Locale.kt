@@ -13,9 +13,9 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
+import data.msi.ProductLanguage
 import input.PromptType
 import input.Prompts
-import msi.ProductLanguage
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject

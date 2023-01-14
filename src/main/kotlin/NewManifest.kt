@@ -1,3 +1,4 @@
+
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -51,7 +52,6 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.InstallerManifest
 import schemas.LocaleManifest
 import schemas.SchemasImpl
 import schemas.TerminalInstance
@@ -114,23 +114,6 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     }
                 }
             }
-        }
-    }
-
-    private fun addMsixBundlePackages(installer: InstallerManifest.Installer) {
-        sharedManifestData.msixBundle?.let { msixBundle ->
-            msixBundle.packages?.forEachIndexed { index, individualPackage ->
-                if (index == 0) return@forEachIndexed
-                individualPackage.processorArchitecture?.let { architecture ->
-                    installerManifestData.installers += installer.copy(
-                        architecture = architecture,
-                        platform = individualPackage.targetDeviceFamily?.map {
-                            it.toPerInstallerPlatform()
-                        },
-                    )
-                }
-            }
-            sharedManifestData.msixBundle = null
         }
     }
 

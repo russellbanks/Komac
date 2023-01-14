@@ -15,6 +15,10 @@ import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.locale.LocaleUrl
+import data.msi.Msi
+import data.msix.Msix
+import data.msix.MsixBundle
+import data.zip.Zip
 import hashing.Hashing.hash
 import input.PromptType
 import input.Prompts
@@ -25,9 +29,6 @@ import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
-import msi.Msi
-import msix.Msix
-import msix.MsixBundle
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -99,15 +100,18 @@ object Url : KoinComponent {
         } else {
             get<Clients>().httpClient.downloadInstallerFromUrl().apply {
                 installerManifestData.installerSha256 = hash()
-                when {
-                    extension.lowercase() == InstallerManifest.InstallerType.MSIX.toString() -> {
+                when (extension.lowercase()) {
+                    InstallerManifest.InstallerType.MSIX.toString() -> {
                         sharedManifestData.msix = Msix(this)
                     }
-                    extension.lowercase() == MsixBundle.msixBundleConst -> {
+                    MsixBundle.msixBundleConst -> {
                         sharedManifestData.msixBundle = MsixBundle(this)
                     }
-                    extension.lowercase() == InstallerManifest.InstallerType.MSI.toString() -> {
+                    InstallerManifest.InstallerType.MSI.toString() -> {
                         sharedManifestData.msi = Msi(this)
+                    }
+                    InstallerManifest.InstallerType.ZIP.toString() -> {
+                        sharedManifestData.zip = Zip(this)
                     }
                 }
                 delete()

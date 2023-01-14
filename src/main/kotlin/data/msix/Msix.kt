@@ -1,4 +1,4 @@
-package msix
+package data.msix
 
 import hashing.Hashing
 import org.w3c.dom.Document
