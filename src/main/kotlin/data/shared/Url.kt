@@ -15,6 +15,10 @@ import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.locale.LocaleUrl
+import data.msi.Msi
+import data.msix.Msix
+import data.msix.MsixBundle
+import data.zip.Zip
 import hashing.Hashing.hash
 import input.PromptType
 import input.Prompts
@@ -25,10 +29,6 @@ import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
-import data.msi.Msi
-import data.msix.Msix
-import data.msix.MsixBundle
-import data.zip.Zip
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject

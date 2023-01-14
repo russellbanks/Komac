@@ -71,7 +71,7 @@ class Msi(private val msiFile: File) : KoinComponent {
                 val pcchPropertyBuf = IntByReference()
                 val szPropertyBuf = CharArray(propertyBufferSize)
                 pcchPropertyBuf.value = propertyBufferSize
-               result = msiLibrary.MsiRecordGetStringW(phRecord.value, 1, szPropertyBuf, pcchPropertyBuf)
+                result = msiLibrary.MsiRecordGetStringW(phRecord.value, 1, szPropertyBuf, pcchPropertyBuf)
                 if (result != 0) {
                     println("Error getting property: $result")
                     msiLibrary.MsiCloseHandle(phRecord.value)

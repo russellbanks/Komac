@@ -59,7 +59,7 @@ object Architecture : KoinComponent {
         } while (architectureValid != Validation.Success)
     }
 
-    fun isArchitectureValid(
+    private fun isArchitectureValid(
         architecture: String?,
         architectureSchema: InstallerSchema.Definitions.Architecture
     ): Pair<Validation, String?> {
