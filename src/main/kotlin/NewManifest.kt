@@ -1,6 +1,5 @@
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.table.verticalLayout
@@ -158,8 +157,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 verticalLayout {
                     cell(brightYellow(additionalInstallerInfo))
                     Polar.values().forEach {
-                        val textColour = if (it == Polar.No) brightGreen else brightWhite
-                        cell(textColour("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
+                        cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
                     }
                 }
             )
@@ -168,7 +166,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 default = when {
                     (previousManifestData?.remoteInstallerData?.installers?.size ?: 0) >
                         installerManifestData.installers.size -> Polar.Yes.name.first().toString()
-                    else -> Polar.No.name.first().toString()
+                    else -> null
                 },
             )?.trim()?.lowercase()?.firstOrNull()
             println()
