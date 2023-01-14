@@ -180,5 +180,6 @@ class InstallerManifestData : KoinComponent {
         sharedManifestData.msi?.resetExceptShared()
         sharedManifestData.msix?.resetExceptShared()
         sharedManifestData.msixBundle?.resetExceptShared()
+        sharedManifestData.zip = null
     }
 }
