@@ -106,7 +106,8 @@ class InstallerManifestData : KoinComponent {
                 null
             },
             nestedInstallerFiles = if (nestedInstallerFilesDistinct) {
-                installers.map { it.nestedInstallerFiles }.first()?.map { it.toManifestNestedInstallerFiles() }
+                installers.map { it.nestedInstallerFiles }
+                    .first()?.map { it.toManifestNestedInstallerFiles() }?.sortedBy { it.relativeFilePath }
             } else {
                 null
             },
