@@ -1,7 +1,6 @@
 package data.shared
 
 import Errors
-import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -19,61 +18,77 @@ import org.koin.core.component.inject
 import schemas.InstallerSchema
 import schemas.SchemasImpl
 import kotlin.random.Random
+import kotlin.system.exitProcess
 
 object PackageVersion : KoinComponent {
     private val githubImpl: GitHubImpl by inject()
 
-    fun Terminal.packageVersionPrompt() {
+    fun Terminal.packageVersionPrompt(packageVersion: String? = null) {
         val sharedManifestData: SharedManifestData by inject()
-        do {
-            println(brightGreen(packageVersionInfo))
-            println(cyan(packageVersionExample))
-            val input = prompt(brightWhite(PromptType.PackageVersion.toString()))?.trim()
-            val (packageVersionValid, error) = isPackageVersionValid(input)
-            error?.let { println(brightRed(it)) }
-            if (packageVersionValid == Validation.Success && input != null) {
-                sharedManifestData.packageVersion = input
-                if (sharedManifestData.updateState != VersionUpdateState.NewPackage) {
-                    githubImpl.getMicrosoftWingetPkgs()
-                        ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
-                        ?.map { it.name }
-                        ?.contains(sharedManifestData.packageVersion)
-                        ?.let {
-                            if (it) {
-                                sharedManifestData.updateState = VersionUpdateState.UpdateVersion
-                            } else {
-                                val versionsToCompare = listOf(
-                                    sharedManifestData.packageVersion,
-                                    sharedManifestData.latestVersion
-                                )
-                                when (sharedManifestData.packageVersion) {
-                                    getHighestVersion(versionsToCompare.filterNotNull()) -> {
-                                        sharedManifestData.updateState = VersionUpdateState.NewVersion
-                                    }
-                                    else -> sharedManifestData.updateState = VersionUpdateState.AddVersion
-                                }
-                            }
-                        }
+        if (packageVersion != null) {
+            isPackageVersionValid(packageVersion).also {
+                if (it == null) {
+                    sharedManifestData.packageVersion = packageVersion
+                    setUpgradeState(sharedManifestData)
+                } else {
+                    println(brightRed(it))
+                    exitProcess(0)
                 }
             }
-            println()
-        } while (packageVersionValid != Validation.Success)
+        } else {
+            do {
+                println(brightGreen(packageVersionInfo))
+                println(cyan(packageVersionExample))
+                val input = prompt(brightWhite(PromptType.PackageVersion.toString()))?.trim()
+                val error = isPackageVersionValid(input)?.also { println(brightRed(it)) }
+                if (error == null && input != null) {
+                    sharedManifestData.packageVersion = input
+                    setUpgradeState(sharedManifestData)
+                }
+                println()
+            } while (error != null)
+        }
+    }
+
+    private fun setUpgradeState(sharedManifestData: SharedManifestData) {
+        if (sharedManifestData.updateState != VersionUpdateState.NewPackage) {
+            githubImpl.getMicrosoftWingetPkgs()
+                ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
+                ?.map { it.name }
+                ?.contains(sharedManifestData.packageVersion)
+                ?.let {
+                    if (it) {
+                        sharedManifestData.updateState = VersionUpdateState.UpdateVersion
+                    } else {
+                        val versionsToCompare = listOf(
+                            sharedManifestData.packageVersion,
+                            sharedManifestData.latestVersion
+                        )
+                        when (sharedManifestData.packageVersion) {
+                            getHighestVersion(versionsToCompare.filterNotNull()) -> {
+                                sharedManifestData.updateState = VersionUpdateState.NewVersion
+                            }
+                            else -> sharedManifestData.updateState = VersionUpdateState.AddVersion
+                        }
+                    }
+                }
+        }
     }
 
     private fun isPackageVersionValid(
         version: String?,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
+    ): String? {
         val packageVersionSchema = installerSchema.definitions.packageVersion
         return when {
-            version.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.PackageVersion)
+            version.isNullOrBlank() -> Errors.blankInput(PromptType.PackageVersion)
             version.length > packageVersionSchema.maxLength -> {
-                Validation.InvalidLength to Errors.invalidLength(max = packageVersionSchema.maxLength)
+                Errors.invalidLength(max = packageVersionSchema.maxLength)
             }
             !version.matches(Regex(packageVersionSchema.pattern)) -> {
-                Validation.InvalidPattern to Errors.invalidRegex(Regex(packageVersionSchema.pattern))
+                Errors.invalidRegex(Regex(packageVersionSchema.pattern))
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 

@@ -10,8 +10,8 @@ fun main(args: Array<String>) {
         defaultModule()
     }
 
-    Komac()
-        .subcommands(NewManifest(), QuickUpdate())
+    Komac(args)
+        .subcommands(NewManifest(), QuickUpdate(), RemoveVersion())
         .versionOption(version = BuildConfig.appVersion, names = setOf("-v", "--version"))
         .main(args)
 }

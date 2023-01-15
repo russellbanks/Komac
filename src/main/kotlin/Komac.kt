@@ -1,3 +1,4 @@
+
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -13,11 +14,11 @@ import schemas.TerminalInstance
 import token.TokenStore
 import kotlin.system.exitProcess
 
-class Komac : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
+class Komac(private val args: Array<String>) : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
     override fun run(): Unit = runBlocking {
-        if (currentContext.invokedSubcommand == null) {
-            with(get<TerminalInstance>().terminal) {
-                get<TokenStore>().getToken(this)
+        with(get<TerminalInstance>().terminal) {
+            get<TokenStore>().getToken(this)
+            if (currentContext.invokedSubcommand == null) {
                 println(
                     verticalLayout {
                         cell(brightYellow("Select mode:"))
@@ -35,9 +36,15 @@ class Komac : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
                 )
                 println()
                 when (selection?.lowercase()) {
-                    Mode.NewManifest.key.toString() -> NewManifest().run()
-                    Mode.QuickUpdate.key.toString() -> QuickUpdate().run()
-                    Mode.RemoveVersion.key.toString() -> RemoveVersion().run()
+                    Mode.NewManifest.key.toString() -> {
+                        this@Komac.registeredSubcommands().first { it::class == NewManifest::class }.main(args)
+                    }
+                    Mode.QuickUpdate.key.toString() -> {
+                        this@Komac.registeredSubcommands().first { it::class == QuickUpdate::class }.main(args)
+                    }
+                    Mode.RemoveVersion.key.toString() -> {
+                        this@Komac.registeredSubcommands().first { it::class == RemoveVersion::class }.main(args)
+                    }
                     Mode.Token.key.toString() -> ChangeToken().run()
                     else -> exitProcess(0)
                 }

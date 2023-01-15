@@ -19,58 +19,68 @@ import schemas.InstallerSchema
 import schemas.Schema
 import schemas.SchemasImpl
 import java.io.IOException
+import kotlin.system.exitProcess
 
 object PackageIdentifier : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private lateinit var installerSchema: InstallerSchema
 
-    suspend fun Terminal.packageIdentifierPrompt() {
+    suspend fun Terminal.packageIdentifierPrompt(packageIdentifier: String? = null) {
         val schemasImpl: SchemasImpl = get()
-        do {
-            println(brightGreen(packageIdentifierInfo))
-            println(cyan(packageIdentifierExample))
-            val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
+        if (packageIdentifier != null) {
             schemasImpl.awaitSchema(Schema.Installer)
             installerSchema = get<SchemasImpl>().installerSchema
-            val error = isPackageIdentifierValid(input).also {
+            sharedManifestData.packageIdentifier = packageIdentifier
+            findPreviousVersions(packageIdentifier = packageIdentifier, writeOutput = false).let {
                 if (it == null) {
-                    if (input != null) {
-                        sharedManifestData.packageIdentifier = input
-                        findPreviousVersions()
-                    }
-                } else {
-                    println(brightRed(it))
+                    println(brightRed("$packageIdentifier does not exist in winget-pkgs"))
+                    exitProcess(0)
                 }
             }
-            println()
-        } while (error != null)
+        } else {
+            do {
+                println(brightGreen(packageIdentifierInfo))
+                println(cyan(packageIdentifierExample))
+                val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
+                schemasImpl.awaitSchema(Schema.Installer)
+                installerSchema = get<SchemasImpl>().installerSchema
+                val error = isPackageIdentifierValid(input).also {
+                    if (it == null) {
+                        if (input != null) {
+                            sharedManifestData.packageIdentifier = input
+                            findPreviousVersions(input)
+                        }
+                    } else {
+                        println(brightRed(it))
+                    }
+                }
+                println()
+            } while (error != null)
+        }
     }
 
-    private fun findPreviousVersions() {
-        try {
-            val githubImpl = get<GitHubImpl>()
-            sharedManifestData.latestVersion = githubImpl
+    private fun findPreviousVersions(packageIdentifier: String, writeOutput: Boolean = true): String? {
+        return try {
+            get<GitHubImpl>()
                 .getMicrosoftWingetPkgs()
-                ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
-                ?.filter {
-                    it.name.matches(
-                        Regex(installerSchema.definitions.packageIdentifier.pattern)
-                    )
-                }
+                ?.getDirectoryContent(Ktor.getDirectoryPath(packageIdentifier))
+                ?.filter { it.name.matches(Regex(installerSchema.definitions.packageVersion.pattern)) }
                 ?.filter { it.isDirectory }
                 ?.also {
-                    if (it.isNotEmpty()) {
-                        println(cyan("Found ${sharedManifestData.packageIdentifier} in the winget-pkgs repository"))
+                    if (it.isNotEmpty() && writeOutput) {
+                        println(cyan("Found $packageIdentifier in the winget-pkgs repository"))
                     }
                 }
                 ?.map { it.name }
                 ?.let { PackageVersion.getHighestVersion(it) }
-                ?.also {
+                ?.also { if (writeOutput) println(cyan("Found latest version: $it")) }
+                .also {
                     sharedManifestData.latestVersion = it
-                    println(cyan("Found latest version: $it"))
-                }.toString()
+                    return it
+                }
         } catch (_: IOException) {
             sharedManifestData.updateState = VersionUpdateState.NewPackage
+            null
         }
     }
 

@@ -50,15 +50,13 @@ object Ktor : KoinComponent {
                 timeRemaining()
             }.run {
                 start()
-                config { followRedirects = true }.use { client ->
-                    client.prepareGet(installerManifestData.installerUrl).execute { httpResponse ->
-                        val channel: ByteReadChannel = httpResponse.body()
-                        while (!channel.isClosedForRead) {
-                            val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-                            while (packet.isNotEmpty) {
-                                file.appendBytes(packet.readBytes())
-                                update(file.length(), httpResponse.contentLength())
-                            }
+                prepareGet(installerManifestData.installerUrl).execute { httpResponse ->
+                    val channel: ByteReadChannel = httpResponse.body()
+                    while (!channel.isClosedForRead) {
+                        val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                        while (packet.isNotEmpty) {
+                            file.appendBytes(packet.readBytes())
+                            update(file.length(), httpResponse.contentLength())
                         }
                     }
                 }

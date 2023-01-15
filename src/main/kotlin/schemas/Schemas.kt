@@ -13,8 +13,25 @@ object Schemas {
         return installerSchema.properties.manifestType.const
     }
 
+    fun buildManifestString(schema: Schema, rawString: String): String {
+        return buildString {
+            appendLine(Comments.createdBy)
+            appendLine(Comments.languageServer(schema))
+            appendLine()
+            appendLine(rawString)
+        }
+    }
+
     object Comments {
         const val createdBy = "# Created with ${BuildConfig.appName} ${BuildConfig.appVersion}"
-        fun languageServer(schemaUrl: String) = "# yaml-language-server: \$schema=$schemaUrl"
+        fun languageServer(schema: Schema): String {
+            val schemaUrl = when(schema) {
+                Schema.Installer -> installerSchema
+                Schema.DefaultLocale -> defaultLocaleSchema
+                Schema.Locale -> localeSchema
+                Schema.Version -> versionSchema
+            }
+            return "# yaml-language-server: \$schema=$schemaUrl"
+        }
     }
 }

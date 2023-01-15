@@ -18,6 +18,6 @@ class Clients {
     }
 
     companion object {
-        const val timeoutMillis = 1000L
+        const val timeoutMillis = 1500L
     }
 }

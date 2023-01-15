@@ -13,7 +13,6 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.Schemas
 import schemas.TerminalInstance
 import token.TokenStore
 import java.io.IOException
@@ -131,15 +130,6 @@ class GitHubImpl : KoinComponent {
             )
             ?.create()
             ?.also { branch?.updateTo(it.shA1) }
-    }
-
-    fun buildManifestString(schemaUrl: String, block: StringBuilder.() -> Unit): String {
-        return buildString {
-            appendLine(Schemas.Comments.createdBy)
-            appendLine(Schemas.Comments.languageServer(schemaUrl))
-            appendLine()
-            block()
-        }
     }
 
     companion object {

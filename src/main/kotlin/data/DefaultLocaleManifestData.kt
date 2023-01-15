@@ -2,9 +2,10 @@ package data
 
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.DefaultLocaleManifest
+import schemas.Schema
+import schemas.Schemas
 import schemas.SchemasImpl
 
 @Single
@@ -26,39 +27,78 @@ class DefaultLocaleManifestData : KoinComponent {
     var releaseNotesUrl: String? = null
 
     private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
-    private val defaultLocaleSchema
-        get() = schemasImpl.defaultLocaleSchema
 
     fun createDefaultLocaleManifest(): String {
-        return DefaultLocaleManifest(
+        return getDefaultLocaleManifestBase().copy(
+            packageIdentifier = sharedManifestData.packageIdentifier,
+            packageVersion = sharedManifestData.packageVersion,
+            packageLocale = sharedManifestData.defaultLocale,
+            publisher = if (::publisher.isInitialized) {
+                publisher
+            } else {
+                previousManifestData.remoteDefaultLocaleData?.publisher
+            } ?: "",
+            publisherUrl = publisherUrl
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.publisherUrl,
+            publisherSupportUrl = publisherSupportUrl
+                .takeIf { it?.isNotBlank() == true }
+                ?: previousManifestData.remoteDefaultLocaleData?.publisherSupportUrl,
+            privacyUrl = publisherPrivacyUrl
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.privacyUrl,
+            author = author.takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.author,
+            packageName = sharedManifestData.packageName
+                ?: previousManifestData.remoteDefaultLocaleData?.packageName
+                ?: "",
+            packageUrl = packageUrl?.ifBlank { null },
+            license = when {
+                ::license.isInitialized -> license
+                else -> previousManifestData.remoteDefaultLocaleData?.license ?: ""
+            },
+            licenseUrl = licenseUrl
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.licenseUrl,
+            copyright = copyright
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.copyright,
+            copyrightUrl = copyrightUrl
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl,
+            shortDescription = when {
+                ::shortDescription.isInitialized -> shortDescription
+                else -> previousManifestData.remoteDefaultLocaleData?.shortDescription ?: ""
+            },
+            description = description
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.description,
+            moniker = moniker
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
+            tags = tags.takeIf { it?.isNotEmpty() == true } ?: previousManifestData.remoteDefaultLocaleData?.tags,
+            releaseNotesUrl = releaseNotesUrl
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.releaseNotesUrl,
+            manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
+            manifestVersion = schemasImpl.defaultLocaleSchema.properties.manifestVersion.default
+        ).toEncodedYaml()
+    }
+
+    private fun getDefaultLocaleManifestBase(): DefaultLocaleManifest {
+        return previousManifestData.remoteDefaultLocaleData ?: DefaultLocaleManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
             publisher = publisher,
-            publisherUrl = publisherUrl?.ifBlank { null },
-            publisherSupportUrl = publisherSupportUrl?.ifBlank { null },
-            privacyUrl = publisherPrivacyUrl?.ifBlank { null },
-            author = author?.ifBlank { null },
-            packageName = sharedManifestData.packageName,
-            packageUrl = packageUrl?.ifBlank { null },
+            packageName = sharedManifestData.packageName!!,
             license = license,
-            licenseUrl = licenseUrl?.ifBlank { null },
-            copyright = copyright?.ifBlank { null },
-            copyrightUrl = copyrightUrl?.ifBlank { null },
             shortDescription = shortDescription,
-            description = description?.ifBlank { null },
-            moniker = moniker?.ifBlank { null },
-            tags = tags?.ifEmpty { null },
-            releaseNotesUrl = releaseNotesUrl?.ifBlank { null },
-            manifestType = defaultLocaleSchema.properties.manifestType.const,
-            manifestVersion = defaultLocaleSchema.properties.manifestVersion.default,
-        ).let {
-            get<GitHubImpl>().buildManifestString(get<SchemasImpl>().defaultLocaleSchema.id) {
-                appendLine(
-                    YamlConfig.defaultWithLocalDataSerializer.encodeToString(DefaultLocaleManifest.serializer(), it)
-                )
-            }
-        }
+            manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
+            manifestVersion = schemasImpl.defaultLocaleSchema.properties.manifestVersion.default
+        )
+    }
+
+    private fun DefaultLocaleManifest.toEncodedYaml(): String {
+        return Schemas.buildManifestString(
+            schema = Schema.DefaultLocale,
+            rawString = YamlConfig.default.encodeToString(
+                serializer = DefaultLocaleManifest.serializer(),
+                value = this@toEncodedYaml
+            )
+        )
     }
 }

@@ -2,15 +2,16 @@ package data
 
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.InstallerManifest
+import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import java.time.LocalDate
 
 @Single
 class InstallerManifestData : KoinComponent {
+    private val sharedManifestData: SharedManifestData by inject()
     lateinit var installerUrl: String
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
@@ -28,15 +29,18 @@ class InstallerManifestData : KoinComponent {
     var installerSuccessCodes: List<Int>? = null
     var installModes: List<InstallerManifest.InstallModes>? = null
     private val schemaImpl: SchemasImpl by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val installerSchema
         get() = schemaImpl.installerSchema
 
     fun addInstaller() {
-        val installer = InstallerManifest.Installer(
+        println(installers.size)
+        val previousInstaller = previousManifestData.remoteInstallerData?.installers?.get(installers.size)
+        println(previousInstaller)
+        val installer = getInstallerBase(previousInstaller).copy(
             installerLocale = installerLocale?.ifBlank { null },
-            architecture = architecture,
-            installerType = installerType,
+            architecture = if (::architecture.isInitialized) architecture else previousInstaller?.architecture!!,
+            installerType = if (::installerType.isInitialized) installerType else previousInstaller?.installerType,
             nestedInstallerType = sharedManifestData.zip?.nestedInstallerType,
             nestedInstallerFiles = sharedManifestData.zip?.nestedInstallerFiles.takeIf { it?.isNotEmpty() == true },
             installerUrl = installerUrl,
@@ -49,9 +53,11 @@ class InstallerManifestData : KoinComponent {
             scope = scope,
             installerSwitches = installerSwitches.takeUnless { it.areAllNullOrBlank() },
             upgradeBehavior = upgradeBehavior?.toPerInstallerUpgradeBehaviour(),
-            productCode = productCode?.ifBlank { null },
+            productCode = sharedManifestData.msi?.productCode ?: productCode?.ifBlank { null },
             releaseDate = releaseDate,
-            appsAndFeaturesEntries = sharedManifestData.msi?.upgradeCode?.let {
+            appsAndFeaturesEntries = previousInstaller?.appsAndFeaturesEntries?.map {
+                it.copy(upgradeCode = sharedManifestData.msi?.upgradeCode)
+            } ?: sharedManifestData.msi?.upgradeCode?.let {
                 listOf(InstallerManifest.Installer.AppsAndFeaturesEntry(upgradeCode = it))
             },
         )
@@ -71,104 +77,149 @@ class InstallerManifestData : KoinComponent {
         resetValues()
     }
 
-    fun createInstallerManifest(): String {
-        val installersLocaleDistinct = installers.distinctBy { it.installerLocale }.size == 1
-        val releaseDateDistinct = installers.distinctBy { it.releaseDate }.size == 1
-        val installerScopeDistinct = installers.distinctBy { it.scope }.size == 1
-        val upgradeBehaviourDistinct = installers.distinctBy { it.upgradeBehavior }.size == 1
-        val installerSwitchesDistinct = installers.distinctBy { it.installerSwitches }.size == 1
-        val installerTypeDistinct = installers.distinctBy { it.installerType }.size == 1
-        val nestedInstallerTypeDistinct = installers.distinctBy { it.nestedInstallerType }.size == 1
-        val nestedInstallerFilesDistinct = installers.distinctBy { it.nestedInstallerFiles }.size == 1
-        val platformDistinct = installers.distinctBy { it.platform }.size == 1
-        val minimumOSVersionDistinct = installers.distinctBy { it.minimumOSVersion }.size == 1
-        val arpDistinct = installers.distinctBy { it.appsAndFeaturesEntries }.size == 1
-        return InstallerManifest(
+    private inline fun <T, R : Any> Iterable<T>.onlyOneNotNullDistinct(selector: (T) -> R?): Boolean {
+        return mapNotNullTo(ArrayList(), selector).distinct().size == 1
+    }
+
+    suspend fun createInstallerManifest(): String {
+        val installersLocaleDistinct = installers.onlyOneNotNullDistinct { it.installerLocale }
+        val releaseDateDistinct = installers.onlyOneNotNullDistinct { it.releaseDate }
+        val installerScopeDistinct = installers.onlyOneNotNullDistinct { it.scope }
+        val upgradeBehaviourDistinct = installers.onlyOneNotNullDistinct { it.upgradeBehavior }
+        val installerSwitchesDistinct = installers.onlyOneNotNullDistinct { it.installerSwitches }
+        val installerTypeDistinct = installers.onlyOneNotNullDistinct { it.installerType }
+        val nestedInstallerTypeDistinct = installers.onlyOneNotNullDistinct { it.nestedInstallerType }
+        val nestedInstallerFilesDistinct = installers.onlyOneNotNullDistinct { it.nestedInstallerFiles }
+        val platformDistinct = installers.onlyOneNotNullDistinct { it.platform }
+        val minimumOSVersionDistinct = installers.onlyOneNotNullDistinct { it.minimumOSVersion }
+        val arpDistinct = installers.onlyOneNotNullDistinct { it.appsAndFeaturesEntries }
+        previousManifestData.remoteInstallerDataJob.join()
+        return getInstallerManifestBase().copy(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             installerLocale = when {
                 installersLocaleDistinct -> installers.map { it.installerLocale }.first()?.ifBlank { null }
-                else -> null
+                else -> previousManifestData.remoteInstallerData?.installerLocale
             },
             platform = when {
                 platformDistinct -> installers.map { it.platform }.first()?.map { it.toManifestPlatform() }
-                else -> null
+                else -> previousManifestData.remoteInstallerData?.platform
             },
-            minimumOSVersion = if (minimumOSVersionDistinct) installers.map { it.minimumOSVersion }.first() else null,
-            installerType = if (installers.distinctBy { it.installerType }.size == 1) {
-                installerType.toManifestInstallerType()
-            } else {
-                null
+            minimumOSVersion = when {
+                minimumOSVersionDistinct -> installers.map { it.minimumOSVersion }.first()
+                else -> previousManifestData.remoteInstallerData?.minimumOSVersion
             },
-            nestedInstallerType = if (nestedInstallerTypeDistinct) {
-                installers.map { it.nestedInstallerType }.first()?.toManifestNestedInstallerType()
-            } else {
-                null
+            installerType = when {
+                installerTypeDistinct -> installers.map { it.installerType }.first()?.toManifestInstallerType()
+                else -> previousManifestData.remoteInstallerData?.installerType
             },
-            nestedInstallerFiles = if (nestedInstallerFilesDistinct) {
-                installers.map { it.nestedInstallerFiles }
-                    .first()?.map { it.toManifestNestedInstallerFiles() }?.sortedBy { it.relativeFilePath }
-            } else {
-                null
+            nestedInstallerType = when {
+                nestedInstallerTypeDistinct -> {
+                    installers.map { it.nestedInstallerType }.first()?.toManifestNestedInstallerType()
+                }
+                else -> previousManifestData.remoteInstallerData?.nestedInstallerType
             },
-            scope = if (installerScopeDistinct) installers.map { it.scope }.first()?.toManifestScope() else null,
-            installModes = installModes?.ifEmpty { null },
+            nestedInstallerFiles = when {
+                nestedInstallerFilesDistinct -> {
+                    installers.map { it.nestedInstallerFiles }
+                        .first()
+                        ?.map { it.toManifestNestedInstallerFiles() }?.sortedBy { it.relativeFilePath }
+                }
+                else -> previousManifestData.remoteInstallerData?.nestedInstallerFiles
+            },
+            scope = when {
+                installerScopeDistinct -> installers.map { it.scope }.first()?.toManifestScope()
+                else -> previousManifestData.remoteInstallerData?.scope
+            },
+            installModes = installModes
+                .takeIf { it?.isNotEmpty() == true } ?: previousManifestData.remoteInstallerData?.installModes,
             installerSwitches = when {
                 installerSwitchesDistinct -> {
                     installers.map { it.installerSwitches }.first()?.toManifestInstallerSwitches()
                 }
-                else -> null
+                else -> previousManifestData.remoteInstallerData?.installerSwitches
             },
-            installerSuccessCodes = installerSuccessCodes?.ifEmpty { null },
+            installerSuccessCodes = installerSuccessCodes?.ifEmpty {
+                previousManifestData.remoteInstallerData?.installerSuccessCodes
+            },
             upgradeBehavior = when {
                 upgradeBehaviourDistinct -> installers.map { it.upgradeBehavior }.first()?.toManifestUpgradeBehaviour()
-                else -> null
+                else -> previousManifestData.remoteInstallerData?.upgradeBehavior
             },
-            commands = commands?.ifEmpty { null },
-            protocols = protocols?.ifEmpty { null },
-            fileExtensions = fileExtensions?.ifEmpty { null },
-            releaseDate = if (releaseDateDistinct) installers.map { it.releaseDate }.first() else null,
+            commands = commands?.ifEmpty { previousManifestData.remoteInstallerData?.commands },
+            protocols = protocols?.ifEmpty { previousManifestData.remoteInstallerData?.protocols },
+            fileExtensions = fileExtensions?.ifEmpty { previousManifestData.remoteInstallerData?.fileExtensions },
+            releaseDate = when {
+                releaseDateDistinct -> installers.map { it.releaseDate }.first()
+                else -> previousManifestData.remoteInstallerData?.releaseDate
+            },
             appsAndFeaturesEntries = when {
-                arpDistinct -> installers.map { installer ->
-                    installer.appsAndFeaturesEntries?.map {
-                        it.copy(
-                            displayName = if (
-                                sharedManifestData.msi?.productName != null &&
-                                sharedManifestData.packageName != sharedManifestData.msi?.productName
-                            ) {
-                                sharedManifestData.msi?.productName
-                            } else {
-                                null
-                            }
-                        )
-                    }
-                }.first()?.map { it.toManifestARPEntry() }
-                else -> null
+                arpDistinct -> {
+                    installers
+                        .first()
+                        .appsAndFeaturesEntries
+                        ?.map { appsAndFeatureEntry ->
+                            sharedManifestData.msi?.productCode?.let {
+                                when {
+                                    sharedManifestData.packageName != it -> appsAndFeatureEntry.copy(displayName = it)
+                                    else -> appsAndFeatureEntry
+                                }
+                            } ?: appsAndFeatureEntry
+                        }
+                        ?.map { it.toManifestARPEntry() }
+                }
+                else -> previousManifestData.remoteInstallerData?.appsAndFeaturesEntries
             },
-            installers = installers.map { installer ->
-                installer.copy(
-                    installerLocale = if (installersLocaleDistinct) null else installer.installerLocale,
-                    platform = if (platformDistinct) null else installer.platform,
-                    minimumOSVersion = if (minimumOSVersionDistinct) null else installer.minimumOSVersion,
-                    nestedInstallerType = if (nestedInstallerTypeDistinct) null else installer.nestedInstallerType,
-                    nestedInstallerFiles = if (nestedInstallerFilesDistinct) null else installer.nestedInstallerFiles,
-                    scope = if (installerScopeDistinct) null else installer.scope,
-                    releaseDate = if (releaseDateDistinct) null else installer.releaseDate,
-                    upgradeBehavior = if (upgradeBehaviourDistinct) null else installer.upgradeBehavior,
-                    installerSwitches = if (installerSwitchesDistinct) null else installer.installerSwitches,
-                    installerType = if (installerTypeDistinct) null else installer.installerType,
-                    appsAndFeaturesEntries = if (arpDistinct) null else installer.appsAndFeaturesEntries
-                )
-            }.sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope })),
+            installers = installers.removeNonDistinctKeys()
+                .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope })),
+            manifestType = installerSchema.properties.manifestType.const,
+            manifestVersion = installerSchema.properties.manifestVersion.default
+        ).toEncodedYaml()
+    }
+
+    private fun getInstallerManifestBase(): InstallerManifest {
+        return previousManifestData.remoteInstallerData ?: InstallerManifest(
+            packageIdentifier = sharedManifestData.packageIdentifier,
+            packageVersion = sharedManifestData.packageVersion,
             manifestType = Schemas.manifestType(installerSchema),
             manifestVersion = installerSchema.properties.manifestVersion.default
-        ).let {
-            get<GitHubImpl>().buildManifestString(get<SchemasImpl>().installerSchema.id) {
-                appendLine(
-                    YamlConfig.defaultWithLocalDataSerializer.encodeToString(InstallerManifest.serializer(), it)
-                )
-            }
+        )
+    }
+
+    private fun List<InstallerManifest.Installer>.removeNonDistinctKeys(): List<InstallerManifest.Installer> {
+        return map { installer ->
+            installer.copy(
+                installerLocale = if (onlyOneNotNullDistinct { it.installerLocale }) null else installer.installerLocale,
+                platform = if (onlyOneNotNullDistinct { it.platform }) null else installer.platform,
+                minimumOSVersion = if (onlyOneNotNullDistinct { it.minimumOSVersion }) null else installer.minimumOSVersion,
+                installerType = if (onlyOneNotNullDistinct { it.installerType }) null else installer.installerType,
+                nestedInstallerType = if (onlyOneNotNullDistinct { it.nestedInstallerType }) null else installer.nestedInstallerType,
+                nestedInstallerFiles = if (onlyOneNotNullDistinct { it.nestedInstallerFiles }) null else installer.nestedInstallerFiles,
+                scope = if (onlyOneNotNullDistinct { it.scope }) null else installer.scope,
+                releaseDate = if (onlyOneNotNullDistinct { it.releaseDate }) null else installer.releaseDate,
+                upgradeBehavior = if (onlyOneNotNullDistinct { it.upgradeBehavior }) null else installer.upgradeBehavior,
+                installerSwitches = if (onlyOneNotNullDistinct { it.installerSwitches }) null else installer.installerSwitches,
+                appsAndFeaturesEntries = if (onlyOneNotNullDistinct { it.appsAndFeaturesEntries }) null else installer.appsAndFeaturesEntries
+            )
         }
+    }
+
+    private fun getInstallerBase(previousInstaller: InstallerManifest.Installer?): InstallerManifest.Installer {
+        return previousInstaller ?: InstallerManifest.Installer(
+            architecture = InstallerManifest.Installer.Architecture.NEUTRAL,
+            installerSha256 = "",
+            installerUrl = ""
+        )
+    }
+
+    private fun InstallerManifest.toEncodedYaml(): String {
+        return Schemas.buildManifestString(
+            schema = Schema.Installer,
+            rawString = YamlConfig.defaultWithLocalDataSerializer.encodeToString(
+                serializer = InstallerManifest.serializer(),
+                value = this@toEncodedYaml
+            )
+        )
     }
 
     private fun resetValues() {

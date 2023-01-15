@@ -52,7 +52,8 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.LocaleManifest
-import schemas.SchemasImpl
+import schemas.Schema
+import schemas.Schemas
 import schemas.TerminalInstance
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
@@ -116,7 +117,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
         }
     }
 
-    private fun createFiles() {
+    private suspend fun createFiles() {
         files = listOf(
             githubImpl.installerManifestName to installerManifestData.createInstallerManifest(),
             githubImpl.defaultLocaleManifestName to defaultLocalManifestData.createDefaultLocaleManifest(),
@@ -127,9 +128,10 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 packageVersion = sharedManifestData.packageVersion,
                 manifestVersion = "1.4.0"
             ).let {
-                githubImpl.buildManifestString(get<SchemasImpl>().localeSchema.id) {
-                    appendLine(YamlConfig.default.encodeToString(LocaleManifest.serializer(), it))
-                }
+                Schemas.buildManifestString(
+                    Schema.Locale,
+                    YamlConfig.default.encodeToString(LocaleManifest.serializer(), it)
+                )
             }
         }.orEmpty()
     }

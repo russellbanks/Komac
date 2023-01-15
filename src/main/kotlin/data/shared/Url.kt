@@ -39,64 +39,73 @@ import schemas.RemoteSchema
 import schemas.SchemasImpl
 
 object Url : KoinComponent {
-    suspend fun Terminal.installerDownloadPrompt() {
+    suspend fun Terminal.installerDownloadPrompt(parameterUrl: String? = null) {
         val installerManifestData: InstallerManifestData by inject()
-        val schemasImpl: SchemasImpl by inject()
-        do {
-            println(brightGreen(installerUrlInfo))
-            val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
-            val error = isUrlValid(url = input, schema = schemasImpl.installerSchema, canBeBlank = false).also {
-                if (it == null) {
-                    if (input != null) installerManifestData.installerUrl = input
-                } else {
-                    println(brightRed(it))
-                }
-            }
-            println()
-        } while (error != null)
-
-        val redirectedUrl = getRedirectedUrl(installerManifestData.installerUrl)
-        if (
-            redirectedUrl != installerManifestData.installerUrl &&
-            redirectedUrl?.contains(other = "github", ignoreCase = true) != true
-        ) {
-            println(
-                verticalLayout {
-                    cell(brightYellow(redirectFound))
-                    cell(cyan("Discovered URL: $redirectedUrl"))
-                    cell(brightGreen(useDetectedUrl))
-                    cell(brightWhite(useOriginalUrl))
-                }
-            )
-            if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
-                println(brightYellow(urlChanged))
-                val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
-                if (error.isNullOrBlank() && !redirectedUrl.isNullOrBlank()) {
-                    installerManifestData.installerUrl = redirectedUrl
-                } else {
-                    println(
-                        verticalLayout {
-                            cell(error)
-                            cell("")
-                            cell(brightYellow(detectedUrlValidationFailed))
-                        }
-                    )
+        if (parameterUrl != null) {
+            installerManifestData.installerUrl = parameterUrl
+            downloadInstaller(installerManifestData)
+        } else {
+            val schemasImpl: SchemasImpl by inject()
+            do {
+                println(brightGreen(installerUrlInfo))
+                val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
+                val error = isUrlValid(url = input, schema = schemasImpl.installerSchema, canBeBlank = false).also {
+                    if (it == null) {
+                        if (input != null) installerManifestData.installerUrl = input
+                    } else {
+                        println(brightRed(it))
+                    }
                 }
                 println()
-            } else {
-                println(brightGreen("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}"))
+            } while (error != null)
+
+            val redirectedUrl = getRedirectedUrl(installerManifestData.installerUrl)
+            if (
+                redirectedUrl != installerManifestData.installerUrl &&
+                redirectedUrl?.contains(other = "github", ignoreCase = true) != true
+            ) {
+                println(
+                    verticalLayout {
+                        cell(brightYellow(redirectFound))
+                        cell(cyan("Discovered URL: $redirectedUrl"))
+                        cell(brightGreen(useDetectedUrl))
+                        cell(brightWhite(useOriginalUrl))
+                    }
+                )
+                if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
+                    println(brightYellow(urlChanged))
+                    val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
+                    if (error.isNullOrBlank() && !redirectedUrl.isNullOrBlank()) {
+                        installerManifestData.installerUrl = redirectedUrl
+                    } else {
+                        println(
+                            verticalLayout {
+                                cell(error)
+                                cell("")
+                                cell(brightYellow(detectedUrlValidationFailed))
+                            }
+                        )
+                    }
+                    println()
+                } else {
+                    println(brightGreen("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}"))
+                }
             }
+            downloadInstaller(installerManifestData)
+            msixBundleDetection()
         }
-        downloadInstaller(installerManifestData)
-        msixBundleDetection()
     }
 
     private suspend fun downloadInstaller(installerManifestData: InstallerManifestData) {
         val sharedManifestData: SharedManifestData by inject()
         if (installerManifestData.installers.map { it.installerUrl }.contains(installerManifestData.installerUrl)) {
-            installerManifestData.installerSha256 = installerManifestData.installers.first {
+            val storedInstaller = installerManifestData.installers.first {
                 it.installerUrl == installerManifestData.installerUrl
-            }.installerSha256
+            }
+            with (installerManifestData) {
+                installerSha256 = storedInstaller.installerSha256
+                productCode = storedInstaller.productCode
+            }
         } else {
             get<Clients>().httpClient.downloadInstallerFromUrl().apply {
                 installerManifestData.installerSha256 = hash()
@@ -186,6 +195,14 @@ object Url : KoinComponent {
             }
             println()
         } while (!error.isNullOrBlank())
+    }
+
+    suspend fun areUrlsValid(urls: List<String>?): String? {
+        urls?.forEach {
+            val error = isUrlValid(it, get<SchemasImpl>().installerSchema, false)
+            error?.let { return error }
+        }
+        return null
     }
 
     private suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): String? {
