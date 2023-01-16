@@ -6,7 +6,6 @@ import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
 import java.time.LocalDate
 
@@ -33,15 +32,14 @@ class InstallerManifestData : KoinComponent {
     private val previousManifestData: PreviousManifestData by inject()
 
     fun addInstaller() {
-        println(installers.size)
         val previousInstaller = previousManifestData.remoteInstallerData?.installers?.get(installers.size)
-        println(previousInstaller)
         val installer = getInstallerBase(previousInstaller).copy(
-            installerLocale = installerLocale?.ifBlank { null },
+            installerLocale = installerLocale?.ifBlank { null } ?: previousInstaller?.installerLocale,
             architecture = if (::architecture.isInitialized) architecture else previousInstaller?.architecture!!,
             installerType = if (::installerType.isInitialized) installerType else previousInstaller?.installerType,
-            nestedInstallerType = sharedManifestData.zip?.nestedInstallerType,
-            nestedInstallerFiles = sharedManifestData.zip?.nestedInstallerFiles.takeIf { it?.isNotEmpty() == true },
+            nestedInstallerType = sharedManifestData.zip?.nestedInstallerType ?: previousInstaller?.nestedInstallerType,
+            nestedInstallerFiles = sharedManifestData.zip?.nestedInstallerFiles
+                .takeIf { it?.isNotEmpty() == true } ?: previousInstaller?.nestedInstallerFiles,
             installerUrl = installerUrl,
             installerSha256 = installerSha256.uppercase(),
             signatureSha256 = when {
@@ -49,9 +47,10 @@ class InstallerManifestData : KoinComponent {
                 sharedManifestData.msixBundle?.signatureSha256 != null -> sharedManifestData.msixBundle?.signatureSha256
                 else -> null
             },
-            scope = scope,
-            installerSwitches = installerSwitches.takeUnless { it.areAllNullOrBlank() },
-            upgradeBehavior = upgradeBehavior?.toPerInstallerUpgradeBehaviour(),
+            scope = scope ?: previousInstaller?.scope,
+            installerSwitches = installerSwitches
+                .takeUnless { it.areAllNullOrBlank() } ?: previousInstaller?.installerSwitches,
+            upgradeBehavior = upgradeBehavior?.toPerInstallerUpgradeBehaviour() ?: previousInstaller?.upgradeBehavior,
             productCode = sharedManifestData.msi?.productCode ?: productCode?.ifBlank { null },
             releaseDate = releaseDate,
             appsAndFeaturesEntries = previousInstaller?.appsAndFeaturesEntries?.map {
@@ -150,7 +149,7 @@ class InstallerManifestData : KoinComponent {
             fileExtensions = fileExtensions?.ifEmpty { previousManifestData.remoteInstallerData?.fileExtensions },
             releaseDate = when {
                 releaseDateDistinct -> installers.map { it.releaseDate }.first()
-                else -> previousManifestData.remoteInstallerData?.releaseDate
+                else -> null
             },
             appsAndFeaturesEntries = when {
                 arpDistinct -> {

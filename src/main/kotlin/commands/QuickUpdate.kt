@@ -34,6 +34,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.TerminalInstance
 import schemas.manifest.LocaleManifest
+import java.io.IOException
 import kotlin.system.exitProcess
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
@@ -73,7 +74,10 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 createFiles()
                 pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                     when (manifestResultOption) {
-                        ManifestResultOption.PullRequest -> commitAndPullRequest()
+                        ManifestResultOption.PullRequest -> {
+                            commit()
+                            pullRequest()
+                        }
                         ManifestResultOption.WriteToFiles -> writeFiles(files)
                         else -> println(brightWhite("Exiting"))
                     }
@@ -148,7 +152,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         }.orEmpty()
     }
 
-    private suspend fun commitAndPullRequest() {
+    private suspend fun commit() {
         previousManifestData.remoteVersionDataJob.join()
         previousManifestData.remoteLocaleDataJob.join()
         previousManifestData.remoteDefaultLocaleDataJob.join()
@@ -159,5 +163,19 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             branch = ref,
             files = files.map { "${githubImpl.baseGitHubPath}/${it.first}" to it.second }
         )
+    }
+
+    private fun pullRequest() {
+        val ghRepository = githubImpl.getMicrosoftWingetPkgs() ?: return
+        try {
+            ghRepository.createPullRequest(
+                /* title = */ githubImpl.getCommitTitle(),
+                /* head = */ "${githubImpl.github.myself.login}:${githubImpl.pullRequestBranch?.ref}",
+                /* base = */ ghRepository.defaultBranch,
+                /* body = */ githubImpl.getPullRequestBody()
+            ).also { println(brightGreen("Pull request created: ${it.htmlUrl}")) }
+        } catch (ioException: IOException) {
+            println(brightRed(ioException.message ?: "Failed to create pull request"))
+        }
     }
 }

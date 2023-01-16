@@ -66,15 +66,14 @@ class DefaultLocaleManifestData : KoinComponent {
                 ::shortDescription.isInitialized -> shortDescription
                 else -> previousManifestData.remoteDefaultLocaleData?.shortDescription ?: ""
             },
-            description = description
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.description
+            description = (description
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.description)
                 ?.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n")
                 ?.trim(),
             moniker = moniker
                 .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
             tags = tags.takeIf { it?.isNotEmpty() == true } ?: previousManifestData.remoteDefaultLocaleData?.tags,
-            releaseNotesUrl = releaseNotesUrl
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.releaseNotesUrl,
+            releaseNotesUrl = releaseNotesUrl.takeIf { it?.isNotBlank() == true },
             manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
             manifestVersion = schemasImpl.defaultLocaleSchema.properties.manifestVersion.default
         ).toEncodedYaml()

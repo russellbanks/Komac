@@ -28,6 +28,7 @@ class GitHubImpl : KoinComponent {
     val defaultLocaleManifestName
         get() = "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
     val versionManifestName = "${sharedManifestData.packageIdentifier}.yaml"
+    var pullRequestBranch: GHRef? = null
     private val terminal = get<TerminalInstance>().terminal
 
     val packageVersionsPath
@@ -91,19 +92,32 @@ class GitHubImpl : KoinComponent {
             repository.createRef(
                 /* name = */ "refs/heads/$branchName",
                 /* sha = */ repository.getBranch(repository.defaultBranch).shA1
-            )
+            ).also { pullRequestBranch = it }
         } catch (ioException: IOException) {
             terminal.println(brightRed(ioException.message ?: "Failed to create branch."))
             null
         }
     }
 
-    private fun getCommitMessage() = buildString {
+    fun getCommitTitle() = buildString {
         append(sharedManifestData.updateState)
         append(": ")
         append(sharedManifestData.packageIdentifier)
-        append(" ")
+        append(" version ")
         append(sharedManifestData.packageVersion)
+    }
+
+    fun getPullRequestBody(): String {
+        return buildString {
+            appendLine("### ${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}")
+            appendLine()
+            if (
+                sharedManifestData.latestVersion != null &&
+                sharedManifestData.updateState == VersionUpdateState.NewVersion
+            ) {
+                appendLine("#### Previous version: ${sharedManifestData.latestVersion}")
+            }
+        }
     }
 
     fun commitFiles(
@@ -112,7 +126,7 @@ class GitHubImpl : KoinComponent {
         files: List<Pair<String, String?>>
     ) {
         repository?.createCommit()
-            ?.message(getCommitMessage())
+            ?.message(getCommitTitle())
             ?.parent(branch?.getObject()?.sha)
             ?.tree(
                 repository

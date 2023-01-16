@@ -33,7 +33,7 @@ object Copyright : KoinComponent {
         } while (packageLocaleValid != Validation.Success)
     }
 
-    fun isCopyrightValid(
+    private fun isCopyrightValid(
         copyright: String?,
         copyrightSchema: DefaultLocaleSchema.Properties.Copyright
     ): Pair<Validation, String?> {
