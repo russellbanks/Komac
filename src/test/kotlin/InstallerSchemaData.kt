@@ -1,3 +1,4 @@
+
 import io.kotest.common.runBlocking
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -7,8 +8,8 @@ import io.ktor.client.request.get
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import ktor.Ktor
-import schemas.InstallerSchema
 import schemas.Schemas
+import schemas.data.InstallerSchema
 
 object InstallerSchemaData {
     val installerSchema: InstallerSchema = runBlocking {

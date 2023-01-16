@@ -19,9 +19,9 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.DefaultLocaleSchema
-import schemas.InstallerSchema
 import schemas.SchemasImpl
+import schemas.data.DefaultLocaleSchema
+import schemas.data.InstallerSchema
 import java.util.Locale
 
 object Locale : KoinComponent {

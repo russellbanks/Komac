@@ -1,3 +1,3 @@
-package schemas
+package schemas.data
 
 interface RemoteSchema

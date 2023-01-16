@@ -2,7 +2,7 @@ package input
 
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import schemas.InstallerSchema
+import schemas.data.InstallerSchema
 import schemas.SchemasImpl
 
 enum class InstallerSwitch : KoinComponent {

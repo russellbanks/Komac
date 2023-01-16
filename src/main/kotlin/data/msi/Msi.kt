@@ -5,8 +5,6 @@ import com.sun.jna.WString
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
-import schemas.TerminalInstance
 import java.io.File
 
 @Suppress("LoopWithTooManyJumpStatements")
@@ -27,84 +25,90 @@ class Msi(private val msiFile: File) : KoinComponent {
     }
 
     private fun getValues() {
-        with(get<TerminalInstance>().terminal) {
-            val phDatabase = PointerByReference()
-            var result = msiLibrary.MsiOpenDatabaseW(WString(msiFile.path), WString(msiDbOpenReadOnly), phDatabase)
-            if (result != 0) {
-                println("Error opening database: $result")
-                return
-            }
+        val phDatabase = openDatabase() ?: return
 
-            val phView = PointerByReference()
-            result = msiLibrary.MsiDatabaseOpenViewW(
-                phDatabase.value,
-                WString(
-                    SQLBuilder()
-                        .select(property, value)
-                        .from(property)
-                        .where(property, values)
-                        .toString()
-                ),
-                phView
-            )
-            if (result != 0) {
-                println("Error executing query: $result")
-                msiLibrary.MsiCloseHandle(phDatabase.value)
-                return
-            }
+        val phView = openView(phDatabase)
 
-            result = msiLibrary.MsiViewExecute(phView.value, null)
-            if (result != 0) {
-                println("Error executing view: $result")
-                msiLibrary.MsiCloseHandle(phView.value)
-                msiLibrary.MsiCloseHandle(phDatabase.value)
-                return
-            }
-
-            val phRecord = PointerByReference()
-            while (true) {
-                result = msiLibrary.MsiViewFetch(phView.value, phRecord)
-                if (result != 0) {
-                    break
-                }
-
-                val pcchPropertyBuf = IntByReference()
-                val szPropertyBuf = CharArray(propertyBufferSize)
-                pcchPropertyBuf.value = propertyBufferSize
-                result = msiLibrary.MsiRecordGetStringW(phRecord.value, 1, szPropertyBuf, pcchPropertyBuf)
-                if (result != 0) {
-                    println("Error getting property: $result")
-                    msiLibrary.MsiCloseHandle(phRecord.value)
-                    continue
-                }
-                val property = Native.toString(szPropertyBuf)
-
-                val pcchValueBuf = IntByReference()
-                val szValueBuf = CharArray(valueBufferSize)
-                pcchValueBuf.value = valueBufferSize
-                result = msiLibrary.MsiRecordGetStringW(phRecord.value, 2, szValueBuf, pcchValueBuf)
-                if (result != 0) {
-                    println("Error getting value: $result")
-                    msiLibrary.MsiCloseHandle(phRecord.value)
-                    continue
-                }
-
-                val value = Native.toString(szValueBuf)
-                when (property) {
-                    upgradeCodeConst -> upgradeCode = value
-                    productCodeConst -> productCode = value
-                    productNameConst -> productName = value
-                    productVersionConst -> productVersion = value
-                    manufacturerConst -> manufacturer = value
-                    productLanguageConst -> productLanguage = value.toIntOrNull()
-                    wixUiModeConst -> isWix = true
-                    allUsersConst -> allUsers = value
-                }
-                msiLibrary.MsiCloseHandle(phRecord.value)
+        if (phView != null) {
+            if (executeView(phView) == 0) {
+                fetchRecords(phView)
             }
             msiLibrary.MsiCloseHandle(phView.value)
-            msiLibrary.MsiCloseHandle(phDatabase.value)
         }
+        msiLibrary.MsiCloseHandle(phDatabase.value)
+    }
+
+    private fun openDatabase(): PointerByReference? {
+        val phDatabase = PointerByReference()
+        val result = msiLibrary.MsiOpenDatabaseW(WString(msiFile.path), WString(msiDbOpenReadOnly), phDatabase)
+        if (result != 0) {
+            println("Error opening database: $result")
+            return null
+        }
+        return phDatabase
+    }
+
+    private fun openView(phDatabase: PointerByReference): PointerByReference? {
+        val phView = PointerByReference()
+        val result = msiLibrary.MsiDatabaseOpenViewW(
+            phDatabase.value,
+            WString(
+                SQLBuilder()
+                    .select(property, value)
+                    .from(property)
+                    .where(property, values)
+                    .toString()
+            ),
+            phView
+        )
+        if (result != 0) {
+            println("Error executing query: $result")
+            return null
+        }
+        return phView
+    }
+
+    private fun executeView(phView: PointerByReference): Int {
+        val result = msiLibrary.MsiViewExecute(phView.value, null)
+        if (result != 0) {
+            println("Error executing view: $result")
+        }
+        return result
+    }
+
+    private fun fetchRecords(phView: PointerByReference) {
+        val phRecord = PointerByReference()
+        while (true) {
+            val result = msiLibrary.MsiViewFetch(phView.value, phRecord)
+            if (result != 0) {
+                break
+            }
+
+            val property = extractString(phRecord = phRecord, field = 1, bufferSize = propertyBufferSize)
+            val value = extractString(phRecord = phRecord, field = 2, bufferSize = valueBufferSize)
+
+            when (property) {
+                upgradeCodeConst -> upgradeCode = value
+                productCodeConst -> productCode = value
+                productNameConst -> productName = value
+                productVersionConst -> productVersion = value
+                manufacturerConst -> manufacturer = value
+                productLanguageConst -> productLanguage = value?.toIntOrNull()
+                wixUiModeConst -> isWix = true
+                allUsersConst -> allUsers = value
+            }
+
+            msiLibrary.MsiCloseHandle(phRecord.value)
+        }
+    }
+
+    private fun extractString(phRecord: PointerByReference, field: Int, bufferSize: Int): String? {
+        val pcchBuf = IntByReference()
+        val szBuf = CharArray(bufferSize)
+        pcchBuf.value = bufferSize
+
+        val result = msiLibrary.MsiRecordGetStringW(phRecord.value, field, szBuf, pcchBuf)
+        return if (result == 0) Native.toString(szBuf) else null
     }
 
     fun resetExceptShared() {

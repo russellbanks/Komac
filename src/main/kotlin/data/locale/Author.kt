@@ -14,8 +14,8 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
+import schemas.data.DefaultLocaleSchema
 
 object Author : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
@@ -40,7 +40,7 @@ object Author : KoinComponent {
         } while (packageLocaleValid != Validation.Success)
     }
 
-    fun isAuthorValid(
+    private fun isAuthorValid(
         author: String?,
         authorSchema: DefaultLocaleSchema.Properties.Author
     ): Pair<Validation, String?> {

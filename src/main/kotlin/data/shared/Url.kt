@@ -32,67 +32,76 @@ import ktor.Ktor.isRedirect
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.DefaultLocaleSchema
-import schemas.InstallerManifest
-import schemas.InstallerSchema
-import schemas.RemoteSchema
 import schemas.SchemasImpl
+import schemas.data.DefaultLocaleSchema
+import schemas.data.InstallerSchema
+import schemas.data.RemoteSchema
+import schemas.manifest.InstallerManifest
 
 object Url : KoinComponent {
+    private val schemasImpl: SchemasImpl by inject()
+
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: String? = null) {
         val installerManifestData: InstallerManifestData by inject()
         if (parameterUrl != null) {
             installerManifestData.installerUrl = parameterUrl
-            downloadInstaller(installerManifestData)
         } else {
-            val schemasImpl: SchemasImpl by inject()
-            do {
-                println(brightGreen(installerUrlInfo))
-                val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
-                val error = isUrlValid(url = input, schema = schemasImpl.installerSchema, canBeBlank = false).also {
-                    if (it == null) {
-                        if (input != null) installerManifestData.installerUrl = input
-                    } else {
-                        println(brightRed(it))
-                    }
-                }
-                println()
-            } while (error != null)
+            setInstallerUrlFromPrompt(installerManifestData)
+        }
+        downloadInstaller(installerManifestData)
+        msixBundleDetection()
+    }
 
-            val redirectedUrl = getRedirectedUrl(installerManifestData.installerUrl)
-            if (
-                redirectedUrl != installerManifestData.installerUrl &&
-                redirectedUrl?.contains(other = "github", ignoreCase = true) != true
-            ) {
-                println(
-                    verticalLayout {
-                        cell(brightYellow(redirectFound))
-                        cell(cyan("Discovered URL: $redirectedUrl"))
-                        cell(brightGreen(useDetectedUrl))
-                        cell(brightWhite(useOriginalUrl))
-                    }
-                )
-                if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
-                    println(brightYellow(urlChanged))
-                    val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
-                    if (error.isNullOrBlank() && !redirectedUrl.isNullOrBlank()) {
-                        installerManifestData.installerUrl = redirectedUrl
-                    } else {
-                        println(
-                            verticalLayout {
-                                cell(error)
-                                cell("")
-                                cell(brightYellow(detectedUrlValidationFailed))
-                            }
-                        )
-                    }
-                    println()
+    private suspend fun Terminal.setInstallerUrlFromPrompt(installerManifestData: InstallerManifestData) {
+        do {
+            println(brightGreen(installerUrlInfo))
+            val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
+            val error = isUrlValid(url = input, schema = schemasImpl.installerSchema, canBeBlank = false).also {
+                if (it == null) {
+                    if (input != null) installerManifestData.installerUrl = input
                 } else {
-                    println(brightGreen("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}"))
+                    println(brightRed(it))
                 }
             }
-            downloadInstaller(installerManifestData)
-            msixBundleDetection()
+            println()
+        } while (error != null)
+
+        setRedirectedUrl(installerManifestData)
+    }
+
+    private suspend fun Terminal.setRedirectedUrl(installerManifestData: InstallerManifestData) {
+        val redirectedUrl = getRedirectedUrl(installerManifestData.installerUrl)
+        if (
+            redirectedUrl != installerManifestData.installerUrl &&
+            redirectedUrl?.contains(other = "github", ignoreCase = true) != true
+        ) {
+            println(
+                verticalLayout {
+                    cell(brightYellow(redirectFound))
+                    cell(cyan("Discovered URL: $redirectedUrl"))
+                    cell(brightGreen(useDetectedUrl))
+                    cell(brightWhite(useOriginalUrl))
+                }
+            )
+            if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
+                println(brightYellow(urlChanged))
+                val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
+                if (error.isNullOrBlank() && !redirectedUrl.isNullOrBlank()) {
+                    installerManifestData.installerUrl = redirectedUrl
+                    println(brightGreen("URL changed to $redirectedUrl"))
+                } else {
+                    println(
+                        verticalLayout {
+                            cell(error)
+                            cell("")
+                            cell(brightYellow(detectedUrlValidationFailed))
+                        }
+                    )
+                }
+                println()
+            } else {
+                println(brightGreen("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}"))
+            }
         }
     }
 
@@ -102,7 +111,7 @@ object Url : KoinComponent {
             val storedInstaller = installerManifestData.installers.first {
                 it.installerUrl == installerManifestData.installerUrl
             }
-            with (installerManifestData) {
+            with(installerManifestData) {
                 installerSha256 = storedInstaller.installerSha256
                 productCode = storedInstaller.productCode
             }
@@ -110,18 +119,12 @@ object Url : KoinComponent {
             get<Clients>().httpClient.downloadInstallerFromUrl().apply {
                 installerManifestData.installerSha256 = hash()
                 when (extension.lowercase()) {
-                    InstallerManifest.InstallerType.MSIX.toString() -> {
-                        sharedManifestData.msix = Msix(this)
-                    }
-                    MsixBundle.msixBundleConst -> {
-                        sharedManifestData.msixBundle = MsixBundle(this)
-                    }
-                    InstallerManifest.InstallerType.MSI.toString() -> {
-                        sharedManifestData.msi = Msi(this)
-                    }
-                    InstallerManifest.InstallerType.ZIP.toString() -> {
-                        sharedManifestData.zip = Zip(this)
-                    }
+                    InstallerManifest.InstallerType.MSIX.toString(),
+                    InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(this)
+                    MsixBundle.msixBundleConst,
+                    MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(this)
+                    InstallerManifest.InstallerType.MSI.toString() -> sharedManifestData.msi = Msi(this)
+                    InstallerManifest.InstallerType.ZIP.toString() -> sharedManifestData.zip = Zip(this)
                 }
                 delete()
             }
@@ -223,19 +226,21 @@ object Url : KoinComponent {
             url.isNullOrBlank() -> Errors.blankInput(PromptType.InstallerUrl)
             url.length > maxLength -> Errors.invalidLength(max = maxLength)
             !url.matches(pattern) -> Errors.invalidRegex(pattern)
-            else -> {
-                get<Clients>().httpClient.config { followRedirects = false }.use {
-                    try {
-                        val installerUrlResponse = it.head(url)
-                        if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {
-                            Errors.unsuccessfulUrlResponse(installerUrlResponse)
-                        } else {
-                            null
-                        }
-                    } catch (_: ConnectTimeoutException) {
-                        Errors.connectionTimeout
-                    }
+            else -> checkUrl(url)
+        }
+    }
+
+    private suspend fun checkUrl(url: String): String? {
+        return get<Clients>().httpClient.config { followRedirects = false }.use {
+            try {
+                val installerUrlResponse = it.head(url)
+                if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {
+                    Errors.unsuccessfulUrlResponse(installerUrlResponse)
+                } else {
+                    null
                 }
+            } catch (_: ConnectTimeoutException) {
+                Errors.connectionTimeout
             }
         }
     }

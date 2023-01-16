@@ -17,9 +17,9 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.InstallerManifest
-import schemas.InstallerSchema
 import schemas.SchemasImpl
+import schemas.data.InstallerSchema
+import schemas.manifest.InstallerManifest
 
 object InstallerSwitch : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()

@@ -15,8 +15,8 @@ import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.InstallerSchema
 import schemas.SchemasImpl
+import schemas.data.InstallerSchema
 import kotlin.random.Random
 import kotlin.system.exitProcess
 
@@ -51,27 +51,31 @@ object PackageVersion : KoinComponent {
     }
 
     private fun setUpgradeState(sharedManifestData: SharedManifestData) {
-        if (sharedManifestData.updateState != VersionUpdateState.NewPackage) {
-            githubImpl.getMicrosoftWingetPkgs()
-                ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
-                ?.map { it.name }
-                ?.contains(sharedManifestData.packageVersion)
-                ?.let {
-                    if (it) {
-                        sharedManifestData.updateState = VersionUpdateState.UpdateVersion
-                    } else {
-                        val versionsToCompare = listOf(
-                            sharedManifestData.packageVersion,
-                            sharedManifestData.latestVersion
-                        )
-                        when (sharedManifestData.packageVersion) {
-                            getHighestVersion(versionsToCompare.filterNotNull()) -> {
-                                sharedManifestData.updateState = VersionUpdateState.NewVersion
-                            }
-                            else -> sharedManifestData.updateState = VersionUpdateState.AddVersion
-                        }
-                    }
-                }
+        if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
+            return
+        }
+        val packageExistsInRepo = checkIfPackageExistsInRepo(sharedManifestData)
+        if (packageExistsInRepo) {
+            sharedManifestData.updateState = VersionUpdateState.UpdateVersion
+        } else {
+            setUpdateStateBasedOnPackageVersion(sharedManifestData)
+        }
+    }
+
+    private fun checkIfPackageExistsInRepo(sharedManifestData: SharedManifestData): Boolean {
+        val packageNames = githubImpl.getMicrosoftWingetPkgs()
+            ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
+            ?.map { it.name }
+        return packageNames?.contains(sharedManifestData.packageVersion) ?: false
+    }
+
+    private fun setUpdateStateBasedOnPackageVersion(sharedManifestData: SharedManifestData) {
+        val versionsToCompare = listOf(sharedManifestData.packageVersion, sharedManifestData.latestVersion)
+        val highestVersion = getHighestVersion(versionsToCompare.filterNotNull())
+        if (sharedManifestData.packageVersion == highestVersion) {
+            sharedManifestData.updateState = VersionUpdateState.NewVersion
+        } else {
+            sharedManifestData.updateState = VersionUpdateState.AddVersion
         }
     }
 

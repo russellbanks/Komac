@@ -1,4 +1,4 @@
-package schemas
+package schemas.manifest.serializers
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -8,7 +8,7 @@ import kotlinx.serialization.encoding.Encoder
 import java.time.LocalDate
 
 object LocalDateSerializer : KSerializer<LocalDate> {
-    override val descriptor = PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
+    override val descriptor = PrimitiveSerialDescriptor(LocalDate::class.simpleName!!, PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: LocalDate) {
         encoder.encodeString(value.toString())

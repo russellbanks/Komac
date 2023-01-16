@@ -1,4 +1,4 @@
-
+package commands
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -51,10 +51,10 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.LocaleManifest
 import schemas.Schema
 import schemas.Schemas
 import schemas.TerminalInstance
+import schemas.manifest.LocaleManifest
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()

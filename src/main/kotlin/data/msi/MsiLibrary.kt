@@ -6,7 +6,7 @@ import com.sun.jna.Pointer
 import com.sun.jna.WString
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import schemas.InstallerManifest
+import schemas.manifest.InstallerManifest
 
 @Suppress("FunctionName")
 interface MsiLibrary : Library {

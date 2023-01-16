@@ -15,8 +15,8 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
+import schemas.data.DefaultLocaleSchema
 
 object Moniker : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()

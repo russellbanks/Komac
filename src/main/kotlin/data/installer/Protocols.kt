@@ -15,8 +15,8 @@ import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.InstallerSchema
 import schemas.SchemasImpl
+import schemas.data.InstallerSchema
 
 object Protocols : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()

@@ -15,9 +15,9 @@ import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.InstallerSchema
 import schemas.Schema
 import schemas.SchemasImpl
+import schemas.data.InstallerSchema
 import java.io.IOException
 import kotlin.system.exitProcess
 

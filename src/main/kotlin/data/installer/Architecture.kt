@@ -19,9 +19,9 @@ import io.ktor.http.Url
 import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.InstallerManifest
-import schemas.InstallerSchema
 import schemas.SchemasImpl
+import schemas.data.InstallerSchema
+import schemas.manifest.InstallerManifest
 
 object Architecture : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()

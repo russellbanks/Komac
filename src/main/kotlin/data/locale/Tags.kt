@@ -15,8 +15,8 @@ import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.DefaultLocaleSchema
 import schemas.SchemasImpl
+import schemas.data.DefaultLocaleSchema
 
 object Tags : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()

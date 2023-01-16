@@ -99,7 +99,7 @@ tasks.jpackage {
     appName = project.name
     appVersion = project.version.toString()
     copyright = "Copyright (c) Russell Banks"
-    licenseFile = "$projectDir/src/main/resources/gpl-3.0.txt"
+    licenseFile = "$projectDir/src/main/resources/gpl-3.0.rst"
     vendor = "Russell Banks"
     mainJar = tasks.jar.get().archiveFileName.get()
     mainClass = application.mainClass.get()
@@ -107,7 +107,7 @@ tasks.jpackage {
 
     windows {
         winPerUserInstall = true
-        type = ImageType.MSI
+        type = ImageType.EXE
         winConsole = true
         winUpgradeUuid = "2D35545F-9065-48C3-A345-42244A3E9FBF"
     }

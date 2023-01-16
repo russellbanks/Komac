@@ -13,8 +13,8 @@ import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.InstallerSchema
 import schemas.SchemasImpl
+import schemas.data.InstallerSchema
 import java.util.UUID
 
 object ProductCode : KoinComponent {

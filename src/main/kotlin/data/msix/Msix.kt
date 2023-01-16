@@ -2,7 +2,7 @@ package data.msix
 
 import hashing.Hashing
 import org.w3c.dom.Document
-import schemas.InstallerManifest
+import schemas.manifest.InstallerManifest
 import java.io.File
 import java.util.zip.ZipFile
 import javax.xml.parsers.DocumentBuilderFactory

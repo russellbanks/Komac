@@ -1,6 +1,7 @@
 package schemas
 
 import com.russellbanks.Komac.BuildConfig
+import schemas.data.InstallerSchema
 
 object Schemas {
     private const val manifestVersion = "1.4.0"
@@ -25,7 +26,7 @@ object Schemas {
     object Comments {
         const val createdBy = "# Created with ${BuildConfig.appName} ${BuildConfig.appVersion}"
         fun languageServer(schema: Schema): String {
-            val schemaUrl = when(schema) {
+            val schemaUrl = when (schema) {
                 Schema.Installer -> installerSchema
                 Schema.DefaultLocale -> defaultLocaleSchema
                 Schema.Locale -> localeSchema

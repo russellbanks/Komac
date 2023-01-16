@@ -1,4 +1,4 @@
-package schemas
+package schemas.manifest
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

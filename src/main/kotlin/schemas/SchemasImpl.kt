@@ -14,6 +14,10 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.data.DefaultLocaleSchema
+import schemas.data.InstallerSchema
+import schemas.data.LocaleSchema
+import schemas.data.VersionSchema
 
 @Single
 class SchemasImpl : KoinComponent {

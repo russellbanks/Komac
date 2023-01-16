@@ -1,4 +1,4 @@
-
+package commands
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
@@ -30,10 +30,10 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.LocaleManifest
 import schemas.Schema
 import schemas.Schemas
 import schemas.TerminalInstance
+import schemas.manifest.LocaleManifest
 import kotlin.system.exitProcess
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {

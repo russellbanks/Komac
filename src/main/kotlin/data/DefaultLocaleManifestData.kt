@@ -3,10 +3,10 @@ package data
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.DefaultLocaleManifest
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
+import schemas.manifest.DefaultLocaleManifest
 
 @Single
 class DefaultLocaleManifestData : KoinComponent {

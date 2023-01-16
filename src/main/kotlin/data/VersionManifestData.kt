@@ -6,7 +6,7 @@ import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
-import schemas.VersionManifest
+import schemas.manifest.VersionManifest
 
 @Single
 class VersionManifestData : KoinComponent {

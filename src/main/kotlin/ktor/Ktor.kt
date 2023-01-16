@@ -21,8 +21,8 @@ import org.apache.commons.io.FilenameUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.InstallerManifest
 import schemas.TerminalInstance
+import schemas.manifest.InstallerManifest
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

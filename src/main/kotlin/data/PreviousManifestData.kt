@@ -9,10 +9,10 @@ import org.kohsuke.github.GHContent
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import schemas.DefaultLocaleManifest
-import schemas.InstallerManifest
-import schemas.LocaleManifest
-import schemas.VersionManifest
+import schemas.manifest.DefaultLocaleManifest
+import schemas.manifest.InstallerManifest
+import schemas.manifest.LocaleManifest
+import schemas.manifest.VersionManifest
 
 @Single
 class PreviousManifestData : KoinComponent {

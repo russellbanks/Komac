@@ -5,61 +5,71 @@ import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.table.verticalLayout
-import input.Mode
+import com.github.ajalt.mordant.terminal.ConversionResult
+import commands.ChangeToken
+import commands.CommandOption
+import commands.NewManifest
+import commands.QuickUpdate
+import commands.RemoveVersion
 import input.Prompts
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.TerminalInstance
 import token.TokenStore
-import kotlin.system.exitProcess
 
 class Komac(private val args: Array<String>) : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
-    override fun run(): Unit = runBlocking {
+    override fun run() = runBlocking {
         with(get<TerminalInstance>().terminal) {
             get<TokenStore>().getToken(this)
             if (currentContext.invokedSubcommand == null) {
                 println(
                     verticalLayout {
                         cell(brightYellow("Select mode:"))
-                        cell("")
-                        Mode.values().forEach { mode ->
-                            cell(optionCell(mode, mode.key))
-                        }
-                        cell("")
+                        CommandOption.values().forEach { cell(optionCell(it)) }
                     }
                 )
-                val selection = prompt(
+                val commandOption = prompt(
                     prompt = brightWhite("Selection"),
-                    default = Mode.Exit.key.toString(),
-                    showDefault = false
+                    convert = { selection ->
+                        val option = CommandOption.values().find {
+                            it.key.toString().equals(other = selection, ignoreCase = true)
+                        }
+                        ConversionResult.Valid(option ?: CommandOption.Exit)
+                    }
                 )
                 println()
-                when (selection?.lowercase()) {
-                    Mode.NewManifest.key.toString() -> {
-                        this@Komac.registeredSubcommands().first { it::class == NewManifest::class }.main(args)
-                    }
-                    Mode.QuickUpdate.key.toString() -> {
-                        this@Komac.registeredSubcommands().first { it::class == QuickUpdate::class }.main(args)
-                    }
-                    Mode.RemoveVersion.key.toString() -> {
-                        this@Komac.registeredSubcommands().first { it::class == RemoveVersion::class }.main(args)
-                    }
-                    Mode.Token.key.toString() -> ChangeToken().run()
-                    else -> exitProcess(0)
-                }
+                executeSubcommand(commandOption)
             }
         }
     }
 
-    private fun optionCell(mode: Mode, key: Char): String {
-        val textColour = if (mode != Mode.Exit) cyan else brightRed
+    private fun executeSubcommand(commandOption: CommandOption?) {
+        when (commandOption) {
+            CommandOption.NewManifest -> {
+                this@Komac.registeredSubcommands().first { it::class == NewManifest::class }.main(args)
+            }
+            CommandOption.QuickUpdate -> {
+                this@Komac.registeredSubcommands().first { it::class == QuickUpdate::class }.main(args)
+            }
+            CommandOption.RemoveVersion -> {
+                this@Komac.registeredSubcommands().first { it::class == RemoveVersion::class }.main(args)
+            }
+            CommandOption.Token -> {
+                this@Komac.registeredSubcommands().first { it::class == ChangeToken::class }.main(args)
+            }
+            else -> return
+        }
+    }
+
+    private fun optionCell(commandOption: CommandOption): String {
+        val textColour = if (commandOption != CommandOption.Exit) cyan else brightRed
         return buildString {
             append(" ".repeat(Prompts.optionIndent))
             append(cyan("["))
-            append(brightWhite(key.toString()))
+            append(brightWhite(commandOption.key.toString()))
             append(cyan("] "))
-            append(textColour(mode.toString()))
+            append(textColour(commandOption.toString()))
         }
     }
 }

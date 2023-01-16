@@ -1,3 +1,6 @@
+package commands
+
+import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -11,9 +14,9 @@ import org.koin.core.component.inject
 import schemas.TerminalInstance
 import token.TokenStore
 
-class ChangeToken : KoinComponent {
+class ChangeToken : CliktCommand(name = "token"), KoinComponent {
     private val tokenStore: TokenStore by inject()
-    fun run() {
+    override fun run() {
         with(get<TerminalInstance>().terminal) {
             println(
                 verticalLayout {

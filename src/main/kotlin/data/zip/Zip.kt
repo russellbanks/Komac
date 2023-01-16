@@ -16,10 +16,10 @@ import input.Polar
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import schemas.InstallerManifest
-import schemas.InstallerSchema
 import schemas.SchemasImpl
 import schemas.TerminalInstance
+import schemas.data.InstallerSchema
+import schemas.manifest.InstallerManifest
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
