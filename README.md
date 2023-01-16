@@ -16,20 +16,39 @@
 
 ## About The Project
 
-Komac is a manifest creator for WinGet. It stands for **KO**tlin **MA**nifest **C**reator. Komac is currently in rapid development and aims to reach feature parity with other manifest creation tools, such as YamlCreate and WinGetCreate. The goal is to develop on the features that both these tools provide with extra functionality, such as a parameters, which allows for straightforward usage in automation. Komac is by no means stable; the first goal is to be able to create a manifest from scratch.
+Komac is a manifest creator for WinGet. It stands for **KO**tlin **MA**nifest **C**reator.
 
-## What can I use in the meantime?
+🎉 Komac is currently in it's final stages of development!
 
-There are already well-established tools in the community. For manifest creation, use:
+Komac creates WinGet 1.4 manifests, ready for when they start getting accepted to winget-pkgs!
 
-- ⭐ [YamlCreate](https://github.com/microsoft/winget-pkgs/blob/master/Tools/YamlCreate.ps1)
-- [WinGetCreate](https://github.com/microsoft/winget-create)
+Below is a development demo of Komac:
 
-For automated releases to WinGet, use:
-- ⭐ [WinGet Releaser](https://github.com/vedantmgoyal2009/winget-releaser)
+![Komac-demo](https://user-images.githubusercontent.com/74878137/212578049-9d929028-daa5-47fc-8beb-2d91a1a44970.gif)
 
-> Note: these are my personal recommendations. Ones that are starred are tools I actively use myself.
-> 
+## Why should I use Komac?
+
+Komac allows you to create WinGet manifests for applications with minimal effort. Manifest creation shouldn't be something that's only for long-time winget-pkgs contributors; it's for everyone.
+
+## What about other manifest creation tools? Why Komac over those?
+
+Other manifest creation tools are great and have created a solid basis for everything so far in winget-pkgs, but development of those tools is arguably very slow and lacks the advanced detction that Komac has.
+
+Komac is also written in Kotlin, meaning it can run on any operating system, not just Windows!
+
+For example, if you enter an MSI as an installer, Komac is able to identify the InstallerType, Version, Name, Language, UpgradeCode, UpgradeBehaviour and more, meaning the user simply doesn't need to be asked for these.
+
+This is similar for MSIX's, APPX's, MSIXBundles, APPXBundles, Zips, etc, whereby Komac will be doing all it can to detect as much as it can from those types. Other tools just don't have this same advanced detection for these file types.
+
+As another (of many things Komac detects) example, if you enter a Url and it contains x64 (or x86, arm, i686, i386, x86_x64, etc) within it, we can't guarantee that this is what the installer actually is, but 99% of the time it will be, so we can show this to the user and even use it as a default value for the prompt.
+
+Finally, Komac is community-oriented. I'm a sole developer who's passionate about programming and the WinGet Community Package Manager repository.
+
+## How can I support Komac?
+
+- ⭐ Star this project! :)
+- 🧑‍💻 Use Komac and [create an issue](https://github.com/russellbanks/Komac/issues/new) if you run into any bugs or inconsistencies
+
 ## License
 
 [![GNU GPLv3 Logo](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)
