@@ -6,6 +6,7 @@ import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
+import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
 import java.time.LocalDate
 
@@ -30,8 +31,6 @@ class InstallerManifestData : KoinComponent {
     var installModes: List<InstallerManifest.InstallModes>? = null
     private val schemaImpl: SchemasImpl by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val installerSchema
-        get() = schemaImpl.installerSchema
 
     fun addInstaller() {
         println(installers.size)
@@ -172,8 +171,8 @@ class InstallerManifestData : KoinComponent {
             },
             installers = installers.removeNonDistinctKeys()
                 .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope })),
-            manifestType = installerSchema.properties.manifestType.const,
-            manifestVersion = installerSchema.properties.manifestVersion.default
+            manifestType = schemaImpl.installerSchema.properties.manifestType.const,
+            manifestVersion = schemaImpl.installerSchema.properties.manifestVersion.default
         ).toEncodedYaml()
     }
 
@@ -181,25 +180,51 @@ class InstallerManifestData : KoinComponent {
         return previousManifestData.remoteInstallerData ?: InstallerManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
-            manifestType = Schemas.manifestType(installerSchema),
-            manifestVersion = installerSchema.properties.manifestVersion.default
+            manifestType = Schemas.manifestType(schemaImpl.installerSchema),
+            manifestVersion = schemaImpl.installerSchema.properties.manifestVersion.default
         )
     }
 
     private fun List<InstallerManifest.Installer>.removeNonDistinctKeys(): List<InstallerManifest.Installer> {
         return map { installer ->
             installer.copy(
-                installerLocale = if (onlyOneNotNullDistinct { it.installerLocale }) null else installer.installerLocale,
+                installerLocale = if (onlyOneNotNullDistinct {
+                        it.installerLocale
+                }) null else installer.installerLocale,
                 platform = if (onlyOneNotNullDistinct { it.platform }) null else installer.platform,
-                minimumOSVersion = if (onlyOneNotNullDistinct { it.minimumOSVersion }) null else installer.minimumOSVersion,
+                minimumOSVersion = if (onlyOneNotNullDistinct { it.minimumOSVersion }) {
+                    null
+                } else {
+                    installer.minimumOSVersion
+                },
                 installerType = if (onlyOneNotNullDistinct { it.installerType }) null else installer.installerType,
-                nestedInstallerType = if (onlyOneNotNullDistinct { it.nestedInstallerType }) null else installer.nestedInstallerType,
-                nestedInstallerFiles = if (onlyOneNotNullDistinct { it.nestedInstallerFiles }) null else installer.nestedInstallerFiles,
+                nestedInstallerType = if (onlyOneNotNullDistinct { it.nestedInstallerType }) {
+                    null
+                } else {
+                    installer.nestedInstallerType
+                },
+                nestedInstallerFiles = if (onlyOneNotNullDistinct { it.nestedInstallerFiles }) {
+                    null
+                } else {
+                    installer.nestedInstallerFiles
+                },
                 scope = if (onlyOneNotNullDistinct { it.scope }) null else installer.scope,
                 releaseDate = if (onlyOneNotNullDistinct { it.releaseDate }) null else installer.releaseDate,
-                upgradeBehavior = if (onlyOneNotNullDistinct { it.upgradeBehavior }) null else installer.upgradeBehavior,
-                installerSwitches = if (onlyOneNotNullDistinct { it.installerSwitches }) null else installer.installerSwitches,
-                appsAndFeaturesEntries = if (onlyOneNotNullDistinct { it.appsAndFeaturesEntries }) null else installer.appsAndFeaturesEntries
+                upgradeBehavior = if (onlyOneNotNullDistinct { it.upgradeBehavior }) {
+                    null
+                } else {
+                    installer.upgradeBehavior
+                },
+                installerSwitches = if (onlyOneNotNullDistinct { it.installerSwitches }) {
+                    null
+                } else {
+                    installer.installerSwitches
+                },
+                appsAndFeaturesEntries = if (onlyOneNotNullDistinct { it.appsAndFeaturesEntries }) {
+                    null
+                } else {
+                    installer.appsAndFeaturesEntries
+                }
             )
         }
     }

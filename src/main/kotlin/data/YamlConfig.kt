@@ -1,5 +1,6 @@
 package data
 
+import com.charleskorn.kaml.MultiLineStringStyle
 import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
@@ -10,7 +11,8 @@ import java.time.LocalDate
 object YamlConfig {
     private val sharedConfiguration = YamlConfiguration(
         encodeDefaults = false,
-        singleLineStringStyle = SingleLineStringStyle.Plain
+        singleLineStringStyle = SingleLineStringStyle.Plain,
+        multiLineStringStyle = MultiLineStringStyle.Literal
     )
 
     val defaultWithLocalDataSerializer = Yaml(

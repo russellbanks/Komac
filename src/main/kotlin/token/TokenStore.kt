@@ -59,12 +59,7 @@ class TokenStore {
 
     private fun checkIfTokenValid(tokenString: String): Boolean {
         return try {
-            if (GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid) {
-                true
-            } else {
-                println(brightRed("Invalid token. Please try again."))
-                false
-            }
+            GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid
         } catch (ioException: IOException) {
             println(brightRed(ioException.message ?: "Invalid token. Please try again."))
             false

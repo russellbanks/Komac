@@ -2,8 +2,8 @@ package input
 
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import schemas.data.InstallerSchema
 import schemas.SchemasImpl
+import schemas.data.InstallerSchema
 
 enum class InstallerSwitch : KoinComponent {
     Silent,

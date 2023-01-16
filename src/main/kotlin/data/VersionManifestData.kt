@@ -24,7 +24,7 @@ class VersionManifestData : KoinComponent {
     }
     private fun VersionManifest.toEncodedYaml(): String {
         return Schemas.buildManifestString(
-            schema = Schema.DefaultLocale,
+            schema = Schema.Version,
             rawString = YamlConfig.default.encodeToString(
                 serializer = VersionManifest.serializer(),
                 value = this@toEncodedYaml

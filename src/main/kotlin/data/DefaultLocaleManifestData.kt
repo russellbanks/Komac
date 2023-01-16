@@ -67,7 +67,9 @@ class DefaultLocaleManifestData : KoinComponent {
                 else -> previousManifestData.remoteDefaultLocaleData?.shortDescription ?: ""
             },
             description = description
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.description,
+                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.description
+                ?.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n")
+                ?.trim(),
             moniker = moniker
                 .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
             tags = tags.takeIf { it?.isNotEmpty() == true } ?: previousManifestData.remoteDefaultLocaleData?.tags,
