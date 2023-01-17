@@ -68,13 +68,11 @@ class InstallerManifestData : KoinComponent {
                 ?: productCode?.ifBlank { null }
                 ?: previousManifest?.productCode,
             releaseDate = releaseDate ?: sharedManifestData.gitHubDetection?.releaseDate?.await(),
-            appsAndFeaturesEntries = previousInstaller?.appsAndFeaturesEntries?.map {
-                it.copy(upgradeCode = sharedManifestData.msi?.upgradeCode)
-            } ?: previousManifest?.appsAndFeaturesEntries?.map {
-                it.copy(upgradeCode = sharedManifestData.msi?.upgradeCode).toInstallerAppsAndFeaturesEntry()
-            } ?: sharedManifestData.msi?.upgradeCode?.let {
-                listOf(InstallerManifest.Installer.AppsAndFeaturesEntry(upgradeCode = it))
-            },
+            appsAndFeaturesEntries = previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
+                appsAndFeaturesEntry.fillARPEntry()
+            } ?: previousManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
+                appsAndFeaturesEntry.toInstallerAppsAndFeaturesEntry().fillARPEntry()
+            } ?: listOf(InstallerManifest.Installer.AppsAndFeaturesEntry().fillARPEntry()).ifEmpty { null },
         )
         when (sharedManifestData.msixBundle) {
             null -> installers += installer
@@ -90,6 +88,16 @@ class InstallerManifestData : KoinComponent {
             }
         }
         resetValues()
+    }
+
+    private fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry()
+    : InstallerManifest.Installer.AppsAndFeaturesEntry {
+        return copy(
+            displayName = sharedManifestData.msi?.productName ?: displayName,
+            publisher = sharedManifestData.msi?.manufacturer ?: publisher,
+            displayVersion = sharedManifestData.msi?.productVersion ?: displayVersion,
+            upgradeCode = sharedManifestData.msi?.upgradeCode ?: upgradeCode
+        )
     }
 
     private inline fun <T, R : Any> Iterable<T>.onlyOneNotNullDistinct(selector: (T) -> R?): Boolean {
@@ -156,14 +164,6 @@ class InstallerManifestData : KoinComponent {
                     installers
                         .first()
                         .appsAndFeaturesEntries
-                        ?.map { appsAndFeatureEntry ->
-                            sharedManifestData.msi?.productName?.let {
-                                when {
-                                    sharedManifestData.packageName != it -> appsAndFeatureEntry.copy(displayName = it)
-                                    else -> appsAndFeatureEntry
-                                }
-                            } ?: appsAndFeatureEntry
-                        }
                         ?.map { it.toManifestARPEntry() }
                 }
                 else -> previousManifestData.remoteInstallerData?.appsAndFeaturesEntries

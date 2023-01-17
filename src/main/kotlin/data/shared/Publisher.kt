@@ -1,4 +1,4 @@
-package data.locale
+package data.shared
 
 import Errors
 import Validation
@@ -8,7 +8,6 @@ import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.terminal.Terminal
-import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import input.PromptType
@@ -20,18 +19,17 @@ import schemas.SchemasImpl
 import schemas.data.DefaultLocaleSchema
 
 object Publisher : KoinComponent {
-    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val publisherSchema = get<SchemasImpl>().defaultLocaleSchema.properties.publisher
     private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.publisherPrompt() {
         sharedManifestData.msix?.publisherDisplayName?.let {
-            defaultLocaleManifestData.publisher = it
+            sharedManifestData.publisher = it
             return
         }
         sharedManifestData.msi?.manufacturer?.let {
-            defaultLocaleManifestData.publisher = it
+            sharedManifestData.publisher = it
             return
         }
         do {
@@ -45,14 +43,14 @@ object Publisher : KoinComponent {
             )?.trim()
             val (publisherValid, error) = publisherValid(input, publisherSchema)
             if (publisherValid == Validation.Success && input != null) {
-                defaultLocaleManifestData.publisher = input
+                sharedManifestData.publisher = input
             }
             error?.let { println(brightRed(it)) }
             println()
         } while (publisherValid != Validation.Success)
     }
 
-    fun publisherValid(
+    private fun publisherValid(
         publisher: String?,
         publisherSchema: DefaultLocaleSchema.Properties.Publisher
     ): Pair<Validation, String?> {

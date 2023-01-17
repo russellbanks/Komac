@@ -132,7 +132,7 @@ class Msi(private val msiFile: File) : KoinComponent {
         private const val allUsersConst = "ALLUSERS"
         private const val msiDbOpenReadOnly = "MSIDBOPEN_READONLY"
         private const val propertyBufferSize = 16 // Length of "ProductLanguage" + null terminator
-        private const val valueBufferSize = 39 // Length of ProductCode/UpgradeCode + null terminator
+        private const val valueBufferSize = 1024
         val values = listOf(
             upgradeCodeConst,
             productCodeConst,

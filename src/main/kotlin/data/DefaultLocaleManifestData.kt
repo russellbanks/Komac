@@ -11,7 +11,6 @@ import schemas.manifest.DefaultLocaleManifest
 
 @Single
 class DefaultLocaleManifestData : KoinComponent {
-    lateinit var publisher: String
     lateinit var license: String
     lateinit var shortDescription: String
     var moniker: String? = null
@@ -36,10 +35,7 @@ class DefaultLocaleManifestData : KoinComponent {
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
-            publisher = when {
-                ::publisher.isInitialized -> publisher
-                else -> previousManifestData.remoteDefaultLocaleData?.publisher ?: ""
-            },
+            publisher = sharedManifestData.publisher ?: previousManifestData.remoteDefaultLocaleData?.publisher ?: "",
             publisherUrl = publisherUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.publisherUrl
                 ?: sharedManifestData.gitHubDetection?.publisherUrl?.await(),
@@ -96,7 +92,7 @@ class DefaultLocaleManifestData : KoinComponent {
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
-            publisher = publisher,
+            publisher = sharedManifestData.publisher!!,
             packageName = sharedManifestData.packageName!!,
             license = license,
             shortDescription = shortDescription,

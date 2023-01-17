@@ -31,7 +31,7 @@ import data.locale.DescriptionType
 import data.locale.License.licensePrompt
 import data.locale.LocaleUrl
 import data.locale.Moniker.monikerPrompt
-import data.locale.Publisher.publisherPrompt
+import data.shared.Publisher.publisherPrompt
 import data.locale.Tags.tagsPrompt
 import data.shared.Locale.localePrompt
 import data.shared.PackageIdentifier.packageIdentifierPrompt
