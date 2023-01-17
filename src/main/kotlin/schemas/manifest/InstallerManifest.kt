@@ -59,12 +59,7 @@ data class InstallerManifest(
 
         override fun toString() = name.split("(?<=[a-z])(?=[A-Z])".toRegex()).joinToString(".")
 
-        fun toPerInstallerPlatform(): Installer.Platform {
-            return when (this) {
-                WindowsDesktop -> Installer.Platform.WindowsDesktop
-                WindowsUniversal -> Installer.Platform.WindowsUniversal
-            }
-        }
+        fun toPerInstallerPlatform() = Installer.Platform.valueOf(name)
     }
 
     /**
@@ -86,21 +81,7 @@ data class InstallerManifest(
 
         override fun toString() = name.lowercase()
 
-        fun toPerInstallerType(): Installer.InstallerType {
-            return when (this) {
-                MSIX -> Installer.InstallerType.MSIX
-                MSI -> Installer.InstallerType.MSI
-                APPX -> Installer.InstallerType.APPX
-                EXE -> Installer.InstallerType.EXE
-                ZIP -> Installer.InstallerType.ZIP
-                INNO -> Installer.InstallerType.INNO
-                NULLSOFT -> Installer.InstallerType.NULLSOFT
-                WIX -> Installer.InstallerType.WIX
-                BURN -> Installer.InstallerType.BURN
-                PWA -> Installer.InstallerType.PWA
-                PORTABLE -> Installer.InstallerType.PORTABLE
-            }
-        }
+        fun toPerInstallerType() = Installer.InstallerType.valueOf(name)
     }
 
     /**
@@ -118,6 +99,8 @@ data class InstallerManifest(
         @SerialName("burn") BURN,
         @SerialName("portable") PORTABLE;
 
+        fun toPerInstallerNestedInstallerType() = Installer.NestedInstallerType.valueOf(name)
+
         override fun toString() = name.lowercase()
     }
 
@@ -128,7 +111,12 @@ data class InstallerManifest(
     data class NestedInstallerFiles(
         @SerialName("RelativeFilePath") val relativeFilePath: String,
         @SerialName("PortableCommandAlias") val portableCommandAlias: String? = null
-    )
+    ) {
+        fun toPerInstallerNestedInstallerFiles() = Installer.NestedInstallerFiles(
+            relativeFilePath = relativeFilePath,
+            portableCommandAlias = portableCommandAlias
+        )
+    }
 
     /**
      * Scope indicates if the installer is per user or per machine
@@ -137,12 +125,7 @@ data class InstallerManifest(
         @SerialName("user") User,
         @SerialName("machine") Machine;
 
-        fun toPerScopeInstallerType(): Installer.Scope {
-            return when (this) {
-                User -> Installer.Scope.User
-                Machine -> Installer.Scope.Machine
-            }
-        }
+        fun toPerScopeInstallerType() = Installer.Scope.valueOf(name)
     }
 
     enum class InstallModes {
@@ -167,17 +150,15 @@ data class InstallerManifest(
             }
         }
 
-        fun toPerInstallerSwitches(): Installer.InstallerSwitches {
-            return Installer.InstallerSwitches(
-                silent = silent,
-                silentWithProgress = silentWithProgress,
-                interactive = interactive,
-                installLocation = installLocation,
-                log = log,
-                upgrade = upgrade,
-                custom = custom
-            )
-        }
+        fun toPerInstallerSwitches() = Installer.InstallerSwitches(
+            silent = silent,
+            silentWithProgress = silentWithProgress,
+            interactive = interactive,
+            installLocation = installLocation,
+            log = log,
+            upgrade = upgrade,
+            custom = custom
+        )
     }
 
     @Serializable
@@ -216,12 +197,7 @@ data class InstallerManifest(
         @SerialName("install") Install,
         @SerialName("uninstallPrevious") UninstallPrevious;
 
-        fun toPerInstallerUpgradeBehaviour(): Installer.UpgradeBehavior {
-            return when (this) {
-                Install -> Installer.UpgradeBehavior.Install
-                UninstallPrevious -> Installer.UpgradeBehavior.UninstallPrevious
-            }
-        }
+        fun toPerInstallerUpgradeBehaviour() = Installer.UpgradeBehavior.valueOf(name)
     }
 
     @Serializable
@@ -262,6 +238,14 @@ data class InstallerManifest(
         @SerialName("UpgradeCode") val upgradeCode: String? = null,
         @SerialName("InstallerType") val installerType: InstallerType? = null
     ) {
+        fun toInstallerAppsAndFeaturesEntry() = Installer.AppsAndFeaturesEntry(
+            displayName = displayName,
+            publisher = publisher,
+            displayVersion = displayVersion,
+            productCode = productCode,
+            upgradeCode = upgradeCode
+        )
+
         /**
          * Enumeration of supported installer types.
          * InstallerType is required in either root level or individual Installer level
@@ -365,12 +349,9 @@ data class InstallerManifest(
             @SerialName("Windows.Desktop") WindowsDesktop,
             @SerialName("Windows.Universal") WindowsUniversal;
 
-            override fun toString() = name.split("(?<=[a-z])(?=[A-Z])".toRegex()).joinToString(".")
+            fun toManifestPlatform() = InstallerManifest.Platform.valueOf(name)
 
-            fun toManifestPlatform() = when (this) {
-                WindowsDesktop -> InstallerManifest.Platform.WindowsDesktop
-                WindowsUniversal -> InstallerManifest.Platform.WindowsUniversal
-            }
+            override fun toString() = name.split("(?<=[a-z])(?=[A-Z])".toRegex()).joinToString(".")
         }
 
         /**
@@ -403,21 +384,7 @@ data class InstallerManifest(
             @SerialName("pwa") PWA,
             @SerialName("portable") PORTABLE;
 
-            fun toManifestInstallerType(): InstallerManifest.InstallerType {
-                return when (this) {
-                    MSIX -> InstallerManifest.InstallerType.MSIX
-                    MSI -> InstallerManifest.InstallerType.MSI
-                    APPX -> InstallerManifest.InstallerType.APPX
-                    EXE -> InstallerManifest.InstallerType.EXE
-                    ZIP -> InstallerManifest.InstallerType.ZIP
-                    INNO -> InstallerManifest.InstallerType.INNO
-                    NULLSOFT -> InstallerManifest.InstallerType.NULLSOFT
-                    WIX -> InstallerManifest.InstallerType.WIX
-                    BURN -> InstallerManifest.InstallerType.BURN
-                    PWA -> InstallerManifest.InstallerType.PWA
-                    PORTABLE -> InstallerManifest.InstallerType.PORTABLE
-                }
-            }
+            fun toManifestInstallerType() = InstallerManifest.InstallerType.valueOf(name)
 
             override fun toString() = name.lowercase()
         }
@@ -437,18 +404,7 @@ data class InstallerManifest(
             @SerialName("burn") BURN,
             @SerialName("portable") PORTABLE;
 
-            fun toManifestNestedInstallerType() = when (this) {
-                MSIX -> InstallerManifest.NestedInstallerType.MSIX
-                MSI -> InstallerManifest.NestedInstallerType.MSI
-                APPX -> InstallerManifest.NestedInstallerType.APPX
-                EXE -> InstallerManifest.NestedInstallerType.EXE
-                ZIP -> InstallerManifest.NestedInstallerType.ZIP
-                INNO -> InstallerManifest.NestedInstallerType.INNO
-                NULLSOFT -> InstallerManifest.NestedInstallerType.NULLSOFT
-                WIX -> InstallerManifest.NestedInstallerType.WIX
-                BURN -> InstallerManifest.NestedInstallerType.BURN
-                PORTABLE -> InstallerManifest.NestedInstallerType.PORTABLE
-            }
+            fun toManifestNestedInstallerType() = InstallerManifest.NestedInstallerType.valueOf(name)
 
             override fun toString() = name.lowercase()
         }
@@ -474,10 +430,7 @@ data class InstallerManifest(
             @SerialName("user") User,
             @SerialName("machine") Machine;
 
-            fun toManifestScope() = when (this) {
-                User -> InstallerManifest.Scope.User
-                Machine -> InstallerManifest.Scope.Machine
-            }
+            fun toManifestScope() = InstallerManifest.Scope.valueOf(name)
         }
 
         enum class InstallModes {
@@ -502,17 +455,15 @@ data class InstallerManifest(
                 }
             }
 
-            fun toManifestInstallerSwitches(): InstallerManifest.InstallerSwitches {
-                return InstallerManifest.InstallerSwitches(
-                    silent = silent,
-                    silentWithProgress = silentWithProgress,
-                    interactive = interactive,
-                    installLocation = installLocation,
-                    log = log,
-                    upgrade = upgrade,
-                    custom = custom
-                )
-            }
+            fun toManifestInstallerSwitches() = InstallerManifest.InstallerSwitches(
+                silent = silent,
+                silentWithProgress = silentWithProgress,
+                interactive = interactive,
+                installLocation = installLocation,
+                log = log,
+                upgrade = upgrade,
+                custom = custom
+            )
 
             operator fun set(installerSwitch: InstallerSwitch, value: String?) {
                 when (installerSwitch) {
@@ -559,10 +510,7 @@ data class InstallerManifest(
             @SerialName("install") Install,
             @SerialName("uninstallPrevious") UninstallPrevious;
 
-            fun toManifestUpgradeBehaviour() = when (this) {
-                Install -> InstallerManifest.UpgradeBehavior.Install
-                UninstallPrevious -> InstallerManifest.UpgradeBehavior.UninstallPrevious
-            }
+            fun toManifestUpgradeBehaviour() = InstallerManifest.UpgradeBehavior.valueOf(name)
         }
 
         @Serializable
@@ -609,6 +557,7 @@ data class InstallerManifest(
                     it == null
                 }
             }
+
             fun toManifestARPEntry() = AppsAndFeaturesEntry(
                 displayName = displayName,
                 publisher = publisher,

@@ -119,7 +119,7 @@ object Url : KoinComponent {
             }
         } else {
             if (
-                installerManifestData.installerUrl.host.lowercase() == "github.com" &&
+                installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true) &&
                 sharedManifestData.gitHubDetection == null
             ) {
                 sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)

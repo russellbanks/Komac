@@ -1,7 +1,6 @@
 package data.locale
 
 import Errors
-import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
@@ -17,7 +16,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.DefaultLocaleSchema
 
 object License : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
@@ -39,28 +37,22 @@ object License : KoinComponent {
                     println(gray("Previous license: $it"))
                 }
             )?.trim()
-            val (packageLocaleValid, error) = isLicenseValid(input, licenseSchema)
-            if (packageLocaleValid == Validation.Success && input != null) {
+            val error = isLicenseValid(input)
+            if (error == null && input != null) {
                 defaultLocaleManifestData.license = input
             }
             error?.let { println(brightRed(it)) }
             println()
-        } while (packageLocaleValid != Validation.Success)
+        } while (error != null)
     }
 
-    fun isLicenseValid(
-        license: String?,
-        licenseSchema: DefaultLocaleSchema.Properties.License
-    ): Pair<Validation, String?> {
+    private fun isLicenseValid(license: String?): String? {
         return when {
-            license.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.License)
+            license.isNullOrBlank() -> Errors.blankInput(PromptType.License)
             license.length < licenseSchema.minLength || license.length > licenseSchema.maxLength -> {
-                Validation.InvalidLength to Errors.invalidLength(
-                    min = licenseSchema.minLength,
-                    max = licenseSchema.maxLength
-                )
+                Errors.invalidLength(min = licenseSchema.minLength, max = licenseSchema.maxLength)
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 
