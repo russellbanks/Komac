@@ -137,16 +137,16 @@ class InstallerManifestData : KoinComponent {
                 }
                 else -> previousManifestData.remoteInstallerData?.installerSwitches
             },
-            installerSuccessCodes = installerSuccessCodes?.ifEmpty {
-                previousManifestData.remoteInstallerData?.installerSuccessCodes
-            },
+            installerSuccessCodes = installerSuccessCodes?.ifEmpty { null }
+                ?: previousManifestData.remoteInstallerData?.installerSuccessCodes,
             upgradeBehavior = when {
                 upgradeBehaviourDistinct -> installers.map { it.upgradeBehavior }.first()?.toManifestUpgradeBehaviour()
                 else -> previousManifestData.remoteInstallerData?.upgradeBehavior
             },
-            commands = commands?.ifEmpty { previousManifestData.remoteInstallerData?.commands },
-            protocols = protocols?.ifEmpty { previousManifestData.remoteInstallerData?.protocols },
-            fileExtensions = fileExtensions?.ifEmpty { previousManifestData.remoteInstallerData?.fileExtensions },
+            commands = commands?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.commands,
+            protocols = protocols?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.protocols,
+            fileExtensions = fileExtensions?.ifEmpty { null }
+                ?: previousManifestData.remoteInstallerData?.fileExtensions,
             releaseDate = when {
                 releaseDateDistinct -> installers.map { it.releaseDate }.first()
                 else -> null

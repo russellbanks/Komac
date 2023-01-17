@@ -48,13 +48,32 @@ class GitHubDetection(url: Url) : KoinComponent {
             }
             releaseNotesUrl = async { Url(release.htmlUrl.toURI()) }
             releaseNotes = async {
+                val lines = release.body.lines()
+                var title = ""
+                var titleAdded = false
                 buildString {
-                    release.body.lineSequence().forEach {
-                        if (it.startsWith("* ") || it.startsWith("- ") || it.startsWith("#")) {
-                            appendLine(it.replace("#", "").trim())
+                    lines.forEachIndexed { index, line ->
+                        val cleanedLine = line.trim()
+                        if (cleanedLine.startsWith("#")) {
+                            title = cleanedLine.dropWhile { it == '#' }.trim().ifEmpty { "" }
+                            titleAdded = false
+                        } else if (cleanedLine.startsWith("- ") || cleanedLine.startsWith("* ")) {
+                            if (!titleAdded && title.isNotEmpty()) {
+                                appendLine(title)
+                                titleAdded = true
+                            }
+                            appendLine("- ${cleanedLine.substring(2).trim()}")
+                        } else if (
+                            titleAdded && (index < lines.size - 2
+                                    && !lines[index + 1].startsWith("#")
+                                    && !lines[index + 2].startsWith("#"))
+                        ) {
+                            delete(length - title.length - 1, length)
+                            title = ""
+                            titleAdded = false
                         }
                     }
-                }.replace("* ", "- ").replace(Regex("\\[([^\\]]+)\\]\\([^\\)]+\\)"), "$1").trim().ifBlank { null }
+                }.replace(Regex("\\[([^\\]]+)\\]\\([^\\)]+\\)"), "$1").trim().ifBlank { null }
             }
             topics = async { repository.listTopics() }
             publisherUrl = async { runCatching { repository.owner.blog }.getOrNull()?.let { Url(it) } }
