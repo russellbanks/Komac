@@ -52,7 +52,9 @@ class DefaultLocaleManifestData : KoinComponent {
             author = author.takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.author,
             packageName = sharedManifestData.packageName
                 ?: previousManifestData.remoteDefaultLocaleData?.packageName ?: "",
-            packageUrl = packageUrl ?: sharedManifestData.gitHubDetection?.packageUrl?.await(),
+            packageUrl = packageUrl
+                ?: previousManifestData.remoteDefaultLocaleData?.packageUrl
+                ?: sharedManifestData.gitHubDetection?.packageUrl?.await(),
             license = when {
                 ::license.isInitialized -> license
                 else -> sharedManifestData.gitHubDetection?.license?.await()
