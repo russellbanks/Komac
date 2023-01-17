@@ -24,7 +24,13 @@ object Description : KoinComponent {
     private val propertiesSchema: DefaultLocaleSchema.Properties = get<SchemasImpl>().defaultLocaleSchema.properties
     private val sharedManifestData: SharedManifestData by inject()
 
-    fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
+    suspend fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
+        if (descriptionType == DescriptionType.Short) {
+            sharedManifestData.gitHubDetection?.shortDescription?.await()?.let {
+                defaultLocaleManifestData.shortDescription = it
+                return
+            }
+        }
         do {
             val textColour = if (descriptionType == DescriptionType.Short) brightGreen else brightYellow
             println(textColour(descriptionInfo(descriptionType)))

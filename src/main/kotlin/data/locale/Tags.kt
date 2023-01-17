@@ -10,6 +10,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -21,11 +22,16 @@ import schemas.data.DefaultLocaleSchema
 object Tags : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
     private val tagsSchema = schemasImpl.defaultLocaleSchema.properties.tags
     private val tagSchema = schemasImpl.defaultLocaleSchema.definitions.tag
 
-    fun Terminal.tagsPrompt() {
+    suspend fun Terminal.tagsPrompt() {
+        sharedManifestData.gitHubDetection?.topics?.await()?.let {
+            defaultLocaleManifestData.tags = it
+            return
+        }
         do {
             println(brightYellow(tagsInfo))
             println(cyan(tagsExample))

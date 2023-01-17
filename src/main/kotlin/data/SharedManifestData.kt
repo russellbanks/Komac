@@ -20,4 +20,5 @@ class SharedManifestData : KoinComponent {
     var msi: Msi? = null
     var zip: Zip? = null
     var fileExtension: String? = null
+    var gitHubDetection: GitHubDetection? = null
 }

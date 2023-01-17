@@ -10,6 +10,7 @@ import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
+import data.SharedManifestData
 import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -22,8 +23,13 @@ object License : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val licenseSchema = get<SchemasImpl>().defaultLocaleSchema.properties.license
+    private val sharedManifestData: SharedManifestData by inject()
 
-    fun Terminal.licensePrompt() {
+    suspend fun Terminal.licensePrompt() {
+        sharedManifestData.gitHubDetection?.license?.await()?.let {
+            defaultLocaleManifestData.license = it
+            return
+        }
         do {
             println(brightGreen(licenseInfo))
             println(cyan(licenseExample))

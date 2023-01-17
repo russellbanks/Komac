@@ -1,16 +1,17 @@
 package data.shared
 
 import Errors
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextStyles.bold
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
+import data.GitHubDetection
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
@@ -24,6 +25,7 @@ import input.PromptType
 import input.Prompts
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
+import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
@@ -43,6 +45,7 @@ object Url : KoinComponent {
 
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: String? = null) {
         val installerManifestData: InstallerManifestData by inject()
+        val sharedManifestData: SharedManifestData by inject()
         if (parameterUrl != null) {
             installerManifestData.installerUrl = parameterUrl
         } else {
@@ -116,6 +119,7 @@ object Url : KoinComponent {
                 productCode = storedInstaller.productCode
             }
         } else {
+            sharedManifestData.gitHubDetection = GitHubDetection(Url(installerManifestData.installerUrl))
             get<Clients>().httpClient.downloadInstallerFromUrl().apply {
                 installerManifestData.installerSha256 = hash()
                 when (extension.lowercase()) {
@@ -175,29 +179,50 @@ object Url : KoinComponent {
     suspend fun Terminal.localeUrlPrompt(localeUrl: LocaleUrl) {
         val defaultLocaleSchema: DefaultLocaleSchema = get<SchemasImpl>().defaultLocaleSchema
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        do {
-            println(brightYellow(localeUrlInfo(localeUrl, defaultLocaleSchema.properties)))
-            val input = prompt(
-                prompt = brightWhite(localeUrl.toString()),
-                default = getPreviousValue(localeUrl)?.also { println(gray("Previous $localeUrl: $it")) }
-            )?.trim()
-            val error = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true).also {
-                if (it.isNullOrBlank()) {
-                    when (localeUrl) {
-                        LocaleUrl.CopyrightUrl -> defaultLocaleManifestData.copyrightUrl = input
-                        LocaleUrl.LicenseUrl -> defaultLocaleManifestData.licenseUrl = input
-                        LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
-                        LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
-                        LocaleUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
-                        LocaleUrl.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
-                        LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
-                    }
-                } else {
-                    println(brightRed(it))
-                }
+        val gitHubDetection: GitHubDetection? = get<SharedManifestData>().gitHubDetection
+        when {
+            gitHubDetection?.licenseUrl != null && localeUrl == LocaleUrl.LicenseUrl -> {
+                defaultLocaleManifestData.licenseUrl = gitHubDetection.licenseUrl?.await()
             }
-            println()
-        } while (!error.isNullOrBlank())
+            gitHubDetection?.publisherUrl != null && localeUrl == LocaleUrl.PublisherUrl -> {
+                defaultLocaleManifestData.publisherUrl = gitHubDetection.publisherUrl?.await()
+            }
+            gitHubDetection?.releaseNotesUrl != null && localeUrl == LocaleUrl.ReleaseNotesUrl -> {
+                defaultLocaleManifestData.releaseNotesUrl = gitHubDetection.releaseNotesUrl?.await()
+            }
+            gitHubDetection?.packageUrl != null && localeUrl == LocaleUrl.PackageUrl -> {
+                defaultLocaleManifestData.packageUrl = gitHubDetection.packageUrl?.await()
+            }
+            gitHubDetection?.publisherSupportUrl != null && localeUrl == LocaleUrl.PublisherSupportUrl -> {
+                defaultLocaleManifestData.publisherSupportUrl = gitHubDetection.publisherSupportUrl?.await()
+            }
+            else -> {
+                do {
+                    println(brightYellow(localeUrlInfo(localeUrl, defaultLocaleSchema.properties)))
+                    val input = prompt(
+                        prompt = brightWhite(localeUrl.toString()),
+                        default = getPreviousValue(localeUrl)
+                            ?.also { println(TextColors.gray("Previous $localeUrl: $it")) }
+                    )?.trim()
+                    val error = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true).also {
+                        if (it == null) {
+                            when (localeUrl) {
+                                LocaleUrl.CopyrightUrl -> defaultLocaleManifestData.copyrightUrl = input
+                                LocaleUrl.LicenseUrl -> defaultLocaleManifestData.licenseUrl = input
+                                LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
+                                LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
+                                LocaleUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
+                                LocaleUrl.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
+                                LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
+                            }
+                        } else {
+                            println(brightRed(it))
+                        }
+                    }
+                    println()
+                } while (!error.isNullOrBlank())
+            }
+        }
     }
 
     suspend fun areUrlsValid(urls: List<String>?): String? {
@@ -208,7 +233,7 @@ object Url : KoinComponent {
         return null
     }
 
-    private suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): String? {
+    suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): String? {
         val maxLength = when (schema) {
             is InstallerSchema -> schema.definitions.url.maxLength
             is DefaultLocaleSchema -> schema.definitions.url.maxLength

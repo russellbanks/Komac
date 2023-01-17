@@ -30,50 +30,57 @@ class DefaultLocaleManifestData : KoinComponent {
     private val previousManifestData: PreviousManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
 
-    fun createDefaultLocaleManifest(): String {
+    suspend fun createDefaultLocaleManifest(): String {
         return getDefaultLocaleManifestBase().copy(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
-            publisher = if (::publisher.isInitialized) {
-                publisher
-            } else {
-                previousManifestData.remoteDefaultLocaleData?.publisher
-            } ?: "",
-            publisherUrl = publisherUrl
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.publisherUrl,
-            publisherSupportUrl = publisherSupportUrl
-                .takeIf { it?.isNotBlank() == true }
-                ?: previousManifestData.remoteDefaultLocaleData?.publisherSupportUrl,
-            privacyUrl = publisherPrivacyUrl
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.privacyUrl,
+            publisher = when {
+                ::publisher.isInitialized -> publisher
+                else -> previousManifestData.remoteDefaultLocaleData?.publisher ?: ""
+            },
+            publisherUrl = publisherUrl.takeIf { it?.isNotBlank() == true }
+                ?: previousManifestData.remoteDefaultLocaleData?.publisherUrl
+                ?: sharedManifestData.gitHubDetection?.publisherUrl?.await(),
+            publisherSupportUrl = publisherSupportUrl.takeIf { it?.isNotBlank() == true }
+                ?: previousManifestData.remoteDefaultLocaleData?.publisherSupportUrl
+                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await(),
+            privacyUrl = publisherPrivacyUrl.takeIf { it?.isNotBlank() == true }
+                ?: previousManifestData.remoteDefaultLocaleData?.privacyUrl
+                ?: sharedManifestData.gitHubDetection?.privacyUrl?.await(),
             author = author.takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.author,
             packageName = sharedManifestData.packageName
-                ?: previousManifestData.remoteDefaultLocaleData?.packageName
-                ?: "",
-            packageUrl = packageUrl?.ifBlank { null },
+                ?: previousManifestData.remoteDefaultLocaleData?.packageName ?: "",
+            packageUrl = packageUrl?.ifBlank { null } ?: sharedManifestData.gitHubDetection?.packageUrl?.await(),
             license = when {
                 ::license.isInitialized -> license
-                else -> previousManifestData.remoteDefaultLocaleData?.license ?: ""
+                else -> sharedManifestData.gitHubDetection?.license?.await()
+                    ?: previousManifestData.remoteDefaultLocaleData?.license ?: ""
             },
-            licenseUrl = licenseUrl
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.licenseUrl,
-            copyright = copyright
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.copyright,
-            copyrightUrl = copyrightUrl
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl,
+            licenseUrl = licenseUrl.takeIf { it?.isNotBlank() == true }
+                ?: previousManifestData.remoteDefaultLocaleData?.licenseUrl
+                ?: sharedManifestData.gitHubDetection?.licenseUrl?.await(),
+            copyright = copyright.takeIf { it?.isNotBlank() == true }
+                ?: previousManifestData.remoteDefaultLocaleData?.copyright,
+            copyrightUrl = copyrightUrl.takeIf { it?.isNotBlank() == true }
+                ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl,
             shortDescription = when {
                 ::shortDescription.isInitialized -> shortDescription
-                else -> previousManifestData.remoteDefaultLocaleData?.shortDescription ?: ""
+                else -> {
+                    previousManifestData.remoteDefaultLocaleData?.shortDescription
+                        ?: sharedManifestData.gitHubDetection?.shortDescription?.await() ?: ""
+                }
             },
             description = (description
                 .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.description)
                 ?.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n")
                 ?.trim(),
-            moniker = moniker
-                .takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
+            moniker = moniker.takeIf { it?.isNotBlank() == true }
+                ?: previousManifestData.remoteDefaultLocaleData?.moniker,
             tags = tags.takeIf { it?.isNotEmpty() == true } ?: previousManifestData.remoteDefaultLocaleData?.tags,
-            releaseNotesUrl = releaseNotesUrl.takeIf { it?.isNotBlank() == true },
+            releaseNotesUrl = releaseNotesUrl.takeIf { it?.isNotBlank() == true }
+                ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await(),
+            releaseNotes = sharedManifestData.gitHubDetection?.releaseNotes?.await()?.trim(),
             manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
             manifestVersion = schemasImpl.defaultLocaleSchema.properties.manifestVersion.default
         ).toEncodedYaml()

@@ -31,10 +31,13 @@ class InstallerManifestData : KoinComponent {
     private val schemaImpl: SchemasImpl by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
-    fun addInstaller() {
+    suspend fun addInstaller() {
         val previousInstaller = previousManifestData.remoteInstallerData?.installers?.get(installers.size)
         val installer = getInstallerBase(previousInstaller).copy(
             installerLocale = installerLocale?.ifBlank { null } ?: previousInstaller?.installerLocale,
+            platform = sharedManifestData.msix?.targetDeviceFamily?.let { listOf(it.toPerInstallerPlatform()) }
+                ?: previousInstaller?.platform,
+            minimumOSVersion = sharedManifestData.msix?.minVersion,
             architecture = if (::architecture.isInitialized) architecture else previousInstaller?.architecture!!,
             installerType = if (::installerType.isInitialized) installerType else previousInstaller?.installerType,
             nestedInstallerType = sharedManifestData.zip?.nestedInstallerType ?: previousInstaller?.nestedInstallerType,
@@ -52,7 +55,7 @@ class InstallerManifestData : KoinComponent {
                 .takeUnless { it.areAllNullOrBlank() } ?: previousInstaller?.installerSwitches,
             upgradeBehavior = upgradeBehavior?.toPerInstallerUpgradeBehaviour() ?: previousInstaller?.upgradeBehavior,
             productCode = sharedManifestData.msi?.productCode ?: productCode?.ifBlank { null },
-            releaseDate = releaseDate,
+            releaseDate = releaseDate ?: sharedManifestData.gitHubDetection?.releaseDate?.await(),
             appsAndFeaturesEntries = previousInstaller?.appsAndFeaturesEntries?.map {
                 it.copy(upgradeCode = sharedManifestData.msi?.upgradeCode)
             } ?: sharedManifestData.msi?.upgradeCode?.let {
@@ -120,8 +123,7 @@ class InstallerManifestData : KoinComponent {
             nestedInstallerFiles = when {
                 nestedInstallerFilesDistinct -> {
                     installers.map { it.nestedInstallerFiles }
-                        .first()
-                        ?.map { it.toManifestNestedInstallerFiles() }?.sortedBy { it.relativeFilePath }
+                        .first()?.map { it.toManifestNestedInstallerFiles() }?.sortedBy { it.relativeFilePath }
                 }
                 else -> previousManifestData.remoteInstallerData?.nestedInstallerFiles
             },
@@ -257,5 +259,6 @@ class InstallerManifestData : KoinComponent {
         sharedManifestData.msix?.resetExceptShared()
         sharedManifestData.msixBundle?.resetExceptShared()
         sharedManifestData.zip = null
+        sharedManifestData.gitHubDetection?.releaseDate = null
     }
 }
