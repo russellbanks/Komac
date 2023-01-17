@@ -15,7 +15,6 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import input.PromptType
 import input.Prompts
-import io.ktor.http.Url
 import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -39,7 +38,7 @@ object Architecture : KoinComponent {
             installerManifestData.architecture = it
             return
         }
-        val detectedArchitectureFromUrl = Ktor.detectArchitectureFromUrl(Url(installerManifestData.installerUrl))
+        val detectedArchitectureFromUrl = Ktor.detectArchitectureFromUrl(installerManifestData.installerUrl)
         do {
             architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
             println(cyan("Options: ${architectureSchema.enum.joinToString(", ")}"))

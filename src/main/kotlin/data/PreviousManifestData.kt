@@ -28,8 +28,7 @@ class PreviousManifestData : KoinComponent {
             repository?.getFileContent(
                 nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }.path
             )?.read()?.use {
-                remoteInstallerData =
-                    YamlConfig.defaultWithLocalDataSerializer.decodeFromStream(InstallerManifest.serializer(), it)
+                remoteInstallerData = YamlConfig.default.decodeFromStream(InstallerManifest.serializer(), it)
             }
         }
     }

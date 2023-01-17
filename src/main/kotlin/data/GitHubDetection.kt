@@ -14,24 +14,22 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 class GitHubDetection(url: Url) : KoinComponent {
-    var publisherUrl: Deferred<String?>? = null
+    var publisherUrl: Deferred<Url?>? = null
     var shortDescription: Deferred<String?>? = null
-    var publisherSupportUrl: Deferred<String?>? = null
+    var publisherSupportUrl: Deferred<Url?>? = null
     var license: Deferred<String?>? = null
-    var licenseUrl: Deferred<String?>? = null
-    var packageUrl: Deferred<String?>? = null
+    var licenseUrl: Deferred<Url?>? = null
+    var packageUrl: Deferred<Url?>? = null
     var releaseDate: Deferred<LocalDate?>? = null
-    var releaseNotesUrl: Deferred<String?>? = null
+    var releaseNotesUrl: Deferred<Url?>? = null
     var releaseNotes: Deferred<String?>? = null
-    var privacyUrl: Deferred<String?>? = null
+    var privacyUrl: Deferred<Url?>? = null
     var topics: Deferred<List<String>?>? = null
 
     private val githubImpl: GitHubImpl by inject()
 
     init {
-        require(url.host.lowercase() == "github.com") {
-            "Url must be a GitHub Url"
-        }
+        require(url.host.equals(other = gitHubWebsite, ignoreCase = true)) { "Url must be a GitHub Url" }
         CoroutineScope(Dispatchers.IO).launch {
             val tag = url.pathSegments.dropLast(1).last()
             val repository = githubImpl.github.getRepository("${url.pathSegments[1]}/${url.pathSegments[2]}")
@@ -39,12 +37,16 @@ class GitHubDetection(url: Url) : KoinComponent {
             val asset = release.listAssets().first { it.browserDownloadUrl == url.toString() }
             releaseDate = async { LocalDate.ofInstant(asset.createdAt.toInstant(), ZoneId.systemDefault()) }
             license = async { repository.license.key.uppercase() }
-            packageUrl = async { repository.htmlUrl.toString() }
-            licenseUrl = async { repository.licenseContent.htmlUrl }
+            packageUrl = async { Url(repository.htmlUrl.toURI()) }
+            licenseUrl = async { Url(repository.licenseContent.htmlUrl) }
             privacyUrl = async {
-                repository.getDirectoryContent("").find { it.name.lowercase().contains("privacy") }?.htmlUrl
+                repository
+                    .getDirectoryContent("")
+                    .find { it.name.lowercase().contains("privacy") }
+                    ?.htmlUrl
+                    ?.let { Url(it) }
             }
-            releaseNotesUrl = async { release.htmlUrl.toString() }
+            releaseNotesUrl = async { Url(release.htmlUrl.toURI()) }
             releaseNotes = async {
                 buildString {
                     release.body.lineSequence().forEach {
@@ -55,21 +57,25 @@ class GitHubDetection(url: Url) : KoinComponent {
                 }.replace("* ", "- ").replace(Regex("\\[([^\\]]+)\\]\\([^\\)]+\\)"), "$1").trim().ifBlank { null }
             }
             topics = async { repository.listTopics() }
-            publisherUrl = async { runCatching { repository.owner.blog }.getOrNull() }
+            publisherUrl = async { runCatching { repository.owner.blog }.getOrNull()?.let { Url(it) } }
             shortDescription = async { repository.description }
-            publisherSupportUrl =  async {
+            publisherSupportUrl = async {
                 data.shared.Url.isUrlValid(
                     url = "$url/support",
                     schema = get<SchemasImpl>().defaultLocaleSchema,
                     canBeBlank = false
-                ).let {
-                    if (it == null) {
+                ).let { error ->
+                    if (error == null) {
                         "$url/support"
                     } else {
                         if (repository.hasIssues()) "https://github.com/${repository.fullName}/issues" else null
-                    }
+                    }?.let { Url(it) }
                 }
             }
         }
+    }
+
+    companion object {
+        const val gitHubWebsite = "github.com"
     }
 }

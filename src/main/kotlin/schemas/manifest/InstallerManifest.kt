@@ -1,6 +1,7 @@
 package schemas.manifest
 
 import input.InstallerSwitch
+import io.ktor.http.Url
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -331,7 +332,7 @@ data class InstallerManifest(
         @SerialName("NestedInstallerType") val nestedInstallerType: NestedInstallerType? = null,
         @SerialName("NestedInstallerFiles") val nestedInstallerFiles: List<NestedInstallerFiles>? = null,
         @SerialName("Scope") val scope: Scope? = null,
-        @SerialName("InstallerUrl") val installerUrl: String,
+        @SerialName("InstallerUrl") @Contextual val installerUrl: Url,
         @SerialName("InstallerSha256") val installerSha256: String,
         @SerialName("SignatureSha256") val signatureSha256: String? = null,
         @SerialName("InstallModes") val installModes: List<InstallModes>? = null,

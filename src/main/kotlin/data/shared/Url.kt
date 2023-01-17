@@ -1,12 +1,12 @@
 package data.shared
 
 import Errors
-import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.rendering.TextStyles.bold
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
@@ -45,9 +45,8 @@ object Url : KoinComponent {
 
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: String? = null) {
         val installerManifestData: InstallerManifestData by inject()
-        val sharedManifestData: SharedManifestData by inject()
         if (parameterUrl != null) {
-            installerManifestData.installerUrl = parameterUrl
+            installerManifestData.installerUrl = Url(parameterUrl)
         } else {
             setInstallerUrlFromPrompt(installerManifestData)
         }
@@ -61,7 +60,7 @@ object Url : KoinComponent {
             val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
             val error = isUrlValid(url = input, schema = schemasImpl.installerSchema, canBeBlank = false).also {
                 if (it == null) {
-                    if (input != null) installerManifestData.installerUrl = input
+                    if (input != null) installerManifestData.installerUrl = Url(input)
                 } else {
                     println(brightRed(it))
                 }
@@ -76,7 +75,7 @@ object Url : KoinComponent {
         val redirectedUrl = getRedirectedUrl(installerManifestData.installerUrl)
         if (
             redirectedUrl != installerManifestData.installerUrl &&
-            redirectedUrl?.contains(other = "github", ignoreCase = true) != true
+            redirectedUrl?.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
         ) {
             println(
                 verticalLayout {
@@ -89,7 +88,7 @@ object Url : KoinComponent {
             if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(brightYellow(urlChanged))
                 val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
-                if (error.isNullOrBlank() && !redirectedUrl.isNullOrBlank()) {
+                if (error.isNullOrBlank() && redirectedUrl != null) {
                     installerManifestData.installerUrl = redirectedUrl
                     println(brightGreen("URL changed to $redirectedUrl"))
                 } else {
@@ -119,7 +118,12 @@ object Url : KoinComponent {
                 productCode = storedInstaller.productCode
             }
         } else {
-            sharedManifestData.gitHubDetection = GitHubDetection(Url(installerManifestData.installerUrl))
+            if (
+                installerManifestData.installerUrl.host.lowercase() == "github.com" &&
+                sharedManifestData.gitHubDetection == null
+            ) {
+                sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
+            }
             get<Clients>().httpClient.downloadInstallerFromUrl().apply {
                 installerManifestData.installerSha256 = hash()
                 when (extension.lowercase()) {
@@ -201,9 +205,9 @@ object Url : KoinComponent {
                     println(brightYellow(localeUrlInfo(localeUrl, defaultLocaleSchema.properties)))
                     val input = prompt(
                         prompt = brightWhite(localeUrl.toString()),
-                        default = getPreviousValue(localeUrl)
-                            ?.also { println(TextColors.gray("Previous $localeUrl: $it")) }
-                    )?.trim()
+                        default = getPreviousValue(localeUrl)?.toString()
+                            ?.also { println(gray("Previous $localeUrl: $it")) }
+                    )?.trim()?.let { Url(it) }
                     val error = isUrlValid(url = input, schema = defaultLocaleSchema, canBeBlank = true).also {
                         if (it == null) {
                             when (localeUrl) {
@@ -231,6 +235,10 @@ object Url : KoinComponent {
             error?.let { return error }
         }
         return null
+    }
+
+    private suspend fun isUrlValid(url: Url?, schema: RemoteSchema, canBeBlank: Boolean): String? {
+        return isUrlValid(url.toString(), schema, canBeBlank)
     }
 
     suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): String? {
@@ -270,7 +278,7 @@ object Url : KoinComponent {
         }
     }
 
-    private fun getPreviousValue(localeUrl: LocaleUrl): String? {
+    private fun getPreviousValue(localeUrl: LocaleUrl): Url? {
         val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
         return when (localeUrl) {
             LocaleUrl.CopyrightUrl -> remoteDefaultLocaleData?.copyrightUrl

@@ -1,5 +1,7 @@
 package data
 
+import io.ktor.http.URLBuilder
+import io.ktor.http.Url
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -12,7 +14,7 @@ import java.time.LocalDate
 @Single
 class InstallerManifestData : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
-    lateinit var installerUrl: String
+    lateinit var installerUrl: Url
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
     lateinit var installerType: InstallerManifest.Installer.InstallerType
@@ -189,9 +191,11 @@ class InstallerManifestData : KoinComponent {
     private fun List<InstallerManifest.Installer>.removeNonDistinctKeys(): List<InstallerManifest.Installer> {
         return map { installer ->
             installer.copy(
-                installerLocale = if (onlyOneNotNullDistinct {
-                        it.installerLocale
-                }) null else installer.installerLocale,
+                installerLocale = if (onlyOneNotNullDistinct { it.installerLocale }) {
+                    null
+                } else {
+                    installer.installerLocale
+                },
                 platform = if (onlyOneNotNullDistinct { it.platform }) null else installer.platform,
                 minimumOSVersion = if (onlyOneNotNullDistinct { it.minimumOSVersion }) {
                     null
@@ -234,14 +238,14 @@ class InstallerManifestData : KoinComponent {
         return previousInstaller ?: InstallerManifest.Installer(
             architecture = InstallerManifest.Installer.Architecture.NEUTRAL,
             installerSha256 = "",
-            installerUrl = ""
+            installerUrl = Url(URLBuilder())
         )
     }
 
     private fun InstallerManifest.toEncodedYaml(): String {
         return Schemas.buildManifestString(
             schema = Schema.Installer,
-            rawString = YamlConfig.defaultWithLocalDataSerializer.encodeToString(
+            rawString = YamlConfig.default.encodeToString(
                 serializer = InstallerManifest.serializer(),
                 value = this@toEncodedYaml
             )

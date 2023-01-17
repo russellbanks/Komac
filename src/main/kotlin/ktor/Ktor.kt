@@ -36,13 +36,13 @@ object Ktor : KoinComponent {
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
                 "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
-                ".${getURLExtension(Url(installerManifestData.installerUrl))}"
+                ".${getURLExtension(installerManifestData.installerUrl)}"
             )
         }
 
         with(terminalInstance.terminal) {
             progressAnimation {
-                text(FilenameUtils.getName(installerManifestData.installerUrl))
+                text(FilenameUtils.getName(installerManifestData.installerUrl.toString()))
                 percentage()
                 progressBar()
                 completed()
@@ -103,9 +103,9 @@ object Ktor : KoinComponent {
         return value in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value
     }
 
-    suspend fun getRedirectedUrl(installerUrl: String): String? {
+    suspend fun getRedirectedUrl(installerUrl: Url): Url? {
         val noRedirectClient = get<Clients>().httpClient.config { followRedirects = false }
-        var redirectedInstallerUrl: String? = installerUrl
+        var redirectedInstallerUrl: Url? = installerUrl
         var response: HttpResponse? = noRedirectClient.head(installerUrl)
 
         var status: HttpStatusCode? = response?.status
@@ -115,7 +115,7 @@ object Ktor : KoinComponent {
             response?.headers?.contains(HttpHeaders.Location) == true &&
             location != null
         ) {
-            redirectedInstallerUrl = location
+            redirectedInstallerUrl = Url(location)
             response = noRedirectClient.head(redirectedInstallerUrl)
             status = response.status
             location = response.headers["Location"]
