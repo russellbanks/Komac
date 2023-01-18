@@ -36,9 +36,9 @@ class GitHubDetection(url: Url) : KoinComponent {
             val release = repository.getReleaseByTagName(tag)
             val asset = release.listAssets().first { it.browserDownloadUrl == url.toString() }
             releaseDate = async { LocalDate.ofInstant(asset.createdAt.toInstant(), ZoneId.systemDefault()) }
-            license = async { repository.license.key.uppercase() }
+            license = async { repository.license?.key?.uppercase() }
             packageUrl = async { Url(repository.htmlUrl.toURI()) }
-            licenseUrl = async { Url(repository.licenseContent.htmlUrl) }
+            licenseUrl = async { repository.licenseContent?.htmlUrl?.let { Url(it) } }
             privacyUrl = async {
                 repository
                     .getDirectoryContent("")
