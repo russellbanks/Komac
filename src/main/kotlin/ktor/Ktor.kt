@@ -17,7 +17,6 @@ import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.commons.io.FilenameUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -42,7 +41,7 @@ object Ktor : KoinComponent {
 
         with(terminalInstance.terminal) {
             progressAnimation {
-                text(FilenameUtils.getName(installerManifestData.installerUrl.toString()))
+                getFileName(installerManifestData.installerUrl)?.let { text(it) }
                 percentage()
                 progressBar()
                 completed()
@@ -75,12 +74,12 @@ object Ktor : KoinComponent {
         }
     }
 
-    private fun getURLExtension(url: Url): String {
-        return url.fullPath
-            .substringAfterLast(".")
-            .split(Regex("[^A-Za-z0-9]"))
-            .firstOrNull()
-            .also { get<SharedManifestData>().fileExtension = it } ?: "winget-tmp"
+    private fun getFileName(url: Url): String? {
+        return url.pathSegments.findLast { it.endsWith(getURLExtension(url)) }
+    }
+
+    fun getURLExtension(url: Url): String {
+        return url.fullPath.substringAfterLast(".").split(Regex("[^A-Za-z0-9]")).firstOrNull() ?: "winget-tmp"
     }
 
     fun detectArchitectureFromUrl(url: Url): InstallerManifest.Installer.Architecture? {
