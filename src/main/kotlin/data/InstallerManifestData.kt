@@ -92,10 +92,15 @@ class InstallerManifestData : KoinComponent {
 
     private fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry()
     : InstallerManifest.Installer.AppsAndFeaturesEntry {
+        val arpDisplayName = sharedManifestData.msi?.productName ?: displayName
+        val packageName = sharedManifestData.packageName ?: previousManifestData.remoteDefaultLocaleData?.packageName
+        val arpPublisher = sharedManifestData.msi?.manufacturer ?: publisher
+        val publisher = sharedManifestData.publisher ?: previousManifestData.remoteDefaultLocaleData?.publisher
+        val displayVersion = sharedManifestData.msi?.productVersion ?: displayVersion
         return copy(
-            displayName = sharedManifestData.msi?.productName ?: displayName,
-            publisher = sharedManifestData.msi?.manufacturer ?: publisher,
-            displayVersion = sharedManifestData.msi?.productVersion ?: displayVersion,
+            displayName = if (arpDisplayName != packageName) arpDisplayName else null,
+            publisher = if (arpPublisher != publisher) arpPublisher else null,
+            displayVersion = if (displayVersion != sharedManifestData.packageVersion) displayVersion else null,
             upgradeCode = sharedManifestData.msi?.upgradeCode ?: upgradeCode
         )
     }
