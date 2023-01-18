@@ -72,7 +72,9 @@ class InstallerManifestData : KoinComponent {
                 appsAndFeaturesEntry.fillARPEntry()
             } ?: previousManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                 appsAndFeaturesEntry.toInstallerAppsAndFeaturesEntry().fillARPEntry()
-            } ?: listOf(InstallerManifest.Installer.AppsAndFeaturesEntry().fillARPEntry()).ifEmpty { null },
+            } ?: listOfNotNull(
+                InstallerManifest.Installer.AppsAndFeaturesEntry().fillARPEntry().takeUnless { it.areAllNull() }
+            ).ifEmpty { null },
         )
         when (sharedManifestData.msixBundle) {
             null -> installers += installer
