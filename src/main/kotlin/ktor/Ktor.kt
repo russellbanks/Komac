@@ -1,5 +1,6 @@
 package ktor
 import com.github.ajalt.mordant.animation.progressAnimation
+import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.SharedManifestData
 import io.ktor.client.HttpClient
@@ -20,15 +21,13 @@ import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.TerminalInstance
 import schemas.manifest.InstallerManifest
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 object Ktor : KoinComponent {
-    suspend fun HttpClient.downloadInstallerFromUrl(): File {
-        val terminalInstance: TerminalInstance by inject()
+    suspend fun HttpClient.downloadInstallerFromUrl(terminal: Terminal): File {
         val sharedManifestData: SharedManifestData by inject()
         val installerManifestData: InstallerManifestData by inject()
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
@@ -39,7 +38,7 @@ object Ktor : KoinComponent {
             )
         }
 
-        with(terminalInstance.terminal) {
+        with(terminal) {
             progressAnimation {
                 getFileName(installerManifestData.installerUrl)?.let { text(it) }
                 percentage()

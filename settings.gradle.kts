@@ -3,7 +3,6 @@ rootProject.name = "Komac"
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        maven("https://maven.hq.hydraulic.software")
     }
 }
 

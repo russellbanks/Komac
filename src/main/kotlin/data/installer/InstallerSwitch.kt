@@ -52,7 +52,7 @@ object InstallerSwitch : KoinComponent {
         } while (switchValid != Validation.Success)
     }
 
-    fun isInstallerSwitchValid(
+    private fun isInstallerSwitchValid(
         switch: String?,
         installerSwitch: InstallerSwitch,
         canBeBlank: Boolean = false,

@@ -52,30 +52,4 @@ object Prompts {
             }
         )
     }
-
-    fun Terminal.removeManifestPullRequestPrompt(sharedManifestData: SharedManifestData): Boolean {
-        println(
-            verticalLayout {
-                cell(
-                    brightYellow(
-                        "Would you like to make a pull request to remove " +
-                            "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
-                    )
-                )
-                Polar.values().forEach {
-                    cell(brightWhite("${" ".repeat(optionIndent)} [${it.name.first()}] ${it.name}"))
-                }
-            }
-        )
-        return prompt(
-            prompt = brightWhite(enterChoice),
-            convert = {
-                when (it.firstOrNull()?.lowercase()) {
-                    Polar.Yes.name.first().lowercase() -> ConversionResult.Valid(true)
-                    Polar.No.name.first().lowercase() -> ConversionResult.Valid(false)
-                    else -> ConversionResult.Invalid("Invalid choice")
-                }
-            }
-        ) == true
-    }
 }

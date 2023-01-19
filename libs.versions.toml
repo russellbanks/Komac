@@ -1,7 +1,7 @@
 [versions]
 auth-secure-storage = "0.6.4"
 buildconfig = "3.1.0"
-clikt = "3.5.1"
+clikt = "4.0.0.198-SNAPSHOT"
 coroutines = "1.6.4"
 detekt = "1.22.0"
 github-api = "1.313"

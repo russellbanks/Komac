@@ -86,7 +86,7 @@ object Locale : KoinComponent {
         }
     }
 
-    fun isPackageLocaleValid(
+    private fun isPackageLocaleValid(
         locale: String?,
         defaultLocaleSchema: DefaultLocaleSchema = get<SchemasImpl>().defaultLocaleSchema
     ): Pair<Validation, String?> {

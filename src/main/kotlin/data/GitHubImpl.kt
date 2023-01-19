@@ -3,6 +3,11 @@ package data
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.terminal.Terminal
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import ktor.Clients
 import ktor.KtorGitHubConnector
 import org.kohsuke.github.GHRef
@@ -13,23 +18,23 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.TerminalInstance
 import token.TokenStore
 import java.io.IOException
 
 @Single
 class GitHubImpl : KoinComponent {
-    val github: GitHub = GitHubBuilder()
-        .withConnector(KtorGitHubConnector(get<Clients>().httpClient))
-        .withOAuthToken(get<TokenStore>().token)
-        .build()
+    val github: Deferred<GitHub> = CoroutineScope(Dispatchers.IO).async {
+        GitHubBuilder()
+            .withConnector(KtorGitHubConnector(get<Clients>().httpClient))
+            .withOAuthToken(get<TokenStore>().token.await())
+            .build()
+    }
     private val sharedManifestData: SharedManifestData by inject()
     val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
     val defaultLocaleManifestName
         get() = "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
     val versionManifestName = "${sharedManifestData.packageIdentifier}.yaml"
     var pullRequestBranch: GHRef? = null
-    private val terminal = get<TerminalInstance>().terminal
 
     val packageVersionsPath
         get() = buildString {
@@ -54,16 +59,16 @@ class GitHubImpl : KoinComponent {
             append(List(uniqueBranchIdentifierLength) { (('A'..'Z') + ('0'..'9')).random() }.joinToString(""))
         }
 
-    fun getWingetPkgsFork(): GHRepository? {
+    suspend fun getWingetPkgsFork(terminal: Terminal): GHRepository? {
         with(terminal) {
             return try {
-                github.getRepository("${github.myself.login}/$wingetpkgs").also {
+                github.await().getRepository("${github.await().myself.login}/$wingetpkgs").also {
                     println(brightWhite("Found forked $wingetpkgs repository: ${it.fullName}"))
                 }
             } catch (_: IOException) {
                 println(brightWhite("Fork of $wingetpkgs not found. Forking..."))
                 try {
-                    github.getRepository("$Microsoft/$wingetpkgs").fork().also {
+                    github.await().getRepository("$Microsoft/$wingetpkgs").fork().also {
                         println(brightGreen("Forked $wingetpkgs repository: ${it.fullName}"))
                     }
                 } catch (ioException: IOException) {
@@ -78,16 +83,15 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    fun getMicrosoftWingetPkgs(): GHRepository? {
+    suspend fun getMicrosoftWingetPkgs(): GHRepository? {
         return try {
-            github.getRepository("$Microsoft/$wingetpkgs")
-        } catch (ioException: IOException) {
-            terminal.println(brightRed(ioException.message ?: "Failed to get Microsoft winget-pkgs repository."))
+            github.await().getRepository("$Microsoft/$wingetpkgs")
+        } catch (_: IOException) {
             null
         }
     }
 
-    fun createBranchFromDefaultBranch(repository: GHRepository): GHRef? {
+    fun createBranchFromDefaultBranch(repository: GHRepository, terminal: Terminal): GHRef? {
         return try {
             repository.createRef(
                 /* name = */ "refs/heads/$branchName",

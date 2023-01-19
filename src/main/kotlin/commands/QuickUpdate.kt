@@ -32,7 +32,7 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
-import schemas.TerminalInstance
+import schemas.SchemasImpl
 import schemas.manifest.LocaleManifest
 import java.io.IOException
 import kotlin.system.exitProcess
@@ -50,7 +50,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val urls: List<String> by option("--url").multiple()
 
     override fun run(): Unit = runBlocking {
-        with(get<TerminalInstance>().terminal) {
+        with(currentContext.terminal) {
             packageIdentifierPrompt(packageIdentifier)
             previousManifestData = get()
             if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
@@ -142,7 +142,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
-                manifestVersion = "1.4.0"
+                manifestVersion = get<SchemasImpl>().localeSchema.properties.manifestVersion.default
             ).let {
                 Schemas.buildManifestString(
                     Schema.Locale,
@@ -152,12 +152,12 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         }.orEmpty()
     }
 
-    private suspend fun commit() {
+    private suspend fun Terminal.commit() {
         previousManifestData.remoteVersionDataJob.join()
         previousManifestData.remoteLocaleDataJob.join()
         previousManifestData.remoteDefaultLocaleDataJob.join()
-        val repository = githubImpl.getWingetPkgsFork() ?: return
-        val ref = githubImpl.createBranchFromDefaultBranch(repository) ?: return
+        val repository = githubImpl.getWingetPkgsFork(terminal = this) ?: return
+        val ref = githubImpl.createBranchFromDefaultBranch(repository = repository, terminal = this) ?: return
         githubImpl.commitFiles(
             repository = repository,
             branch = ref,
@@ -165,12 +165,12 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         )
     }
 
-    private fun pullRequest() {
+    private suspend fun Terminal.pullRequest() {
         val ghRepository = githubImpl.getMicrosoftWingetPkgs() ?: return
         try {
             ghRepository.createPullRequest(
                 /* title = */ githubImpl.getCommitTitle(),
-                /* head = */ "${githubImpl.github.myself.login}:${githubImpl.pullRequestBranch?.ref}",
+                /* head = */ "${githubImpl.github.await().myself.login}:${githubImpl.pullRequestBranch?.ref}",
                 /* base = */ ghRepository.defaultBranch,
                 /* body = */ githubImpl.getPullRequestBody()
             ).also { println(brightGreen("Pull request created: ${it.htmlUrl}")) }

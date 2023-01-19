@@ -42,7 +42,7 @@ object Moniker : KoinComponent {
         } while (packageLocaleValid != Validation.Success)
     }
 
-    fun isMonikerValid(
+    private fun isMonikerValid(
         moniker: String?,
         monikerSchema: DefaultLocaleSchema.Definitions.Tag
     ): Pair<Validation, String?> {

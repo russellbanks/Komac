@@ -18,6 +18,7 @@ version = "0.9.0"
 
 repositories {
     mavenCentral()
+    maven(uri("https://oss.sonatype.org/content/repositories/snapshots/"))
 }
 
 dependencies {

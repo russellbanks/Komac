@@ -12,14 +12,14 @@ import javax.xml.xpath.XPathFactory
 
 class Msix(msixFile: File) {
     var displayName: String? = null
-    var displayVersion: String? = null
+    private var displayVersion: String? = null
     var publisherDisplayName: String? = null
     var signatureSha256: String? = null
     var targetDeviceFamily: InstallerManifest.Platform? = null
     var minVersion: String? = null
     var description: String? = null
     var processorArchitecture: InstallerManifest.Installer.Architecture? = null
-    var packageFamilyName: String? = null
+    private var packageFamilyName: String? = null
 
     init {
         val validExtensions = listOf(InstallerManifest.InstallerType.APPX, InstallerManifest.InstallerType.MSIX)

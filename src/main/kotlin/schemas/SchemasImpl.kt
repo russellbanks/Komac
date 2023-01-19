@@ -1,6 +1,7 @@
 package schemas
 
 import com.github.ajalt.mordant.animation.progressAnimation
+import com.github.ajalt.mordant.terminal.Terminal
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -13,7 +14,6 @@ import ktor.Clients
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import org.koin.core.component.inject
 import schemas.data.DefaultLocaleSchema
 import schemas.data.InstallerSchema
 import schemas.data.LocaleSchema
@@ -21,7 +21,6 @@ import schemas.data.VersionSchema
 
 @Single
 class SchemasImpl : KoinComponent {
-    private val terminalInstance: TerminalInstance by inject()
     private val client: HttpClient = get<Clients>().httpClient
     private val json = Json { ignoreUnknownKeys = true }
     private var installerSchemaJob = CoroutineScope(Dispatchers.Default).launch {
@@ -41,7 +40,7 @@ class SchemasImpl : KoinComponent {
     lateinit var localeSchema: LocaleSchema
     lateinit var versionSchema: VersionSchema
 
-    suspend fun awaitSchema(schema: Schema) {
+    suspend fun awaitSchema(schema: Schema, terminal: Terminal) {
         val job = when (schema) {
             Schema.Installer -> installerSchemaJob
             Schema.DefaultLocale -> defaultLocaleSchemaJob
@@ -50,7 +49,7 @@ class SchemasImpl : KoinComponent {
         }
         with(job) {
             if (isActive) {
-                terminalInstance.terminal.progressAnimation {
+                terminal.progressAnimation {
                     text("Retrieving $schema schema")
                     progressBar()
                 }.run {

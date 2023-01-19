@@ -2,7 +2,6 @@
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
@@ -15,17 +14,16 @@ import input.Prompts
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import schemas.TerminalInstance
 import token.TokenStore
 
 class Komac(private val args: Array<String>) : CliktCommand(invokeWithoutSubcommand = true), KoinComponent {
     override fun run() = runBlocking {
-        with(get<TerminalInstance>().terminal) {
-            get<TokenStore>().getToken(this)
+        get<TokenStore>()
+        with(currentContext.terminal) {
             if (currentContext.invokedSubcommand == null) {
                 println(
                     verticalLayout {
-                        cell(brightYellow("Select mode:"))
+                        cell(brightWhite("Select mode:"))
                         CommandOption.values().forEach { cell(optionCell(it)) }
                     }
                 )
@@ -38,7 +36,7 @@ class Komac(private val args: Array<String>) : CliktCommand(invokeWithoutSubcomm
                         ConversionResult.Valid(option ?: CommandOption.Exit)
                     }
                 )
-                println()
+                echo()
                 executeSubcommand(commandOption)
             }
         }

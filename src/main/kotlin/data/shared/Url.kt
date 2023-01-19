@@ -107,7 +107,7 @@ object Url : KoinComponent {
         }
     }
 
-    private suspend fun downloadInstaller(installerManifestData: InstallerManifestData) {
+    private suspend fun Terminal.downloadInstaller(installerManifestData: InstallerManifestData) {
         val sharedManifestData: SharedManifestData by inject()
         if (installerManifestData.installers.map { it.installerUrl }.contains(installerManifestData.installerUrl)) {
             val storedInstaller = installerManifestData.installers.first {
@@ -118,13 +118,13 @@ object Url : KoinComponent {
                 productCode = storedInstaller.productCode
             }
         } else {
+            val gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
             if (
-                installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true) &&
-                sharedManifestData.gitHubDetection == null
+                installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)
             ) {
-                sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
+                sharedManifestData.gitHubDetection = gitHubDetection
             }
-            get<Clients>().httpClient.downloadInstallerFromUrl().apply {
+            get<Clients>().httpClient.downloadInstallerFromUrl(terminal = this).apply {
                 installerManifestData.installerSha256 = hash()
                 when (extension.lowercase()) {
                     InstallerManifest.InstallerType.MSIX.toString(),
@@ -132,7 +132,10 @@ object Url : KoinComponent {
                     MsixBundle.msixBundleConst,
                     MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(this)
                     InstallerManifest.InstallerType.MSI.toString() -> sharedManifestData.msi = Msi(this)
-                    InstallerManifest.InstallerType.ZIP.toString() -> sharedManifestData.zip = Zip(this)
+                    InstallerManifest.InstallerType.ZIP.toString() -> sharedManifestData.zip = Zip(
+                        zip = this,
+                        terminal = this@downloadInstaller
+                    )
                 }
                 delete()
             }

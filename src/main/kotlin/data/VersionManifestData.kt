@@ -19,7 +19,7 @@ class VersionManifestData : KoinComponent {
             packageVersion = sharedManifestData.packageVersion,
             defaultLocale = sharedManifestData.defaultLocale,
             manifestType = schemaImpl.versionSchema.properties.manifestType.const,
-            manifestVersion = schemaImpl.versionSchema.properties.manifestVersion.default,
+            manifestVersion = schemaImpl.versionSchema.properties.manifestVersion.default
         ).toEncodedYaml()
     }
     private fun VersionManifest.toEncodedYaml(): String {

@@ -10,21 +10,20 @@ import com.github.ajalt.mordant.rendering.TextStyles.bold
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.terminal.YesNoPrompt
 import data.msi.Msi
 import data.msix.MsixBundle
-import input.Polar
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.SchemasImpl
-import schemas.TerminalInstance
 import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 
-class Zip(zip: File) : KoinComponent {
+class Zip(zip: File, terminal: Terminal) : KoinComponent {
     var nestedInstallerType: InstallerManifest.Installer.NestedInstallerType? = null
     var nestedInstallerFiles: List<InstallerManifest.Installer.NestedInstallerFiles>? = null
     private var installerTypeCounts: Map<String, Int>
@@ -44,7 +43,6 @@ class Zip(zip: File) : KoinComponent {
             MsixBundle.msixBundleConst,
             MsixBundle.appxBundleConst,
         )
-        val terminal = get<TerminalInstance>().terminal
         ZipFile(zip).use { zipFile ->
             val zipEntries = zipFile.entries()
                 .asSequence()
@@ -136,34 +134,10 @@ class Zip(zip: File) : KoinComponent {
                     }
                 }
             } while (error != null)
-            println(
-                verticalLayout {
-                    cell(brightYellow("${Prompts.optional} Would you like to add another nested installer?"))
-                    cell(
-                        cyan(
-                            buildString {
-                                append("You have added ")
-                                append(nestedInstallerFiles?.size)
-                                append(" nested installer")
-                                if ((nestedInstallerFiles?.size ?: 0) > 1) append("s")
-                            }
-                        )
-                    )
-                    Polar.values().forEach {
-                        cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
-                    }
-                }
-            )
-            val shouldLoop = prompt(
-                prompt = brightWhite(Prompts.enterChoice),
-                convert = {
-                    when (it.firstOrNull()?.lowercase()) {
-                        Polar.Yes.name.first().lowercase() -> ConversionResult.Valid(true)
-                        Polar.No.name.first().lowercase() -> ConversionResult.Valid(false)
-                        else -> ConversionResult.Invalid("Invalid choice")
-                    }
-                }
-            )
+            val shouldLoop = YesNoPrompt(
+                prompt = brightWhite("${Prompts.optional} Would you like to add another nested installer?"),
+                terminal = this
+            ).ask()
         } while (shouldLoop == true)
     }
 
@@ -243,24 +217,10 @@ class Zip(zip: File) : KoinComponent {
                                 }
                             )
                         )
-                        Polar.values().forEach {
-                            cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
-                        }
                     }
                 )
-                prompt(
-                    prompt = brightWhite(Prompts.enterChoice),
-                    convert = {
-                        when (it.firstOrNull()?.lowercase()) {
-                            Polar.Yes.name.first().lowercase() -> ConversionResult.Valid(Polar.Yes)
-                            Polar.No.name.first().lowercase() -> ConversionResult.Valid(Polar.No)
-                            else -> ConversionResult.Invalid("Invalid choice")
-                        }
-                    }
-                ).let {
-                    if (it == Polar.Yes) {
-                        chosenZipEntries.add(zipEntry)
-                    }
+                YesNoPrompt(prompt = brightWhite(Prompts.enterChoice), terminal = this).ask()?.let {
+                    if (it) chosenZipEntries.add(zipEntry)
                 }
             }
             if (chosenZipEntries.isEmpty()) {

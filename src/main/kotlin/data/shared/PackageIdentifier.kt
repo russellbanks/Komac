@@ -28,7 +28,7 @@ object PackageIdentifier : KoinComponent {
     suspend fun Terminal.packageIdentifierPrompt(packageIdentifier: String? = null) {
         val schemasImpl: SchemasImpl = get()
         if (packageIdentifier != null) {
-            schemasImpl.awaitSchema(Schema.Installer)
+            schemasImpl.awaitSchema(schema = Schema.Installer, terminal = this)
             installerSchema = get<SchemasImpl>().installerSchema
             sharedManifestData.packageIdentifier = packageIdentifier
             findPreviousVersions(packageIdentifier = packageIdentifier, writeOutput = false).let {
@@ -42,7 +42,7 @@ object PackageIdentifier : KoinComponent {
                 println(brightGreen(packageIdentifierInfo))
                 println(cyan(packageIdentifierExample))
                 val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
-                schemasImpl.awaitSchema(Schema.Installer)
+                schemasImpl.awaitSchema(schema = Schema.Installer, terminal = this)
                 installerSchema = get<SchemasImpl>().installerSchema
                 val error = isPackageIdentifierValid(input).also {
                     if (it == null) {
@@ -59,7 +59,7 @@ object PackageIdentifier : KoinComponent {
         }
     }
 
-    private fun findPreviousVersions(packageIdentifier: String, writeOutput: Boolean = true): String? {
+    private suspend fun Terminal.findPreviousVersions(packageIdentifier: String, writeOutput: Boolean = true): String? {
         return try {
             get<GitHubImpl>()
                 .getMicrosoftWingetPkgs()

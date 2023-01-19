@@ -112,6 +112,7 @@ class Msi(private val msiFile: File) : KoinComponent {
     }
 
     fun resetExceptShared() {
+        productVersion = null
         productCode = null
         upgradeCode = null
         productLanguage = null
@@ -131,7 +132,7 @@ class Msi(private val msiFile: File) : KoinComponent {
         private const val wixUiModeConst = "WixUI_Mode"
         private const val allUsersConst = "ALLUSERS"
         private const val msiDbOpenReadOnly = "MSIDBOPEN_READONLY"
-        private const val propertyBufferSize = 16 // Length of "ProductLanguage" + null terminator
+        private const val propertyBufferSize = 64
         private const val valueBufferSize = 1024
         val values = listOf(
             upgradeCodeConst,

@@ -2,7 +2,6 @@ package commands
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -31,20 +30,18 @@ import data.locale.DescriptionType
 import data.locale.License.licensePrompt
 import data.locale.LocaleUrl
 import data.locale.Moniker.monikerPrompt
-import data.shared.Publisher.publisherPrompt
 import data.locale.Tags.tagsPrompt
 import data.shared.Locale.localePrompt
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageName.packageNamePrompt
 import data.shared.PackageVersion.packageVersionPrompt
+import data.shared.Publisher.publisherPrompt
 import data.shared.Url.installerDownloadPrompt
 import data.shared.Url.localeUrlPrompt
 import input.FileWriter.writeFiles
 import input.InstallerSwitch
 import input.ManifestResultOption
-import input.Polar
 import input.PromptType
-import input.Prompts
 import input.Prompts.pullRequestPrompt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -53,7 +50,6 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
-import schemas.TerminalInstance
 import schemas.manifest.LocaleManifest
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
@@ -66,7 +62,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val githubImpl: GitHubImpl by inject()
 
     override fun run(): Unit = runBlocking {
-        with(get<TerminalInstance>().terminal) {
+        with(currentContext.terminal) {
             packageIdentifierPrompt()
             launch { if (sharedManifestData.updateState != VersionUpdateState.NewPackage) previousManifestData = get() }
             launch {
@@ -82,7 +78,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     upgradeBehaviourPrompt()
                     releaseDatePrompt()
                     installerManifestData.addInstaller()
-                    val shouldContinue = shouldLoopPrompt()
+                    val shouldContinue = confirm(brightYellow(additionalInstallerInfo))!!
                 } while (shouldContinue)
                 fileExtensionsPrompt()
                 protocolsPrompt()
@@ -110,7 +106,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     when (manifestResultOption) {
                         ManifestResultOption.PullRequest -> commitAndPullRequest()
                         ManifestResultOption.WriteToFiles -> writeFiles(files)
-                        else -> println(brightWhite("Exiting"))
+                        else -> echo(brightWhite("Exiting"))
                     }
                 }
             }
@@ -136,47 +132,20 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
         }.orEmpty()
     }
 
-    private suspend fun commitAndPullRequest() {
+    private suspend fun Terminal.commitAndPullRequest() {
         previousManifestData?.apply {
             remoteVersionDataJob.join()
             remoteLocaleDataJob.join()
             remoteDefaultLocaleDataJob.join()
         }
         val githubImpl = get<GitHubImpl>()
-        val repository = githubImpl.getWingetPkgsFork() ?: return
-        val ref = githubImpl.createBranchFromDefaultBranch(repository) ?: return
+        val repository = githubImpl.getWingetPkgsFork(terminal = this) ?: return
+        val ref = githubImpl.createBranchFromDefaultBranch(repository = repository, terminal = this) ?: return
         githubImpl.commitFiles(
             repository = repository,
             branch = ref,
             files = files.map { "${githubImpl.baseGitHubPath}/${it.first}" to it.second }
         )
-    }
-
-    private fun Terminal.shouldLoopPrompt(): Boolean {
-        var promptInput: Char?
-        do {
-            println(
-                verticalLayout {
-                    cell(brightYellow(additionalInstallerInfo))
-                    Polar.values().forEach {
-                        cell(brightWhite("${" ".repeat(Prompts.optionIndent)} [${it.name.first()}] ${it.name}"))
-                    }
-                }
-            )
-            promptInput = prompt(
-                prompt = brightWhite(Prompts.enterChoice),
-                default = when {
-                    (previousManifestData?.remoteInstallerData?.installers?.size ?: 0) >
-                        installerManifestData.installers.size -> Polar.Yes.name.first().toString()
-                    else -> null
-                },
-            )?.trim()?.lowercase()?.firstOrNull()
-            println()
-        } while (
-            promptInput != Polar.Yes.toString().first().lowercaseChar() &&
-            promptInput != Polar.No.toString().first().lowercaseChar()
-        )
-        return promptInput == Polar.Yes.toString().first().lowercaseChar()
     }
 
     companion object {

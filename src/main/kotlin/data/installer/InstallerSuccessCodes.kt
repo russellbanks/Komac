@@ -48,7 +48,7 @@ object InstallerSuccessCodes : KoinComponent {
         } while (installerSuccessCodesValid != Validation.Success)
     }
 
-    fun areInstallerSuccessCodesValid(
+    private fun areInstallerSuccessCodesValid(
         installerSuccessCodes: Iterable<Int>?,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {

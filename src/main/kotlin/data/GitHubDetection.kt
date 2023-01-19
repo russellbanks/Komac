@@ -32,7 +32,7 @@ class GitHubDetection(url: Url) : KoinComponent {
         require(url.host.equals(other = gitHubWebsite, ignoreCase = true)) { "Url must be a GitHub Url" }
         CoroutineScope(Dispatchers.IO).launch {
             val tag = url.pathSegments.dropLast(1).last()
-            val repository = githubImpl.github.getRepository("${url.pathSegments[1]}/${url.pathSegments[2]}")
+            val repository = githubImpl.github.await().getRepository("${url.pathSegments[1]}/${url.pathSegments[2]}")
             val release = repository.getReleaseByTagName(tag)
             val asset = release.listAssets().first { it.browserDownloadUrl == url.toString() }
             releaseDate = async { LocalDate.ofInstant(asset.createdAt.toInstant(), ZoneId.systemDefault()) }

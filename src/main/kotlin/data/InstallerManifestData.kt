@@ -93,7 +93,7 @@ class InstallerManifestData : KoinComponent {
     }
 
     private fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry()
-    : InstallerManifest.Installer.AppsAndFeaturesEntry {
+        : InstallerManifest.Installer.AppsAndFeaturesEntry {
         val arpDisplayName = sharedManifestData.msi?.productName ?: displayName
         val packageName = sharedManifestData.packageName ?: previousManifestData.remoteDefaultLocaleData?.packageName
         val arpPublisher = sharedManifestData.msi?.manufacturer ?: publisher
@@ -107,20 +107,15 @@ class InstallerManifestData : KoinComponent {
         )
     }
 
-    private inline fun <T, R : Any> Iterable<T>.onlyOneNotNullDistinct(selector: (T) -> R?): Boolean {
-        return mapNotNullTo(ArrayList(), selector).distinct().size == 1
-    }
-
     fun createInstallerManifest(): String {
-        val installersLocaleDistinct = installers.onlyOneNotNullDistinct { it.installerLocale }
-        val releaseDateDistinct = installers.onlyOneNotNullDistinct { it.releaseDate }
-        val installerScopeDistinct = installers.onlyOneNotNullDistinct { it.scope }
-        val upgradeBehaviourDistinct = installers.onlyOneNotNullDistinct { it.upgradeBehavior }
-        val installerSwitchesDistinct = installers.onlyOneNotNullDistinct { it.installerSwitches }
-        val installerTypeDistinct = installers.onlyOneNotNullDistinct { it.installerType }
-        val platformDistinct = installers.onlyOneNotNullDistinct { it.platform }
-        val minimumOSVersionDistinct = installers.onlyOneNotNullDistinct { it.minimumOSVersion }
-        val arpDistinct = installers.onlyOneNotNullDistinct { it.appsAndFeaturesEntries }
+        val installersLocaleDistinct = installers.distinctBy { it.installerLocale }.size == 1
+        val releaseDateDistinct = installers.distinctBy { it.releaseDate }.size == 1
+        val installerScopeDistinct = installers.distinctBy { it.scope }.size == 1
+        val upgradeBehaviourDistinct = installers.distinctBy { it.upgradeBehavior }.size == 1
+        val installerSwitchesDistinct = installers.distinctBy { it.installerSwitches }.size == 1
+        val installerTypeDistinct = installers.distinctBy { it.installerType }.size == 1
+        val platformDistinct = installers.distinctBy { it.platform }.size == 1
+        val minimumOSVersionDistinct = installers.distinctBy { it.minimumOSVersion }.size == 1
         return getInstallerManifestBase().copy(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
@@ -166,8 +161,8 @@ class InstallerManifestData : KoinComponent {
                 releaseDateDistinct -> installers.map { it.releaseDate }.first()
                 else -> null
             },
-            appsAndFeaturesEntries = when {
-                arpDistinct -> {
+            appsAndFeaturesEntries = when (installers.distinctBy { it.appsAndFeaturesEntries }.size) {
+                1 -> {
                     installers
                         .first()
                         .appsAndFeaturesEntries
@@ -194,31 +189,31 @@ class InstallerManifestData : KoinComponent {
     private fun List<InstallerManifest.Installer>.removeNonDistinctKeys(): List<InstallerManifest.Installer> {
         return map { installer ->
             installer.copy(
-                installerLocale = if (onlyOneNotNullDistinct { it.installerLocale }) {
+                installerLocale = if (installers.distinctBy { it.installerLocale }.size == 1) {
                     null
                 } else {
                     installer.installerLocale
                 },
-                platform = if (onlyOneNotNullDistinct { it.platform }) null else installer.platform,
-                minimumOSVersion = if (onlyOneNotNullDistinct { it.minimumOSVersion }) {
+                platform = if (installers.distinctBy { it.platform }.size == 1) null else installer.platform,
+                minimumOSVersion = if (installers.distinctBy { it.minimumOSVersion }.size == 1) {
                     null
                 } else {
                     installer.minimumOSVersion
                 },
-                installerType = if (onlyOneNotNullDistinct { it.installerType }) null else installer.installerType,
-                scope = if (onlyOneNotNullDistinct { it.scope }) null else installer.scope,
-                releaseDate = if (onlyOneNotNullDistinct { it.releaseDate }) null else installer.releaseDate,
-                upgradeBehavior = if (onlyOneNotNullDistinct { it.upgradeBehavior }) {
+                installerType = if (installers.distinctBy { it.installerType }.size == 1) null else installer.installerType,
+                scope = if (installers.distinctBy { it.scope }.size == 1) null else installer.scope,
+                releaseDate = if (installers.distinctBy { it.releaseDate }.size == 1) null else installer.releaseDate,
+                upgradeBehavior = if (installers.distinctBy { it.upgradeBehavior }.size == 1) {
                     null
                 } else {
                     installer.upgradeBehavior
                 },
-                installerSwitches = if (onlyOneNotNullDistinct { it.installerSwitches }) {
+                installerSwitches = if (installers.distinctBy { it.installerSwitches }.size == 1) {
                     null
                 } else {
                     installer.installerSwitches
                 },
-                appsAndFeaturesEntries = if (onlyOneNotNullDistinct { it.appsAndFeaturesEntries }) {
+                appsAndFeaturesEntries = if (installers.distinctBy { it.appsAndFeaturesEntries }.size == 1) {
                     null
                 } else {
                     installer.appsAndFeaturesEntries

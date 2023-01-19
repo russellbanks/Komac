@@ -72,7 +72,7 @@ object UpgradeBehaviour : KoinComponent {
         }
     }
 
-    fun isUpgradeBehaviourValid(
+    private fun isUpgradeBehaviourValid(
         option: Char?,
         upgradeBehaviourSchema: InstallerSchema.Definitions.UpgradeBehavior
     ): Pair<Validation, String?> {

@@ -39,7 +39,7 @@ object Commands : KoinComponent {
         } while (commandsValid != Validation.Success)
     }
 
-    fun areCommandsValid(
+    private fun areCommandsValid(
         commands: Iterable<String>?,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {

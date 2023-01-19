@@ -1,8 +1,7 @@
 package token
 
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.microsoft.alm.secret.Token
 import com.microsoft.alm.secret.TokenType
@@ -10,31 +9,38 @@ import com.microsoft.alm.storage.SecretStore
 import com.microsoft.alm.storage.macosx.KeychainSecurityBackedTokenStore
 import com.microsoft.alm.storage.posix.GnomeKeyringBackedTokenStore
 import com.microsoft.alm.storage.windows.CredManagerBackedTokenStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.kohsuke.github.GitHubBuilder
 import org.koin.core.annotation.Single
 import java.io.IOException
 
 @Single
 class TokenStore {
-    lateinit var token: String
-    fun getToken(terminal: Terminal) {
-        val credentialStore = getCredentialStore()
-        if (credentialStore[credentialKey] == null) {
-            promptForToken(terminal).also { putToken(it, credentialStore) }
+    private val credentialStore = getCredentialStore()
+    var token: Deferred<String> = CoroutineScope(Dispatchers.IO).async { getToken(Terminal()) }
+
+    private suspend fun getToken(terminal: Terminal): String {
+        return if (credentialStore[credentialKey] == null) {
+            promptForToken(terminal).also { putToken(it) }
         } else {
             val credentialToken = credentialStore[credentialKey].Value
-            if (checkIfTokenValid(credentialToken)) {
-                token = credentialToken
+            val (tokenValid, ioException) = checkIfTokenValid(credentialToken)
+            if (tokenValid) {
+                credentialToken
             } else {
-                terminal.println(brightRed("Token is invalid. Please enter a new token."))
-                promptForToken(terminal).also { putToken(it, credentialStore) }
+                terminal.warning(ioException ?: "Token is invalid. Please enter a new token.")
+                promptForToken(terminal).also { putToken(it) }
             }
         }
     }
 
-    fun putToken(tokenString: String, credentialStore: SecretStore<Token> = getCredentialStore()) {
+    suspend fun putToken(tokenString: String) = coroutineScope {
         credentialStore.add(credentialKey, Token(tokenString, TokenType.Personal))
-        token = tokenString
+        token = async { tokenString }
     }
 
     private fun getCredentialStore(): SecretStore<Token> {
@@ -48,21 +54,24 @@ class TokenStore {
     }
 
     fun promptForToken(terminal: Terminal): String {
-        var token: String?
-        do {
-            println(brightGreen("Please enter your GitHub personal access token:"))
-            token = terminal.prompt(brightWhite("Token"))
-            val isValid = token?.let { checkIfTokenValid(it) }
-        } while (token == null || isValid == false)
-        return token
+        return terminal.prompt(
+            prompt = brightGreen("Please enter your GitHub personal access token"),
+            convert = {
+                val (tokenValid, ioException) = checkIfTokenValid(it)
+                if (tokenValid) {
+                    ConversionResult.Valid(it)
+                } else {
+                    ConversionResult.Invalid(ioException?.message ?: "Invalid token. Please try again.")
+                }
+            }
+        )!!
     }
 
-    private fun checkIfTokenValid(tokenString: String): Boolean {
+    private fun checkIfTokenValid(tokenString: String): Pair<Boolean, IOException?> {
         return try {
-            GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid
+            GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid to null
         } catch (ioException: IOException) {
-            println(brightRed(ioException.message ?: "Invalid token. Please try again."))
-            false
+            false to ioException
         }
     }
 

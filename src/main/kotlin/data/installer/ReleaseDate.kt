@@ -47,7 +47,7 @@ object ReleaseDate : KoinComponent {
         } while (releaseDateValid != Validation.Success)
     }
 
-    fun isReleaseDateValid(releaseDate: String?): Pair<Validation, String?> {
+    private fun isReleaseDateValid(releaseDate: String?): Pair<Validation, String?> {
         if (!releaseDate.isNullOrBlank()) {
             try {
                 LocalDate.parse(releaseDate, DateTimeFormatter.ofPattern(releaseDatePattern))
@@ -84,7 +84,7 @@ object ReleaseDate : KoinComponent {
         endExclusive = LocalDate.now()
     )}"
 
-    const val releaseDatePattern = "yyyy-MM-dd"
+    private const val releaseDatePattern = "yyyy-MM-dd"
     private const val releaseDateInfo = "${Prompts.optional} Enter the application release date in the format " +
         releaseDatePattern
 }

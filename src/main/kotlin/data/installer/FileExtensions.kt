@@ -43,7 +43,7 @@ object FileExtensions : KoinComponent {
         } while (fileExtensionsValid != Validation.Success)
     }
 
-    fun areFileExtensionsValid(
+    private fun areFileExtensionsValid(
         fileExtensions: Iterable<String>?,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Validation, String?> {

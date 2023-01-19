@@ -47,7 +47,7 @@ object PackageName : KoinComponent {
         } while (packageNameValid != Validation.Success)
     }
 
-    fun packageNameValid(
+    private fun packageNameValid(
         input: String?,
         packageNameSchema: DefaultLocaleSchema.Properties.PackageName
     ): Pair<Validation, String?> {

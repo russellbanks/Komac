@@ -23,7 +23,7 @@ import kotlin.system.exitProcess
 object PackageVersion : KoinComponent {
     private val githubImpl: GitHubImpl by inject()
 
-    fun Terminal.packageVersionPrompt(packageVersion: String? = null) {
+    suspend fun Terminal.packageVersionPrompt(packageVersion: String? = null) {
         val sharedManifestData: SharedManifestData by inject()
         if (packageVersion != null) {
             isPackageVersionValid(packageVersion).also {
@@ -50,7 +50,7 @@ object PackageVersion : KoinComponent {
         }
     }
 
-    private fun setUpgradeState(sharedManifestData: SharedManifestData) {
+    private suspend fun setUpgradeState(sharedManifestData: SharedManifestData) {
         if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
             return
         }
@@ -62,7 +62,7 @@ object PackageVersion : KoinComponent {
         }
     }
 
-    private fun checkIfPackageExistsInRepo(sharedManifestData: SharedManifestData): Boolean {
+    private suspend fun checkIfPackageExistsInRepo(sharedManifestData: SharedManifestData): Boolean {
         val packageNames = githubImpl.getMicrosoftWingetPkgs()
             ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
             ?.map { it.name }

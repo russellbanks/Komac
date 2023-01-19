@@ -58,7 +58,7 @@ object Description : KoinComponent {
         } while (descriptionValid != Validation.Success)
     }
 
-    fun descriptionValid(
+    private fun descriptionValid(
         description: String?,
         descriptionType: DescriptionType,
         propertiesSchema: DefaultLocaleSchema.Properties,
