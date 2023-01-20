@@ -1,6 +1,10 @@
 package data
 
+import io.ktor.http.URLBuilder
 import io.ktor.http.Url
+import io.ktor.http.appendPathSegments
+import io.ktor.http.copy
+import io.ktor.http.set
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -79,16 +83,17 @@ class GitHubDetection(url: Url) : KoinComponent {
             publisherUrl = async { runCatching { repository.owner.blog }.getOrNull()?.let { Url(it) } }
             shortDescription = async { repository.description }
             publisherSupportUrl = async {
+                val supportUrl = URLBuilder(url).appendPathSegments("support").build()
                 data.shared.Url.isUrlValid(
-                    url = "$url/support",
+                    url = supportUrl,
                     schema = get<SchemasImpl>().defaultLocaleSchema,
                     canBeBlank = false
                 ).let { error ->
-                    if (error == null) {
-                        "$url/support"
-                    } else {
-                        if (repository.hasIssues()) "https://github.com/${repository.fullName}/issues" else null
-                    }?.let { Url(it) }
+                    when {
+                        error == null -> supportUrl
+                        repository.hasIssues() -> Url("https://github.com/${repository.fullName}/issues")
+                        else -> null
+                    }
                 }
             }
         }

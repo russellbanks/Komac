@@ -30,7 +30,7 @@ object PackageName : KoinComponent {
         }
         do {
             println(brightGreen(packageNameInfo))
-            println(cyan(packageNameExample))
+            info(packageNameExample)
             sharedManifestData.msi?.productName?.let { println(brightYellow("Detected from MSI: $it")) }
             val input = prompt(
                 prompt = brightWhite(PromptType.PackageName.toString()),

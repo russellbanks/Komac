@@ -2,11 +2,6 @@ package data.locale
 
 import Errors
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
@@ -33,19 +28,19 @@ object Tags : KoinComponent {
             return
         }
         do {
-            println(brightYellow(tagsInfo))
-            println(cyan(tagsExample))
+            println(colors.brightYellow(tagsInfo))
+            info(tagsExample)
             val input = prompt(
-                prompt = brightWhite(PromptType.Tags.toString()),
+                prompt = colors.brightWhite(PromptType.Tags.toString()),
                 default = previousManifestData.remoteDefaultLocaleData?.tags?.joinToString(", ")?.also {
-                    println(gray("Previous tags: $it"))
+                    muted("Previous tags: $it")
                 }
             )?.trim()?.convertToYamlList(tagsSchema.uniqueItems)
             val (commandsValid, error) = areTagsValid(input, tagsSchema, tagSchema)
             if (commandsValid == Validation.Success) {
                 defaultLocaleManifestData.tags = input
             }
-            error?.let { println(brightRed(it)) }
+            error?.let { danger(it) }
             println()
         } while (commandsValid != Validation.Success)
     }

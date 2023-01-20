@@ -5,7 +5,6 @@ import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -33,7 +32,7 @@ object FileExtensions : KoinComponent {
             val input = prompt(
                 prompt = brightWhite(PromptType.FileExtensions.toString()),
                 default = getPreviousValue()?.joinToString(", ")?.also {
-                    println(gray("Previous file extensions: $it"))
+                    muted("Previous file extensions: $it")
                 }
             )?.trim()?.convertToYamlList(fileExtensionsSchema.uniqueItems)
             val (fileExtensionsValid, error) = areFileExtensionsValid(input)

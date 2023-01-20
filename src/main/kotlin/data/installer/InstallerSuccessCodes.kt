@@ -33,7 +33,7 @@ object InstallerSuccessCodes : KoinComponent {
             val input = prompt(
                 prompt = brightWhite(PromptType.InstallerSuccessCodes.toString()),
                 default = getPreviousValue()?.joinToString(", ")?.also {
-                    println(gray("Previous commands: $it"))
+                    println(gray("Previous success codes: $it"))
                 }
             )?.trim()
                 ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)

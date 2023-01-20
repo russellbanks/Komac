@@ -2,10 +2,8 @@ package data.installer
 
 import Errors
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.SharedManifestData
@@ -30,10 +28,10 @@ object ProductCode : KoinComponent {
         val productCodeSchema = schemasImpl.installerSchema.definitions.productCode
         do {
             println(brightYellow(productCodeInfo))
-            println(cyan(productCodeExample))
+            info(productCodeExample)
             installerManifestData.productCode = prompt(brightWhite(PromptType.ProductCode.toString()))?.trim()
             val (productCodeValid, error) = isProductCodeValid(installerManifestData.productCode, productCodeSchema)
-            error?.let { println(brightRed(it)) }
+            error?.let { danger(it) }
             println()
         } while (productCodeValid != Validation.Success)
     }

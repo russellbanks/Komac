@@ -1,6 +1,5 @@
 package token
 
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.microsoft.alm.secret.Token
@@ -55,7 +54,7 @@ class TokenStore {
 
     fun promptForToken(terminal: Terminal): String {
         return terminal.prompt(
-            prompt = brightGreen("Please enter your GitHub personal access token"),
+            prompt = terminal.colors.brightGreen("Please enter your GitHub personal access token"),
             convert = {
                 val (tokenValid, ioException) = checkIfTokenValid(it)
                 if (tokenValid) {

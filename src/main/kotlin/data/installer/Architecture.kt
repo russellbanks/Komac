@@ -41,36 +41,35 @@ object Architecture : KoinComponent {
         val detectedArchitectureFromUrl = Ktor.detectArchitectureFromUrl(installerManifestData.installerUrl)
         do {
             architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
-            println(cyan("Options: ${architectureSchema.enum.joinToString(", ")}"))
+            info("Options: ${architectureSchema.enum.joinToString(", ")}")
             detectedArchitectureFromUrl?.let { println(brightYellow("Detected from Url: $it")) }
             val input = prompt(
                 prompt = brightWhite(PromptType.Architecture.toString()),
                 default = getPreviousValue()?.also {
                     println(gray("Previous architecture: $it"))
                 } ?: detectedArchitectureFromUrl?.toString()
-            )?.trim()?.lowercase()
-            val (architectureValid, error) = isArchitectureValid(input, architectureSchema)
-            error?.let { println(brightRed(it)) }
-            if (architectureValid == Validation.Success && input != null) {
+            )!!.trim().lowercase()
+            val error = isArchitectureValid(input, architectureSchema)?.also { danger(it) }
+            if (error == null) {
                 installerManifestData.architecture = input.toArchitecture()
             }
             println()
-        } while (architectureValid != Validation.Success)
+        } while (error != null)
     }
 
     private fun isArchitectureValid(
         architecture: String?,
         architectureSchema: InstallerSchema.Definitions.Architecture
-    ): Pair<Validation, String?> {
+    ): String? {
         return when {
-            architecture.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.Architecture)
+            architecture.isNullOrBlank() -> Errors.blankInput(PromptType.Architecture)
             !architectureSchema.enum.contains(architecture) -> {
-                Validation.InvalidArchitecture to Errors.invalidEnum(
+                Errors.invalidEnum(
                     Validation.InvalidArchitecture,
                     architectureSchema.enum
                 )
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 

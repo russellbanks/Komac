@@ -1,15 +1,11 @@
 package data.installer
 
 import Errors
-import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.gray
+import com.github.ajalt.clikt.core.CliktError
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
-import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
@@ -24,38 +20,46 @@ object Commands : KoinComponent {
     private val commandsSchema = get<SchemasImpl>().installerSchema.definitions.commands
 
     fun Terminal.commandsPrompt() {
-        do {
-            println(brightYellow("${Prompts.optional} ${commandsSchema.description} (Max ${commandsSchema.maxItems})"))
-            val input = prompt(
-                prompt = brightWhite(PromptType.Commands.toString()),
-                default = getPreviousValue()?.joinToString(", ")?.also {
-                    println(gray("Previous commands: $it"))
+        println(
+            colors.brightYellow(
+                "${Prompts.optional} ${commandsSchema.description} (Max ${commandsSchema.maxItems})"
+            )
+        )
+        installerManifestData.commands = prompt(
+            prompt = colors.brightWhite(const),
+            default = getPreviousValue()?.also { muted("Previous commands: $it") },
+            convert = {
+                val inputAsList = it.convertToYamlList(commandsSchema.uniqueItems)
+                val error = areCommandsValid(inputAsList)
+                if (error != null) {
+                    ConversionResult.Invalid(error.message!!)
+                } else {
+                    ConversionResult.Valid(inputAsList)
                 }
-            )?.trim()?.convertToYamlList(commandsSchema.uniqueItems)
-            val (commandsValid, error) = areCommandsValid(input)
-            if (commandsValid == Validation.Success) installerManifestData.commands = input
-            error?.let { println(brightRed(it)) }
-            println()
-        } while (commandsValid != Validation.Success)
+            }
+        )
+        println()
     }
 
     private fun areCommandsValid(
         commands: Iterable<String>?,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
+    ): CliktError? {
         val commandsSchema = installerSchema.definitions.commands
         return when {
             (commands?.count() ?: 0) > commandsSchema.maxItems -> {
-                Validation.InvalidLength to Errors.invalidLength(max = commandsSchema.maxItems)
+                CliktError(Errors.invalidLength(max = commandsSchema.maxItems))
             }
             commands?.any { it.length > commandsSchema.items.maxLength } == true -> {
-                Validation.InvalidLength to Errors.invalidLength(
-                    min = commandsSchema.items.minLength,
-                    max = commandsSchema.items.maxLength,
-                    items = commands.filter { it.length > commandsSchema.items.maxLength }
+                CliktError(
+                    Errors.invalidLength(
+                        min = commandsSchema.items.minLength,
+                        max = commandsSchema.items.maxLength,
+                        items = commands.filter { it.length > commandsSchema.items.maxLength }
+                    )
                 )
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 
@@ -64,4 +68,6 @@ object Commands : KoinComponent {
             it.commands ?: it.installers[installerManifestData.installers.size].commands
         }
     }
+
+    private const val const = "Commands"
 }

@@ -49,10 +49,10 @@ object InstallerType : KoinComponent {
             }
             else -> do {
                 installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
-                println(cyan("Options: ${installerTypeSchema.enum.joinToString(", ")}"))
+                info("Options: ${installerTypeSchema.enum.joinToString(", ")}")
                 val input = prompt(
                     prompt = brightWhite(PromptType.InstallerType.toString()),
-                    default = getPreviousValue()?.also { println(gray("Previous installer type: $it")) }
+                    default = getPreviousValue()?.also { muted("Previous installer type: $it") }
                 )?.trim()?.lowercase()
                 val (installerTypeValid, error) = isInstallerTypeValid(input, installerTypeSchema)
                 error?.let { println(brightRed(it)) }

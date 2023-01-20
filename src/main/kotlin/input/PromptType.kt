@@ -3,7 +3,6 @@ package input
 enum class PromptType {
     Architecture,
     Author,
-    Commands,
     Copyright,
     CustomSwitch,
     FileExtensions,
@@ -13,7 +12,6 @@ enum class PromptType {
     InstallerType,
     InstallerUrl,
     License,
-    Moniker,
     PackageIdentifier,
     PackageLocale,
     PackageName,

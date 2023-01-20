@@ -98,7 +98,7 @@ class GitHubImpl : KoinComponent {
                 /* sha = */ repository.getBranch(repository.defaultBranch).shA1
             ).also { pullRequestBranch = it }
         } catch (ioException: IOException) {
-            terminal.println(brightRed(ioException.message ?: "Failed to create branch."))
+            terminal.danger(ioException.message ?: "Failed to create branch.")
             null
         }
     }

@@ -2,11 +2,6 @@ package data.installer
 
 import Errors
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -31,12 +26,12 @@ object ReleaseDate : KoinComponent {
             return
         }
         do {
-            println(brightYellow(releaseDateInfo))
-            println(cyan(releaseDateExample))
-            getPreviousValue()?.let { println(gray("Previous release date: $it")) }
-            val input = prompt(brightWhite(PromptType.ReleaseDate.toString()))?.trim()
+            println(colors.brightYellow(releaseDateInfo))
+            info(releaseDateExample)
+            getPreviousValue()?.let { muted("Previous release date: $it") }
+            val input = prompt(colors.brightWhite(PromptType.ReleaseDate.toString()))?.trim()
             val (releaseDateValid, error) = isReleaseDateValid(input)
-            error?.let { println(brightRed(it)) }
+            error?.let { danger(it) }
             if (releaseDateValid == Validation.Success && !input.isNullOrBlank()) {
                 installerManifestData.releaseDate = LocalDate.parse(
                     input,

@@ -1,16 +1,15 @@
 package data.shared
 
 import Errors
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.cyan
+import com.github.ajalt.clikt.core.CliktError
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.GitHubImpl
 import data.SharedManifestData
 import data.VersionUpdateState
 import input.PromptType
 import input.Prompts
+import kotlinx.coroutines.runBlocking
 import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -19,47 +18,50 @@ import schemas.Schema
 import schemas.SchemasImpl
 import schemas.data.InstallerSchema
 import java.io.IOException
-import kotlin.system.exitProcess
 
 object PackageIdentifier : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private lateinit var installerSchema: InstallerSchema
 
-    suspend fun Terminal.packageIdentifierPrompt(packageIdentifier: String? = null) {
+    suspend fun Terminal.packageIdentifierPrompt(packageIdentifierParameter: String? = null) {
         val schemasImpl: SchemasImpl = get()
-        if (packageIdentifier != null) {
-            schemasImpl.awaitSchema(schema = Schema.Installer, terminal = this)
-            installerSchema = get<SchemasImpl>().installerSchema
-            sharedManifestData.packageIdentifier = packageIdentifier
-            findPreviousVersions(packageIdentifier = packageIdentifier, writeOutput = false).let {
-                if (it == null) {
-                    println(brightRed("$packageIdentifier does not exist in winget-pkgs"))
-                    exitProcess(0)
-                }
-            }
-        } else {
-            do {
-                println(brightGreen(packageIdentifierInfo))
-                println(cyan(packageIdentifierExample))
-                val input = prompt(brightWhite(PromptType.PackageIdentifier.toString()))?.trim()
-                schemasImpl.awaitSchema(schema = Schema.Installer, terminal = this)
-                installerSchema = get<SchemasImpl>().installerSchema
-                val error = isPackageIdentifierValid(input).also {
-                    if (it == null) {
-                        if (input != null) {
-                            sharedManifestData.packageIdentifier = input
-                            findPreviousVersions(input)
+        if (packageIdentifierParameter == null) {
+            println(colors.brightGreen(identifierInfo))
+            info(example)
+            sharedManifestData.packageIdentifier = prompt(
+                prompt = colors.brightWhite(const),
+                convert = {
+                    if (!::installerSchema.isInitialized) {
+                        runBlocking {
+                            schemasImpl.awaitSchema(
+                                schema = Schema.Installer,
+                                terminal = this@packageIdentifierPrompt
+                            )
                         }
+                        installerSchema = schemasImpl.installerSchema
+                    }
+                    val error = isPackageIdentifierValid(it)
+                    if (error != null) {
+                        ConversionResult.Invalid(error.message!!)
                     } else {
-                        println(brightRed(it))
+                        ConversionResult.Valid(it)
                     }
                 }
-                println()
-            } while (error != null)
+            )!!.trim()
+            sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
+            println()
+        } else {
+            schemasImpl.awaitSchema(schema = Schema.Installer, terminal = this)
+            installerSchema = schemasImpl.installerSchema
+            sharedManifestData.packageIdentifier = packageIdentifierParameter
+            sharedManifestData.latestVersion = getLatestVersion(
+                packageIdentifier = packageIdentifierParameter,
+                writeOutput = false
+            )
         }
     }
 
-    private suspend fun Terminal.findPreviousVersions(packageIdentifier: String, writeOutput: Boolean = true): String? {
+    private suspend fun Terminal.getLatestVersion(packageIdentifier: String, writeOutput: Boolean = true): String? {
         return try {
             get<GitHubImpl>()
                 .getMicrosoftWingetPkgs()
@@ -68,41 +70,37 @@ object PackageIdentifier : KoinComponent {
                 ?.filter { it.isDirectory }
                 ?.also {
                     if (it.isNotEmpty() && writeOutput) {
-                        println(cyan("Found $packageIdentifier in the winget-pkgs repository"))
+                        println(colors.cyan("Found $packageIdentifier in the winget-pkgs repository"))
                     }
                 }
                 ?.map { it.name }
                 ?.let { PackageVersion.getHighestVersion(it) }
-                ?.also { if (writeOutput) println(cyan("Found latest version: $it")) }
-                .also {
-                    sharedManifestData.latestVersion = it
-                    return it
-                }
+                ?.also { if (writeOutput) println(colors.cyan("Found latest version: $it")) }
+                .also { sharedManifestData.latestVersion = it }
         } catch (_: IOException) {
             sharedManifestData.updateState = VersionUpdateState.NewPackage
             null
         }
     }
 
-    private fun isPackageIdentifierValid(identifier: String?): String? {
+    private fun isPackageIdentifierValid(identifier: String): CliktError? {
         val packageIdentifierSchema = installerSchema.definitions.packageIdentifier
         return when {
-            identifier.isNullOrBlank() -> Errors.blankInput(PromptType.PackageIdentifier)
+            identifier.isBlank() -> CliktError(Errors.blankInput(const))
             identifier.length > packageIdentifierSchema.maxLength -> {
-                Errors.invalidLength(
-                    min = packageIdentifierMinLength,
-                    max = packageIdentifierSchema.maxLength
-                )
+                CliktError(Errors.invalidLength(min = minLength, max = packageIdentifierSchema.maxLength))
             }
             !identifier.matches(Regex(packageIdentifierSchema.pattern)) -> {
-                Errors.invalidRegex(Regex(packageIdentifierSchema.pattern))
+                CliktError(Errors.invalidRegex(Regex(packageIdentifierSchema.pattern)))
             }
             else -> null
         }
     }
 
-    private const val packageIdentifierExample = "Example: Microsoft.Excel"
-    private const val packageIdentifierInfo = "${Prompts.required} Enter the Package Identifier, " +
+
+    private const val const = "Package Identifier"
+    private const val example = "Example: Microsoft.Excel"
+    private const val identifierInfo = "${Prompts.required} Enter the $const, " +
         "in the following format <Publisher shortname.Application shortname>"
-    private const val packageIdentifierMinLength = 4
+    private const val minLength = 4
 }

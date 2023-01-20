@@ -1,14 +1,15 @@
 package data.shared
 
 import Errors
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.rendering.TextColors.gray
-import com.github.ajalt.mordant.rendering.TextStyles.bold
 import com.github.ajalt.mordant.table.verticalLayout
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubDetection
@@ -27,6 +28,9 @@ import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
@@ -43,10 +47,10 @@ import schemas.manifest.InstallerManifest
 object Url : KoinComponent {
     private val schemasImpl: SchemasImpl by inject()
 
-    suspend fun Terminal.installerDownloadPrompt(parameterUrl: String? = null) {
+    suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) {
         val installerManifestData: InstallerManifestData by inject()
         if (parameterUrl != null) {
-            installerManifestData.installerUrl = Url(parameterUrl)
+            installerManifestData.installerUrl = parameterUrl
         } else {
             setInstallerUrlFromPrompt(installerManifestData)
         }
@@ -55,18 +59,22 @@ object Url : KoinComponent {
     }
 
     private suspend fun Terminal.setInstallerUrlFromPrompt(installerManifestData: InstallerManifestData) {
-        do {
-            println(brightGreen(installerUrlInfo))
-            val input = prompt(brightWhite(PromptType.InstallerUrl.toString()))?.trim()
-            val error = isUrlValid(url = input, schema = schemasImpl.installerSchema, canBeBlank = false).also {
-                if (it == null) {
-                    if (input != null) installerManifestData.installerUrl = Url(input)
+        println(colors.brightGreen(installerUrlInfo))
+        installerManifestData.installerUrl = prompt(
+            prompt = colors.brightWhite(PromptType.InstallerUrl.toString()),
+            convert = {
+                var error: CliktError? = null
+                CoroutineScope(Dispatchers.IO).launch {
+                    error = isUrlValid(url = Url(it), schema = schemasImpl.installerSchema, canBeBlank = false)
+                }
+                if (error != null) {
+                    ConversionResult.Invalid(error?.message!!)
                 } else {
-                    println(brightRed(it))
+                    ConversionResult.Valid(Url(it))
                 }
             }
-            println()
-        } while (error != null)
+        )!!
+        println()
 
         setRedirectedUrl(installerManifestData)
     }
@@ -88,9 +96,9 @@ object Url : KoinComponent {
             if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 println(brightYellow(urlChanged))
                 val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
-                if (error.isNullOrBlank() && redirectedUrl != null) {
+                if (error == null && redirectedUrl != null) {
                     installerManifestData.installerUrl = redirectedUrl
-                    println(brightGreen("URL changed to $redirectedUrl"))
+                    success("URL changed to $redirectedUrl")
                 } else {
                     println(
                         verticalLayout {
@@ -102,7 +110,7 @@ object Url : KoinComponent {
                 }
                 println()
             } else {
-                println(brightGreen("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}"))
+                info("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}")
             }
         }
     }
@@ -119,9 +127,7 @@ object Url : KoinComponent {
             }
         } else {
             val gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
-            if (
-                installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)
-            ) {
+            if (installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
                 sharedManifestData.gitHubDetection = gitHubDetection
             }
             get<Clients>().httpClient.downloadInstallerFromUrl(terminal = this).apply {
@@ -148,7 +154,7 @@ object Url : KoinComponent {
             println(
                 verticalLayout {
                     cell(
-                        (brightGreen + bold)(
+                        (colors.brightGreen + colors.bold)(
                             "${msixBundle.packages?.size} packages have been detected inside the MSIX Bundle:"
                         )
                     )
@@ -175,7 +181,7 @@ object Url : KoinComponent {
             )
             println()
             println(
-                (brightYellow + bold)(
+                (colors.brightYellow + colors.bold)(
                     "All packages inside the MSIX Bundle will be added as separate installers in the manifest"
                 )
             )
@@ -205,7 +211,7 @@ object Url : KoinComponent {
             }
             else -> {
                 do {
-                    println(brightYellow(localeUrlInfo(localeUrl, defaultLocaleSchema.properties)))
+                    println(colors.brightYellow(localeUrlInfo(localeUrl, defaultLocaleSchema.properties)))
                     val input = prompt(
                         prompt = brightWhite(localeUrl.toString()),
                         default = getPreviousValue(localeUrl)?.toString()
@@ -223,16 +229,16 @@ object Url : KoinComponent {
                                 LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
                             }
                         } else {
-                            println(brightRed(it))
+                            danger(it)
                         }
                     }
                     println()
-                } while (!error.isNullOrBlank())
+                } while (error != null)
             }
         }
     }
 
-    suspend fun areUrlsValid(urls: List<String>?): String? {
+    suspend fun areUrlsValid(urls: List<Url>?): CliktError? {
         urls?.forEach {
             val error = isUrlValid(it, get<SchemasImpl>().installerSchema, false)
             error?.let { return error }
@@ -240,11 +246,7 @@ object Url : KoinComponent {
         return null
     }
 
-    private suspend fun isUrlValid(url: Url?, schema: RemoteSchema, canBeBlank: Boolean): String? {
-        return isUrlValid(url.toString(), schema, canBeBlank)
-    }
-
-    suspend fun isUrlValid(url: String?, schema: RemoteSchema, canBeBlank: Boolean): String? {
+    suspend fun isUrlValid(url: Url?, schema: RemoteSchema, canBeBlank: Boolean): CliktError? {
         val maxLength = when (schema) {
             is InstallerSchema -> schema.definitions.url.maxLength
             is DefaultLocaleSchema -> schema.definitions.url.maxLength
@@ -257,16 +259,17 @@ object Url : KoinComponent {
                 else -> ""
             }
         )
+        val urlString = url.toString()
         return when {
-            url.isNullOrBlank() && canBeBlank -> null
-            url.isNullOrBlank() -> Errors.blankInput(PromptType.InstallerUrl)
-            url.length > maxLength -> Errors.invalidLength(max = maxLength)
-            !url.matches(pattern) -> Errors.invalidRegex(pattern)
-            else -> checkUrl(url)
+            urlString.isBlank() && canBeBlank -> null
+            urlString.isBlank() -> CliktError(Errors.blankInput(PromptType.InstallerUrl))
+            urlString.length > maxLength -> CliktError(Errors.invalidLength(max = maxLength))
+            !urlString.matches(pattern) -> CliktError(Errors.invalidRegex(pattern))
+            else -> checkUrlResponse(urlString)?.let { CliktError(it) }
         }
     }
 
-    private suspend fun checkUrl(url: String): String? {
+    private suspend fun checkUrlResponse(url: String): String? {
         return get<Clients>().httpClient.config { followRedirects = false }.use {
             try {
                 val installerUrlResponse = it.head(url)

@@ -23,12 +23,12 @@ class Komac(private val args: Array<String>) : CliktCommand(invokeWithoutSubcomm
             if (currentContext.invokedSubcommand == null) {
                 println(
                     verticalLayout {
-                        cell(brightWhite("Select mode:"))
+                        cell(colors.brightWhite("Select mode:"))
                         CommandOption.values().forEach { cell(optionCell(it)) }
                     }
                 )
                 val commandOption = prompt(
-                    prompt = brightWhite("Selection"),
+                    prompt = colors.brightWhite("Selection"),
                     convert = { selection ->
                         val option = CommandOption.values().find {
                             it.key.toString().equals(other = selection, ignoreCase = true)

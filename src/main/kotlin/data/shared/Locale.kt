@@ -38,11 +38,11 @@ object Locale : KoinComponent {
         }
         do {
             localeInfo(promptType).also { (info, infoColor) -> println(infoColor(info)) }
-            println(cyan("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}"))
+            info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
             val input = prompt(
                 prompt = brightWhite(promptType.toString()),
                 default = when (promptType) {
-                    PromptType.InstallerLocale -> getPreviousValue()?.also { println(gray("Previous value: $it")) }
+                    PromptType.InstallerLocale -> getPreviousValue()?.also { muted("Previous value: $it") }
                     PromptType.PackageLocale -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default
                     else -> null
                 }

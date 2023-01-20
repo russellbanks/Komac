@@ -79,8 +79,7 @@ class DefaultLocaleManifestData : KoinComponent {
             moniker = moniker.takeIf { it?.isNotBlank() == true }
                 ?: previousManifestData.remoteDefaultLocaleData?.moniker,
             tags = tags.takeIf { it?.isNotEmpty() == true } ?: previousManifestData.remoteDefaultLocaleData?.tags,
-            releaseNotesUrl = releaseNotesUrl
-                ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await(),
+            releaseNotesUrl = releaseNotesUrl ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await(),
             releaseNotes = sharedManifestData.gitHubDetection?.releaseNotes?.await()?.trim(),
             manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
             manifestVersion = schemasImpl.defaultLocaleSchema.properties.manifestVersion.default

@@ -1,14 +1,11 @@
 package data.installer
 
 import Errors
-import Validation
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -26,47 +23,47 @@ object InstallerSwitch : KoinComponent {
     private val previousManifestData: PreviousManifestData by inject()
 
     fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
-        val isRequired = installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE &&
-            installerSwitch != InstallerSwitch.Custom
-        do {
+        if (
+            installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE
+            || installerSwitch == InstallerSwitch.Custom
+        ) {
+            val isRequired = installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE &&
+                    installerSwitch != InstallerSwitch.Custom
             switchInfo(installerManifestData.installerType, installerSwitch).also { (info, infoColor) ->
                 println(infoColor(info))
             }
-            println(cyan(switchExample(installerSwitch)))
-            val input: String? = prompt(
-                prompt = brightWhite(installerSwitch.toString()),
-                default = getPreviousValue(installerSwitch)?.also {
-                    println(gray("Previous $installerSwitch: $it"))
+            info(switchExample(installerSwitch))
+            installerManifestData.installerSwitches[installerSwitch] = prompt(
+                prompt = colors.brightWhite(installerSwitch.toString()),
+                default = getPreviousValue(installerSwitch)?.also { muted("Previous $installerSwitch: $it") },
+                convert = {
+                    val error = isInstallerSwitchValid(
+                        switch = it,
+                        installerSwitch = installerSwitch,
+                        canBeBlank = !isRequired
+                    )
+                    if (error != null) {
+                        ConversionResult.Invalid(error.message!!)
+                    } else {
+                        ConversionResult.Valid(it)
+                    }
                 }
-            )?.trim()
-            val (switchValid, error) = isInstallerSwitchValid(
-                switch = input,
-                installerSwitch = installerSwitch,
-                canBeBlank = !isRequired
-            )
-            error?.let { println(brightRed(it)) }
-            if (switchValid == Validation.Success) {
-                input?.let { installerManifestData.installerSwitches[installerSwitch] = it.ifBlank { null } }
-            }
+            )?.takeIf { it.isNotBlank() }?.trim()
             println()
-        } while (switchValid != Validation.Success)
+        }
     }
 
     private fun isInstallerSwitchValid(
-        switch: String?,
+        switch: String,
         installerSwitch: InstallerSwitch,
         canBeBlank: Boolean = false,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
+    ): CliktError? {
         val (minBoundary, maxBoundary) = installerSwitch.getLengthBoundary(installerSchema)
         return when {
-            switch.isNullOrBlank() && !canBeBlank -> {
-                Validation.Blank to Errors.blankInput(installerSwitch.toPromptType())
-            }
-            (switch?.length ?: 0) > maxBoundary -> {
-                Validation.InvalidLength to Errors.invalidLength(min = minBoundary, max = maxBoundary)
-            }
-            else -> Validation.Success to null
+            switch.isBlank() && !canBeBlank -> CliktError(Errors.blankInput(installerSwitch.toPromptType()))
+            switch.length > maxBoundary -> CliktError(Errors.invalidLength(min = minBoundary, max = maxBoundary))
+            else -> null
         }
     }
 

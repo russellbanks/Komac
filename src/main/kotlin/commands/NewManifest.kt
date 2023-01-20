@@ -1,7 +1,5 @@
 package commands
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -50,6 +48,7 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
+import schemas.SchemasImpl
 import schemas.manifest.LocaleManifest
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
@@ -78,7 +77,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     upgradeBehaviourPrompt()
                     releaseDatePrompt()
                     installerManifestData.addInstaller()
-                    val shouldContinue = confirm(brightYellow(additionalInstallerInfo))!!
+                    val shouldContinue = confirm(colors.brightYellow(additionalInstallerInfo))!!
                 } while (shouldContinue)
                 fileExtensionsPrompt()
                 protocolsPrompt()
@@ -106,7 +105,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     when (manifestResultOption) {
                         ManifestResultOption.PullRequest -> commitAndPullRequest()
                         ManifestResultOption.WriteToFiles -> writeFiles(files)
-                        else -> echo(brightWhite("Exiting"))
+                        else -> echo(colors.brightWhite("Exiting"))
                     }
                 }
             }
@@ -122,7 +121,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
-                manifestVersion = "1.4.0"
+                manifestVersion = get<SchemasImpl>().versionSchema.properties.manifestVersion.default
             ).let {
                 Schemas.buildManifestString(
                     Schema.Locale,

@@ -5,8 +5,6 @@ import Validation
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.terminal.Terminal
 import data.PreviousManifestData
 import data.SharedManifestData
@@ -33,12 +31,12 @@ object Publisher : KoinComponent {
             return
         }
         do {
-            println(brightGreen(publisherInfo))
-            println(cyan(publisherExample))
+            println(colors.brightGreen(publisherInfo))
+            info(publisherExample)
             val input = prompt(
                 prompt = brightWhite(PromptType.Publisher.toString()),
                 default = previousManifestData.remoteDefaultLocaleData?.publisher?.also {
-                    println(gray("Previous publisher: $it"))
+                    muted("Previous publisher: $it")
                 }
             )?.trim()
             val (publisherValid, error) = publisherValid(input, publisherSchema)

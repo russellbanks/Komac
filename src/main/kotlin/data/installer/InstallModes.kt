@@ -28,18 +28,18 @@ object InstallModes : KoinComponent {
     fun Terminal.installModesPrompt() {
         do {
             println(brightYellow(installModesInfo))
-            println(cyan(installModesExample))
+            info(installModesExample)
             val input = prompt(
                 prompt = brightWhite(PromptType.InstallModes.toString()),
                 default = getPreviousValue()?.joinToString(", ")?.also {
-                    println(gray("Previous install modes: $it"))
+                    muted("Previous install modes: $it")
                 }
             )?.trim()?.convertToYamlList(installModesSchema.uniqueItems)?.toInstallModes()
             val (installModesValid, error) = areInstallModesValid(input)
             if (installModesValid == Validation.Success && input != null) {
                 installerManifestData.installModes = input
             }
-            error?.let { println(brightRed(it)) }
+            error?.let { danger(it) }
             println()
         } while (installModesValid != Validation.Success)
     }
