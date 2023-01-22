@@ -1,7 +1,6 @@
 package data.installer
 
 import Errors
-import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -24,8 +23,8 @@ object InstallerSwitch : KoinComponent {
 
     fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
         if (
-            installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE
-            || installerSwitch == InstallerSwitch.Custom
+            installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE ||
+            installerSwitch == InstallerSwitch.Custom
         ) {
             val isRequired = installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE &&
                     installerSwitch != InstallerSwitch.Custom
@@ -34,19 +33,12 @@ object InstallerSwitch : KoinComponent {
             }
             info(switchExample(installerSwitch))
             installerManifestData.installerSwitches[installerSwitch] = prompt(
-                prompt = colors.brightWhite(installerSwitch.toString()),
+                prompt = installerSwitch.toString(),
                 default = getPreviousValue(installerSwitch)?.also { muted("Previous $installerSwitch: $it") },
-                convert = {
-                    val error = isInstallerSwitchValid(
-                        switch = it,
-                        installerSwitch = installerSwitch,
-                        canBeBlank = !isRequired
-                    )
-                    if (error != null) {
-                        ConversionResult.Invalid(error.message!!)
-                    } else {
-                        ConversionResult.Valid(it)
-                    }
+                convert = { input ->
+                    isInstallerSwitchValid(switch = input, installerSwitch = installerSwitch, canBeBlank = !isRequired)
+                        ?.let { ConversionResult.Invalid(it) }
+                        ?: ConversionResult.Valid(input)
                 }
             )?.takeIf { it.isNotBlank() }?.trim()
             println()
@@ -58,11 +50,11 @@ object InstallerSwitch : KoinComponent {
         installerSwitch: InstallerSwitch,
         canBeBlank: Boolean = false,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): CliktError? {
+    ): String? {
         val (minBoundary, maxBoundary) = installerSwitch.getLengthBoundary(installerSchema)
         return when {
-            switch.isBlank() && !canBeBlank -> CliktError(Errors.blankInput(installerSwitch.toPromptType()))
-            switch.length > maxBoundary -> CliktError(Errors.invalidLength(min = minBoundary, max = maxBoundary))
+            switch.isBlank() && !canBeBlank -> Errors.blankInput(installerSwitch.toString())
+            switch.length > maxBoundary -> Errors.invalidLength(min = minBoundary, max = maxBoundary)
             else -> null
         }
     }

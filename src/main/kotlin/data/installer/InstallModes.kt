@@ -1,24 +1,20 @@
 package data.installer
 
 import Errors
+import ExitCode
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
-import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
+import kotlin.system.exitProcess
 
 object InstallModes : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -26,40 +22,33 @@ object InstallModes : KoinComponent {
     private val installModesSchema = get<SchemasImpl>().installerSchema.definitions.installModes
 
     fun Terminal.installModesPrompt() {
-        do {
-            println(brightYellow(installModesInfo))
-            info(installModesExample)
-            val input = prompt(
-                prompt = brightWhite(PromptType.InstallModes.toString()),
-                default = getPreviousValue()?.joinToString(", ")?.also {
-                    muted("Previous install modes: $it")
-                }
-            )?.trim()?.convertToYamlList(installModesSchema.uniqueItems)?.toInstallModes()
-            val (installModesValid, error) = areInstallModesValid(input)
-            if (installModesValid == Validation.Success && input != null) {
-                installerManifestData.installModes = input
+        println(colors.brightYellow(installModesInfo))
+        info(installModesExample)
+        installerManifestData.installModes = prompt(
+            prompt = const,
+            default = getPreviousValue()?.joinToString(", ")
+                ?.also { muted("Previous install modes: $it") },
+            convert = { input ->
+                areInstallModesValid(input.convertToYamlList(installModesSchema.uniqueItems)?.toInstallModes())
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim())
             }
-            error?.let { danger(it) }
-            println()
-        } while (installModesValid != Validation.Success)
+        )?.convertToYamlList(installModesSchema.uniqueItems)?.toInstallModes() ?: exitProcess(ExitCode.CtrlC.code)
+        println()
     }
 
-    private fun areInstallModesValid(
-        installModes: Iterable<InstallerManifest.InstallModes>?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
-        val installModesSchema = installerSchema.definitions.installModes
+    private fun areInstallModesValid(installModes: Iterable<InstallerManifest.InstallModes>?): String? {
         return when {
             (installModes?.count() ?: 0) > installModesSchema.maxItems -> {
-                Validation.InvalidLength to Errors.invalidLength(max = installModesSchema.maxItems)
+                Errors.invalidLength(max = installModesSchema.maxItems)
             }
             installModes?.any { it !in InstallerManifest.InstallModes.values() } == true -> {
-                Validation.InvalidInstallMode to Errors.invalidEnum(
+                Errors.invalidEnum(
                     Validation.InvalidInstallMode,
                     InstallerManifest.InstallModes.values().map { it.toString() }
                 )
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 
@@ -77,4 +66,6 @@ object InstallModes : KoinComponent {
             InstallerManifest.InstallModes.values().find { it.name.lowercase() == string.lowercase() }
         }.ifEmpty { null }
     }
+
+    private const val const = "Install Modes"
 }

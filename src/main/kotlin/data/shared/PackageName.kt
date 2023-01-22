@@ -1,22 +1,16 @@
 package data.shared
 
 import Errors
-import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
+import ExitCode
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.PreviousManifestData
 import data.SharedManifestData
-import input.PromptType
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.DefaultLocaleSchema
+import kotlin.system.exitProcess
 
 object PackageName : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
@@ -28,41 +22,31 @@ object PackageName : KoinComponent {
             sharedManifestData.packageName = it
             return
         }
-        do {
-            println(brightGreen(packageNameInfo))
-            info(packageNameExample)
-            sharedManifestData.msi?.productName?.let { println(brightYellow("Detected from MSI: $it")) }
-            val input = prompt(
-                prompt = brightWhite(PromptType.PackageName.toString()),
-                default = previousManifestData.remoteDefaultLocaleData?.packageName?.also {
-                    println(gray("Previous package name: $it"))
-                }
-            )?.trim()
-            val (packageNameValid, error) = packageNameValid(input, packageNameSchema)
-            if (packageNameValid == Validation.Success && input != null) {
-                sharedManifestData.packageName = input
+        println(colors.brightGreen(nameInfo))
+        info(example)
+        sharedManifestData.msi?.productName?.let { info("Detected from MSI: $it") }
+        sharedManifestData.packageName = prompt(
+            prompt = colors.brightWhite(const),
+            default = previousManifestData.remoteDefaultLocaleData?.packageName
+                ?.also { muted("Previous package name: $it") },
+            convert = { input ->
+                isPackageNameValid(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
-            error?.let { println(brightRed(it)) }
-            println()
-        } while (packageNameValid != Validation.Success)
+        ) ?: exitProcess(ExitCode.CtrlC.code)
+        println()
     }
 
-    private fun packageNameValid(
-        input: String?,
-        packageNameSchema: DefaultLocaleSchema.Properties.PackageName
-    ): Pair<Validation, String?> {
+    private fun isPackageNameValid(input: String): String? {
         return when {
-            input.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.Publisher)
+            input.isBlank() -> Errors.blankInput(const)
             input.length < packageNameSchema.minLength || input.length > packageNameSchema.maxLength -> {
-                Validation.InvalidLength to Errors.invalidLength(
-                    min = packageNameSchema.minLength,
-                    max = packageNameSchema.maxLength
-                )
+                Errors.invalidLength(min = packageNameSchema.minLength, max = packageNameSchema.maxLength)
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 
-    private val packageNameInfo = "Enter ${packageNameSchema.description.lowercase()}"
-    private const val packageNameExample = "For example, Microsoft Teams"
+    private const val const = "Package Name"
+    private val nameInfo = "Enter ${packageNameSchema.description.lowercase()}"
+    private const val example = "Example: Microsoft Teams"
 }

@@ -10,7 +10,7 @@ import schemas.manifest.VersionManifest
 
 @Single
 class VersionManifestData : KoinComponent {
-    private val schemaImpl: SchemasImpl by inject()
+    private val schemasImpl: SchemasImpl by inject()
     private val sharedManifestData: SharedManifestData by inject()
 
     fun createVersionManifest(): String {
@@ -18,8 +18,9 @@ class VersionManifestData : KoinComponent {
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             defaultLocale = sharedManifestData.defaultLocale,
-            manifestType = schemaImpl.versionSchema.properties.manifestType.const,
-            manifestVersion = schemaImpl.versionSchema.properties.manifestVersion.default
+            manifestType = schemasImpl.versionSchema.properties.manifestType.const,
+            manifestVersion = schemasImpl.manifestOverride
+                ?: schemasImpl.versionSchema.properties.manifestVersion.default
         ).toEncodedYaml()
     }
     private fun VersionManifest.toEncodedYaml(): String {

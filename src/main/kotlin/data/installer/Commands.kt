@@ -1,7 +1,7 @@
 package data.installer
 
 import Errors
-import com.github.ajalt.clikt.core.CliktError
+import ExitCode
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -13,6 +13,7 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
 import schemas.data.InstallerSchema
+import kotlin.system.exitProcess
 
 object Commands : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -26,37 +27,31 @@ object Commands : KoinComponent {
             )
         )
         installerManifestData.commands = prompt(
-            prompt = colors.brightWhite(const),
-            default = getPreviousValue()?.also { muted("Previous commands: $it") },
-            convert = {
-                val inputAsList = it.convertToYamlList(commandsSchema.uniqueItems)
-                val error = areCommandsValid(inputAsList)
-                if (error != null) {
-                    ConversionResult.Invalid(error.message!!)
-                } else {
-                    ConversionResult.Valid(inputAsList)
-                }
+            prompt = const,
+            default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous commands: $it") },
+            convert = { input ->
+                areCommandsValid(input.convertToYamlList())
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim())
             }
-        )
+        )?.convertToYamlList() ?: exitProcess(ExitCode.CtrlC.code)
         println()
     }
 
     private fun areCommandsValid(
         commands: Iterable<String>?,
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): CliktError? {
+    ): String? {
         val commandsSchema = installerSchema.definitions.commands
         return when {
             (commands?.count() ?: 0) > commandsSchema.maxItems -> {
-                CliktError(Errors.invalidLength(max = commandsSchema.maxItems))
+                Errors.invalidLength(max = commandsSchema.maxItems)
             }
             commands?.any { it.length > commandsSchema.items.maxLength } == true -> {
-                CliktError(
-                    Errors.invalidLength(
-                        min = commandsSchema.items.minLength,
-                        max = commandsSchema.items.maxLength,
-                        items = commands.filter { it.length > commandsSchema.items.maxLength }
-                    )
+                Errors.invalidLength(
+                    min = commandsSchema.items.minLength,
+                    max = commandsSchema.items.maxLength,
+                    items = commands.filter { it.length > commandsSchema.items.maxLength }
                 )
             }
             else -> null

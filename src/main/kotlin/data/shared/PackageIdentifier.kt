@@ -1,13 +1,12 @@
 package data.shared
 
 import Errors
-import com.github.ajalt.clikt.core.CliktError
+import ExitCode
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.GitHubImpl
 import data.SharedManifestData
 import data.VersionUpdateState
-import input.PromptType
 import input.Prompts
 import kotlinx.coroutines.runBlocking
 import ktor.Ktor
@@ -18,6 +17,7 @@ import schemas.Schema
 import schemas.SchemasImpl
 import schemas.data.InstallerSchema
 import java.io.IOException
+import kotlin.system.exitProcess
 
 object PackageIdentifier : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
@@ -29,8 +29,8 @@ object PackageIdentifier : KoinComponent {
             println(colors.brightGreen(identifierInfo))
             info(example)
             sharedManifestData.packageIdentifier = prompt(
-                prompt = colors.brightWhite(const),
-                convert = {
+                prompt = const,
+                convert = { input ->
                     if (!::installerSchema.isInitialized) {
                         runBlocking {
                             schemasImpl.awaitSchema(
@@ -40,14 +40,11 @@ object PackageIdentifier : KoinComponent {
                         }
                         installerSchema = schemasImpl.installerSchema
                     }
-                    val error = isPackageIdentifierValid(it)
-                    if (error != null) {
-                        ConversionResult.Invalid(error.message!!)
-                    } else {
-                        ConversionResult.Valid(it)
-                    }
+                    isPackageIdentifierValid(input)
+                        ?.let { ConversionResult.Invalid(it) }
+                        ?: ConversionResult.Valid(input.trim())
                 }
-            )!!.trim()
+            ) ?: exitProcess(ExitCode.CtrlC.code)
             sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
             println()
         } else {
@@ -83,20 +80,19 @@ object PackageIdentifier : KoinComponent {
         }
     }
 
-    private fun isPackageIdentifierValid(identifier: String): CliktError? {
+    private fun isPackageIdentifierValid(identifier: String): String? {
         val packageIdentifierSchema = installerSchema.definitions.packageIdentifier
         return when {
-            identifier.isBlank() -> CliktError(Errors.blankInput(const))
+            identifier.isBlank() -> Errors.blankInput(const)
             identifier.length > packageIdentifierSchema.maxLength -> {
-                CliktError(Errors.invalidLength(min = minLength, max = packageIdentifierSchema.maxLength))
+                Errors.invalidLength(min = minLength, max = packageIdentifierSchema.maxLength)
             }
             !identifier.matches(Regex(packageIdentifierSchema.pattern)) -> {
-                CliktError(Errors.invalidRegex(Regex(packageIdentifierSchema.pattern)))
+                Errors.invalidRegex(Regex(packageIdentifierSchema.pattern))
             }
             else -> null
         }
     }
-
 
     private const val const = "Package Identifier"
     private const val example = "Example: Microsoft.Excel"

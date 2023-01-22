@@ -2,13 +2,9 @@ package data.installer
 
 import Errors
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
-import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
@@ -25,19 +21,19 @@ object FileExtensions : KoinComponent {
     fun Terminal.fileExtensionsPrompt() {
         do {
             println(
-                brightYellow(
+                colors.brightYellow(
                     "${Prompts.optional} ${fileExtensionsSchema.description} (Max ${fileExtensionsSchema.maxItems})"
                 )
             )
             val input = prompt(
-                prompt = brightWhite(PromptType.FileExtensions.toString()),
+                prompt = const,
                 default = getPreviousValue()?.joinToString(", ")?.also {
                     muted("Previous file extensions: $it")
                 }
             )?.trim()?.convertToYamlList(fileExtensionsSchema.uniqueItems)
             val (fileExtensionsValid, error) = areFileExtensionsValid(input)
             if (fileExtensionsValid == Validation.Success) installerManifestData.fileExtensions = input
-            error?.let { println(brightRed(it)) }
+            error?.let { danger(it) }
             println()
         } while (fileExtensionsValid != Validation.Success)
     }
@@ -72,4 +68,6 @@ object FileExtensions : KoinComponent {
             it.fileExtensions ?: it.installers[installerManifestData.installers.size].fileExtensions
         }
     }
+
+    private const val const = "File Extensions"
 }

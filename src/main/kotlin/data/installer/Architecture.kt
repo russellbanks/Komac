@@ -1,26 +1,23 @@
 package data.installer
 
 import Errors
+import ExitCode
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
-import input.PromptType
 import input.Prompts
 import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
+import kotlin.system.exitProcess
 
 object Architecture : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -39,35 +36,27 @@ object Architecture : KoinComponent {
             return
         }
         val detectedArchitectureFromUrl = Ktor.detectArchitectureFromUrl(installerManifestData.installerUrl)
-        do {
-            architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
-            info("Options: ${architectureSchema.enum.joinToString(", ")}")
-            detectedArchitectureFromUrl?.let { println(brightYellow("Detected from Url: $it")) }
-            val input = prompt(
-                prompt = brightWhite(PromptType.Architecture.toString()),
-                default = getPreviousValue()?.also {
-                    println(gray("Previous architecture: $it"))
-                } ?: detectedArchitectureFromUrl?.toString()
-            )!!.trim().lowercase()
-            val error = isArchitectureValid(input, architectureSchema)?.also { danger(it) }
-            if (error == null) {
-                installerManifestData.architecture = input.toArchitecture()
+        architectureInfo().also { (info, infoColor) -> println(infoColor(info)) }
+        info("Options: ${architectureSchema.enum.joinToString(", ")}")
+        detectedArchitectureFromUrl?.let { info("Detected from Url: $it") }
+        installerManifestData.architecture = prompt(
+            prompt = const,
+            default = getPreviousValue()?.toArchitecture()?.also { muted("Previous architecture: $it") }
+                ?: detectedArchitectureFromUrl,
+            convert = { input ->
+                isArchitectureValid(input)
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim().toArchitecture())
             }
-            println()
-        } while (error != null)
+        ) ?: exitProcess(ExitCode.CtrlC.code)
+        println()
     }
 
-    private fun isArchitectureValid(
-        architecture: String?,
-        architectureSchema: InstallerSchema.Definitions.Architecture
-    ): String? {
+    private fun isArchitectureValid(architecture: String): String? {
         return when {
-            architecture.isNullOrBlank() -> Errors.blankInput(PromptType.Architecture)
+            architecture.isBlank() -> Errors.blankInput(const)
             !architectureSchema.enum.contains(architecture) -> {
-                Errors.invalidEnum(
-                    Validation.InvalidArchitecture,
-                    architectureSchema.enum
-                )
+                Errors.invalidEnum(Validation.InvalidArchitecture, architectureSchema.enum)
             }
             else -> null
         }
@@ -91,4 +80,6 @@ object Architecture : KoinComponent {
             append(" Enter the architecture")
         } to if (getPreviousValue() == null) brightGreen else brightYellow
     }
+
+    const val const = "Architecture"
 }

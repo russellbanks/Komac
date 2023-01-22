@@ -1,5 +1,6 @@
 package commands
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -19,7 +20,6 @@ import data.installer.InstallerSwitch.installerSwitchPrompt
 import data.installer.InstallerType.installerTypePrompt
 import data.installer.ProductCode.productCodePrompt
 import data.installer.Protocols.protocolsPrompt
-import data.installer.ReleaseDate.releaseDatePrompt
 import data.installer.UpgradeBehaviour.upgradeBehaviourPrompt
 import data.locale.Author.authorPrompt
 import data.locale.Copyright.copyrightPrompt
@@ -50,6 +50,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.LocaleManifest
+import java.io.IOException
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -59,8 +60,10 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private var previousManifestData: PreviousManifestData? = null
     private lateinit var files: List<Pair<String, String?>>
     private val githubImpl: GitHubImpl by inject()
+    private val manifestVersion: String? by option()
 
     override fun run(): Unit = runBlocking {
+        manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
         with(currentContext.terminal) {
             packageIdentifierPrompt()
             launch { if (sharedManifestData.updateState != VersionUpdateState.NewPackage) previousManifestData = get() }
@@ -75,7 +78,6 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     productCodePrompt()
                     installerScopePrompt()
                     upgradeBehaviourPrompt()
-                    releaseDatePrompt()
                     installerManifestData.addInstaller()
                     val shouldContinue = confirm(colors.brightYellow(additionalInstallerInfo))!!
                 } while (shouldContinue)
@@ -103,7 +105,10 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 createFiles()
                 pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                     when (manifestResultOption) {
-                        ManifestResultOption.PullRequest -> commitAndPullRequest()
+                        ManifestResultOption.PullRequest -> {
+                            commit()
+                            pullRequest()
+                        }
                         ManifestResultOption.WriteToFiles -> writeFiles(files)
                         else -> echo(colors.brightWhite("Exiting"))
                     }
@@ -131,13 +136,12 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
         }.orEmpty()
     }
 
-    private suspend fun Terminal.commitAndPullRequest() {
+    private suspend fun Terminal.commit() {
         previousManifestData?.apply {
             remoteVersionDataJob.join()
             remoteLocaleDataJob.join()
             remoteDefaultLocaleDataJob.join()
         }
-        val githubImpl = get<GitHubImpl>()
         val repository = githubImpl.getWingetPkgsFork(terminal = this) ?: return
         val ref = githubImpl.createBranchFromDefaultBranch(repository = repository, terminal = this) ?: return
         githubImpl.commitFiles(
@@ -145,6 +149,20 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
             branch = ref,
             files = files.map { "${githubImpl.baseGitHubPath}/${it.first}" to it.second }
         )
+    }
+
+    private suspend fun Terminal.pullRequest() {
+        val ghRepository = githubImpl.getMicrosoftWingetPkgs() ?: return
+        try {
+            ghRepository.createPullRequest(
+                /* title = */ githubImpl.getCommitTitle(),
+                /* head = */ "${githubImpl.github.await().myself.login}:${githubImpl.pullRequestBranch?.ref}",
+                /* base = */ ghRepository.defaultBranch,
+                /* body = */ githubImpl.getPullRequestBody()
+            ).also { success("Pull request created: ${it.htmlUrl}") }
+        } catch (ioException: IOException) {
+            danger(ioException.message ?: "Failed to create pull request")
+        }
     }
 
     companion object {

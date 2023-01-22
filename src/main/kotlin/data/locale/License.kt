@@ -1,21 +1,18 @@
 package data.locale
 
 import Errors
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
+import ExitCode
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
-import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
+import kotlin.system.exitProcess
 
 object License : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
@@ -28,27 +25,21 @@ object License : KoinComponent {
             defaultLocaleManifestData.license = it
             return
         }
-        do {
-            println(brightGreen(licenseInfo))
-            println(cyan(licenseExample))
-            val input = prompt(
-                prompt = brightWhite(PromptType.License.toString()),
-                default = previousManifestData.remoteDefaultLocaleData?.license?.also {
-                    println(gray("Previous license: $it"))
-                }
-            )?.trim()
-            val error = isLicenseValid(input)
-            if (error == null && input != null) {
-                defaultLocaleManifestData.license = input
+        println(colors.brightGreen(licenseInfo))
+        info(example)
+        defaultLocaleManifestData.license = prompt(
+            prompt = const,
+            default = previousManifestData.remoteDefaultLocaleData?.license?.also { muted("Previous license: $it") },
+            convert = { input ->
+                isLicenseValid(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input)
             }
-            error?.let { println(brightRed(it)) }
-            println()
-        } while (error != null)
+        )?.trim() ?: exitProcess(ExitCode.CtrlC.code)
+        println()
     }
 
-    private fun isLicenseValid(license: String?): String? {
+    private fun isLicenseValid(license: String): String? {
         return when {
-            license.isNullOrBlank() -> Errors.blankInput(PromptType.License)
+            license.isBlank() -> Errors.blankInput(const)
             license.length < licenseSchema.minLength || license.length > licenseSchema.maxLength -> {
                 Errors.invalidLength(min = licenseSchema.minLength, max = licenseSchema.maxLength)
             }
@@ -56,6 +47,7 @@ object License : KoinComponent {
         }
     }
 
+    private const val const = "License"
     private val licenseInfo = "${Prompts.required} Enter ${licenseSchema.description.lowercase()}"
-    private const val licenseExample = "Example: MIT, GPL, Freeware, Proprietary"
+    private const val example = "Example: MIT, GPL-3.0, Freeware, Proprietary"
 }

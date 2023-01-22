@@ -9,6 +9,10 @@ import org.koin.core.annotation.Single
 @Single
 class Clients {
     val httpClient = HttpClient(Java) {
+        engine {
+            pipelining = true
+            protocolVersion = java.net.http.HttpClient.Version.HTTP_2
+        }
         install(UserAgent) {
             agent = Ktor.userAgent
         }

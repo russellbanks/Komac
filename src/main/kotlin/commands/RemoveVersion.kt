@@ -1,6 +1,7 @@
 package commands
 
 import Errors
+import ExitCode
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.animation.progressAnimation
@@ -18,6 +19,7 @@ import org.kohsuke.github.GHContent
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.IOException
+import kotlin.system.exitProcess
 
 class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
@@ -77,7 +79,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
                     /* body = */ "## $deletionReason"
                 ).also { currentContext.terminal.success("Pull request created: ${it.htmlUrl}") }
             } catch (ioException: IOException) {
-                echoFormattedError(CliktError(message = ioException.message ?: "Failed to create pull request"))
+                throw CliktError(message = ioException.message ?: "Failed to create pull request")
             }
         }
     }
@@ -97,7 +99,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
                     else -> ConversionResult.Valid(it)
                 }
             }
-        )!!
+        ) ?: exitProcess(ExitCode.CtrlC.code)
     }
 
     companion object {

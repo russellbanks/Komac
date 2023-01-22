@@ -1,47 +1,39 @@
 package data.shared
 
 import Errors
-import com.github.ajalt.clikt.core.CliktError
+import ExitCode
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.GitHubImpl
 import data.SharedManifestData
 import data.VersionUpdateState
-import input.PromptType
 import input.Prompts
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import kotlin.random.Random
+import kotlin.system.exitProcess
 
 object PackageVersion : KoinComponent {
     private val githubImpl: GitHubImpl by inject()
 
     suspend fun Terminal.packageVersionPrompt(packageVersion: String? = null) {
         val sharedManifestData: SharedManifestData by inject()
-        if (packageVersion != null) {
-            sharedManifestData.packageVersion = packageVersion
+        sharedManifestData.packageVersion = if (packageVersion != null) {
+            packageVersion
         } else {
             println(colors.brightGreen(versionInfo))
             info(example)
-            sharedManifestData.packageVersion = prompt(
+            prompt(
                 prompt = colors.brightWhite(const),
-                convert = {
-                    val error = isPackageVersionValid(it)
-                    if (error != null) {
-                        ConversionResult.Invalid(error.message!!)
-                    } else {
-                        ConversionResult.Valid(it)
-                    }
+                convert = { input ->
+                    isPackageVersionValid(input)
+                        ?.let { ConversionResult.Invalid(it) }
+                        ?: ConversionResult.Valid(input.trim())
                 }
-            )!!.trim()
-            println()
+            )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
         }
         setUpgradeState(sharedManifestData)
     }
@@ -73,18 +65,15 @@ object PackageVersion : KoinComponent {
         }
     }
 
-    private fun isPackageVersionValid(
-        version: String,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): CliktError? {
-        val packageVersionSchema = installerSchema.definitions.packageVersion
+    private fun isPackageVersionValid(version: String): String? {
+        val packageVersionSchema = get<SchemasImpl>().installerSchema.definitions.packageVersion
         return when {
-            version.isBlank() -> CliktError(Errors.blankInput(PromptType.PackageVersion))
+            version.isBlank() -> Errors.blankInput(const)
             version.length > packageVersionSchema.maxLength -> {
-                CliktError(Errors.invalidLength(max = packageVersionSchema.maxLength))
+                Errors.invalidLength(max = packageVersionSchema.maxLength)
             }
             !version.matches(Regex(packageVersionSchema.pattern)) -> {
-                CliktError(Errors.invalidRegex(Regex(packageVersionSchema.pattern)))
+                Errors.invalidRegex(Regex(packageVersionSchema.pattern))
             }
             else -> null
         }

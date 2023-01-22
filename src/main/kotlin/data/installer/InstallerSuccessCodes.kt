@@ -2,15 +2,9 @@ package data.installer
 
 import Errors
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
-import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
@@ -28,12 +22,12 @@ object InstallerSuccessCodes : KoinComponent {
 
     fun Terminal.installerSuccessCodesPrompt() {
         do {
-            println(brightYellow(installerSuccessCodeInfo))
-            println(cyan(installerSuccessCodesExample))
+            println(colors.brightYellow(installerSuccessCodeInfo))
+            info(installerSuccessCodesExample)
             val input = prompt(
-                prompt = brightWhite(PromptType.InstallerSuccessCodes.toString()),
+                prompt = const,
                 default = getPreviousValue()?.joinToString(", ")?.also {
-                    println(gray("Previous success codes: $it"))
+                    muted("Previous success codes: $it")
                 }
             )?.trim()
                 ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
@@ -43,7 +37,7 @@ object InstallerSuccessCodes : KoinComponent {
             if (installerSuccessCodesValid == Validation.Success) {
                 installerManifestData.installerSuccessCodes = input
             }
-            error?.let { println(brightRed(it)) }
+            error?.let { danger(it) }
             println()
         } while (installerSuccessCodesValid != Validation.Success)
     }
@@ -84,6 +78,7 @@ object InstallerSuccessCodes : KoinComponent {
         }
     }
 
+    private const val const = "Installer Success Codes"
     private val installerSuccessCodeInfo =
         "${Prompts.optional} ${installerSuccessCodesSchema.description} (Max ${installerSuccessCodesSchema.maxItems})"
     private val installerSuccessCodesExample =

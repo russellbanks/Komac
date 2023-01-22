@@ -1,57 +1,44 @@
 package data.locale
 
 import Errors
-import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
+import ExitCode
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
-import input.PromptType
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.DefaultLocaleSchema
+import kotlin.system.exitProcess
 
 object Copyright : KoinComponent {
+    private val copyrightSchema = get<SchemasImpl>().defaultLocaleSchema.properties.copyright
+
     fun Terminal.copyrightPrompt() {
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val copyrightSchema = get<SchemasImpl>().defaultLocaleSchema.properties.copyright
-        do {
-            println(brightYellow(copyrightInfo(copyrightSchema)))
-            println(cyan(copyrightExample))
-            val input = prompt(brightWhite(PromptType.Copyright.toString()))?.trim()
-            val (packageLocaleValid, error) = isCopyrightValid(input, copyrightSchema)
-            if (packageLocaleValid == Validation.Success && input != null) {
-                defaultLocaleManifestData.copyright = input
+        println(colors.brightYellow(copyrightInfo))
+        info(example)
+        defaultLocaleManifestData.copyright = prompt(
+            prompt = const,
+            convert = { input ->
+                isCopyrightValid(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
-            error?.let { println(brightRed(it)) }
-            println()
-        } while (packageLocaleValid != Validation.Success)
+        ) ?: exitProcess(ExitCode.CtrlC.code)
+        println()
     }
 
-    private fun isCopyrightValid(
-        copyright: String?,
-        copyrightSchema: DefaultLocaleSchema.Properties.Copyright
-    ): Pair<Validation, String?> {
+    private fun isCopyrightValid(copyright: String): String? {
         return when {
-            !copyright.isNullOrBlank() &&
+            copyright.isNotBlank() &&
                 (copyright.length < copyrightSchema.minLength || copyright.length > copyrightSchema.maxLength) -> {
-                Validation.InvalidLength to Errors.invalidLength(
-                    min = copyrightSchema.minLength,
-                    max = copyrightSchema.maxLength
-                )
+                Errors.invalidLength(min = copyrightSchema.minLength, max = copyrightSchema.maxLength)
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 
-    private fun copyrightInfo(copyrightSchema: DefaultLocaleSchema.Properties.Copyright): String {
-        return "${Prompts.optional} Enter ${copyrightSchema.description.lowercase()}"
-    }
-
-    private const val copyrightExample = "Example: Copyright (c) Microsoft Corporation"
+    private const val const = "Copyright"
+    private val copyrightInfo = "${Prompts.optional} Enter ${copyrightSchema.description.lowercase()}"
+    private const val example = "Example: Copyright (c) Microsoft Corporation"
 }

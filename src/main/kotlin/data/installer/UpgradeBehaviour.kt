@@ -2,11 +2,6 @@ package data.installer
 
 import Errors
 import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.gray
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -15,7 +10,6 @@ import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
 
 object UpgradeBehaviour : KoinComponent {
@@ -29,13 +23,13 @@ object UpgradeBehaviour : KoinComponent {
             val previousValue = getPreviousValue()
             println(
                 verticalLayout {
-                    cell(brightYellow(upgradeBehaviourInfo))
+                    cell(colors.brightYellow(upgradeBehaviourInfo))
                     InstallerManifest.UpgradeBehavior.values().forEach { behaviour ->
                         val textColour = when {
                             previousValue == behaviour ||
-                                previousValue == behaviour.toPerInstallerUpgradeBehaviour() -> brightGreen
-                            behaviour == InstallerManifest.UpgradeBehavior.Install -> brightGreen
-                            else -> brightWhite
+                                previousValue == behaviour.toPerInstallerUpgradeBehaviour() -> colors.brightGreen
+                            behaviour == InstallerManifest.UpgradeBehavior.Install -> colors.brightGreen
+                            else -> colors.brightWhite
                         }
                         cell(
                             textColour(
@@ -47,21 +41,21 @@ object UpgradeBehaviour : KoinComponent {
                             )
                         )
                     }
-                    previousValue?.let { cell(gray("Previous upgrade behaviour: $previousValue")) }
+                    previousValue?.let { cell(colors.muted("Previous upgrade behaviour: $previousValue")) }
                 }
             )
             val input = prompt(
-                prompt = brightWhite(Prompts.enterChoice),
+                prompt = Prompts.enterChoice,
                 default = previousValue?.toString()?.firstOrNull()?.toString()
-                    ?: InstallerManifest.UpgradeBehavior.Install.toString().first().toString()
+                    ?: InstallerManifest.UpgradeBehavior.Install.toString().first().toString(),
             )?.trim()
-            val (upgradeBehaviourValid, error) = isUpgradeBehaviourValid(input?.firstOrNull(), upgradeBehaviourSchema)
+            val (upgradeBehaviourValid, error) = isUpgradeBehaviourValid(input?.firstOrNull())
             if (upgradeBehaviourValid == Validation.Success) {
                 installerManifestData.upgradeBehavior = InstallerManifest.UpgradeBehavior.values().firstOrNull {
                     it.name.firstOrNull()?.titlecase() == input?.firstOrNull()?.titlecase()
                 }
             }
-            error?.let { println(brightRed(it)) }
+            error?.let { danger(it) }
             println()
         } while (upgradeBehaviourValid != Validation.Success)
     }
@@ -72,10 +66,7 @@ object UpgradeBehaviour : KoinComponent {
         }
     }
 
-    private fun isUpgradeBehaviourValid(
-        option: Char?,
-        upgradeBehaviourSchema: InstallerSchema.Definitions.UpgradeBehavior
-    ): Pair<Validation, String?> {
+    private fun isUpgradeBehaviourValid(option: Char?): Pair<Validation, String?> {
         return when {
             upgradeBehaviourSchema.enum.all {
                 it.first().titlecase() != option?.titlecase()

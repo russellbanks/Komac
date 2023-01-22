@@ -12,14 +12,6 @@ enum class InstallerSwitch : KoinComponent {
 
     override fun toString() = name.replace(Regex("([A-Z])"), " $1").trim()
 
-    fun toPromptType(): PromptType {
-        return when (this) {
-            Silent -> PromptType.SilentSwitch
-            SilentWithProgress -> PromptType.SilentWithProgressSwitch
-            Custom -> PromptType.CustomSwitch
-        }
-    }
-
     fun getLengthBoundary(
         installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
     ): Pair<Int, Int> {

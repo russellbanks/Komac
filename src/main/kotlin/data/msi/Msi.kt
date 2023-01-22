@@ -1,10 +1,12 @@
 package data.msi
 
 import com.sun.jna.Native
+import com.sun.jna.Platform
 import com.sun.jna.WString
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import org.koin.core.component.KoinComponent
+import schemas.manifest.InstallerManifest
 import java.io.File
 
 @Suppress("LoopWithTooManyJumpStatements")
@@ -14,13 +16,14 @@ class Msi(private val msiFile: File) : KoinComponent {
     var productName: String? = null
     var productVersion: String? = null
     var manufacturer: String? = null
-    var productLanguage: Int? = null
-    var allUsers: String? = null
+    var productLanguage: String? = null
+    var allUsers: AllUsers? = null
     var isWix: Boolean = false
 
     private val msiLibrary = MsiLibrary.INSTANCE
 
     init {
+        require(Platform.isWindows())
         getValues()
     }
 
@@ -93,9 +96,9 @@ class Msi(private val msiFile: File) : KoinComponent {
                 productNameConst -> productName = value
                 productVersionConst -> productVersion = value
                 manufacturerConst -> manufacturer = value
-                productLanguageConst -> productLanguage = value?.toIntOrNull()
+                productLanguageConst -> productLanguage = ProductLanguage(value?.toIntOrNull()).locale
                 wixUiModeConst -> isWix = true
-                allUsersConst -> allUsers = value
+                allUsersConst -> allUsers = AllUsers.values().find { it.code == value }
             }
 
             msiLibrary.MsiCloseHandle(phRecord.value)
@@ -118,6 +121,18 @@ class Msi(private val msiFile: File) : KoinComponent {
         productLanguage = null
         allUsers = null
         isWix = false
+    }
+
+    enum class AllUsers(val code: String) {
+        Machine("1"),
+        User(""),
+        Dependent("2");
+
+        fun toInstallerScope() = when (this) {
+            Machine -> InstallerManifest.Installer.Scope.Machine
+            User -> InstallerManifest.Installer.Scope.User
+            Dependent -> null
+        }
     }
 
     companion object {

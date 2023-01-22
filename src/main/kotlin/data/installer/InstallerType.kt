@@ -1,28 +1,25 @@
 package data.installer
 
 import Errors
+import ExitCode
 import Validation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextColors.gray
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.msix.MsixBundle
-import input.PromptType
 import input.Prompts
 import ktor.Ktor
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
+import kotlin.system.exitProcess
 
 object InstallerType : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -47,40 +44,35 @@ object InstallerType : KoinComponent {
             InstallerManifest.InstallerType.APPX.toString(), MsixBundle.appxBundleConst -> {
                 installerManifestData.installerType = InstallerManifest.Installer.InstallerType.APPX
             }
-            else -> do {
+            else -> {
                 installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
                 info("Options: ${installerTypeSchema.enum.joinToString(", ")}")
-                val input = prompt(
-                    prompt = brightWhite(PromptType.InstallerType.toString()),
-                    default = getPreviousValue()?.also { muted("Previous installer type: $it") }
-                )?.trim()?.lowercase()
-                val (installerTypeValid, error) = isInstallerTypeValid(input, installerTypeSchema)
-                error?.let { println(brightRed(it)) }
-                if (installerTypeValid == Validation.Success && input != null) {
-                    installerManifestData.installerType = input.toInstallerType()
-                }
+                installerManifestData.installerType = prompt(
+                    prompt = const,
+                    default = getPreviousValue()?.toInstallerType()?.also { muted("Previous installer type: $it") },
+                    convert = { input ->
+                        isInstallerTypeValid(input)
+                            ?.let { ConversionResult.Invalid(it) }
+                            ?: ConversionResult.Valid(input.toInstallerType())
+                    }
+                ) ?: exitProcess(ExitCode.CtrlC.code)
                 println()
-            } while (installerTypeValid != Validation.Success)
+            }
         }
     }
 
-    private fun isInstallerTypeValid(
-        installerType: String?,
-        schema: InstallerSchema.Definitions.InstallerType = installerTypeSchema
-    ): Pair<Validation, String?> {
+    private fun isInstallerTypeValid(installerType: String): String? {
         return when {
-            installerType.isNullOrBlank() -> Validation.Blank to Errors.blankInput(PromptType.InstallerType)
-            !schema.enum.contains(installerType) -> {
-                Validation.InvalidInstallerType to Errors.invalidEnum(Validation.InvalidInstallerType, schema.enum)
+            installerType.isBlank() -> Errors.blankInput(const)
+            !installerTypeSchema.enum.contains(installerType) -> {
+                Errors.invalidEnum(Validation.InvalidInstallerType, installerTypeSchema.enum)
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 
     private fun String.toInstallerType(): InstallerManifest.Installer.InstallerType {
-        InstallerManifest.Installer.InstallerType.values().forEach {
-            if (it.toString().lowercase() == this) return it
-        }
+        InstallerManifest.Installer.InstallerType.values().forEach { if (it.toString().lowercase() == this) return it }
         throw IllegalArgumentException("Invalid installer type: $this")
     }
 
@@ -97,4 +89,6 @@ object InstallerType : KoinComponent {
             append(" Enter the installer type")
         } to if (getPreviousValue() == null) brightGreen else brightYellow
     }
+
+    const val const = "Installer Type"
 }

@@ -1,7 +1,6 @@
 package commands
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -12,7 +11,7 @@ class ChangeToken : CliktCommand(name = "token"), KoinComponent {
 
     override fun run() = runBlocking {
         val confirmed = confirm(
-            text = brightWhite("Would you like to change the currently stored token?"),
+            text = "Would you like to change the currently stored token?",
             default = true
         )
         if (confirmed == true) {

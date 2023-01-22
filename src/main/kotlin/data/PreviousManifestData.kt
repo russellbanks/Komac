@@ -24,7 +24,8 @@ class PreviousManifestData : KoinComponent {
     private val repository = CoroutineScope(Dispatchers.IO).async { githubImpl.getMicrosoftWingetPkgs() }
     private val directoryPath: Deferred<MutableList<GHContent>?> = CoroutineScope(Dispatchers.IO).async {
         sharedManifestData.latestVersion?.let {
-            repository.await()?.getDirectoryContent("${Ktor.getDirectoryPath(sharedManifestData.packageIdentifier)}/$it")
+            repository.await()
+                ?.getDirectoryContent("${Ktor.getDirectoryPath(sharedManifestData.packageIdentifier)}/$it")
         }
     }
     var remoteInstallerDataJob: Job = CoroutineScope(Dispatchers.IO).launch {

@@ -23,22 +23,23 @@ import schemas.data.VersionSchema
 class SchemasImpl : KoinComponent {
     private val client: HttpClient = get<Clients>().httpClient
     private val json = Json { ignoreUnknownKeys = true }
-    private var installerSchemaJob = CoroutineScope(Dispatchers.Default).launch {
+    private var installerSchemaJob = CoroutineScope(Dispatchers.IO).launch {
         installerSchema = json.decodeFromString(client.get(Schemas.installerSchema).body())
     }
-    private var defaultLocaleSchemaJob = CoroutineScope(Dispatchers.Default).launch {
+    private var defaultLocaleSchemaJob = CoroutineScope(Dispatchers.IO).launch {
         defaultLocaleSchema = json.decodeFromString(client.get(Schemas.defaultLocaleSchema).body())
     }
-    private var localeSchemaJob = CoroutineScope(Dispatchers.Default).launch {
+    private var localeSchemaJob = CoroutineScope(Dispatchers.IO).launch {
         localeSchema = json.decodeFromString(client.get(Schemas.localeSchema).body())
     }
-    private var versionSchemaJob = CoroutineScope(Dispatchers.Default).launch {
+    private var versionSchemaJob = CoroutineScope(Dispatchers.IO).launch {
         versionSchema = json.decodeFromString(client.get(Schemas.versionSchema).body())
     }
     lateinit var installerSchema: InstallerSchema
     lateinit var defaultLocaleSchema: DefaultLocaleSchema
     lateinit var localeSchema: LocaleSchema
     lateinit var versionSchema: VersionSchema
+    var manifestOverride: String? = null
 
     suspend fun awaitSchema(schema: Schema, terminal: Terminal) {
         val job = when (schema) {

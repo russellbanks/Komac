@@ -28,7 +28,7 @@ class Komac(private val args: Array<String>) : CliktCommand(invokeWithoutSubcomm
                     }
                 )
                 val commandOption = prompt(
-                    prompt = colors.brightWhite("Selection"),
+                    prompt = "Selection",
                     convert = { selection ->
                         val option = CommandOption.values().find {
                             it.key.toString().equals(other = selection, ignoreCase = true)

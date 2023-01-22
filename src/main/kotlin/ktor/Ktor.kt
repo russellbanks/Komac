@@ -13,6 +13,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.contentLength
 import io.ktor.http.fullPath
+import io.ktor.http.lastModified
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
@@ -23,11 +24,13 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
 import java.io.File
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 object Ktor : KoinComponent {
-    suspend fun HttpClient.downloadInstallerFromUrl(terminal: Terminal): File {
+    suspend fun HttpClient.downloadInstallerFromUrl(terminal: Terminal): Pair<File, Thread> {
         val sharedManifestData: SharedManifestData by inject()
         val installerManifestData: InstallerManifestData by inject()
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
@@ -37,6 +40,8 @@ object Ktor : KoinComponent {
                 ".${getURLExtension(installerManifestData.installerUrl)}"
             )
         }
+        val fileDeletionThread = Thread { file.delete() }
+        Runtime.getRuntime().addShutdownHook(fileDeletionThread)
 
         with(terminal) {
             progressAnimation {
@@ -49,6 +54,9 @@ object Ktor : KoinComponent {
             }.run {
                 start()
                 prepareGet(installerManifestData.installerUrl).execute { httpResponse ->
+                    httpResponse.lastModified()?.let {
+                        installerManifestData.releaseDate = LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                    }
                     val channel: ByteReadChannel = httpResponse.body()
                     while (!channel.isClosedForRead) {
                         val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
@@ -62,7 +70,7 @@ object Ktor : KoinComponent {
                 clear()
             }
         }
-        return file
+        return file to fileDeletionThread
     }
 
     fun getDirectoryPath(packageIdentifier: String): String {
@@ -101,13 +109,13 @@ object Ktor : KoinComponent {
         return value in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value
     }
 
-    suspend fun getRedirectedUrl(installerUrl: Url): Url? {
+    suspend fun getRedirectedUrl(installerUrl: Url): Url {
         val noRedirectClient = get<Clients>().httpClient.config { followRedirects = false }
-        var redirectedInstallerUrl: Url? = installerUrl
+        var redirectedInstallerUrl: Url = installerUrl
         var response: HttpResponse? = noRedirectClient.head(installerUrl)
 
         var status: HttpStatusCode? = response?.status
-        var location: String? = response?.headers?.get("Location")
+        var location: String? = response?.headers?.get(HttpHeaders.Location)
         while (
             status?.isRedirect() == true &&
             response?.headers?.contains(HttpHeaders.Location) == true &&
@@ -116,7 +124,7 @@ object Ktor : KoinComponent {
             redirectedInstallerUrl = Url(location)
             response = noRedirectClient.head(redirectedInstallerUrl)
             status = response.status
-            location = response.headers["Location"]
+            location = response.headers[HttpHeaders.Location]
         }
         noRedirectClient.close()
         return redirectedInstallerUrl

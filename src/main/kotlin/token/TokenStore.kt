@@ -1,13 +1,11 @@
 package token
 
+import ExitCode
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.microsoft.alm.secret.Token
 import com.microsoft.alm.secret.TokenType
-import com.microsoft.alm.storage.SecretStore
-import com.microsoft.alm.storage.macosx.KeychainSecurityBackedTokenStore
-import com.microsoft.alm.storage.posix.GnomeKeyringBackedTokenStore
-import com.microsoft.alm.storage.windows.CredManagerBackedTokenStore
+import com.microsoft.alm.storage.StorageProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -16,10 +14,14 @@ import kotlinx.coroutines.coroutineScope
 import org.kohsuke.github.GitHubBuilder
 import org.koin.core.annotation.Single
 import java.io.IOException
+import kotlin.system.exitProcess
 
 @Single
 class TokenStore {
-    private val credentialStore = getCredentialStore()
+    private val credentialStore = StorageProvider.getTokenStorage(
+        /* persist = */ true,
+        /* secureOption = */ StorageProvider.SecureOption.MUST
+    ) ?: throw UnsupportedOperationException("Could not find secure token storage for the current operating system")
     var token: Deferred<String> = CoroutineScope(Dispatchers.IO).async { getToken(Terminal()) }
 
     private suspend fun getToken(terminal: Terminal): String {
@@ -42,16 +44,6 @@ class TokenStore {
         token = async { tokenString }
     }
 
-    private fun getCredentialStore(): SecretStore<Token> {
-        val operatingSystem = System.getProperty(osName)
-        return when {
-            operatingSystem.startsWith(windows) -> CredManagerBackedTokenStore()
-            operatingSystem.startsWith(linux) -> GnomeKeyringBackedTokenStore()
-            operatingSystem.startsWith(mac) -> KeychainSecurityBackedTokenStore()
-            else -> throw IOException("Unsupported operating system")
-        }
-    }
-
     fun promptForToken(terminal: Terminal): String {
         return terminal.prompt(
             prompt = terminal.colors.brightGreen("Please enter your GitHub personal access token"),
@@ -63,7 +55,7 @@ class TokenStore {
                     ConversionResult.Invalid(ioException?.message ?: "Invalid token. Please try again.")
                 }
             }
-        )!!
+        ) ?: exitProcess(ExitCode.CtrlC.code)
     }
 
     private fun checkIfTokenValid(tokenString: String): Pair<Boolean, IOException?> {
@@ -75,10 +67,6 @@ class TokenStore {
     }
 
     companion object {
-        private const val osName = "os.name"
-        private const val windows = "Windows"
-        private const val linux = "Linux"
-        private const val mac = "Mac"
         private const val credentialKey = "komac/github-access-token"
     }
 }

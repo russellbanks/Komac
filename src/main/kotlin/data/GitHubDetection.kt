@@ -3,8 +3,6 @@ package data
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.appendPathSegments
-import io.ktor.http.copy
-import io.ktor.http.set
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -68,16 +66,16 @@ class GitHubDetection(url: Url) : KoinComponent {
                             }
                             appendLine("- ${cleanedLine.substring(2).trim()}")
                         } else if (
-                            titleAdded && (index < lines.size - 2
-                                    && !lines[index + 1].startsWith("#")
-                                    && !lines[index + 2].startsWith("#"))
+                            titleAdded && (index < lines.size - 2 &&
+                                !lines[index + 1].startsWith("#") &&
+                                !lines[index + 2].startsWith("#"))
                         ) {
                             delete(length - title.length - 1, length)
                             title = ""
                             titleAdded = false
                         }
                     }
-                }.replace(Regex("\\[([^\\]]+)\\]\\([^\\)]+\\)"), "$1").trim().ifBlank { null }
+                }.replace(Regex("\\[([^]]+)]\\([^)]+\\)"), "$1").trim().ifBlank { null }
             }
             topics = async { repository.listTopics() }
             publisherUrl = async { runCatching { repository.owner.blog }.getOrNull()?.let { Url(it) } }

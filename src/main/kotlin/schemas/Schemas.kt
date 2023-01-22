@@ -1,6 +1,8 @@
 package schemas
 
 import com.russellbanks.Komac.BuildConfig
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import schemas.data.InstallerSchema
 
 object Schemas {
@@ -23,7 +25,7 @@ object Schemas {
         }
     }
 
-    object Comments {
+    object Comments : KoinComponent {
         const val createdBy = "# Created with ${BuildConfig.appName} ${BuildConfig.appVersion}"
         fun languageServer(schema: Schema): String {
             val schemaUrl = when (schema) {
@@ -31,6 +33,8 @@ object Schemas {
                 Schema.DefaultLocale -> defaultLocaleSchema
                 Schema.Locale -> localeSchema
                 Schema.Version -> versionSchema
+            }.let { schemaUrl ->
+                get<SchemasImpl>().manifestOverride?.let { schemaUrl.replace(manifestVersion, it) } ?: schemaUrl
             }
             return "# yaml-language-server: \$schema=$schemaUrl"
         }

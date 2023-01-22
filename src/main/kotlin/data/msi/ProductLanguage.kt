@@ -1,9 +1,14 @@
 package data.msi
 
 import com.sun.jna.Native
+import com.sun.jna.Platform
 
 class ProductLanguage(languageCode: Int?) {
     val locale = languageCode?.toLanguageTag()
+
+    init {
+        require(Platform.isWindows())
+    }
 
     private fun Int.toLanguageTag(): String? {
         val lcidLibrary = LCIDLibrary.INSTANCE

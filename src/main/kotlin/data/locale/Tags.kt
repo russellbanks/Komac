@@ -6,7 +6,6 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
-import input.PromptType
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
@@ -29,9 +28,9 @@ object Tags : KoinComponent {
         }
         do {
             println(colors.brightYellow(tagsInfo))
-            info(tagsExample)
+            info(example)
             val input = prompt(
-                prompt = colors.brightWhite(PromptType.Tags.toString()),
+                prompt = const,
                 default = previousManifestData.remoteDefaultLocaleData?.tags?.joinToString(", ")?.also {
                     muted("Previous tags: $it")
                 }
@@ -71,5 +70,6 @@ object Tags : KoinComponent {
         append("(Max ${tagsSchema.maxItems})")
     }
 
-    private const val tagsExample = "Example: zip, c++, photos, OBS"
+    private const val const = "Tags"
+    private const val example = "Example: zip, c++, photos, OBS"
 }

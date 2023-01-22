@@ -1,10 +1,9 @@
 package commands
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
@@ -15,12 +14,15 @@ import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
 import data.YamlConfig
+import data.installer.Architecture
+import data.installer.InstallerScope
+import data.installer.InstallerType
+import data.shared.Locale
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
-import input.PromptType
 import input.Prompts
 import input.Prompts.pullRequestPrompt
 import io.ktor.http.Url
@@ -34,7 +36,6 @@ import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.LocaleManifest
 import java.io.IOException
-import kotlin.system.exitProcess
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -47,8 +48,10 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val packageIdentifier: String? by option()
     private val packageVersion: String? by option()
     private val urls: List<Url> by option("--url").convert { Url(it) }.multiple()
+    private val manifestVersion: String? by option()
 
     override fun run(): Unit = runBlocking {
+        manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
         with(currentContext.terminal) {
             packageIdentifierPrompt(packageIdentifier)
             previousManifestData = get()
@@ -77,47 +80,38 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     }
 
     private suspend fun Terminal.loopThroughInstallers(parameterUrls: List<Url> = emptyList()) {
-        val remoteInstallers = previousManifestData.remoteInstallerData?.installers
+        val remoteInstallerManifest = previousManifestData.remoteInstallerData
         if (parameterUrls.isNotEmpty()) {
-            if (remoteInstallers?.size != parameterUrls.size) {
-                println(brightRed("The number of urls provided does not match the number of previous installers"))
-                exitProcess(0)
+            if (remoteInstallerManifest?.installers?.size != parameterUrls.size) {
+                throw CliktError(
+                    message = "The number of urls provided does not match the number of previous installers",
+                    statusCode = 1
+                )
             }
-            val urlError = data.shared.Url.areUrlsValid(parameterUrls)
-            if (urlError != null) {
-                throw urlError
-            } else {
-                parameterUrls.forEach { url ->
+            data.shared.Url.areUrlsValid(parameterUrls)
+                ?.let { throw CliktError(it) }
+                ?: parameterUrls.forEach { url ->
                     installerDownloadPrompt(url)
                     installerManifestData.addInstaller()
                 }
-            }
         } else {
-            do {
-                remoteInstallers?.forEachIndexed { index, installer ->
-                    info("Installer Entry ${index.inc()}/${remoteInstallers.size}")
-                    listOf(
-                        PromptType.Architecture to installer.architecture,
-                        PromptType.InstallerType to installer.installerType,
-                        PromptType.Scope to installer.scope,
-                        PromptType.InstallerLocale to installer.installerLocale
-                    ).forEach { (promptType, value) ->
-                        value?.let {
-                            println(
-                                colors.brightWhite(
-                                    "${" ".repeat(Prompts.optionIndent)} $promptType: ${colors.info(it.toString())}"
-                                )
-                            )
-                        }
+            remoteInstallerManifest?.installers?.forEachIndexed { index, installer ->
+                info("Installer Entry ${index.inc()}/${remoteInstallerManifest.installers.size}")
+                listOf(
+                    Architecture.const to installer.architecture,
+                    InstallerType.const to (installer.installerType ?: remoteInstallerManifest.installerType),
+                    InstallerScope.const to (installer.scope ?: remoteInstallerManifest.scope),
+                    Locale.installerLocaleConst to
+                        (installer.installerLocale ?: remoteInstallerManifest.installerLocale)
+                ).forEach { (promptType, value) ->
+                    value?.let {
+                        println("${" ".repeat(Prompts.optionIndent)} $promptType: ${colors.info(it.toString())}")
                     }
-                    println()
-                    installerDownloadPrompt()
-                    installerManifestData.addInstaller()
                 }
-            } while (
-                (previousManifestData.remoteInstallerData?.installers?.size ?: 0) <
-                installerManifestData.installers.size
-            )
+                println()
+                installerDownloadPrompt()
+                installerManifestData.addInstaller()
+            }
         }
     }
 
@@ -162,7 +156,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 /* head = */ "${githubImpl.github.await().myself.login}:${githubImpl.pullRequestBranch?.ref}",
                 /* base = */ ghRepository.defaultBranch,
                 /* body = */ githubImpl.getPullRequestBody()
-            ).also { println(brightGreen("Pull request created: ${it.htmlUrl}")) }
+            ).also { success("Pull request created: ${it.htmlUrl}") }
         } catch (ioException: IOException) {
             danger(ioException.message ?: "Failed to create pull request")
         }
