@@ -19,7 +19,6 @@ ktor = "2.2.2"
 mordant = "2.0.0-beta10"
 shadow = "7.1.2"
 skrapeit = "1.2.2"
-slf4j = "2.0.6"
 
 [libraries]
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
@@ -56,8 +55,6 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 mordant = { module = "com.github.ajalt.mordant:mordant", version.ref = "mordant" }
 
 skrapeit-htmlparser = { module = "it.skrape:skrapeit-html-parser", version.ref = "skrapeit" }
-
-slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 
 [plugins]
 buildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig" }

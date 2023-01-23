@@ -123,7 +123,6 @@ tasks.jpackage {
 tasks.withType<ShadowJar> {
     minimize {
         exclude(dependency(libs.jna.asProvider().get().toString()))
-        exclude(dependency(libs.slf4j.nop.get().toString()))
     }
 }
 
