@@ -70,8 +70,6 @@ dependencies {
         }
     }
 
-    // SLF4J No-operation implementation - https://github.com/qos-ch/slf4j
-    implementation(libs.slf4j.nop)
 }
 
 task("copyDependencies", Copy::class) {
