@@ -5,7 +5,6 @@ import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.microsoft.alm.secret.Token
 import com.microsoft.alm.secret.TokenType
-import com.microsoft.alm.storage.StorageProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +21,7 @@ class TokenStore {
         /* persist = */ true,
         /* secureOption = */ StorageProvider.SecureOption.MUST
     ) ?: throw UnsupportedOperationException("Could not find secure token storage for the current operating system")
-    var token: Deferred<String> = CoroutineScope(Dispatchers.IO).async { getToken(Terminal()) }
+    var storedToken: Deferred<String> = CoroutineScope(Dispatchers.IO).async { getToken(Terminal()) }
 
     private suspend fun getToken(terminal: Terminal): String {
         return if (credentialStore[credentialKey] == null) {
@@ -41,7 +40,7 @@ class TokenStore {
 
     suspend fun putToken(tokenString: String) = coroutineScope {
         credentialStore.add(credentialKey, Token(tokenString, TokenType.Personal))
-        token = async { tokenString }
+        storedToken = async { tokenString }
     }
 
     fun promptForToken(terminal: Terminal): String {
