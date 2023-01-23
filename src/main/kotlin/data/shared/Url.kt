@@ -27,9 +27,7 @@ import io.ktor.client.request.head
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import ktor.Clients
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
@@ -63,13 +61,9 @@ object Url : KoinComponent {
         installerManifestData.installerUrl = prompt(
             prompt = colors.brightWhite(PromptType.InstallerUrl.toString()),
             convert = { input ->
-                var error: String? = null
-                CoroutineScope(Dispatchers.IO).launch {
-                    error = isUrlValid(url = Url(input), schema = schemasImpl.installerSchema, canBeBlank = false)
-                }
-                error
+                runBlocking { isUrlValid(url = Url(input), schema = schemasImpl.installerSchema, canBeBlank = false) }
                     ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(input.ifBlank { null }?.let { Url(it) })
+                    ?: ConversionResult.Valid(Url(input))
             }
         ) ?: exitProcess(ExitCode.CtrlC.code)
         println()
@@ -214,13 +208,9 @@ object Url : KoinComponent {
                     prompt = localeUrl.toString(),
                     default = getPreviousValue(localeUrl)?.also { muted("Previous $localeUrl: $it") },
                     convert = { input ->
-                        var error: String? = null
-                        CoroutineScope(Dispatchers.IO).launch {
-                            error = isUrlValid(url = Url(input), schema = defaultLocaleSchema, canBeBlank = true)
-                        }
-                        error
+                        runBlocking { isUrlValid(url = Url(input), schema = defaultLocaleSchema, canBeBlank = true) }
                             ?.let { ConversionResult.Invalid(it) }
-                            ?: ConversionResult.Valid(input.ifBlank { null }?.let { Url(it) })
+                            ?: ConversionResult.Valid(Url(input))
                     }
                 )
                 when (localeUrl) {
