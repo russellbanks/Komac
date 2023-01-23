@@ -27,9 +27,7 @@ class KtorGitHubConnector(private val client: HttpClient) : GitHubConnector {
                 setBody(connectorRequest.body())
             }
             headers {
-                connectorRequest.allHeaders().forEach { (key: String, value: List<String>) ->
-                    appendAll(key, value)
-                }
+                connectorRequest.allHeaders().forEach(::appendAll)
             }
             connectorRequest.contentType()?.let {
                 contentType(ContentType.parse(it))
