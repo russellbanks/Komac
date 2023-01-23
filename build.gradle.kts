@@ -63,9 +63,6 @@ dependencies {
     // Mordant - https://github.com/ajalt/mordant
     implementation(libs.mordant)
 
-    // Secure Token Storage Library - https://github.com/microsoft/vsts-authentication-library-for-java
-    implementation(libs.auth.secure.storage)
-
     // Skrape{it} - https://github.com/skrapeit/skrape.it
     implementation(libs.skrapeit.htmlparser) {
         constraints {

@@ -26,7 +26,7 @@ class GitHubImpl : KoinComponent {
     val github: Deferred<GitHub> = CoroutineScope(Dispatchers.IO).async {
         GitHubBuilder()
             .withConnector(KtorGitHubConnector(get<Clients>().httpClient))
-            .withOAuthToken(get<TokenStore>().storedToken.await())
+            .withOAuthToken(get<TokenStore>().token.await())
             .build()
     }
     private val sharedManifestData: SharedManifestData by inject()

@@ -1,5 +1,4 @@
 [versions]
-auth-secure-storage = "0.6.4"
 buildconfig = "3.1.0"
 clikt = "4.0.0.198-SNAPSHOT"
 coroutines = "1.6.4"
@@ -23,8 +22,6 @@ skrapeit = "1.2.2"
 slf4j = "2.0.6"
 
 [libraries]
-auth-secure-storage = { module = "com.microsoft.alm:auth-secure-storage", version.ref = "auth-secure-storage" }
-
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }

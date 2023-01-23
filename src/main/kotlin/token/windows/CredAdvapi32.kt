@@ -1,11 +1,12 @@
-package token
+package token.windows
 
 import com.sun.jna.LastErrorException
-import com.sun.jna.Memory
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
+import com.sun.jna.Structure.FieldOrder
 import com.sun.jna.platform.win32.WinBase.FILETIME
+import com.sun.jna.platform.win32.WinDef.DWORD
 import com.sun.jna.win32.StdCallLibrary
 import com.sun.jna.win32.W32APIOptions
 
@@ -15,80 +16,8 @@ import com.sun.jna.win32.W32APIOptions
  *
  * Please refer to MSDN documentations for each method usage pattern
  */
+@Suppress("FunctionName", "VariableNaming", "Unused")
 internal interface CredAdvapi32 : StdCallLibrary {
-    /**
-     * Credential attributes
-     *
-     * https://msdn.microsoft.com/en-us/library/windows/desktop/aa374790(v=vs.85).aspx
-     *
-     * typedef struct _CREDENTIAL_ATTRIBUTE {
-     * LPTSTR Keyword;
-     * DWORD  Flags;
-     * DWORD  ValueSize;
-     * LPBYTE Value;
-     * } CREDENTIAL_ATTRIBUTE, *PCREDENTIAL_ATTRIBUTE;
-     *
-     */
-    open class CREDENTIAL_ATTRIBUTE : Structure() {
-        class ByReference : CREDENTIAL_ATTRIBUTE(), Structure.ByReference
-
-        override fun getFieldOrder(): MutableList<String>? {
-            return mutableListOf(
-                "Keyword",
-                "Flags",
-                "ValueSize",
-                "Value"
-            )
-        }
-
-        /**
-         * Name of the application-specific attribute. Names should be of the form <CompanyName>_<Name>.
-         * This member cannot be longer than CRED_MAX_STRING_LENGTH (256) characters.
-        </Name></CompanyName> */
-        var Keyword: String? = null
-
-        /**
-         * Identifies characteristics of the credential attribute. This member is reserved and should be originally
-         * initialized as zero and not otherwise altered to permit future enhancement.
-         */
-        var Flags = 0
-
-        /**
-         * Length of Value in bytes. This member cannot be larger than CRED_MAX_VALUE_SIZE (256).
-         */
-        var ValueSize = 0
-
-        /**
-         * Data associated with the attribute. By convention, if Value is a text string, then Value should not
-         * include the trailing zero character and should be in UNICODE.
-         *
-         * Credentials are expected to be portable. The application should take care to ensure that the data in
-         * value is portable. It is the responsibility of the application to define the byte-endian and alignment
-         * of the data in Value.
-         */
-        var Value: Pointer? = null
-    }
-
-    /**
-     * Pointer to {@See CREDENTIAL_ATTRIBUTE} struct
-     */
-    class PCREDENTIAL_ATTRIBUTE : Structure {
-        override fun getFieldOrder(): List<String> {
-            return listOf("credential_attribute")
-        }
-
-        constructor() : super()
-        constructor(data: ByteArray) : super(Memory(data.size.toLong())) {
-            pointer.write(0, data, 0, data.size)
-            read()
-        }
-
-        constructor(memory: Pointer?) : super(memory) {
-            read()
-        }
-
-        var credential_attribute: Pointer? = null
-    }
 
     /**
      * The CREDENTIAL structure contains an individual credential
@@ -110,27 +39,13 @@ internal interface CredAdvapi32 : StdCallLibrary {
      * LPTSTR                UserName;
      * } CREDENTIAL, *PCREDENTIAL;
      */
+    @FieldOrder(
+        "Flags", "Type", "TargetName", "Comment", "LastWritten", "CredentialBlobSize", "CredentialBlob", "Persist",
+        "AttributeCount", "Attributes", "TargetAlias", "UserName"
+    )
     class CREDENTIAL : Structure {
-        override fun getFieldOrder(): List<String> {
-            return mutableListOf(
-                "Flags",
-                "Type",
-                "TargetName",
-                "Comment",
-                "LastWritten",
-                "CredentialBlobSize",
-                "CredentialBlob",
-                "Persist",
-                "AttributeCount",
-                "Attributes",
-                "TargetAlias",
-                "UserName"
-            )
-        }
-
         constructor() : super()
-        constructor(size: Int) : super(Memory(size.toLong()))
-        constructor(memory: Pointer?) : super(memory) {
+        constructor(memory: Pointer) : super(memory) {
             read()
         }
 
@@ -140,14 +55,14 @@ internal interface CredAdvapi32 : StdCallLibrary {
          *
          * See MSDN doc for all possible flags
          */
-        var Flags = 0
+        lateinit var Flags: DWORD
 
         /**
          * The type of the credential. This member cannot be changed after the credential is created.
          *
          * See MSDN doc for all possible types
          */
-        var Type = 0
+        lateinit var Type: DWORD
 
         /**
          * The name of the credential. The TargetName and Type members uniquely identify the credential.
@@ -156,25 +71,25 @@ internal interface CredAdvapi32 : StdCallLibrary {
          *
          * See MSDN doc for additional requirement
          */
-        var TargetName: String? = null
+        lateinit var TargetName: String
 
         /**
          * A string comment from the user that describes this credential. This member cannot be longer than
          * CRED_MAX_STRING_LENGTH (256) characters.
          */
-        var Comment: String? = null
+        lateinit var Comment: String
 
         /**
          * The time, in Coordinated Universal Time (Greenwich Mean Time), of the last modification of the credential.
          * For write operations, the value of this member is ignored.
          */
-        var LastWritten: FILETIME? = null
+        lateinit var LastWritten: FILETIME
 
         /**
          * The size, in bytes, of the CredentialBlob member. This member cannot be larger than
          * CRED_MAX_CREDENTIAL_BLOB_SIZE (512) bytes.
          */
-        var CredentialBlobSize = 0
+        lateinit var CredentialBlobSize: DWORD
 
         /**
          * Secret data for the credential. The CredentialBlob member can be both read and written.
@@ -190,27 +105,26 @@ internal interface CredAdvapi32 : StdCallLibrary {
          * Credentials are expected to be portable. Applications should ensure that the data in CredentialBlob is
          * portable. The application defines the byte-endian and alignment of the data in CredentialBlob.
          */
-        var CredentialBlob: Pointer? = null
+        lateinit var CredentialBlob: Pointer
 
         /**
          * Defines the persistence of this credential. This member can be read and written.
          *
          * See MSDN doc for all possible values
          */
-        var Persist = 0
+        lateinit var Persist: DWORD
 
         /**
          * The number of application-defined attributes to be associated with the credential. This member can be
          * read and written. Its value cannot be greater than CRED_MAX_ATTRIBUTES (64).
          */
-        var AttributeCount = 0
+        lateinit var AttributeCount: DWORD
 
         /**
          * Application-defined attributes that are associated with the credential. This member can be read
          * and written.
          */
-        //TODO: Need to make this into array
-        var Attributes: CREDENTIAL_ATTRIBUTE.ByReference? = null
+        lateinit var Attributes: Pointer
 
         /**
          * Alias for the TargetName member. This member can be read and written. It cannot be longer than
@@ -219,10 +133,10 @@ internal interface CredAdvapi32 : StdCallLibrary {
          * If the credential Type is CRED_TYPE_GENERIC, this member can be non-NULL, but the credential manager
          * ignores the member.
          */
-        var TargetAlias: String? = null
+        lateinit var TargetAlias: String
 
         /**
-         * The user name of the account used to connect to TargetName.
+         * The username of the account used to connect to TargetName.
          * If the credential Type is CRED_TYPE_DOMAIN_PASSWORD, this member can be either a DomainName\UserName
          * or a UPN.
          *
@@ -234,28 +148,15 @@ internal interface CredAdvapi32 : StdCallLibrary {
          *
          * This member cannot be longer than CRED_MAX_USERNAME_LENGTH (513) characters.
          */
-        var UserName: String? = null
+        lateinit var UserName: String
     }
 
     /**
      * Pointer to {@see CREDENTIAL} struct
      */
-    class PCREDENTIAL : Structure {
-        override fun getFieldOrder(): List<String> {
-            return listOf("credential")
-        }
-
-        constructor() : super()
-        constructor(data: ByteArray) : super(Memory(data.size.toLong())) {
-            pointer.write(0, data, 0, data.size)
-            read()
-        }
-
-        constructor(memory: Pointer?) : super(memory) {
-            read()
-        }
-
-        var credential: Pointer? = null
+    @FieldOrder("credential")
+    class PCREDENTIAL : Structure() {
+        lateinit var credential: Pointer
     }
 
     /**
@@ -323,8 +224,8 @@ internal interface CredAdvapi32 : StdCallLibrary {
      * Type of the credential to delete. Must be one of the CRED_TYPE_* defined types. For a list of the
      * defined types, see the Type member of the CREDENTIAL structure.
      * If the value of this parameter is CRED_TYPE_DOMAIN_EXTENDED, this function can delete a credential that
-     * specifies a user name when there are multiple credentials for the same target. The value of the TargetName
-     * parameter must specify the user name as Target|UserName.
+     * specifies a username when there are multiple credentials for the same target. The value of the TargetName
+     * parameter must specify the username as Target|UserName.
      * @param flags
      * Reserved and must be zero.
      *
@@ -352,40 +253,16 @@ internal interface CredAdvapi32 : StdCallLibrary {
     fun CredFree(credential: Pointer?)
 
     companion object {
-        val INSTANCE = Native.loadLibrary(
-            "Advapi32",
-            CredAdvapi32::class.java, W32APIOptions.UNICODE_OPTIONS
-        ) as CredAdvapi32
-
-        /**
-         * CredRead flag
-         */
-        const val CRED_FLAGS_PROMPT_NOW = 0x0002
-        const val CRED_FLAGS_USERNAME_TARGET = 0x0004
+        val INSTANCE = Native.load("Advapi32", CredAdvapi32::class.java, W32APIOptions.UNICODE_OPTIONS) as CredAdvapi32
 
         /**
          * Type of Credential
          */
         const val CRED_TYPE_GENERIC = 1
-        const val CRED_TYPE_DOMAIN_PASSWORD = 2
-        const val CRED_TYPE_DOMAIN_CERTIFICATE = 3
-        const val CRED_TYPE_DOMAIN_VISIBLE_PASSWORD = 4
-        const val CRED_TYPE_GENERIC_CERTIFICATE = 5
-        const val CRED_TYPE_DOMAIN_EXTENDED = 6
-        const val CRED_TYPE_MAXIMUM = 7 // Maximum supported cred type
-        const val CRED_TYPE_MAXIMUM_EX = CRED_TYPE_MAXIMUM + 1000
-
-        /**
-         * CredWrite flag
-         */
-        const val CRED_PRESERVE_CREDENTIAL_BLOB = 0x1
 
         /**
          * Values of the Credential Persist field
          */
-        const val CRED_PERSIST_NONE = 0
-        const val CRED_PERSIST_SESSION = 1
         const val CRED_PERSIST_LOCAL_MACHINE = 2
-        const val CRED_PERSIST_ENTERPRISE = 3
     }
 }
