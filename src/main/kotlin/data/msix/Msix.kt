@@ -37,9 +37,7 @@ class Msix(msixFile: File) {
                     .ifBlank { null }
                     ?.replace(".", "")
                     ?.let { InstallerManifest.Platform.valueOf(it) }
-                displayVersion = identity
-                    .attribute("Version".lowercase())
-                    .ifBlank { null }
+                displayVersion = identity.attribute("Version".lowercase()).ifBlank { null }
                 displayName = properties.findFirst("DisplayName").text.ifBlank { null }
                 publisherDisplayName = properties.findFirst("PublisherDisplayName").text.ifBlank { null }
                 minVersion = targetDeviceFamilyAttribute.attribute("MinVersion".lowercase()).ifBlank { null }
