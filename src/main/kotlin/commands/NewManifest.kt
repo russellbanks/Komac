@@ -1,4 +1,5 @@
 package commands
+import ExitCode
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.mordant.terminal.Terminal
@@ -51,6 +52,7 @@ import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.LocaleManifest
 import java.io.IOException
+import kotlin.system.exitProcess
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -79,7 +81,8 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     installerScopePrompt()
                     upgradeBehaviourPrompt()
                     installerManifestData.addInstaller()
-                    val shouldContinue = confirm(colors.brightYellow(additionalInstallerInfo))!!
+                    val shouldContinue = confirm(colors.brightYellow(additionalInstallerInfo))
+                        ?: exitProcess(ExitCode.CtrlC.code)
                 } while (shouldContinue)
                 fileExtensionsPrompt()
                 protocolsPrompt()

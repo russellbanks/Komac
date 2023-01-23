@@ -49,7 +49,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
         val deletionReason = getDeletionReason()
         val confirmPrompt = "Would you like to make a pull request to remove " +
             "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
-        val shouldRemoveManifest = confirm(confirmPrompt)!!
+        val shouldRemoveManifest = confirm(confirmPrompt) ?: exitProcess(ExitCode.CtrlC.code)
         echo()
         if (shouldRemoveManifest) {
             val forkRepository = githubImpl.getWingetPkgsFork(currentContext.terminal) ?: return@runBlocking
