@@ -66,6 +66,9 @@ dependencies {
     // Secure Token Storage Library - https://github.com/microsoft/vsts-authentication-library-for-java
     implementation(libs.auth.secure.storage)
 
+    // skrape{it} - https://github.com/skrapeit/skrape.it
+    implementation(libs.skrapeit.htmlparser)
+
     // SLF4J No-operation implementation - https://github.com/qos-ch/slf4j
     implementation(libs.slf4j.nop)
 }

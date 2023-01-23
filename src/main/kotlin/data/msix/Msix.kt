@@ -1,14 +1,11 @@
 package data.msix
 
 import hashing.Hashing
-import org.w3c.dom.Document
+import it.skrape.core.htmlDocument
+import it.skrape.selects.Doc
 import schemas.manifest.InstallerManifest
 import java.io.File
 import java.util.zip.ZipFile
-import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.xpath.XPath
-import javax.xml.xpath.XPathConstants
-import javax.xml.xpath.XPathFactory
 
 class Msix(msixFile: File) {
     var displayName: String? = null
@@ -29,44 +26,32 @@ class Msix(msixFile: File) {
         }
         ZipFile(msixFile).use { zip ->
             zip.getEntry(appxManifestXml)?.let { appxManifest ->
-                val xPath: XPath = XPathFactory.newInstance().newXPath()
-                val xmlDocument: Document = zip.getInputStream(appxManifest).use {
-                    DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(it)
-                }
-                targetDeviceFamily = (
-                    xPath.compile("/Package/Dependencies/TargetDeviceFamily/@Name")
-                        .evaluate(xmlDocument, XPathConstants.STRING) as String
-                    ).takeIf { it.isNotBlank() }
+                val document = zip.getInputStream(appxManifest)
+                    .use { htmlDocument(it) }
+                    .let { Doc(document = it.document, relaxed = true) }
+                val properties = document.findFirst("Properties")
+                val targetDeviceFamilyAttribute = document.findFirst("TargetDeviceFamily")
+                val identity = document.findFirst("Identity")
+                targetDeviceFamily = targetDeviceFamilyAttribute
+                    .attribute("Name".lowercase())
+                    .ifBlank { null }
                     ?.replace(".", "")
                     ?.let { InstallerManifest.Platform.valueOf(it) }
-                displayVersion = (
-                    xPath.compile("/Package/Identity/@Version")
-                        .evaluate(xmlDocument, XPathConstants.STRING) as String
-                    ).takeIf { it.isNotBlank() }
-                displayName = (
-                    xPath.compile("/Package/Properties/DisplayName/text()")
-                        .evaluate(xmlDocument, XPathConstants.STRING) as String
-                    ).takeIf { it.isNotBlank() }
-                publisherDisplayName = (
-                    xPath.compile("/Package/Properties/PublisherDisplayName/text()")
-                        .evaluate(xmlDocument, XPathConstants.STRING) as String
-                    ).takeIf { it.isNotBlank() }
-                minVersion = (
-                    xPath.compile("/Package/Dependencies/TargetDeviceFamily/@MinVersion")
-                        .evaluate(xmlDocument, XPathConstants.STRING) as String
-                    ).takeIf { it.isNotBlank() }
-                description = (
-                    xPath.compile("/Package/Properties/Description/text()")
-                        .evaluate(xmlDocument, XPathConstants.STRING) as String
-                    ).takeIf { it.isNotBlank() }
-                processorArchitecture = (
-                    xPath
-                        .compile("/Package/Identity/@ProcessorArchitecture")
-                        .evaluate(xmlDocument, XPathConstants.STRING) as String
-                    )
-                    .takeIf { it.isNotBlank() }
+                displayVersion = identity
+                    .attribute("Version".lowercase())
+                    .ifBlank { null }
+                displayName = properties.findFirst("DisplayName").text.ifBlank { null }
+                publisherDisplayName = properties.findFirst("PublisherDisplayName").text.ifBlank { null }
+                minVersion = targetDeviceFamilyAttribute.attribute("MinVersion".lowercase()).ifBlank { null }
+                description = properties.findFirst("Description").text.ifBlank { null }
+                processorArchitecture = identity
+                    .attribute("ProcessorArchitecture".lowercase())
+                    .ifBlank { null }
                     ?.let { InstallerManifest.Installer.Architecture.valueOf(it.uppercase()) }
-                getPackageFamilyName(xPath, xmlDocument)
+                packageFamilyName = getPackageFamilyName(
+                    identityName = identity.attribute("Name".lowercase()),
+                    identityPublisher = identity.attribute("Publisher".lowercase())
+                )
             }
             zip.getEntry(appxSignatureP7x)?.let { appxSignature ->
                 val digest = Hashing.Algorithms.SHA256
@@ -76,11 +61,7 @@ class Msix(msixFile: File) {
         }
     }
 
-    private fun getPackageFamilyName(xPath: XPath, xmlDocument: Document) {
-        val identityName =
-            xPath.compile("/Package/Identity/@Name").evaluate(xmlDocument, XPathConstants.STRING) as String
-        val identityPublisher =
-            xPath.compile("/Package/Identity/@Publisher").evaluate(xmlDocument, XPathConstants.STRING) as String
+    private fun getPackageFamilyName(identityName: String, identityPublisher: String): String {
         val hashPart = Hashing.Algorithms.SHA256
             .digest(identityPublisher.toByteArray(Charsets.UTF_16))
             .take(8)
@@ -91,7 +72,7 @@ class Msix(msixFile: File) {
             .map { "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[it.joinToString("").toInt(2)] }
             .joinToString("")
             .lowercase()
-        packageFamilyName = "${identityName}_$hashPart"
+        return "${identityName}_$hashPart"
     }
 
     fun resetExceptShared() {
