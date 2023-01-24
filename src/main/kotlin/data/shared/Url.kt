@@ -9,15 +9,15 @@ import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Platform
 import data.DefaultLocaleManifestData
-import detection.GitHubDetection
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.locale.LocaleUrl
-import detection.files.msi.Msi
-import detection.files.Msix
-import detection.files.MsixBundle
+import detection.GitHubDetection
 import detection.files.Zip
+import detection.files.msi.Msi
+import detection.files.msix.Msix
+import detection.files.msix.MsixBundle
 import hashing.Hashing.hash
 import input.Prompts
 import io.ktor.client.network.sockets.ConnectTimeoutException
@@ -26,7 +26,7 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
-import ktor.Clients
+import ktor.Http
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
@@ -114,7 +114,7 @@ object Url : KoinComponent {
             if (installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
                 sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
             }
-            val (file, fileDeletionThread) = get<Clients>().httpClient.downloadInstallerFromUrl(terminal = this)
+            val (file, fileDeletionThread) = get<Http>().client.downloadInstallerFromUrl(terminal = this)
             installerManifestData.installerSha256 = file.hash()
             when (file.extension.lowercase()) {
                 InstallerManifest.InstallerType.MSIX.toString(),
@@ -247,7 +247,7 @@ object Url : KoinComponent {
     }
 
     private suspend fun checkUrlResponse(url: Url): String? {
-        return get<Clients>().httpClient.config { followRedirects = false }.use {
+        return get<Http>().client.config { followRedirects = false }.use {
             try {
                 val installerUrlResponse = it.head(url)
                 if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {

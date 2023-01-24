@@ -6,9 +6,17 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.UserAgent
 import org.koin.core.annotation.Single
 
+/**
+ * Stores the [HttpClient] instance and its configuration.
+ */
 @Single
-class Clients {
-    val httpClient = HttpClient(Java) {
+class Http {
+    /**
+     * The [HttpClient] instance.
+     *
+     * This uses the [Java] engine for performance and support for HTTP 2.
+     */
+    val client = HttpClient(Java) {
         engine {
             pipelining = true
             protocolVersion = java.net.http.HttpClient.Version.HTTP_2
@@ -22,7 +30,7 @@ class Clients {
     }
 
     companion object {
-        const val timeoutMillis = 1500L
-        const val userAgent = "Microsoft-Delivery-Optimization/10.1"
+        private const val timeoutMillis = 1500L
+        private const val userAgent = "Microsoft-Delivery-Optimization/10.1"
     }
 }

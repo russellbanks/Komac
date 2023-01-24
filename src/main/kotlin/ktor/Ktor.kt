@@ -110,7 +110,7 @@ object Ktor : KoinComponent {
     }
 
     suspend fun getRedirectedUrl(installerUrl: Url): Url {
-        val noRedirectClient = get<Clients>().httpClient.config { followRedirects = false }
+        val noRedirectClient = get<ktor.Http>().client.config { followRedirects = false }
         var redirectedInstallerUrl: Url = installerUrl
         var response: HttpResponse? = noRedirectClient.head(installerUrl)
 

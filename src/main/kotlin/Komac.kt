@@ -1,10 +1,8 @@
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.cyan
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
+import com.github.ajalt.mordant.terminal.Terminal
 import commands.ChangeToken
 import commands.CommandOption
 import commands.NewManifest
@@ -60,13 +58,13 @@ class Komac(private val args: Array<String>) : CliktCommand(invokeWithoutSubcomm
         }
     }
 
-    private fun optionCell(commandOption: CommandOption): String {
-        val textColour = if (commandOption != CommandOption.Exit) cyan else brightRed
+    private fun Terminal.optionCell(commandOption: CommandOption): String {
+        val textColour = if (commandOption != CommandOption.Exit) colors.cyan else colors.brightRed
         return buildString {
             append(" ".repeat(Prompts.optionIndent))
-            append(cyan("["))
-            append(brightWhite(commandOption.key.toString()))
-            append(cyan("] "))
+            append(colors.cyan("["))
+            append(colors.brightWhite(commandOption.key.toString()))
+            append(colors.cyan("] "))
             append(textColour(commandOption.toString()))
         }
     }

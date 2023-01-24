@@ -8,7 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import ktor.Clients
+import ktor.Http
 import ktor.KtorGitHubConnector
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
@@ -25,7 +25,7 @@ import java.io.IOException
 class GitHubImpl : KoinComponent {
     val github: Deferred<GitHub> = CoroutineScope(Dispatchers.IO).async {
         GitHubBuilder()
-            .withConnector(KtorGitHubConnector(get<Clients>().httpClient))
+            .withConnector(KtorGitHubConnector(get<Http>().client))
             .withOAuthToken(get<TokenStore>().token.await())
             .build()
     }

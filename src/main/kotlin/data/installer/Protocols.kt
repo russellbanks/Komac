@@ -45,7 +45,7 @@ object Protocols : KoinComponent {
                     items = protocols.filter { it.length > protocolsSchema.items.maxLength }
                 )
             }
-            else ->  null
+            else -> null
         }
     }
 

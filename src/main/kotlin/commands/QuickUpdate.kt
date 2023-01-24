@@ -4,7 +4,6 @@ import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -13,7 +12,6 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
-import schemas.manifest.YamlConfig
 import data.installer.Architecture
 import data.installer.InstallerScope
 import data.installer.InstallerType
@@ -35,6 +33,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.LocaleManifest
+import schemas.manifest.YamlConfig
 import java.io.IOException
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
@@ -72,7 +71,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                             pullRequest()
                         }
                         ManifestResultOption.WriteToFiles -> writeFiles(files)
-                        else -> println(brightWhite("Exiting"))
+                        else -> println("Exiting")
                     }
                 }
             }

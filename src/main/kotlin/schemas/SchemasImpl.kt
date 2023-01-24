@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import ktor.Clients
+import ktor.Http
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -21,7 +21,7 @@ import schemas.data.VersionSchema
 
 @Single
 class SchemasImpl : KoinComponent {
-    private val client: HttpClient = get<Clients>().httpClient
+    private val client: HttpClient = get<Http>().client
     private val json = Json { ignoreUnknownKeys = true }
     private var installerSchemaJob = CoroutineScope(Dispatchers.IO).launch {
         installerSchema = json.decodeFromString(client.get(Schemas.installerSchema).body())

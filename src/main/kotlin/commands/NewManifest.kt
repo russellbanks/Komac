@@ -10,7 +10,6 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
-import schemas.manifest.YamlConfig
 import data.installer.Architecture.architecturePrompt
 import data.installer.Commands.commandsPrompt
 import data.installer.FileExtensions.fileExtensionsPrompt
@@ -39,8 +38,8 @@ import data.shared.Url.installerDownloadPrompt
 import data.shared.Url.localeUrlPrompt
 import input.FileWriter.writeFiles
 import input.InstallerSwitch
-import input.ManifestResultOption
 import input.LocaleType
+import input.ManifestResultOption
 import input.Prompts.pullRequestPrompt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -51,6 +50,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.LocaleManifest
+import schemas.manifest.YamlConfig
 import java.io.IOException
 import kotlin.system.exitProcess
 
