@@ -1,4 +1,4 @@
-package detection.files
+package detection.files.msix
 
 import hashing.Hashing
 import it.skrape.core.htmlDocument
@@ -10,6 +10,7 @@ import java.util.zip.ZipFile
 
 class MsixBundle(msixBundleFile: File) {
     var signatureSha256: String? = null
+    var packageFamilyName: String? = null
     var packages: List<IndividualPackage>? = null
 
     init {
@@ -22,6 +23,13 @@ class MsixBundle(msixBundleFile: File) {
                 packages = zip.getInputStream(appxManifest)
                     .use { htmlDocument(it) }
                     .let { Doc(document = it.document, relaxed = true) }
+                    .also {
+                        val identity = it.findFirst("Identity")
+                        packageFamilyName = MsixUtils.getPackageFamilyName(
+                            identityName = identity.attribute("Name".lowercase()),
+                            identityPublisher = identity.attribute("Publisher".lowercase())
+                        )
+                    }
                     .findAll("Package")
                     .filter { it.attribute("Type".lowercase()).equals(other = "Application", ignoreCase = true) }
                     .map { packageElement ->

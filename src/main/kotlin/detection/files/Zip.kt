@@ -12,6 +12,7 @@ import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
 import detection.files.msi.Msi
+import detection.files.msix.MsixBundle
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get

@@ -1,4 +1,4 @@
-package detection.files
+package detection.files.msix
 
 import hashing.Hashing
 import it.skrape.core.htmlDocument
@@ -16,7 +16,7 @@ class Msix(msixFile: File) {
     var minVersion: String? = null
     var description: String? = null
     var processorArchitecture: InstallerManifest.Installer.Architecture? = null
-    private var packageFamilyName: String? = null
+    var packageFamilyName: String? = null
 
     init {
         val validExtensions = listOf(InstallerManifest.InstallerType.APPX, InstallerManifest.InstallerType.MSIX)
@@ -46,7 +46,7 @@ class Msix(msixFile: File) {
                     .attribute("ProcessorArchitecture".lowercase())
                     .ifBlank { null }
                     ?.let { InstallerManifest.Installer.Architecture.valueOf(it.uppercase()) }
-                packageFamilyName = getPackageFamilyName(
+                packageFamilyName = MsixUtils.getPackageFamilyName(
                     identityName = identity.attribute("Name".lowercase()),
                     identityPublisher = identity.attribute("Publisher".lowercase())
                 )
@@ -57,20 +57,6 @@ class Msix(msixFile: File) {
                 signatureSha256 = Hashing.buildHash(digest.digest())
             }
         }
-    }
-
-    private fun getPackageFamilyName(identityName: String, identityPublisher: String): String {
-        val hashPart = Hashing.Algorithms.SHA256
-            .digest(identityPublisher.toByteArray(Charsets.UTF_16))
-            .take(8)
-            .flatMap { Integer.toBinaryString(it.toInt() and 0xff).padStart(8, '0').asIterable() }
-            .toMutableList()
-            .apply { add(0, '0') }
-            .chunked(5)
-            .map { "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[it.joinToString("").toInt(2)] }
-            .joinToString("")
-            .lowercase()
-        return "${identityName}_$hashPart"
     }
 
     fun resetExceptShared() {
