@@ -26,8 +26,7 @@ object InstallModes : KoinComponent {
         info(installModesExample)
         installerManifestData.installModes = prompt(
             prompt = const,
-            default = getPreviousValue()?.joinToString(", ")
-                ?.also { muted("Previous install modes: $it") },
+            default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous install modes: $it") },
             convert = { input ->
                 areInstallModesValid(input.convertToYamlList(installModesSchema.uniqueItems)?.toInstallModes())
                     ?.let { ConversionResult.Invalid(it) }

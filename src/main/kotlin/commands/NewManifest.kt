@@ -10,7 +10,7 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
-import data.YamlConfig
+import schemas.manifest.YamlConfig
 import data.installer.Architecture.architecturePrompt
 import data.installer.Commands.commandsPrompt
 import data.installer.FileExtensions.fileExtensionsPrompt
@@ -40,7 +40,7 @@ import data.shared.Url.localeUrlPrompt
 import input.FileWriter.writeFiles
 import input.InstallerSwitch
 import input.ManifestResultOption
-import input.PromptType
+import input.LocaleType
 import input.Prompts.pullRequestPrompt
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -76,7 +76,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     architecturePrompt()
                     installerTypePrompt()
                     InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
-                    localePrompt(PromptType.InstallerLocale)
+                    localePrompt(LocaleType.Installer)
                     productCodePrompt()
                     installerScopePrompt()
                     upgradeBehaviourPrompt()
@@ -89,7 +89,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 commandsPrompt()
                 installerSuccessCodesPrompt()
                 installModesPrompt()
-                localePrompt(PromptType.PackageLocale)
+                localePrompt(LocaleType.Package)
                 publisherPrompt()
                 packageNamePrompt()
                 monikerPrompt()
@@ -113,7 +113,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                             pullRequest()
                         }
                         ManifestResultOption.WriteToFiles -> writeFiles(files)
-                        else -> echo(colors.brightWhite("Exiting"))
+                        else -> echo("Exiting")
                     }
                 }
             }
@@ -129,7 +129,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
-                manifestVersion = get<SchemasImpl>().versionSchema.properties.manifestVersion.default
+                manifestVersion = Schemas.manifestVersion
             ).let {
                 Schemas.buildManifestString(
                     Schema.Locale,

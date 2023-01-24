@@ -8,6 +8,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.DefaultLocaleManifest
+import schemas.manifest.YamlConfig
 
 @Single
 class DefaultLocaleManifestData : KoinComponent {
@@ -45,7 +46,7 @@ class DefaultLocaleManifestData : KoinComponent {
             privacyUrl = publisherPrivacyUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.privacyUrl
                 ?: sharedManifestData.gitHubDetection?.privacyUrl?.await(),
-            author = author.takeIf { it?.isNotBlank() == true } ?: previousManifestData.remoteDefaultLocaleData?.author,
+            author = author?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.author,
             packageName = sharedManifestData.packageName
                 ?: previousManifestData.remoteDefaultLocaleData?.packageName ?: "",
             packageUrl = packageUrl
@@ -59,8 +60,7 @@ class DefaultLocaleManifestData : KoinComponent {
             licenseUrl = licenseUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.licenseUrl
                 ?: sharedManifestData.gitHubDetection?.licenseUrl?.await(),
-            copyright = copyright.takeIf { it?.isNotBlank() == true }
-                ?: previousManifestData.remoteDefaultLocaleData?.copyright,
+            copyright = copyright?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.copyright,
             copyrightUrl = copyrightUrl ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl,
             shortDescription = when {
                 ::shortDescription.isInitialized -> shortDescription
@@ -69,21 +69,15 @@ class DefaultLocaleManifestData : KoinComponent {
                         ?: sharedManifestData.gitHubDetection?.shortDescription?.await() ?: ""
                 }
             },
-            description = (
-                description
-                    .takeIf { it?.isNotBlank() == true }
-                    ?: previousManifestData.remoteDefaultLocaleData?.description
-                )
+            description = (description?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.description)
                 ?.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n")
                 ?.trim(),
-            moniker = moniker.takeIf { it?.isNotBlank() == true }
-                ?: previousManifestData.remoteDefaultLocaleData?.moniker,
-            tags = tags.takeIf { it?.isNotEmpty() == true } ?: previousManifestData.remoteDefaultLocaleData?.tags,
+            moniker = moniker?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
+            tags = tags?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.tags,
             releaseNotesUrl = releaseNotesUrl ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await(),
             releaseNotes = sharedManifestData.gitHubDetection?.releaseNotes?.await()?.trim(),
             manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
-            manifestVersion = schemasImpl.manifestOverride
-                ?: schemasImpl.defaultLocaleSchema.properties.manifestVersion.default
+            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
         ).toEncodedYaml()
     }
 
@@ -97,7 +91,7 @@ class DefaultLocaleManifestData : KoinComponent {
             license = license,
             shortDescription = shortDescription,
             manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
-            manifestVersion = schemasImpl.defaultLocaleSchema.properties.manifestVersion.default
+            manifestVersion = Schemas.manifestVersion
         )
     }
 

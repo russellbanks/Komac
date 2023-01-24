@@ -12,7 +12,7 @@ import token.Token
  * This class exposes functions to interact with Windows Credential Manager
  */
 abstract class CredManagerBackedSecureStore<E : Token?> : SecretStore<E> {
-    private val INSTANCE = credAdvapi32Instance
+    private val instance = credAdvapi32Instance
 
     /**
      * Create a `Secret` from the string representation
@@ -60,7 +60,7 @@ abstract class CredManagerBackedSecureStore<E : Token?> : SecretStore<E> {
         var cred: E?
         try {
             // MSDN doc doesn't mention threading safety, so let's just be careful and synchronize the access
-            synchronized(INSTANCE) { read = INSTANCE.CredRead(key, CredAdvapi32.CRED_TYPE_GENERIC, 0, pcredential) }
+            synchronized(instance) { read = instance.CredRead(key, CredAdvapi32.CRED_TYPE_GENERIC, 0, pcredential) }
             cred = if (read) {
                 val credential = CredAdvapi32.CREDENTIAL(pcredential.credential)
                 val secretBytes: ByteArray = credential.CredentialBlob.getByteArray(
@@ -76,7 +76,7 @@ abstract class CredManagerBackedSecureStore<E : Token?> : SecretStore<E> {
         } catch (_: LastErrorException) {
             cred = null
         } finally {
-            synchronized(INSTANCE) { INSTANCE.CredFree(pcredential.credential) }
+            synchronized(instance) { instance.CredFree(pcredential.credential) }
         }
         return cred
     }
@@ -94,7 +94,7 @@ abstract class CredManagerBackedSecureStore<E : Token?> : SecretStore<E> {
      */
     override fun delete(key: String): Boolean {
         try {
-            synchronized(INSTANCE) { return INSTANCE.CredDelete(key, CredAdvapi32.CRED_TYPE_GENERIC, 0) }
+            synchronized(instance) { return instance.CredDelete(key, CredAdvapi32.CRED_TYPE_GENERIC, 0) }
         } catch (_: LastErrorException) {
             return false
         }
@@ -118,7 +118,7 @@ abstract class CredManagerBackedSecureStore<E : Token?> : SecretStore<E> {
         val credBlob = credentialBlob.toByteArray(Charsets.UTF_8)
         val cred: CredAdvapi32.CREDENTIAL = buildCred(key, username, credBlob)
         return try {
-            synchronized(INSTANCE) { INSTANCE.CredWrite(cred, 0) }
+            synchronized(instance) { instance.CredWrite(cred, 0) }
             true
         } catch (_: LastErrorException) {
             false

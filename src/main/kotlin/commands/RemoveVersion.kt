@@ -12,7 +12,7 @@ import data.SharedManifestData
 import data.VersionUpdateState
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
-import input.PromptType
+import input.LocaleType
 import input.Prompts
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHContent
@@ -90,7 +90,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
             text = "Reason",
             convert = {
                 when {
-                    it.isBlank() -> ConversionResult.Invalid(Errors.blankInput(null as PromptType?))
+                    it.isBlank() -> ConversionResult.Invalid(Errors.blankInput(null as LocaleType?))
                     it.length < minimumReasonLength || it.length > maximumReasonLength -> {
                         ConversionResult.Invalid(
                             Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength)

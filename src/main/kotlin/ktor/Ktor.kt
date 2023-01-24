@@ -129,6 +129,4 @@ object Ktor : KoinComponent {
         noRedirectClient.close()
         return redirectedInstallerUrl
     }
-
-    const val userAgent = "Microsoft-Delivery-Optimization/10.1"
 }

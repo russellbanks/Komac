@@ -66,13 +66,11 @@ object PackageIdentifier : KoinComponent {
                 ?.filter { it.name.matches(Regex(installerSchema.definitions.packageVersion.pattern)) }
                 ?.filter { it.isDirectory }
                 ?.also {
-                    if (it.isNotEmpty() && writeOutput) {
-                        println(colors.cyan("Found $packageIdentifier in the winget-pkgs repository"))
-                    }
+                    if (it.isNotEmpty() && writeOutput) info("Found $packageIdentifier in the winget-pkgs repository")
                 }
                 ?.map { it.name }
                 ?.let { PackageVersion.getHighestVersion(it) }
-                ?.also { if (writeOutput) println(colors.cyan("Found latest version: $it")) }
+                ?.also { if (writeOutput) info("Found latest version: $it") }
                 .also { sharedManifestData.latestVersion = it }
         } catch (_: IOException) {
             sharedManifestData.updateState = VersionUpdateState.NewPackage

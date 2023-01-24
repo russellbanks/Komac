@@ -1,4 +1,4 @@
-package data
+package schemas.manifest
 
 import com.charleskorn.kaml.MultiLineStringStyle
 import com.charleskorn.kaml.SingleLineStringStyle

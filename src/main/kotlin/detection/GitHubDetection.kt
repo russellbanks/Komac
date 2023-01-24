@@ -1,5 +1,6 @@
-package data
+package detection
 
+import data.GitHubImpl
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.appendPathSegments

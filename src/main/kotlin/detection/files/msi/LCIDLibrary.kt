@@ -1,9 +1,9 @@
-package data.msi
+package detection.files.msi
 
 import com.sun.jna.Library
 import com.sun.jna.Native
 
-@Suppress("FunctionName", "FunctionParameterNaming")
+@Suppress("FunctionName", "FunctionParameterNaming", "LocalVariableName")
 interface LCIDLibrary : Library {
     fun GetLocaleInfoW(Locale: Int, LCType: Int, lpLCData: CharArray?, cchData: Int): Int
 

@@ -7,6 +7,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.VersionManifest
+import schemas.manifest.YamlConfig
 
 @Single
 class VersionManifestData : KoinComponent {
@@ -19,8 +20,7 @@ class VersionManifestData : KoinComponent {
             packageVersion = sharedManifestData.packageVersion,
             defaultLocale = sharedManifestData.defaultLocale,
             manifestType = schemasImpl.versionSchema.properties.manifestType.const,
-            manifestVersion = schemasImpl.manifestOverride
-                ?: schemasImpl.versionSchema.properties.manifestVersion.default
+            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
         ).toEncodedYaml()
     }
     private fun VersionManifest.toEncodedYaml(): String {

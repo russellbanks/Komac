@@ -13,7 +13,7 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
-import data.YamlConfig
+import schemas.manifest.YamlConfig
 import data.installer.Architecture
 import data.installer.InstallerScope
 import data.installer.InstallerType

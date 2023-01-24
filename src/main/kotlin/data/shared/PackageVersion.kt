@@ -27,7 +27,7 @@ object PackageVersion : KoinComponent {
             println(colors.brightGreen(versionInfo))
             info(example)
             prompt(
-                prompt = colors.brightWhite(const),
+                prompt = const,
                 convert = { input ->
                     isPackageVersionValid(input)
                         ?.let { ConversionResult.Invalid(it) }
@@ -39,30 +39,27 @@ object PackageVersion : KoinComponent {
     }
 
     private suspend fun setUpgradeState(sharedManifestData: SharedManifestData) {
-        if (sharedManifestData.updateState == VersionUpdateState.NewPackage) return
-        val packageExistsInRepo = checkIfPackageExistsInRepo(sharedManifestData)
-        if (packageExistsInRepo) {
-            sharedManifestData.updateState = VersionUpdateState.UpdateVersion
-        } else {
-            setUpdateStateBasedOnPackageVersion(sharedManifestData)
+        when {
+            sharedManifestData.updateState == VersionUpdateState.NewPackage -> Unit
+            checkIfPackageExistsInRepo(sharedManifestData) -> {
+                sharedManifestData.updateState = VersionUpdateState.UpdateVersion
+            }
+            else -> {
+                val versionsToCompare = listOf(sharedManifestData.packageVersion, sharedManifestData.latestVersion)
+                val highestVersion = getHighestVersion(versionsToCompare.filterNotNull())
+                sharedManifestData.updateState = when (sharedManifestData.packageVersion) {
+                    highestVersion -> VersionUpdateState.NewVersion
+                    else -> VersionUpdateState.AddVersion
+                }
+            }
         }
     }
 
     private suspend fun checkIfPackageExistsInRepo(sharedManifestData: SharedManifestData): Boolean {
-        val packageNames = githubImpl.getMicrosoftWingetPkgs()
+        return githubImpl.getMicrosoftWingetPkgs()
             ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
             ?.map { it.name }
-        return packageNames?.contains(sharedManifestData.packageVersion) ?: false
-    }
-
-    private fun setUpdateStateBasedOnPackageVersion(sharedManifestData: SharedManifestData) {
-        val versionsToCompare = listOf(sharedManifestData.packageVersion, sharedManifestData.latestVersion)
-        val highestVersion = getHighestVersion(versionsToCompare.filterNotNull())
-        if (sharedManifestData.packageVersion == highestVersion) {
-            sharedManifestData.updateState = VersionUpdateState.NewVersion
-        } else {
-            sharedManifestData.updateState = VersionUpdateState.AddVersion
-        }
+            ?.contains(sharedManifestData.packageVersion) ?: false
     }
 
     private fun isPackageVersionValid(version: String): String? {

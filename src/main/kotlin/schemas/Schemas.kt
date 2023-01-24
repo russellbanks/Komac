@@ -6,7 +6,7 @@ import org.koin.core.component.get
 import schemas.data.InstallerSchema
 
 object Schemas {
-    private const val manifestVersion = "1.4.0"
+    const val manifestVersion = "1.4.0"
     const val installerSchema = "https://aka.ms/winget-manifest.installer.$manifestVersion.schema.json"
     const val defaultLocaleSchema = "https://aka.ms/winget-manifest.defaultLocale.$manifestVersion.schema.json"
     const val localeSchema = "https://aka.ms/winget-manifest.locale.$manifestVersion.schema.json"

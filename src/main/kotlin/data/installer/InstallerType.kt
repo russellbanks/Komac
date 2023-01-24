@@ -11,7 +11,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
-import data.msix.MsixBundle
+import detection.files.MsixBundle
 import input.Prompts
 import ktor.Ktor
 import org.koin.core.component.KoinComponent

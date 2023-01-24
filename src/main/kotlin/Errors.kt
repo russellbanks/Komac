@@ -1,5 +1,5 @@
 import data.locale.DescriptionType
-import input.PromptType
+import input.LocaleType
 import io.ktor.client.statement.HttpResponse
 
 object Errors {
@@ -49,7 +49,7 @@ object Errors {
 
     fun blankInput(descriptionType: DescriptionType? = null) = blankInput(descriptionType?.promptName)
 
-    fun blankInput(promptType: PromptType? = null) = blankInput(promptType.toString())
+    fun blankInput(localeType: LocaleType? = null) = blankInput(localeType.toString())
 
     fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
 

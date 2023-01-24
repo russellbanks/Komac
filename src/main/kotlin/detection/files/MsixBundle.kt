@@ -1,4 +1,4 @@
-package data.msix
+package detection.files
 
 import hashing.Hashing
 import it.skrape.core.htmlDocument

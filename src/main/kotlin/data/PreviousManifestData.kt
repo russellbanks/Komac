@@ -15,6 +15,7 @@ import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.VersionManifest
+import schemas.manifest.YamlConfig
 
 @Single
 class PreviousManifestData : KoinComponent {

@@ -12,9 +12,7 @@ enum class InstallerSwitch : KoinComponent {
 
     override fun toString() = name.replace(Regex("([A-Z])"), " $1").trim()
 
-    fun getLengthBoundary(
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Int, Int> {
+    fun getLengthBoundary(installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema): Pair<Int, Int> {
         val installerSwitchProperties = installerSchema.definitions.installerSwitches.properties
         return when (this) {
             Silent -> Pair(installerSwitchProperties.silent.minLength, installerSwitchProperties.silent.maxLength)

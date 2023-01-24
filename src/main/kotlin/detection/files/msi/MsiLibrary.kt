@@ -1,4 +1,4 @@
-package data.msi
+package detection.files.msi
 
 import com.sun.jna.Library
 import com.sun.jna.Native

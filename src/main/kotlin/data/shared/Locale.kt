@@ -11,7 +11,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
-import input.PromptType
+import input.LocaleType
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -25,24 +25,23 @@ object Locale : KoinComponent {
     val sharedManifestData: SharedManifestData by inject()
     val previousManifestData: PreviousManifestData by inject()
 
-    fun Terminal.localePrompt(promptType: PromptType) {
-        if (promptType == PromptType.InstallerLocale) {
+    fun Terminal.localePrompt(localeType: LocaleType) {
+        if (localeType == LocaleType.Installer) {
             sharedManifestData.msi?.productLanguage?.let {
                 installerManifestData.installerLocale = it
                 return
             }
         }
-        localeInfo(promptType).also { (info, infoColor) -> println(infoColor(info)) }
+        localeInfo(localeType).also { (info, infoColor) -> println(infoColor(info)) }
         info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
         val input = prompt(
-            prompt = brightWhite(promptType.toString()),
-            default = when (promptType) {
-                PromptType.InstallerLocale -> getPreviousValue()?.also { muted("Previous value: $it") }
-                PromptType.PackageLocale -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default
-                else -> null
+            prompt = brightWhite(localeType.toString()),
+            default = when (localeType) {
+                LocaleType.Installer -> getPreviousValue()?.also { muted("Previous value: $it") }
+                LocaleType.Package -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default
             },
             convert = { input ->
-                val error = if (promptType == PromptType.InstallerLocale) {
+                val error = if (localeType == LocaleType.Installer) {
                     isInstallerLocaleValid(input)
                 } else {
                     isPackageLocaleValid(input)
@@ -50,7 +49,7 @@ object Locale : KoinComponent {
                 error?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
         ) ?: exitProcess(ExitCode.CtrlC.code)
-        if (promptType == PromptType.InstallerLocale) {
+        if (localeType == LocaleType.Installer) {
             installerManifestData.installerLocale = input
         } else {
             sharedManifestData.defaultLocale = input
@@ -78,7 +77,7 @@ object Locale : KoinComponent {
     private fun isPackageLocaleValid(locale: String): String? {
         val packageLocaleSchema = get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale
         return when {
-            locale.isBlank() -> Errors.blankInput(PromptType.PackageLocale)
+            locale.isBlank() -> Errors.blankInput(LocaleType.Package)
             !locale.matches(Regex(packageLocaleSchema.pattern)) -> {
                 Errors.invalidRegex(Regex(packageLocaleSchema.pattern))
             }
@@ -87,11 +86,11 @@ object Locale : KoinComponent {
         }
     }
 
-    private fun localeInfo(promptType: PromptType): Pair<String, TextColors> {
+    private fun localeInfo(localeType: LocaleType): Pair<String, TextColors> {
         return buildString {
-            append(if (promptType == PromptType.PackageLocale) Prompts.required else Prompts.optional)
-            append(" Enter the $promptType")
-        } to if (promptType == PromptType.PackageLocale) brightGreen else brightYellow
+            append(if (localeType == LocaleType.Package) Prompts.required else Prompts.optional)
+            append(" Enter the $localeType")
+        } to if (localeType == LocaleType.Package) brightGreen else brightYellow
     }
 
     const val installerLocaleConst = "Installer Locale"

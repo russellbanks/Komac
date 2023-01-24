@@ -4,23 +4,21 @@ import Errors
 import ExitCode
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Platform
 import data.DefaultLocaleManifestData
-import data.GitHubDetection
+import detection.GitHubDetection
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.locale.LocaleUrl
-import data.msi.Msi
-import data.msix.Msix
-import data.msix.MsixBundle
-import data.zip.Zip
+import detection.files.msi.Msi
+import detection.files.Msix
+import detection.files.MsixBundle
+import detection.files.Zip
 import hashing.Hashing.hash
-import input.PromptType
 import input.Prompts
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
@@ -59,7 +57,7 @@ object Url : KoinComponent {
     private suspend fun Terminal.setInstallerUrlFromPrompt(installerManifestData: InstallerManifestData) {
         println(colors.brightGreen(installerUrlInfo))
         installerManifestData.installerUrl = prompt(
-            prompt = colors.brightWhite(PromptType.InstallerUrl.toString()),
+            prompt = installerUrlConst,
             convert = { input ->
                 runBlocking { isUrlValid(url = Url(input), schema = schemasImpl.installerSchema, canBeBlank = false) }
                     ?.let { ConversionResult.Invalid(it) }
@@ -86,19 +84,14 @@ object Url : KoinComponent {
                 }
             )
             if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
-                println(brightYellow(urlChanged))
+                warning(urlChanged)
                 val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
                 if (error == null) {
                     installerManifestData.installerUrl = redirectedUrl
                     success("URL changed to $redirectedUrl")
                 } else {
-                    println(
-                        verticalLayout {
-                            cell(error)
-                            cell("")
-                            cell(colors.brightYellow(detectedUrlValidationFailed))
-                        }
-                    )
+                    warning(error)
+                    warning(detectedUrlValidationFailed)
                 }
                 println()
             } else {
@@ -173,11 +166,7 @@ object Url : KoinComponent {
                 }
             )
             println()
-            println(
-                (colors.brightYellow + colors.bold)(
-                    "All packages inside the MSIX Bundle will be added as separate installers in the manifest"
-                )
-            )
+            info("All packages inside the MSIX Bundle will be added as separate installers in the manifest")
             println()
         }
     }
@@ -250,7 +239,7 @@ object Url : KoinComponent {
         )
         return when {
             url == Url(URLBuilder()) && canBeBlank -> null
-            url == Url(URLBuilder()) -> Errors.blankInput(PromptType.InstallerUrl)
+            url == Url(URLBuilder()) -> Errors.blankInput(installerUrlConst)
             url.toString().length > maxLength -> Errors.invalidLength(max = maxLength)
             !url.toString().matches(pattern) -> Errors.invalidRegex(pattern)
             else -> checkUrlResponse(url)
@@ -311,4 +300,6 @@ object Url : KoinComponent {
 
     private const val urlChanged = "[Warning] URL Changed - " +
         "The URL was changed during processing and will be re-validated"
+
+    private const val installerUrlConst = "Installer Url"
 }

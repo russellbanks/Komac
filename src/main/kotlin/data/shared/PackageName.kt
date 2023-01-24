@@ -26,7 +26,7 @@ object PackageName : KoinComponent {
         info(example)
         sharedManifestData.msi?.productName?.let { info("Detected from MSI: $it") }
         sharedManifestData.packageName = prompt(
-            prompt = colors.brightWhite(const),
+            prompt = const,
             default = previousManifestData.remoteDefaultLocaleData?.packageName
                 ?.also { muted("Previous package name: $it") },
             convert = { input ->

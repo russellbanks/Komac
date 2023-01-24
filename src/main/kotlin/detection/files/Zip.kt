@@ -1,4 +1,4 @@
-package data.zip
+package detection.files
 
 import Errors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
@@ -11,8 +11,7 @@ import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
-import data.msi.Msi
-import data.msix.MsixBundle
+import detection.files.msi.Msi
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get

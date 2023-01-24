@@ -14,7 +14,7 @@ class Clients {
             protocolVersion = java.net.http.HttpClient.Version.HTTP_2
         }
         install(UserAgent) {
-            agent = Ktor.userAgent
+            agent = userAgent
         }
         install(HttpTimeout) {
             connectTimeoutMillis = timeoutMillis
@@ -23,5 +23,6 @@ class Clients {
 
     companion object {
         const val timeoutMillis = 1500L
+        const val userAgent = "Microsoft-Delivery-Optimization/10.1"
     }
 }

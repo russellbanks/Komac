@@ -1,9 +1,10 @@
 package data
 
-import data.msi.Msi
-import data.msix.Msix
-import data.msix.MsixBundle
-import data.zip.Zip
+import detection.GitHubDetection
+import detection.files.msi.Msi
+import detection.files.Msix
+import detection.files.MsixBundle
+import detection.files.Zip
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 

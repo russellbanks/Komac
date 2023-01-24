@@ -9,6 +9,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
+import schemas.manifest.YamlConfig
 import java.time.LocalDate
 
 @Single
@@ -51,7 +52,7 @@ class InstallerManifestData : KoinComponent {
                 ?: previousInstaller?.nestedInstallerType
                 ?: previousManifest?.nestedInstallerType?.toPerInstallerNestedInstallerType(),
             nestedInstallerFiles = sharedManifestData.zip?.nestedInstallerFiles
-                .takeIf { it?.isNotEmpty() == true }
+                ?.ifEmpty { null }
                 ?: previousInstaller?.nestedInstallerFiles
                 ?: previousManifest?.nestedInstallerFiles?.map { it.toPerInstallerNestedInstallerFiles() },
             installerUrl = installerUrl,
@@ -145,8 +146,7 @@ class InstallerManifestData : KoinComponent {
                 installerScopeDistinct -> installers.firstNotNullOf { it.scope }.toManifestScope()
                 else -> previousManifestData.remoteInstallerData?.scope
             },
-            installModes = installModes
-                .takeIf { it?.isNotEmpty() == true } ?: previousManifestData.remoteInstallerData?.installModes,
+            installModes = installModes?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.installModes,
             installerSwitches = when {
                 installerSwitchesDistinct -> {
                     installers.firstNotNullOf { it.installerSwitches }.toManifestInstallerSwitches()
@@ -163,10 +163,7 @@ class InstallerManifestData : KoinComponent {
             protocols = protocols?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.protocols,
             fileExtensions = fileExtensions?.ifEmpty { null }
                 ?: previousManifestData.remoteInstallerData?.fileExtensions,
-            releaseDate = when {
-                releaseDateDistinct -> installers.map { it.releaseDate }.first()
-                else -> null
-            },
+            releaseDate = if (releaseDateDistinct) installers.map { it.releaseDate }.first() else null,
             appsAndFeaturesEntries = when (installers.distinctBy { it.appsAndFeaturesEntries }.size) {
                 1 -> {
                     installers

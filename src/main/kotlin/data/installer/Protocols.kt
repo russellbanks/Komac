@@ -1,8 +1,7 @@
 package data.installer
 
 import Errors
-import Validation
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -12,7 +11,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 
 object Protocols : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -20,39 +18,34 @@ object Protocols : KoinComponent {
     private val protocolsSchema = get<SchemasImpl>().installerSchema.definitions.protocols
 
     fun Terminal.protocolsPrompt() {
-        do {
-            println(
-                colors.brightYellow(
-                    "${Prompts.optional} ${protocolsSchema.description} (Max ${protocolsSchema.maxItems})"
-                )
-            )
-            val input = prompt(
-                prompt = const,
-                default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous protocols: $it") }
-            )?.trim()?.convertToYamlList(protocolsSchema.uniqueItems)
-            val (protocolsValid, error) = areProtocolsValid(input)
-            if (protocolsValid == Validation.Success) installerManifestData.protocols = input
-            error?.let { println(brightRed(it)) }
-            println()
-        } while (protocolsValid != Validation.Success)
+        println(
+            colors.brightYellow("${Prompts.optional} ${protocolsSchema.description} (Max ${protocolsSchema.maxItems})")
+        )
+        installerManifestData.protocols = prompt(
+            prompt = const,
+            default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous protocols: $it") },
+            convert = {
+                val error = areProtocolsValid(it.trim().convertToYamlList(protocolsSchema.uniqueItems))
+                if (error != null) {
+                    ConversionResult.Invalid(error)
+                } else {
+                    ConversionResult.Valid(it.trim())
+                }
+            }
+        )?.convertToYamlList(protocolsSchema.uniqueItems)
+        println()
     }
 
-    private fun areProtocolsValid(
-        protocols: Iterable<String>?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
-        val protocolsSchema = installerSchema.definitions.protocols
+    private fun areProtocolsValid(protocols: Iterable<String>?): String? {
         return when {
-            (protocols?.count() ?: 0) > protocolsSchema.maxItems -> {
-                Validation.InvalidLength to Errors.invalidLength(max = protocolsSchema.maxItems)
-            }
+            (protocols?.count() ?: 0) > protocolsSchema.maxItems -> Errors.invalidLength(max = protocolsSchema.maxItems)
             protocols?.any { it.length > protocolsSchema.items.maxLength } == true -> {
-                Validation.InvalidLength to Errors.invalidLength(
+                Errors.invalidLength(
                     max = protocolsSchema.items.maxLength,
                     items = protocols.filter { it.length > protocolsSchema.items.maxLength }
                 )
             }
-            else -> Validation.Success to null
+            else ->  null
         }
     }
 
