@@ -2,7 +2,7 @@ name: 'Feature Request'
 description: Request a new feature
 title: '[Feature/Idea]: '
 labels: [feat]
-assignees: vedantmgoyal2009
+assignees: russellbanks
 body:
   - type: markdown
     attributes:
