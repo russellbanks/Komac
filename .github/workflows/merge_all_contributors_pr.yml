@@ -1,0 +1,32 @@
+name: Merge @all-contributors[bot] PR
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code 👋
+        uses: actions/checkout@v3
+      - name: Check and merge ⛙
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+          script: |
+            const { repo: { owner, repo } } = context;
+            const pr = context.payload.pull_request;
+
+            if (pr.user.id !== 46447321) {
+              console.log('Not an @all-contributors [bot] pull request');
+              return;
+            }
+
+            console.log(`Merging pull request: ${pr.html_url}`);
+            await github.rest.pulls.merge({
+              owner, repo,
+              pull_number: pr.number,
+              merge_method: "rebase",
+            });

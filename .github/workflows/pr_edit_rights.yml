@@ -45,7 +45,7 @@ jobs:
               const pullRequest = result.repository.pullRequest;
 
               if (pullRequest.headRepositoryOwner.login === 'russellbanks') {
-                console.log('PR owned by JanDeDobbeleer');
+                console.log('PR owned by russellbanks');
                 return;
               }
 
