@@ -51,7 +51,7 @@ class GitHubDetection(url: Url) : KoinComponent {
             privacyUrl = async {
                 repository
                     .getDirectoryContent("")
-                    .find { it.name.lowercase().contains("privacy") }
+                    .find { it.name.lowercase().contains(other = "privacy", ignoreCase = true) }
                     ?.htmlUrl
                     ?.let { Url(it) }
             }
@@ -80,47 +80,43 @@ class GitHubDetection(url: Url) : KoinComponent {
     /**
      * Extracts formatted release notes from a given release.
      *
-     * 1. The function first splits the release notes body into lines and initializes a variable called "title" to an
-     * empty string and "titleAdded" to false.
+     * 1. The function first splits the release notes body into lines and cleans each line by removing dropdowns,
+     * changing all bullet points to be dashes, removing code formatted with backticks, and converting Markdown links
+     * to plaintext.
      * 2. It then uses a buildString block to loop through each line of the release notes.
-     * 3. If the line starts with "#", the title variable is updated to the text after the "#" and titleAdded is set to
-     * false.
-     * 4. If the line starts with "- " or "* ", it is added to the string with a "- " prefix, and if the title has not
-     * been added yet, it is also added to the string.
-     * 5. If a title has been added and the next two lines do not start with "#", the title is removed from the string
-     * and the titleAdded variable is set to false.
-     * 6. Finally, the string has all instances of "text" removed and is trimmed, returning null if the string is empty.
+     * 3. If the line starts with "#" and there is another bullet point within two lines of it, it is added.
+     * 4. If the line starts with "- " it is added, with each sentence being on a new line and indented.
+     * 5. Finally, either the string is returned, or null if it is blank.
      *
      * @param release the [GHRelease] object containing the release notes to be formatted
      * @return A formatted string of the release notes or null if the release notes are blank
      */
     private fun getFormattedReleaseNotes(release: GHRelease): String? {
-        val lines = release.body.lines()
-        var title = ""
-        var titleAdded = false
+        val lines = release.body
+            .replace(Regex("<details>.*?</details>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+            .lines()
+            .map { line ->
+                line.trim()
+                    .let { if (it.startsWith("* ")) it.replaceFirst("* ", "- ") else it }
+                    .replace("`", "")
+                    .replace(Regex("\\[([^]]+)]\\([^)]+\\)"), "$1")
+            }
         return buildString {
             lines.forEachIndexed { index, line ->
-                val cleanedLine = line.trim()
-                if (cleanedLine.startsWith("#")) {
-                    title = cleanedLine.dropWhile { it == '#' }.trim().ifEmpty { "" }
-                    titleAdded = false
-                } else if (cleanedLine.startsWith("- ") || cleanedLine.startsWith("* ")) {
-                    if (!titleAdded && title.isNotEmpty()) {
-                        appendLine(title)
-                        titleAdded = true
+                when {
+                    line.startsWith("#") -> {
+                        if (lines[index + 1].startsWith("- ") || lines[index + 2].startsWith("- ")) {
+                            line.dropWhile { it == '#' }.trim().takeUnless { it.isBlank() }?.let { appendLine(it) }
+                        }
                     }
-                    appendLine("- ${cleanedLine.substring(2).trim()}")
-                } else if (
-                    titleAdded && (index < lines.size - 2 &&
-                        !lines[index + 1].startsWith("#") &&
-                        !lines[index + 2].startsWith("#"))
-                ) {
-                    delete(length - title.length - 1, length)
-                    title = ""
-                    titleAdded = false
+                    line.startsWith("- ") -> {
+                        appendLine(
+                            "- ${line.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n  ").drop(2).trim()}"
+                        )
+                    }
                 }
             }
-        }.replace(Regex("\\[([^]]+)]\\([^)]+\\)"), "$1").trim().ifBlank { null }
+        }.ifBlank { null }
     }
 
     companion object {
