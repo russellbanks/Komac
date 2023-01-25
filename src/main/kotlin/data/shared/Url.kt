@@ -27,6 +27,7 @@ import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
 import ktor.Http
+import ktor.Ktor.decodeHex
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
 import ktor.Ktor.isRedirect
@@ -46,7 +47,7 @@ object Url : KoinComponent {
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) {
         val installerManifestData: InstallerManifestData by inject()
         if (parameterUrl != null) {
-            installerManifestData.installerUrl = parameterUrl
+            installerManifestData.installerUrl = parameterUrl.decodeHex()
         } else {
             setInstallerUrlFromPrompt(installerManifestData)
         }
@@ -61,7 +62,7 @@ object Url : KoinComponent {
             convert = { input ->
                 runBlocking { isUrlValid(url = Url(input), schema = schemasImpl.installerSchema, canBeBlank = false) }
                     ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(Url(input))
+                    ?: ConversionResult.Valid(Url(input.trim()).decodeHex())
             }
         ) ?: exitProcess(ExitCode.CtrlC.code)
         println()

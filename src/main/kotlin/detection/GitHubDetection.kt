@@ -9,6 +9,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import ktor.Ktor.decodeHex
 import org.kohsuke.github.GHRelease
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -37,10 +38,14 @@ class GitHubDetection(url: Url) : KoinComponent {
         CoroutineScope(Dispatchers.IO).launch {
             val tag = url.pathSegments.dropLast(1).last()
             val repository = githubImpl.github.await().getRepository("${url.pathSegments[1]}/${url.pathSegments[2]}")
-            val release: GHRelease = repository.getReleaseByTagName(tag)
-            val asset = release.listAssets().first { it.browserDownloadUrl == url.toString() }
-            releaseDate = async { LocalDate.ofInstant(asset.createdAt.toInstant(), ZoneId.systemDefault()) }
-            license = async { repository.license?.key?.uppercase() }
+            val release: GHRelease? = runCatching { repository.getReleaseByTagName(tag) }.getOrNull()
+            val asset = release?.listAssets()?.firstOrNull { Url(it.browserDownloadUrl).decodeHex() == url.decodeHex() }
+            releaseDate = async { asset?.let { LocalDate.ofInstant(it.createdAt.toInstant(), ZoneId.systemDefault()) } }
+            license = async {
+                runCatching {
+                    repository.license?.key?.uppercase()?.takeUnless { it.equals(other = "other", ignoreCase = true) }
+                }.getOrNull()
+            }
             packageUrl = async { Url(repository.htmlUrl.toURI()) }
             licenseUrl = async { repository.licenseContent?.htmlUrl?.let { Url(it) } }
             privacyUrl = async {
@@ -50,8 +55,8 @@ class GitHubDetection(url: Url) : KoinComponent {
                     ?.htmlUrl
                     ?.let { Url(it) }
             }
-            releaseNotesUrl = async { Url(release.htmlUrl.toURI()) }
-            releaseNotes = async { getFormattedReleaseNotes(release) }
+            releaseNotesUrl = async { release?.htmlUrl?.let { Url(it.toURI()) } }
+            releaseNotes = async { release?.let { getFormattedReleaseNotes(it) } }
             topics = async { repository.listTopics() }
             publisherUrl = async { runCatching { repository.owner.blog }.getOrNull()?.let { Url(it) } }
             shortDescription = async { repository.description }

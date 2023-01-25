@@ -24,6 +24,7 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
 import java.io.File
+import java.net.URLDecoder
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -128,5 +129,14 @@ object Ktor : KoinComponent {
         }
         noRedirectClient.close()
         return redirectedInstallerUrl
+    }
+
+    /**
+     * Decodes a [Url] using [Charsets.UTF_8]
+     *
+     * @return the decoded url or the original url if there was an exception
+     */
+    fun Url.decodeHex(): Url {
+        return runCatching { Url(URLDecoder.decode(toString(), Charsets.UTF_8)) }.getOrDefault(this)
     }
 }
