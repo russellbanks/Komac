@@ -37,10 +37,9 @@ jobs:
             build/distributions/*.dmg
             build/distributions/*.deb
             build/distributions/*.exe
-          draft: false
           fail_on_unmatched_files: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-jar:
     name: Build jar
@@ -64,12 +63,10 @@ jobs:
       - name: Upload to release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            build/libs/*-all.jar
-          draft: false
+          files: build/libs/*-all.jar
           fail_on_unmatched_files: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release-winget:
     name: Release winget
