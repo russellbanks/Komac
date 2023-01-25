@@ -48,7 +48,7 @@ jobs:
               const name = file.filename;
               // addContribution(contributions, name, 'themes/', 'design');
               addContribution(contributions, name, 'src/', 'code');
-              // addContribution(contributions, name, 'website/', 'doc');
+              addContribution(contributions, name, 'README.md', 'doc');
             }
 
             if (contributions.length === 0) {
