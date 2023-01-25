@@ -6,18 +6,19 @@ on:
       - "v*.*.*"
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-binaries:
+    name: Build binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout the repo
+      - name: Checkout code 👋
         uses: actions/checkout@v3
 
-      - name: Install Conveyor
-        run: |-
-          wget https://downloads.hydraulic.dev/conveyor/hydraulic-conveyor_5.0_amd64.deb
-          sudo apt install ./hydraulic-conveyor_5.0_amd64.deb
-
-      - name: Setup JDK 17
+      - name: Setup JDK
         uses: actions/setup-java@v3
         with:
           distribution: temurin
@@ -26,30 +27,56 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Build binaries
+        run: ./gradlew jpackage
 
-      - name: Build releases for all platforms
-        run: conveyor make site
-
-      - name: Remove Jar
-        run: rm build/libs/*.jar
-
-      - name: Create Shadow Jar
-        run: ./gradlew shadowJar
-
-      - name: Rename Shadow Jar
-        run: rename 's/-all.jar/.jar/' Komac*-all.jar
-
-      - name: Upload artifacts
+      - name: Upload to release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            build/libs/*.jar
-            output/*.appinstaller
-            output/*.exe
-            output/*.msix
-            output/*.tar.gz
-            output/*.zip
-            output/*.deb
-          generate_release_notes: true
+            build/distributions/*.dmg
+            build/distributions/*.deb
+            build/distributions/*.exe
+          draft: false
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+  build-jar:
+    name: Build jar
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code 👋
+        uses: actions/checkout@v3
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build jar
+        run: ./gradlew jar
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/libs/*-all.jar
+          draft: false
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+
+  release-winget:
+    name: Release winget
+    needs: [build-binaries]
+    runs-on: windows-latest
+    steps:
+      - uses: vedantmgoyal2009/winget-releaser@v1
+        with:
+          identifier: RussellBanks.Komac
+          token: ${{ secrets.WINGET_TOKEN }}
