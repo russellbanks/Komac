@@ -1,0 +1,28 @@
+{
+  "files": [
+    "CONTRIBUTORS.md"
+  ],
+  "imageSize": 90,
+  "commit": true,
+  "contributorsPerLine": 7,
+  "contributorsSortAlphabetically": true,
+  "projectName": "Komac",
+  "projectOwner": "russellbanks",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true,
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "russellbanks",
+      "name": "Russell Banks",
+      "avatar_url": "https://avatars.githubusercontent.com/u/74878137?v=4",
+      "profile": "http://russell.bandev.uk",
+      "contributions": [
+        "code",
+        "ideas",
+        "maintenance"
+      ]
+    }
+  ]
+}
