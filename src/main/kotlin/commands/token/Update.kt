@@ -1,4 +1,4 @@
-package commands
+package commands.token
 
 import com.github.ajalt.clikt.core.CliktCommand
 import kotlinx.coroutines.runBlocking
@@ -6,7 +6,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import token.TokenStore
 
-class ChangeToken : CliktCommand(name = "token"), KoinComponent {
+class Update : CliktCommand(), KoinComponent {
     private val tokenStore: TokenStore by inject()
 
     override fun run() = runBlocking {

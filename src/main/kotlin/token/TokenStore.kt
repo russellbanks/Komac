@@ -27,6 +27,8 @@ class TokenStore {
         storedToken = Token(tokenString)
     }
 
+    fun deleteToken() = credentialStore.delete(credentialKey)
+
     suspend fun promptForToken(terminal: Terminal): String {
         return terminal.prompt(
             prompt = terminal.colors.brightGreen("Please enter your GitHub personal access token"),
