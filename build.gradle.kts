@@ -118,6 +118,10 @@ tasks.jpackage {
     linux {
         type = ImageType.DEB
     }
+
+    mac {
+        type = ImageType.DMG
+    }
 }
 
 tasks.withType<ShadowJar> {
