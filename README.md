@@ -12,7 +12,9 @@
     <a href="https://github.com/russellbanks/Komac/issues">Request Feature</a>
 </p>
 
-![Contributors](https://img.shields.io/github/contributors/russellbanks/Komac?color=dark-green) ![Issues](https://img.shields.io/github/issues/russellbanks/Komac) ![License](https://img.shields.io/github/license/russellbanks/Komac)
+![GitHub contributors (via allcontributors.org)](https://img.shields.io/github/all-contributors/russellbanks/Komac/main)
+![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
+![License](https://img.shields.io/github/license/russellbanks/Komac)
 
 ## About The Project
 
@@ -42,7 +44,7 @@ This is similar for MSIX's, APPX's, MSIXBundles, APPXBundles, Zips, etc, whereby
 
 As another (of many things Komac detects) example, if you enter a Url and it contains x64 (or x86, arm, i686, i386, x86_x64, etc) within it, we can't guarantee that this is what the installer actually is, but 99% of the time it will be, so we can show this to the user and even use it as a default value for the prompt.
 
-Finally, Komac is community-oriented. I'm a sole developer who's passionate about programming and the WinGet Community Package Manager repository.
+Finally, Komac is community-oriented. I'm a sole developer who's passionate about programming and the WinGet Package Manager Community repository.
 
 ## How can I support Komac?
 
