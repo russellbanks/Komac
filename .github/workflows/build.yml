@@ -11,7 +11,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout the repo
+      - name: Checkout code 👋
         uses: actions/checkout@v3
 
       - name: Setup JDK
