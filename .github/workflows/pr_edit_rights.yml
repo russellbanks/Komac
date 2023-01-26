@@ -13,7 +13,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  notify-when-maintainers-cannot-edit:
+  notify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v6
