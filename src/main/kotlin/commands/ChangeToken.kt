@@ -10,13 +10,10 @@ class ChangeToken : CliktCommand(name = "token"), KoinComponent {
     private val tokenStore: TokenStore by inject()
 
     override fun run() = runBlocking {
-        if (tokenStore.storedToken == null) {
-            tokenStore.token.await()
+        if (tokenStore.token == null) {
+            tokenStore.promptForToken(currentContext.terminal)
         } else {
-            val confirmed = confirm(
-                text = "Would you like to change the currently stored token?",
-                default = true
-            )
+            val confirmed = confirm(text = "Would you like to change the currently stored token?", default = true)
             if (confirmed == true) {
                 tokenStore.promptForToken(currentContext.terminal).also { tokenStore.putToken(it) }
                 currentContext.terminal.success("Token changed successfully")

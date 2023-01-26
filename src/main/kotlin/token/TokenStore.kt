@@ -17,49 +17,40 @@ import kotlin.system.exitProcess
 class TokenStore {
     private val credentialStore = StorageProvider.getTokenStorage()
         ?: throw UnsupportedOperationException("Could not find secure token storage for the current operating system")
-    var token: Deferred<String> = CoroutineScope(Dispatchers.IO).async { getToken(Terminal()) }
-    var storedToken = credentialStore[credentialKey]
-
-    private suspend fun getToken(terminal: Terminal): String {
-        return if (credentialStore[credentialKey] == null) {
-            promptForToken(terminal).also { putToken(it) }
-        } else {
-            val credentialToken = credentialStore[credentialKey]?.value ?: ""
-            val (tokenValid, ioException) = checkIfTokenValid(credentialToken)
-            if (tokenValid) {
-                credentialToken
-            } else {
-                terminal.warning(ioException ?: "Token is invalid. Please enter a new token.")
-                promptForToken(terminal).also { putToken(it) }
-            }
-        }
-    }
+    private var storedToken = credentialStore[credentialKey]
+    val token: String?
+        get() = storedToken?.value
+    val isTokenValid: Deferred<Boolean> = CoroutineScope(Dispatchers.IO).async { checkIfTokenValid(storedToken?.value) }
 
     suspend fun putToken(tokenString: String) = coroutineScope {
         credentialStore.add(credentialKey, Token(tokenString))
-        token = async { tokenString }
+        storedToken = Token(tokenString)
     }
 
-    fun promptForToken(terminal: Terminal): String {
+    suspend fun promptForToken(terminal: Terminal): String {
         return terminal.prompt(
             prompt = terminal.colors.brightGreen("Please enter your GitHub personal access token"),
             convert = {
-                val (tokenValid, ioException) = checkIfTokenValid(it)
-                if (tokenValid) {
+                if (checkIfTokenValid(it)) {
                     ConversionResult.Valid(it)
                 } else {
-                    ConversionResult.Invalid(ioException?.message ?: "Invalid token. Please try again.")
+                    ConversionResult.Invalid("Invalid token. Please try again.")
                 }
             }
-        ) ?: exitProcess(ExitCode.CtrlC.code)
+        )?.also { putToken(it) } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    private fun checkIfTokenValid(tokenString: String?): Pair<Boolean, IOException?> {
+    private fun checkIfTokenValid(tokenString: String?): Boolean {
         return try {
-            GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid to null
-        } catch (ioException: IOException) {
-            false to ioException
+            GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid
+        } catch (_: IOException) {
+            false
         }
+    }
+
+    suspend fun invalidTokenPrompt(terminal: Terminal) {
+        terminal.warning("Token is invalid. Please enter a new token.")
+        promptForToken(terminal).also { putToken(it) }
     }
 
     companion object {

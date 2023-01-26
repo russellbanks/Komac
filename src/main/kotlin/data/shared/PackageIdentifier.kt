@@ -16,16 +16,21 @@ import org.koin.core.component.inject
 import schemas.Schema
 import schemas.SchemasImpl
 import schemas.data.InstallerSchema
+import token.TokenStore
 import java.io.IOException
 import kotlin.system.exitProcess
 
 object PackageIdentifier : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private lateinit var installerSchema: InstallerSchema
+    private val tokenStore: TokenStore by inject()
 
     suspend fun Terminal.packageIdentifierPrompt(packageIdentifierParameter: String? = null) {
         val schemasImpl: SchemasImpl = get()
         if (packageIdentifierParameter == null) {
+            if (tokenStore.token == null) {
+                tokenStore.promptForToken(this)
+            }
             println(colors.brightGreen(identifierInfo))
             info(example)
             sharedManifestData.packageIdentifier = prompt(
@@ -45,6 +50,10 @@ object PackageIdentifier : KoinComponent {
                         ?: ConversionResult.Valid(input.trim())
                 }
             ) ?: exitProcess(ExitCode.CtrlC.code)
+            if (!tokenStore.isTokenValid.await()) {
+                println()
+                tokenStore.invalidTokenPrompt(this)
+            }
             sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
             println()
         } else {
