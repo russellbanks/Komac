@@ -5,7 +5,6 @@ import io.ktor.http.Url
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import schemas.Schemas
 import schemas.manifest.InstallerManifest.AppsAndFeaturesEntry
 import java.time.LocalDate
 

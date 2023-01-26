@@ -8,7 +8,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import org.kohsuke.github.GitHubBuilder
+import org.kohsuke.github.GitHub
 import org.koin.core.annotation.Single
 import java.io.IOException
 import kotlin.system.exitProcess
@@ -20,11 +20,12 @@ class TokenStore {
     private var storedToken = credentialStore[credentialKey]
     val token: String?
         get() = storedToken?.value
-    val isTokenValid: Deferred<Boolean> = CoroutineScope(Dispatchers.IO).async { checkIfTokenValid(storedToken?.value) }
+    var isTokenValid: Deferred<Boolean> = CoroutineScope(Dispatchers.IO).async { checkIfTokenValid(token) }
 
     suspend fun putToken(tokenString: String) = coroutineScope {
         credentialStore.add(credentialKey, Token(tokenString))
         storedToken = Token(tokenString)
+        isTokenValid = async { true }
     }
 
     fun deleteToken() = credentialStore.delete(credentialKey)
@@ -44,7 +45,7 @@ class TokenStore {
 
     private fun checkIfTokenValid(tokenString: String?): Boolean {
         return try {
-            GitHubBuilder().withOAuthToken(tokenString).build().isCredentialValid
+            GitHub.connectUsingOAuth(tokenString).isCredentialValid
         } catch (_: IOException) {
             false
         }
