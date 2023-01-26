@@ -67,7 +67,6 @@ object Ktor : KoinComponent {
                         }
                     }
                 }
-                stop()
                 clear()
             }
         }

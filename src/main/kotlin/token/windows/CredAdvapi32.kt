@@ -6,7 +6,6 @@ import com.sun.jna.Pointer
 import com.sun.jna.Structure
 import com.sun.jna.Structure.FieldOrder
 import com.sun.jna.platform.win32.WinBase.FILETIME
-import com.sun.jna.platform.win32.WinDef.DWORD
 import com.sun.jna.win32.StdCallLibrary
 import com.sun.jna.win32.W32APIOptions
 
@@ -55,14 +54,14 @@ internal interface CredAdvapi32 : StdCallLibrary {
          *
          * See MSDN doc for all possible flags
          */
-        lateinit var Flags: DWORD
+        @JvmField var Flags: Int = 0
 
         /**
          * The type of the credential. This member cannot be changed after the credential is created.
          *
          * See MSDN doc for all possible types
          */
-        lateinit var Type: DWORD
+        @JvmField var Type = 0
 
         /**
          * The name of the credential. The TargetName and Type members uniquely identify the credential.
@@ -71,25 +70,25 @@ internal interface CredAdvapi32 : StdCallLibrary {
          *
          * See MSDN doc for additional requirement
          */
-        lateinit var TargetName: String
+        @JvmField var TargetName: String? = null
 
         /**
          * A string comment from the user that describes this credential. This member cannot be longer than
          * CRED_MAX_STRING_LENGTH (256) characters.
          */
-        lateinit var Comment: String
+        @JvmField var Comment: String? = null
 
         /**
          * The time, in Coordinated Universal Time (Greenwich Mean Time), of the last modification of the credential.
          * For write operations, the value of this member is ignored.
          */
-        lateinit var LastWritten: FILETIME
+        @JvmField var LastWritten: FILETIME? = null
 
         /**
          * The size, in bytes, of the CredentialBlob member. This member cannot be larger than
          * CRED_MAX_CREDENTIAL_BLOB_SIZE (512) bytes.
          */
-        lateinit var CredentialBlobSize: DWORD
+        @JvmField var CredentialBlobSize = 0
 
         /**
          * Secret data for the credential. The CredentialBlob member can be both read and written.
@@ -105,26 +104,26 @@ internal interface CredAdvapi32 : StdCallLibrary {
          * Credentials are expected to be portable. Applications should ensure that the data in CredentialBlob is
          * portable. The application defines the byte-endian and alignment of the data in CredentialBlob.
          */
-        lateinit var CredentialBlob: Pointer
+        @JvmField var CredentialBlob: Pointer? = null
 
         /**
          * Defines the persistence of this credential. This member can be read and written.
          *
          * See MSDN doc for all possible values
          */
-        lateinit var Persist: DWORD
+        @JvmField var Persist = 0
 
         /**
          * The number of application-defined attributes to be associated with the credential. This member can be
          * read and written. Its value cannot be greater than CRED_MAX_ATTRIBUTES (64).
          */
-        lateinit var AttributeCount: DWORD
+        @JvmField var AttributeCount = 0
 
         /**
          * Application-defined attributes that are associated with the credential. This member can be read
          * and written.
          */
-        lateinit var Attributes: Pointer
+        @JvmField var Attributes: Pointer? = null
 
         /**
          * Alias for the TargetName member. This member can be read and written. It cannot be longer than
@@ -133,7 +132,7 @@ internal interface CredAdvapi32 : StdCallLibrary {
          * If the credential Type is CRED_TYPE_GENERIC, this member can be non-NULL, but the credential manager
          * ignores the member.
          */
-        lateinit var TargetAlias: String
+        @JvmField var TargetAlias: String? = null
 
         /**
          * The username of the account used to connect to TargetName.
@@ -148,7 +147,7 @@ internal interface CredAdvapi32 : StdCallLibrary {
          *
          * This member cannot be longer than CRED_MAX_USERNAME_LENGTH (513) characters.
          */
-        lateinit var UserName: String
+        @JvmField var UserName: String? = null
     }
 
     /**
@@ -156,7 +155,7 @@ internal interface CredAdvapi32 : StdCallLibrary {
      */
     @FieldOrder("credential")
     class PCREDENTIAL : Structure() {
-        lateinit var credential: Pointer
+        @JvmField var credential: Pointer? = null
     }
 
     /**

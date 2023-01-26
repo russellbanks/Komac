@@ -18,6 +18,7 @@ class TokenStore {
     private val credentialStore = StorageProvider.getTokenStorage()
         ?: throw UnsupportedOperationException("Could not find secure token storage for the current operating system")
     var token: Deferred<String> = CoroutineScope(Dispatchers.IO).async { getToken(Terminal()) }
+    var storedToken = credentialStore[credentialKey]
 
     private suspend fun getToken(terminal: Terminal): String {
         return if (credentialStore[credentialKey] == null) {

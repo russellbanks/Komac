@@ -4,7 +4,6 @@ import com.sun.jna.LastErrorException
 import com.sun.jna.Memory
 import com.sun.jna.Platform
 import com.sun.jna.Pointer
-import com.sun.jna.platform.win32.WinDef.DWORD
 import token.SecretStore
 import token.Token
 
@@ -62,14 +61,14 @@ abstract class CredManagerBackedSecureStore<E : Token?> : SecretStore<E> {
             // MSDN doc doesn't mention threading safety, so let's just be careful and synchronize the access
             synchronized(instance) { read = instance.CredRead(key, CredAdvapi32.CRED_TYPE_GENERIC, 0, pcredential) }
             cred = if (read) {
-                val credential = CredAdvapi32.CREDENTIAL(pcredential.credential)
-                val secretBytes: ByteArray = credential.CredentialBlob.getByteArray(
+                val credential = CredAdvapi32.CREDENTIAL(pcredential.credential!!)
+                val secretBytes: ByteArray = credential.CredentialBlob!!.getByteArray(
                     /* offset = */ 0,
-                    /* arraySize = */ credential.CredentialBlobSize.toInt()
+                    /* arraySize = */ credential.CredentialBlobSize
                 )
                 val secret = secretBytes.toString(Charsets.UTF_8)
                 val username = credential.UserName
-                create(username, secret)
+                create(username!!, secret)
             } else {
                 null
             }
@@ -123,19 +122,19 @@ abstract class CredManagerBackedSecureStore<E : Token?> : SecretStore<E> {
         } catch (_: LastErrorException) {
             false
         } finally {
-            cred.CredentialBlob.clear(credBlob.size.toLong())
+            cred.CredentialBlob?.clear(credBlob.size.toLong())
             credBlob.fill(0.toByte())
         }
     }
 
     private fun buildCred(key: String, username: String, credentialBlob: ByteArray): CredAdvapi32.CREDENTIAL {
         val credential = CredAdvapi32.CREDENTIAL().apply {
-            Flags = DWORD(0)
-            Type = DWORD(CredAdvapi32.CRED_TYPE_GENERIC.toLong())
+            Flags = 0
+            Type = CredAdvapi32.CRED_TYPE_GENERIC
             TargetName = key
-            CredentialBlobSize = DWORD(credentialBlob.size.toLong())
+            CredentialBlobSize = credentialBlob.size
             CredentialBlob = getPointer(credentialBlob)
-            Persist = DWORD(CredAdvapi32.CRED_PERSIST_LOCAL_MACHINE.toLong())
+            Persist = CredAdvapi32.CRED_PERSIST_LOCAL_MACHINE
             UserName = username
         }
         return credential

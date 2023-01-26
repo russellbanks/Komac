@@ -6,15 +6,9 @@ import commands.ChangeToken
 import commands.NewManifest
 import commands.QuickUpdate
 import commands.RemoveVersion
-import org.koin.core.context.GlobalContext.startKoin
-import org.koin.ksp.generated.defaultModule
 
 fun main(args: Array<String>) {
-    startKoin {
-        defaultModule()
-    }
-
-    Komac(args)
+    Komac()
         .subcommands(NewManifest(), QuickUpdate(), RemoveVersion(), ChangeToken())
         .versionOption(version = BuildConfig.appVersion, names = setOf("-v", "--version"))
         .main(args)

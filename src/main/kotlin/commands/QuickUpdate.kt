@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -26,15 +27,21 @@ import input.Prompts.pullRequestPrompt
 import io.ktor.http.Url
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
+import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.YamlConfig
+import schemas.manifest.serializers.JsonLocalDateSerializer
+import schemas.manifest.serializers.JsonUrlSerializer
 import java.io.IOException
+import java.time.LocalDate
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -48,11 +55,20 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val packageVersion: String? by option()
     private val urls: List<Url> by option("--url").convert { Url(it) }.multiple()
     private val manifestVersion: String? by option()
+    private val json: InstallerManifest? by option().file().convert {
+        val json = Json {
+            serializersModule = SerializersModule {
+                contextual(LocalDate::class, JsonLocalDateSerializer)
+                contextual(Url::class, JsonUrlSerializer)
+            }
+        }
+        json.decodeFromString(InstallerManifest.serializer(), it.readText())
+    }
 
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
         with(currentContext.terminal) {
-            packageIdentifierPrompt(packageIdentifier)
+            packageIdentifierPrompt(packageIdentifier ?: json?.packageIdentifier)
             previousManifestData = get()
             if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
                 warning("${sharedManifestData.packageIdentifier} is not in the ${GitHubImpl.wingetpkgs} repository.")
@@ -60,9 +76,9 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 return@runBlocking
             }
             launch {
-                packageVersionPrompt(packageVersion)
+                packageVersionPrompt(packageVersion ?: json?.packageVersion)
                 previousManifestData.remoteInstallerDataJob.join()
-                loopThroughInstallers(urls)
+                loopThroughInstallers(urls.ifEmpty { null } ?: json?.installers?.map { it.installerUrl })
                 createFiles()
                 pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                     when (manifestResultOption) {
@@ -78,9 +94,9 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         }
     }
 
-    private suspend fun Terminal.loopThroughInstallers(parameterUrls: List<Url> = emptyList()) {
+    private suspend fun Terminal.loopThroughInstallers(parameterUrls: List<Url>? = null) {
         val remoteInstallerManifest = previousManifestData.remoteInstallerData
-        if (parameterUrls.isNotEmpty()) {
+        if (parameterUrls?.isNotEmpty() == true) {
             if (remoteInstallerManifest?.installers?.size != parameterUrls.size) {
                 throw CliktError(
                     message = "The number of urls provided does not match the number of previous installers",

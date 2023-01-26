@@ -5,6 +5,7 @@ import io.ktor.http.Url
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import schemas.Schemas
 import schemas.manifest.InstallerManifest.AppsAndFeaturesEntry
 import java.time.LocalDate
 
@@ -50,8 +51,8 @@ data class InstallerManifest(
     @SerialName("ElevationRequirement") val elevationRequirement: ElevationRequirement? = null,
     @SerialName("InstallationMetadata") val installationMetadata: InstallationMetadata? = null,
     @SerialName("Installers") val installers: List<Installer> = listOf(),
-    @SerialName("ManifestType") val manifestType: String,
-    @SerialName("ManifestVersion") val manifestVersion: String
+    @SerialName("ManifestType") val manifestType: String = Schemas.installerType,
+    @SerialName("ManifestVersion") val manifestVersion: String = Schemas.manifestVersion
 ) {
     enum class Platform {
         @SerialName("Windows.Desktop") WindowsDesktop,
