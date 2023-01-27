@@ -79,7 +79,7 @@ object InstallerType : KoinComponent {
     private fun getPreviousValue(): String? {
         return previousManifestData.remoteInstallerData?.let {
             it.installerType?.toString()
-                ?: it.installers[installerManifestData.installers.size].installerType?.toString()
+                ?: it.installers.getOrNull(installerManifestData.installers.size)?.installerType?.toString()
         }
     }
 

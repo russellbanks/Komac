@@ -51,7 +51,7 @@ object Protocols : KoinComponent {
 
     private fun getPreviousValue(): List<String>? {
         return previousManifestData.remoteInstallerData?.let {
-            it.protocols ?: it.installers[installerManifestData.installers.size].protocols
+            it.protocols ?: it.installers.getOrNull(installerManifestData.installers.size)?.protocols
         }
     }
 

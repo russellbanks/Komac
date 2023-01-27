@@ -37,7 +37,7 @@ class InstallerManifestData : KoinComponent {
     suspend fun addInstaller() {
         previousManifestData.remoteInstallerDataJob.join()
         val previousManifest = previousManifestData.remoteInstallerData
-        val previousInstaller = previousManifest?.installers?.get(installers.size)
+        val previousInstaller = previousManifest?.installers?.getOrNull(installers.size)
         val installer = getInstallerBase(previousInstaller).copy(
             installerLocale = sharedManifestData.msi?.productLanguage
                 ?: installerLocale?.ifBlank { null }
@@ -165,13 +165,14 @@ class InstallerManifestData : KoinComponent {
                 ?: previousManifestData.remoteInstallerData?.fileExtensions,
             releaseDate = if (releaseDateDistinct) installers.map { it.releaseDate }.first() else null,
             appsAndFeaturesEntries = when (installers.distinctBy { it.appsAndFeaturesEntries }.size) {
+                0 -> previousManifestData.remoteInstallerData?.appsAndFeaturesEntries
                 1 -> {
                     installers
                         .first()
                         .appsAndFeaturesEntries
                         ?.map { it.toManifestARPEntry() }
                 }
-                else -> previousManifestData.remoteInstallerData?.appsAndFeaturesEntries
+                else -> null
             },
             installers = installers.removeNonDistinctKeys()
                 .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope })),

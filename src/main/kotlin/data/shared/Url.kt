@@ -198,9 +198,9 @@ object Url : KoinComponent {
                     prompt = localeUrl.toString(),
                     default = getPreviousValue(localeUrl)?.also { muted("Previous $localeUrl: $it") },
                     convert = { input ->
-                        runBlocking { isUrlValid(url = Url(input), schema = defaultLocaleSchema, canBeBlank = true) }
-                            ?.let { ConversionResult.Invalid(it) }
-                            ?: ConversionResult.Valid(Url(input))
+                        runBlocking {
+                            isUrlValid(url = Url(input.trim()), schema = defaultLocaleSchema, canBeBlank = true)
+                        }?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(Url(input))
                     }
                 )
                 when (localeUrl) {

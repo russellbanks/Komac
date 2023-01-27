@@ -53,7 +53,7 @@ object InstallModes : KoinComponent {
 
     private fun getPreviousValue(): List<Enum<*>>? {
         return previousManifestData.remoteInstallerData?.let {
-            it.installModes ?: it.installers[installerManifestData.installers.size].installModes
+            it.installModes ?: it.installers.getOrNull(installerManifestData.installers.size)?.installModes
         }
     }
 

@@ -60,7 +60,7 @@ object Commands : KoinComponent {
 
     private fun getPreviousValue(): List<String>? {
         return previousManifestData.remoteInstallerData?.let {
-            it.commands ?: it.installers[installerManifestData.installers.size].commands
+            it.commands ?: it.installers.getOrNull(installerManifestData.installers.size)?.commands
         }
     }
 

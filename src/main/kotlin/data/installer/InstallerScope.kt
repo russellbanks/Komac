@@ -71,7 +71,7 @@ object InstallerScope : KoinComponent {
 
     private fun getPreviousValue(): Enum<*>? {
         return previousManifestData.remoteInstallerData?.let {
-            it.scope ?: it.installers[installerManifestData.installers.size].scope
+            it.scope ?: it.installers.getOrNull(installerManifestData.installers.size)?.scope
         }
     }
 

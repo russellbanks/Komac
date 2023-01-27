@@ -2,6 +2,7 @@ package data.installer
 
 import Errors
 import Validation
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -21,41 +22,44 @@ object InstallerSuccessCodes : KoinComponent {
     private val installerReturnCodeSchema = schemasImpl.installerSchema.definitions.installerReturnCode
 
     fun Terminal.installerSuccessCodesPrompt() {
-        do {
-            println(colors.brightYellow(installerSuccessCodeInfo))
-            info(installerSuccessCodesExample)
-            val input = prompt(
-                prompt = const,
-                default = getPreviousValue()?.joinToString(", ")?.also {
-                    muted("Previous success codes: $it")
+        println(colors.brightYellow(installerSuccessCodeInfo))
+        info(installerSuccessCodesExample)
+        installerManifestData.installerSuccessCodes = prompt(
+            prompt = const,
+            default = getPreviousValue()?.joinToString(", ")?.also {
+                muted("Previous success codes: $it")
+            },
+            convert = {
+                val error = areInstallerSuccessCodesValid(convertToInstallerCodeList(it))
+                if (error != null) {
+                    ConversionResult.Invalid(error)
+                } else {
+                    ConversionResult.Valid(it)
                 }
-            )?.trim()
-                ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
-                ?.mapNotNull { it.toIntOrNull() }
-                ?.filterNot { it in installerReturnCodeSchema.not.enum }
-            val (installerSuccessCodesValid, error) = areInstallerSuccessCodesValid(input)
-            if (installerSuccessCodesValid == Validation.Success) {
-                installerManifestData.installerSuccessCodes = input
             }
-            error?.let { danger(it) }
-            println()
-        } while (installerSuccessCodesValid != Validation.Success)
+        )?.trim()
+            ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
+            ?.mapNotNull { it.toIntOrNull() }
+            ?.filterNot { it in installerReturnCodeSchema.not.enum }
+        println()
     }
 
-    private fun areInstallerSuccessCodesValid(
-        installerSuccessCodes: Iterable<Int>?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
-        val installerSuccessCodesSchema = installerSchema.definitions.installerSuccessCodes
-        val installerReturnCodeSchema = installerSchema.definitions.installerReturnCode
+    private fun convertToInstallerCodeList(input: String?): Iterable<Int>? {
+        return input?.trim()
+            ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
+            ?.mapNotNull { it.toIntOrNull() }
+            ?.filterNot { it in installerReturnCodeSchema.not.enum }
+    }
+
+    private fun areInstallerSuccessCodesValid(installerSuccessCodes: Iterable<Int>?): String? {
         return when {
             (installerSuccessCodes?.count() ?: 0) > installerSuccessCodesSchema.maxItems -> {
-                Validation.InvalidLength to Errors.invalidLength(max = installerSuccessCodesSchema.maxItems)
+                Errors.invalidLength(max = installerSuccessCodesSchema.maxItems)
             }
             installerSuccessCodes?.any {
                 it < installerReturnCodeSchema.minimum || it > installerReturnCodeSchema.maximum
             } == true -> {
-                Validation.InvalidLength to Errors.invalidLength(
+                Errors.invalidLength(
                     min = installerReturnCodeSchema.minimum,
                     max = installerReturnCodeSchema.maximum,
                     items = installerSuccessCodes.filter {
@@ -63,7 +67,7 @@ object InstallerSuccessCodes : KoinComponent {
                     }.map { it.toString() }
                 )
             }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 
@@ -74,7 +78,7 @@ object InstallerSuccessCodes : KoinComponent {
 
     private fun getPreviousValue(): List<Int>? {
         return previousManifestData.remoteInstallerData?.let {
-            it.installerSuccessCodes ?: it.installers[installerManifestData.installers.size].installerSuccessCodes
+            it.installerSuccessCodes ?: it.installers.getOrNull(installerManifestData.installers.size)?.installerSuccessCodes
         }
     }
 

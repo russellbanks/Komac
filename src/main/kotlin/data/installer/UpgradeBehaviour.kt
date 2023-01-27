@@ -49,32 +49,32 @@ object UpgradeBehaviour : KoinComponent {
                 default = previousValue?.toString()?.firstOrNull()?.toString()
                     ?: InstallerManifest.UpgradeBehavior.Install.toString().first().toString(),
             )?.trim()
-            val (upgradeBehaviourValid, error) = isUpgradeBehaviourValid(input?.firstOrNull())
-            if (upgradeBehaviourValid == Validation.Success) {
+            val error = isUpgradeBehaviourValid(input?.firstOrNull())
+            if (error == null) {
                 installerManifestData.upgradeBehavior = InstallerManifest.UpgradeBehavior.values().firstOrNull {
                     it.name.firstOrNull()?.titlecase() == input?.firstOrNull()?.titlecase()
                 }
             }
             error?.let { danger(it) }
             println()
-        } while (upgradeBehaviourValid != Validation.Success)
+        } while (error != null)
     }
 
     private fun getPreviousValue(): Enum<*>? {
         return previousManifestData.remoteInstallerData?.let {
-            it.upgradeBehavior ?: it.installers[installerManifestData.installers.size].upgradeBehavior
+            it.upgradeBehavior ?: it.installers.getOrNull(installerManifestData.installers.size)?.upgradeBehavior
         }
     }
 
-    private fun isUpgradeBehaviourValid(option: Char?): Pair<Validation, String?> {
+    private fun isUpgradeBehaviourValid(option: Char?): String? {
         return when {
             upgradeBehaviourSchema.enum.all {
                 it.first().titlecase() != option?.titlecase()
-            } -> Validation.InvalidUpgradeBehaviour to Errors.invalidEnum(
+            } -> Errors.invalidEnum(
                 Validation.InvalidUpgradeBehaviour,
                 upgradeBehaviourSchema.enum
             )
-            else -> Validation.Success to null
+            else -> null
         }
     }
 

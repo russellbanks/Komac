@@ -70,8 +70,11 @@ object Architecture : KoinComponent {
     }
 
     private fun getPreviousValue(): String? {
-        return previousManifestData.remoteInstallerData?.installers
-            ?.get(installerManifestData.installers.size)?.architecture?.toString()
+        return previousManifestData.remoteInstallerData
+            ?.installers
+            ?.getOrNull(installerManifestData.installers.size)
+            ?.architecture
+            ?.toString()
     }
 
     private fun architectureInfo(): Pair<String, TextColors> {

@@ -65,7 +65,7 @@ object FileExtensions : KoinComponent {
 
     private fun getPreviousValue(): List<String>? {
         return previousManifestData.remoteInstallerData?.let {
-            it.fileExtensions ?: it.installers[installerManifestData.installers.size].fileExtensions
+            it.fileExtensions ?: it.installers.getOrNull(installerManifestData.installers.size)?.fileExtensions
         }
     }
 

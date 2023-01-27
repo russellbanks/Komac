@@ -25,11 +25,13 @@ object Description : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
 
     suspend fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
-        if (descriptionType == DescriptionType.Short) {
-            sharedManifestData.gitHubDetection?.shortDescription?.await()?.let {
-                defaultLocaleManifestData.shortDescription = it
-                return
-            }
+        if (
+            descriptionType == DescriptionType.Short &&
+            sharedManifestData.gitHubDetection?.shortDescription?.await() != null &&
+            getPreviousValue(descriptionType) == null
+        ) {
+            defaultLocaleManifestData.shortDescription = sharedManifestData.gitHubDetection?.shortDescription?.await()!!
+            return
         }
         do {
             val textColour = if (descriptionType == DescriptionType.Short) brightGreen else brightYellow

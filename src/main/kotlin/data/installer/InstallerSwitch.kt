@@ -63,16 +63,19 @@ object InstallerSwitch : KoinComponent {
         return previousManifestData.remoteInstallerData?.let {
             when (installerSwitch) {
                 InstallerSwitch.Silent -> {
-                    it.installerSwitches?.silent ?: it.installers[installerManifestData.installers.size]
-                        .installerSwitches?.silent
+                    it.installerSwitches?.silent
+                        ?: it.installers.getOrNull(installerManifestData.installers.size)
+                        ?.installerSwitches?.silent
                 }
                 InstallerSwitch.SilentWithProgress -> {
-                    it.installerSwitches?.silentWithProgress ?: it.installers[installerManifestData.installers.size]
-                        .installerSwitches?.silentWithProgress
+                    it.installerSwitches?.silentWithProgress
+                        ?: it.installers.getOrNull(installerManifestData.installers.size)
+                        ?.installerSwitches?.silentWithProgress
                 }
                 InstallerSwitch.Custom -> {
-                    it.installerSwitches?.custom ?: it.installers[installerManifestData.installers.size]
-                        .installerSwitches?.custom
+                    it.installerSwitches?.custom
+                        ?: it.installers.getOrNull(installerManifestData.installers.size)
+                        ?.installerSwitches?.custom
                 }
             }
         }

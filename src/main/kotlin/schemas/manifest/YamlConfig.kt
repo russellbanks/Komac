@@ -19,7 +19,8 @@ object YamlConfig {
         configuration = YamlConfiguration(
             encodeDefaults = false,
             singleLineStringStyle = SingleLineStringStyle.Plain,
-            multiLineStringStyle = MultiLineStringStyle.Literal
+            multiLineStringStyle = MultiLineStringStyle.Literal,
+            breakScalarsAt = Int.MAX_VALUE
         )
     )
 }
