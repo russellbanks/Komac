@@ -200,7 +200,8 @@ object Url : KoinComponent {
                     convert = { input ->
                         runBlocking {
                             isUrlValid(url = Url(input.trim()), schema = defaultLocaleSchema, canBeBlank = true)
-                        }?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(Url(input))
+                        }?.let { ConversionResult.Invalid(it) }
+                            ?: ConversionResult.Valid(input.trim().ifBlank { null }?.let { Url(it) })
                     }
                 )
                 when (localeUrl) {
