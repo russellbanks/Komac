@@ -6,12 +6,13 @@ import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import ktor.Ktor.decodeHex
 
-object YamlUrlSerializer : KSerializer<Url> {
+object UrlSerializer : KSerializer<Url> {
     override val descriptor = PrimitiveSerialDescriptor(Url::class.simpleName!!, PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: Url) {
-        encoder.encodeString(value.toString())
+        encoder.encodeString(value.decodeHex().toString().removeSuffix("/"))
     }
 
     override fun deserialize(decoder: Decoder): Url {

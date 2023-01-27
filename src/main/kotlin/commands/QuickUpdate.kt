@@ -27,6 +27,7 @@ import input.Prompts.pullRequestPrompt
 import io.ktor.http.Url
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import ktor.Ktor.decodeHex
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -47,7 +48,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val githubImpl: GitHubImpl by inject()
     private val packageIdentifier: String? by option()
     private val packageVersion: String? by option()
-    private val urls: List<Url> by option("--url").convert { Url(it) }.multiple()
+    private val urls: List<Url> by option("--url").convert { Url(it.removeSuffix("/")).decodeHex() }.multiple()
     private val manifestVersion: String? by option()
     private val submit: Boolean by option().flag(default = false)
 

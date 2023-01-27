@@ -47,7 +47,7 @@ object Url : KoinComponent {
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) {
         val installerManifestData: InstallerManifestData by inject()
         if (parameterUrl != null) {
-            installerManifestData.installerUrl = parameterUrl.decodeHex()
+            installerManifestData.installerUrl = parameterUrl
         } else {
             setInstallerUrlFromPrompt(installerManifestData)
         }
