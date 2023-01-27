@@ -1,6 +1,7 @@
 package data
 
 import io.ktor.http.Url
+import ktor.Ktor.decodeHex
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -37,31 +38,36 @@ class DefaultLocaleManifestData : KoinComponent {
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
             publisher = sharedManifestData.publisher ?: previousManifestData.remoteDefaultLocaleData?.publisher ?: "",
-            publisherUrl = publisherUrl
+            publisherUrl = (publisherUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.publisherUrl
-                ?: sharedManifestData.gitHubDetection?.publisherUrl?.await(),
-            publisherSupportUrl = publisherSupportUrl
+                ?: sharedManifestData.gitHubDetection?.publisherUrl?.await())
+                ?.decodeHex(),
+            publisherSupportUrl = (publisherSupportUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.publisherSupportUrl
-                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await(),
-            privacyUrl = publisherPrivacyUrl
+                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await())
+                ?.decodeHex(),
+            privacyUrl = (publisherPrivacyUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.privacyUrl
-                ?: sharedManifestData.gitHubDetection?.privacyUrl?.await(),
+                ?: sharedManifestData.gitHubDetection?.privacyUrl?.await())
+                ?.decodeHex(),
             author = author?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.author,
             packageName = sharedManifestData.packageName
                 ?: previousManifestData.remoteDefaultLocaleData?.packageName ?: "",
-            packageUrl = packageUrl
+            packageUrl = (packageUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.packageUrl
-                ?: sharedManifestData.gitHubDetection?.packageUrl?.await(),
+                ?: sharedManifestData.gitHubDetection?.packageUrl?.await())
+                ?.decodeHex(),
             license = when {
                 ::license.isInitialized -> license
                 else -> sharedManifestData.gitHubDetection?.license?.await()
                     ?: previousManifestData.remoteDefaultLocaleData?.license ?: ""
             },
-            licenseUrl = licenseUrl
+            licenseUrl = (licenseUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.licenseUrl
-                ?: sharedManifestData.gitHubDetection?.licenseUrl?.await(),
+                ?: sharedManifestData.gitHubDetection?.licenseUrl?.await())
+                ?.decodeHex(),
             copyright = copyright?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.copyright,
-            copyrightUrl = copyrightUrl ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl,
+            copyrightUrl = (copyrightUrl ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl)?.decodeHex(),
             shortDescription = when {
                 ::shortDescription.isInitialized -> shortDescription
                 else -> {
@@ -74,7 +80,9 @@ class DefaultLocaleManifestData : KoinComponent {
                 ?.trim(),
             moniker = moniker?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
             tags = tags?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.tags,
-            releaseNotesUrl = releaseNotesUrl ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await(),
+            releaseNotesUrl = (releaseNotesUrl
+                ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await())
+                ?.decodeHex(),
             releaseNotes = sharedManifestData.gitHubDetection?.releaseNotes?.await()?.trim(),
             manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
             manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
