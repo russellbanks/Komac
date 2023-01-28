@@ -68,7 +68,11 @@ jobs:
             build/libs/*-all.jar
 
       - name: Release to Winget
-        if: steps.decide_whether_to_release.outputs.conslusion && matrix.os == 'windows-latest'
+        if: |
+          steps.decide_whether_to_release.outputs.conslusion &&
+            matrix.os == 'windows-latest' &&
+            steps.decide_whether_to_release.outputs.tag_name != 'nightly' &&
+            github.repository == 'russellbanks/Komac'
         uses: vedantmgoyal2009/winget-releaser@v1
         with:
           identifier: RussellBanks.Komac
