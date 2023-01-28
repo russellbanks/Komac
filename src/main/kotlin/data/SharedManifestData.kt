@@ -17,6 +17,7 @@ class SharedManifestData : KoinComponent {
     var defaultLocale: String = ""
     var updateState: VersionUpdateState? = null
     var latestVersion: String? = null
+    var allVersions: List<String>? = null
     var msix: Msix? = null
     var msixBundle: MsixBundle? = null
     var msi: Msi? = null

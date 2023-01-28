@@ -78,6 +78,7 @@ object PackageIdentifier : KoinComponent {
                     if (it.isNotEmpty() && writeOutput) info("Found $packageIdentifier in the winget-pkgs repository")
                 }
                 ?.map { it.name }
+                ?.also { sharedManifestData.allVersions = it }
                 ?.let { PackageVersion.getHighestVersion(it) }
                 ?.also { if (writeOutput) info("Found latest version: $it") }
                 .also { sharedManifestData.latestVersion = it }

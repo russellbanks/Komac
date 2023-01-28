@@ -107,11 +107,17 @@ class InstallerManifestData : KoinComponent {
         val publisher = sharedManifestData.publisher ?: previousManifestData.remoteDefaultLocaleData?.publisher
         val displayVersion = sharedManifestData.msi?.productVersion ?: displayVersion
         return copy(
-            displayName = if (arpDisplayName != packageName) arpDisplayName else null,
+            displayName = if (arpDisplayName != packageName) arpDisplayName?.updateDisplayName() else null,
             publisher = if (arpPublisher != publisher) arpPublisher else null,
             displayVersion = if (displayVersion != sharedManifestData.packageVersion) displayVersion else null,
             upgradeCode = sharedManifestData.msi?.upgradeCode ?: upgradeCode
         )
+    }
+
+    private fun String.updateDisplayName(): String {
+        return sharedManifestData.allVersions?.joinToString("|") { it }
+            ?.let { replaceFirst(Regex(it), sharedManifestData.packageVersion) }
+            ?: this
     }
 
     fun createInstallerManifest(): String {
