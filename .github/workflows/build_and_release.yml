@@ -1,0 +1,75 @@
+name: Build & Release
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code 👋
+        uses: actions/checkout@v3
+
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Should I publish a release?
+        id: decide_whether_to_release
+        uses: actions/github-script@v5
+        with:
+          script: |
+            if (context.eventName === 'push') {
+              core.setOutput('conslusion', true);
+              if (context.ref.startsWith('refs/tags/')) {
+                const tag_name = context.ref.replace('refs/tags/', '');
+                core.setOutput('name', `Release ${tag_name}`);
+                core.setOutput('tag_name', tag_name);
+                core.setOutput('prerelease', false);
+                core.setOutput('gen_rel_notes', true);
+              } else {
+                core.setOutput('name', `Nightly release`);
+                core.setOutput('tag_name', 'nightly');
+                core.setOutput('prerelease', true);
+                core.setOutput('gen_rel_notes', false);
+              }
+            } else {
+              core.setOutput('conslusion', false);
+            }
+
+      - name: Build binaries
+        if: steps.decide_whether_to_release.outputs.conslusion
+        run: ./gradlew jpackage
+
+      - name: Release
+        if: steps.decide_whether_to_release.outputs.conslusion
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ steps.decide_whether_to_release.outputs.name }}
+          tag_name: ${{ steps.decide_whether_to_release.outputs.tag_name }}
+          prerelease: ${{ steps.decide_whether_to_release.outputs.prerelease }}
+          generate_release_notes: ${{ steps.decide_whether_to_release.outputs.gen_rel_notes }}
+          files: |
+            build/distributions/*.dmg
+            build/distributions/*.deb
+            build/distributions/*.exe
+            build/libs/*-all.jar
+
+      - name: Release to Winget
+        if: steps.decide_whether_to_release.outputs.conslusion && matrix.os == 'windows-latest'
+        uses: vedantmgoyal2009/winget-releaser@v1
+        with:
+          identifier: RussellBanks.Komac
+          token: ${{ secrets.WINGET_TOKEN }}
