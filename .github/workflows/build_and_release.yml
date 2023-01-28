@@ -31,10 +31,9 @@ jobs:
         uses: actions/github-script@v5
         with:
           script: |
-            const core = require('@actions/core');
             if (context.eventName === 'push') {
               core.setOutput('conslusion', true);
-              if (context.ref.startsWith('refs/tags/') {
+              if (context.ref.startsWith('refs/tags/')) {
                 const tag_name = context.ref.replace('refs/tags/', '');
                 core.setOutput('name', `Release ${tag_name}`);
                 core.setOutput('tag_name', tag_name);
