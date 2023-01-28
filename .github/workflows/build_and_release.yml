@@ -31,8 +31,8 @@ jobs:
         uses: actions/github-script@v5
         with:
           script: |
-            if (context.eventName === 'push' && context.ref == 'refs/tags/main') {
-              core.setOutput('conslusion', true);
+            if (context.eventName === 'push' && context.ref == 'refs/heads/main') {
+              core.setOutput('conclusion', true);
               if (context.ref.startsWith('refs/tags/')) {
                 const tag_name = context.ref.replace('refs/tags/', '');
                 core.setOutput('name', `Release ${tag_name}`);
@@ -46,15 +46,15 @@ jobs:
                 core.setOutput('gen_rel_notes', false);
               }
             } else {
-              core.setOutput('conslusion', false);
+              core.setOutput('conclusion', false);
             }
 
       - name: Build binaries
-        if: steps.decide_whether_to_release.outputs.conslusion
+        if: steps.decide_whether_to_release.outputs.conclusion
         run: ./gradlew jpackage
 
       - name: Release
-        if: steps.decide_whether_to_release.outputs.conslusion
+        if: steps.decide_whether_to_release.outputs.conclusion
         uses: softprops/action-gh-release@v1
         with:
           name: ${{ steps.decide_whether_to_release.outputs.name }}
@@ -69,7 +69,7 @@ jobs:
 
       - name: Release to Winget
         if: |
-          steps.decide_whether_to_release.outputs.conslusion &&
+          steps.decide_whether_to_release.outputs.conclusion &&
             matrix.os == 'windows-latest' &&
             steps.decide_whether_to_release.outputs.tag_name != 'nightly' &&
             github.repository == 'russellbanks/Komac'
