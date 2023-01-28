@@ -31,8 +31,8 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            if (context.eventName === 'push') {
-              core.setOutput('conslusion', true);
+            if (context.eventName === 'push' && context.ref == 'refs/heads/main') {
+              core.setOutput('conclusion', true);
               if (context.ref.startsWith('refs/tags/')) {
                 const tag_name = context.ref.replace('refs/tags/', '');
                 core.setOutput('name', `Release ${tag_name}`);
@@ -46,15 +46,15 @@ jobs:
                 core.setOutput('gen_rel_notes', false);
               }
             } else {
-              core.setOutput('conslusion', false);
+              core.setOutput('conclusion', false);
             }
 
       - name: Build binaries
-        if: steps.decide_whether_to_release.outputs.conslusion
+        if: steps.decide_whether_to_release.outputs.conclusion
         run: ./gradlew jpackage
 
       - name: Release
-        if: steps.decide_whether_to_release.outputs.conslusion
+        if: steps.decide_whether_to_release.outputs.conclusion == 'true'
         uses: softprops/action-gh-release@v1
         with:
           name: ${{ steps.decide_whether_to_release.outputs.name }}
@@ -68,7 +68,11 @@ jobs:
             build/libs/*-all.jar
 
       - name: Release to Winget
-        if: steps.decide_whether_to_release.outputs.conslusion && matrix.os == 'windows-latest'
+        if: |
+          steps.decide_whether_to_release.outputs.conclusion == 'true' &&
+            matrix.os == 'windows-latest' &&
+            steps.decide_whether_to_release.outputs.tag_name != 'nightly' &&
+            github.repository == 'russellbanks/Komac'
         uses: vedantmgoyal2009/winget-releaser@v1
         with:
           identifier: RussellBanks.Komac
