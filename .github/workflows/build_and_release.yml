@@ -31,6 +31,7 @@ jobs:
         uses: actions/github-script@v5
         with:
           script: |
+            const core = require('@actions/core');
             if (context.eventName === 'push') {
               core.setOutput('conslusion', true);
               if (context.ref.startsWith('refs/tags/') {
