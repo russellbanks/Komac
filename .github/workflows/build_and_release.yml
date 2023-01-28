@@ -28,7 +28,7 @@ jobs:
 
       - name: Should I publish a release?
         id: decide_whether_to_release
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             if (context.eventName === 'push') {
