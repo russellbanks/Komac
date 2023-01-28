@@ -54,7 +54,7 @@ jobs:
         run: ./gradlew jpackage
 
       - name: Release
-        if: steps.decide_whether_to_release.outputs.conclusion
+        if: steps.decide_whether_to_release.outputs.conclusion == 'true'
         uses: softprops/action-gh-release@v1
         with:
           name: ${{ steps.decide_whether_to_release.outputs.name }}
