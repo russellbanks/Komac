@@ -31,7 +31,7 @@ jobs:
         uses: actions/github-script@v5
         with:
           script: |
-            if (context.eventName === 'push') {
+            if (context.eventName === 'push' && context.ref == 'refs/tags/main') {
               core.setOutput('conslusion', true);
               if (context.ref.startsWith('refs/tags/')) {
                 const tag_name = context.ref.replace('refs/tags/', '');
