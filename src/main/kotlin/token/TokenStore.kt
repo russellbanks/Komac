@@ -17,7 +17,7 @@ import kotlin.system.exitProcess
 class TokenStore {
     private val credentialStore = StorageProvider.getTokenStorage()
         ?: throw UnsupportedOperationException("Could not find secure token storage for the current operating system")
-    var storedToken = credentialStore[credentialKey]
+    private var storedToken = credentialStore[credentialKey]
     val token: String?
         get() = storedToken?.value
     var isTokenValid: Deferred<Boolean> = CoroutineScope(Dispatchers.IO).async { checkIfTokenValid(token) }

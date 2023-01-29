@@ -10,7 +10,6 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
-import data.installer.Architecture.architecturePrompt
 import data.installer.Commands.commandsPrompt
 import data.installer.FileExtensions.fileExtensionsPrompt
 import data.installer.InstallModes.installModesPrompt
@@ -73,7 +72,6 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 packageVersionPrompt()
                 do {
                     installerDownloadPrompt()
-                    architecturePrompt()
                     installerTypePrompt()
                     InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
                     localePrompt(LocaleType.Installer)

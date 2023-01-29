@@ -14,7 +14,6 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
-import data.installer.Architecture
 import data.installer.InstallerScope
 import data.installer.InstallerType
 import data.shared.Locale
@@ -35,6 +34,7 @@ import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
+import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.YamlConfig
 import token.TokenStore
@@ -124,7 +124,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             remoteInstallerManifest?.installers?.forEachIndexed { index, installer ->
                 info("Installer Entry ${index.inc()}/${remoteInstallerManifest.installers.size}")
                 listOf(
-                    Architecture.const to installer.architecture,
+                    InstallerManifest.Installer.Architecture::name to installer.architecture,
                     InstallerType.const to (installer.installerType ?: remoteInstallerManifest.installerType),
                     InstallerScope.const to (installer.scope ?: remoteInstallerManifest.scope),
                     Locale.installerLocaleConst to
