@@ -1,4 +1,5 @@
 package commands
+import Errors
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.options.convert
@@ -36,6 +37,7 @@ import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.LocaleManifest
 import schemas.manifest.YamlConfig
+import token.TokenStore
 import java.io.IOException
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
@@ -46,16 +48,28 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private lateinit var previousManifestData: PreviousManifestData
     private lateinit var files: List<Pair<String, String?>>
     private val githubImpl: GitHubImpl by inject()
+    private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
     private val packageIdentifier: String? by option()
     private val packageVersion: String? by option()
     private val urls: List<Url> by option("--url").convert { Url(it.removeSuffix("/")).decodeHex() }.multiple()
     private val manifestVersion: String? by option()
     private val submit: Boolean by option().flag(default = false)
+    private val tokenParameter: String? by option("--token")
 
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
         with(currentContext.terminal) {
-            packageIdentifierPrompt(packageIdentifier)
+            if (isCIEnvironment) {
+                info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
+                tokenParameter?.let {
+                    get<TokenStore>().useTokenParameter(it).let { isTokenValid ->
+                        if (!isTokenValid) {
+                            throw CliktError(message = colors.danger("${Errors.error} Invalid token"), statusCode = 1)
+                        }
+                    }
+                }
+            }
+            packageIdentifierPrompt(packageIdentifier, isCIEnvironment)
             previousManifestData = get()
             if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
                 warning("${sharedManifestData.packageIdentifier} is not in the ${GitHubImpl.wingetpkgs} repository.")
@@ -63,14 +77,14 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 return@runBlocking
             }
             launch {
-                packageVersionPrompt(packageVersion)
+                packageVersionPrompt(packageVersion, isCIEnvironment)
                 previousManifestData.remoteInstallerDataJob.join()
-                loopThroughInstallers(urls.ifEmpty { null })
+                loopThroughInstallers(parameterUrls = urls.ifEmpty { null }, isCIEnvironment = isCIEnvironment)
                 createFiles()
                 if (submit) {
                     commit()
                     pullRequest()
-                } else {
+                } else if (!isCIEnvironment) {
                     pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                         when (manifestResultOption) {
                             ManifestResultOption.PullRequest -> {
@@ -86,9 +100,12 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         }
     }
 
-    private suspend fun Terminal.loopThroughInstallers(parameterUrls: List<Url>? = null) {
+    private suspend fun Terminal.loopThroughInstallers(
+        parameterUrls: List<Url>? = null,
+        isCIEnvironment: Boolean = false
+    ) {
         val remoteInstallerManifest = previousManifestData.remoteInstallerData
-        if (parameterUrls?.isNotEmpty() == true) {
+        if (parameterUrls != null) {
             if (remoteInstallerManifest?.installers?.size != parameterUrls.size) {
                 throw CliktError(
                     message = "The number of urls provided does not match the number of previous installers",
@@ -96,11 +113,13 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 )
             }
             data.shared.Url.areUrlsValid(parameterUrls)
-                ?.let { throw CliktError(it) }
+                ?.let { throw CliktError(colors.danger(it)) }
                 ?: parameterUrls.forEach { url ->
                     installerDownloadPrompt(url)
                     installerManifestData.addInstaller()
                 }
+        } else if (isCIEnvironment) {
+            throw CliktError(colors.danger("${Errors.error} No installers have been provided"), statusCode = 1)
         } else {
             remoteInstallerManifest?.installers?.forEachIndexed { index, installer ->
                 info("Installer Entry ${index.inc()}/${remoteInstallerManifest.installers.size}")

@@ -2,6 +2,7 @@ package data.shared
 
 import Errors
 import ExitCode
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.GitHubImpl
@@ -19,10 +20,13 @@ import kotlin.system.exitProcess
 object PackageVersion : KoinComponent {
     private val githubImpl: GitHubImpl by inject()
 
-    suspend fun Terminal.packageVersionPrompt(packageVersion: String? = null) {
+    suspend fun Terminal.packageVersionPrompt(versionParameter: String? = null, isCIEnvironment: Boolean = false) {
         val sharedManifestData: SharedManifestData by inject()
-        sharedManifestData.packageVersion = if (packageVersion != null) {
-            packageVersion
+        if (versionParameter == null && isCIEnvironment) {
+            throw CliktError(colors.danger("Package Version not inputted"), statusCode = 1)
+        }
+        sharedManifestData.packageVersion = if (versionParameter != null) {
+            versionParameter
         } else {
             println(colors.brightGreen(versionInfo))
             info(example)
