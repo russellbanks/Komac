@@ -1,7 +1,6 @@
 package data.installer
 
 import Errors
-import Validation
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -9,10 +8,8 @@ import data.PreviousManifestData
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 
 object InstallerSuccessCodes : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()

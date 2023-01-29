@@ -81,13 +81,13 @@ object Ktor : KoinComponent {
         }
     }
 
-    private fun getFileName(url: Url): String? {
-        return url.pathSegments.findLast { it.endsWith(getURLExtension(url)) }
-    }
+    fun getFileName(url: Url): String? = url.pathSegments.findLast { it.endsWith(getURLExtension(url)) }
 
     fun getURLExtension(url: Url): String {
         return url.fullPath.substringAfterLast(".").split(Regex("[^A-Za-z0-9]")).firstOrNull() ?: "winget-tmp"
     }
+
+    fun fileNameWithoutExtension(url: Url): String? = getFileName(url)?.removeSuffix(getURLExtension(url))
 
     fun detectArchitectureFromUrl(url: Url): InstallerManifest.Installer.Architecture? {
         var archInUrl = Regex("(x86_64|i[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?)")

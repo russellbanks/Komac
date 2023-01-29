@@ -27,7 +27,7 @@ object InstallerSwitch : KoinComponent {
             installerSwitch == InstallerSwitch.Custom
         ) {
             val isRequired = installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE &&
-                    installerSwitch != InstallerSwitch.Custom
+                installerSwitch != InstallerSwitch.Custom
             switchInfo(installerManifestData.installerType, installerSwitch).also { (info, infoColor) ->
                 println(infoColor(info))
             }
@@ -65,17 +65,17 @@ object InstallerSwitch : KoinComponent {
                 InstallerSwitch.Silent -> {
                     it.installerSwitches?.silent
                         ?: it.installers.getOrNull(installerManifestData.installers.size)
-                        ?.installerSwitches?.silent
+                            ?.installerSwitches?.silent
                 }
                 InstallerSwitch.SilentWithProgress -> {
                     it.installerSwitches?.silentWithProgress
                         ?: it.installers.getOrNull(installerManifestData.installers.size)
-                        ?.installerSwitches?.silentWithProgress
+                            ?.installerSwitches?.silentWithProgress
                 }
                 InstallerSwitch.Custom -> {
                     it.installerSwitches?.custom
                         ?: it.installers.getOrNull(installerManifestData.installers.size)
-                        ?.installerSwitches?.custom
+                            ?.installerSwitches?.custom
                 }
             }
         }

@@ -1,83 +1,109 @@
 package detection
 
 import data.GitHubImpl
-import io.ktor.http.URLBuilder
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Url
-import io.ktor.http.appendPathSegments
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
+import ktor.Http
 import ktor.Ktor.decodeHex
+import ktor.Ktor.fileNameWithoutExtension
+import ktor.Ktor.getFileName
+import org.kohsuke.github.GHAsset
 import org.kohsuke.github.GHRelease
+import org.kohsuke.github.PagedIterable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import org.koin.core.component.inject
-import schemas.SchemasImpl
 import java.time.LocalDate
 import java.time.ZoneId
 
 class GitHubDetection(url: Url) : KoinComponent {
-    var publisherUrl: Deferred<Url?>? = null
-    var shortDescription: Deferred<String?>? = null
-    var publisherSupportUrl: Deferred<Url?>? = null
-    var license: Deferred<String?>? = null
-    var licenseUrl: Deferred<Url?>? = null
-    var packageUrl: Deferred<Url?>? = null
-    var releaseDate: Deferred<LocalDate?>? = null
-    var releaseNotesUrl: Deferred<Url?>? = null
-    var releaseNotes: Deferred<String?>? = null
-    var privacyUrl: Deferred<Url?>? = null
-    var topics: Deferred<List<String>?>? = null
+    private val pathSegments = url.pathSegments.filterNot { it.isBlank() }
+    private val repository = CoroutineScope(Dispatchers.IO).async {
+        get<GitHubImpl>().github.await().getRepository(/* name = */ "${pathSegments[0]}/${pathSegments[1]}")
+    }
+    private val release: Deferred<GHRelease?> = CoroutineScope(Dispatchers.IO).async {
+        runCatching {
+            repository.await().listReleases().find {
+                it.tagName.contains(other = pathSegments.dropLast(1).last(), ignoreCase = true)
+            }
+        }.getOrNull()
+    }
+    private val assets = CoroutineScope(Dispatchers.IO).async { release.await()?.listAssets() }
+    private val asset = CoroutineScope(Dispatchers.IO).async {
+        assets.await()?.firstOrNull { Url(it.browserDownloadUrl).decodeHex() == url.decodeHex() }
+    }
 
-    private val githubImpl: GitHubImpl by inject()
+    var publisherUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
+        if (repository.await().hasIssues()) Url("https://github.com/${repository.await().fullName}/issues") else null
+    }
+    var shortDescription: Deferred<String?> = CoroutineScope(Dispatchers.IO).async { repository.await().description }
+    var publisherSupportUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
+        runCatching { repository.await().owner.blog }.getOrNull()?.let { Url(it) }
+    }
+    var license: Deferred<String?> = CoroutineScope(Dispatchers.IO).async {
+        runCatching {
+            repository.await()
+                .license
+                ?.key
+                ?.uppercase()
+                ?.takeUnless { it.equals(other = "other", ignoreCase = true) }
+        }.getOrNull()
+    }
+    var licenseUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
+        repository.await().licenseContent?.htmlUrl?.let { Url(it) }
+    }
+    var packageUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async { Url(repository.await().htmlUrl.toURI()) }
+    var releaseDate: Deferred<LocalDate?> = CoroutineScope(Dispatchers.IO).async {
+        runCatching {
+            asset.await()?.let { LocalDate.ofInstant(it.createdAt.toInstant(), ZoneId.systemDefault()) }
+        }.getOrNull()
+    }
+    var releaseNotesUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
+        release.await()?.htmlUrl?.let { Url(it.toURI()) }
+    }
+    var releaseNotes: Deferred<String?> = CoroutineScope(Dispatchers.IO).async {
+        release.await()?.let { getFormattedReleaseNotes(it) }
+    }
+    var privacyUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
+        repository.await()
+            .getDirectoryContent("")
+            .find { it.name.lowercase().contains(other = "privacy", ignoreCase = true) }
+            ?.htmlUrl
+            ?.let { Url(it) }
+    }
+    var topics: Deferred<List<String>?> = CoroutineScope(Dispatchers.IO).async { repository.await().listTopics() }
+    var sha256: Deferred<String?> = CoroutineScope(Dispatchers.IO).async { findSha256(url, assets.await()) }
+
+    private val client = get<Http>().client
 
     init {
         require(url.host.equals(other = gitHubWebsite, ignoreCase = true)) { "Url must be a GitHub Url" }
-        CoroutineScope(Dispatchers.IO).launch {
-            val pathSegments = url.pathSegments.filterNot { it.isBlank() }
-            val tag = pathSegments.dropLast(1).last()
-            val repository = githubImpl.github.await().getRepository("${pathSegments[0]}/${pathSegments[1]}")
-            val release: GHRelease? = runCatching {
-                repository.listReleases().find { it.tagName.contains(other = tag, ignoreCase = true) }
-            }.getOrNull()
-            val asset = release?.listAssets()?.firstOrNull { Url(it.browserDownloadUrl).decodeHex() == url.decodeHex() }
-            releaseDate = async { asset?.let { LocalDate.ofInstant(it.createdAt.toInstant(), ZoneId.systemDefault()) } }
-            license = async {
-                runCatching {
-                    repository.license?.key?.uppercase()?.takeUnless { it.equals(other = "other", ignoreCase = true) }
-                }.getOrNull()
-            }
-            packageUrl = async { Url(repository.htmlUrl.toURI()) }
-            licenseUrl = async { repository.licenseContent?.htmlUrl?.let { Url(it) } }
-            privacyUrl = async {
-                repository
-                    .getDirectoryContent("")
-                    .find { it.name.lowercase().contains(other = "privacy", ignoreCase = true) }
-                    ?.htmlUrl
-                    ?.let { Url(it) }
-            }
-            releaseNotesUrl = async { release?.htmlUrl?.let { Url(it.toURI()) } }
-            releaseNotes = async { release?.let { getFormattedReleaseNotes(it) } }
-            topics = async { repository.listTopics() }
-            publisherUrl = async { runCatching { repository.owner.blog }.getOrNull()?.let { Url(it) } }
-            shortDescription = async { repository.description }
-            publisherSupportUrl = async {
-                val supportUrl = URLBuilder(url).appendPathSegments("support").build()
-                data.shared.Url.isUrlValid(
-                    url = supportUrl,
-                    schema = get<SchemasImpl>().defaultLocaleSchema,
-                    canBeBlank = false
-                ).let { error ->
-                    when {
-                        error == null -> supportUrl
-                        repository.hasIssues() -> Url("https://github.com/${repository.fullName}/issues")
-                        else -> null
-                    }
-                }
-            }
-        }
+    }
+
+    private suspend fun findSha256(url: Url, assets: PagedIterable<GHAsset>?): String? {
+        return assets
+            ?.find { it.isSha256(url) || it.name.equals(other = "Sha256Sums", ignoreCase = true) }
+            ?.browserDownloadUrl
+            ?.let { client.get(it).bodyAsText() }
+            ?.let { Regex(pattern = "(.*) ${getFileName(url)}").find(it) }
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.trim()
+    }
+
+    private fun GHAsset.isSha256(url: Url): Boolean {
+        return fileNameWithoutExtension(url)?.let {
+            name.contains(other = it, ignoreCase = true)
+        } == true && endsWithSha256()
+    }
+
+    private fun GHAsset.endsWithSha256(): Boolean {
+        return name.endsWith(suffix = ".sha256sum", ignoreCase = true) ||
+            name.endsWith(suffix = ".sha256", ignoreCase = true)
     }
 
     /**

@@ -2,6 +2,8 @@ package data
 
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -56,7 +58,7 @@ class InstallerManifestData : KoinComponent {
                 ?: previousInstaller?.nestedInstallerFiles
                 ?: previousManifest?.nestedInstallerFiles?.map { it.toPerInstallerNestedInstallerFiles() },
             installerUrl = installerUrl,
-            installerSha256 = installerSha256.uppercase(),
+            installerSha256 = (sharedManifestData.gitHubDetection?.sha256?.await() ?: installerSha256).uppercase(),
             signatureSha256 = sharedManifestData.msix?.signatureSha256
                 ?: sharedManifestData.msixBundle?.signatureSha256,
             scope = if (sharedManifestData.msi?.allUsers != null) {
@@ -260,7 +262,7 @@ class InstallerManifestData : KoinComponent {
         )
     }
 
-    private fun resetValues() {
+    private suspend fun resetValues() = coroutineScope {
         installerLocale = null
         scope = null
         installerSwitches = InstallerManifest.Installer.InstallerSwitches()
@@ -271,6 +273,6 @@ class InstallerManifestData : KoinComponent {
         sharedManifestData.msix?.resetExceptShared()
         sharedManifestData.msixBundle?.resetExceptShared()
         sharedManifestData.zip = null
-        sharedManifestData.gitHubDetection?.releaseDate = null
+        sharedManifestData.gitHubDetection?.releaseDate = async { null }
     }
 }

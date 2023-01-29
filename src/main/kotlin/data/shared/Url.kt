@@ -30,6 +30,7 @@ import ktor.Http
 import ktor.Ktor.decodeHex
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
+import ktor.Ktor.getURLExtension
 import ktor.Ktor.isRedirect
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -115,23 +116,32 @@ object Url : KoinComponent {
             if (installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
                 sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
             }
-            val (file, fileDeletionThread) = get<Http>().client.downloadInstallerFromUrl(terminal = this)
-            installerManifestData.installerSha256 = file.hash()
-            when (file.extension.lowercase()) {
-                InstallerManifest.InstallerType.MSIX.toString(),
-                InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file)
-                MsixBundle.msixBundleConst,
-                MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(file)
-                InstallerManifest.InstallerType.MSI.toString() -> {
-                    if (Platform.isWindows()) sharedManifestData.msi = Msi(file)
-                }
-                InstallerManifest.InstallerType.ZIP.toString() -> sharedManifestData.zip = Zip(
-                    zip = file,
-                    terminal = this@downloadInstaller
+            if (sharedManifestData.gitHubDetection?.sha256?.await() == null &&
+                getURLExtension(installerManifestData.installerUrl).equals(
+                    other = InstallerManifest.InstallerType.EXE.toString(),
+                    ignoreCase = true
                 )
+            ) {
+                val (file, fileDeletionThread) = get<Http>().client.downloadInstallerFromUrl(terminal = this)
+                installerManifestData.installerSha256 = file.hash()
+                when (file.extension.lowercase()) {
+                    InstallerManifest.InstallerType.MSIX.toString(),
+                    InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file)
+                    MsixBundle.msixBundleConst,
+                    MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(file)
+                    InstallerManifest.InstallerType.MSI.toString() -> {
+                        if (Platform.isWindows()) sharedManifestData.msi = Msi(file)
+                    }
+                    InstallerManifest.InstallerType.ZIP.toString() -> sharedManifestData.zip = Zip(
+                        zip = file,
+                        terminal = this@downloadInstaller
+                    )
+                }
+                file.delete()
+                Runtime.getRuntime().removeShutdownHook(fileDeletionThread)
+            } else {
+                installerManifestData.installerSha256 = sharedManifestData.gitHubDetection?.sha256?.await()!!
             }
-            file.delete()
-            Runtime.getRuntime().removeShutdownHook(fileDeletionThread)
         }
     }
 
@@ -178,19 +188,19 @@ object Url : KoinComponent {
         val gitHubDetection: GitHubDetection? = get<SharedManifestData>().gitHubDetection
         when {
             gitHubDetection?.licenseUrl != null && localeUrl == LocaleUrl.LicenseUrl -> {
-                defaultLocaleManifestData.licenseUrl = gitHubDetection.licenseUrl?.await()
+                defaultLocaleManifestData.licenseUrl = gitHubDetection.licenseUrl.await()
             }
             gitHubDetection?.publisherUrl != null && localeUrl == LocaleUrl.PublisherUrl -> {
-                defaultLocaleManifestData.publisherUrl = gitHubDetection.publisherUrl?.await()
+                defaultLocaleManifestData.publisherUrl = gitHubDetection.publisherUrl.await()
             }
             gitHubDetection?.releaseNotesUrl != null && localeUrl == LocaleUrl.ReleaseNotesUrl -> {
-                defaultLocaleManifestData.releaseNotesUrl = gitHubDetection.releaseNotesUrl?.await()
+                defaultLocaleManifestData.releaseNotesUrl = gitHubDetection.releaseNotesUrl.await()
             }
             gitHubDetection?.packageUrl != null && localeUrl == LocaleUrl.PackageUrl -> {
-                defaultLocaleManifestData.packageUrl = gitHubDetection.packageUrl?.await()
+                defaultLocaleManifestData.packageUrl = gitHubDetection.packageUrl.await()
             }
             gitHubDetection?.publisherSupportUrl != null && localeUrl == LocaleUrl.PublisherSupportUrl -> {
-                defaultLocaleManifestData.publisherSupportUrl = gitHubDetection.publisherSupportUrl?.await()
+                defaultLocaleManifestData.publisherSupportUrl = gitHubDetection.publisherSupportUrl.await()
             }
             else -> {
                 println(colors.brightYellow(localeUrlInfo(localeUrl, defaultLocaleSchema.properties)))
