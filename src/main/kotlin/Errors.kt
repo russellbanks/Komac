@@ -63,4 +63,5 @@ object Errors {
     }
 
     const val connectionTimeout = "$error Connection timed out"
+    const val connectionFailure = "$error Failed to connect"
 }

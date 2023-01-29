@@ -40,6 +40,7 @@ import schemas.data.DefaultLocaleSchema
 import schemas.data.InstallerSchema
 import schemas.data.RemoteSchema
 import schemas.manifest.InstallerManifest
+import java.net.ConnectException
 import kotlin.system.exitProcess
 
 object Url : KoinComponent {
@@ -140,7 +141,7 @@ object Url : KoinComponent {
                 file.delete()
                 Runtime.getRuntime().removeShutdownHook(fileDeletionThread)
             } else {
-                installerManifestData.installerSha256 = sharedManifestData.gitHubDetection?.sha256?.await()!!
+                sharedManifestData.gitHubDetection?.sha256?.await()?.let { installerManifestData.installerSha256 = it }
             }
         }
     }
@@ -269,6 +270,8 @@ object Url : KoinComponent {
                 }
             } catch (_: ConnectTimeoutException) {
                 Errors.connectionTimeout
+            } catch (_: ConnectException) {
+                Errors.connectionFailure
             }
         }
     }
