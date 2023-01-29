@@ -4,8 +4,8 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -51,7 +51,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
     private val packageIdentifier: String? by option()
     private val packageVersion: String? by option()
-    private val urls: List<Url> by option("--url").convert { Url(it.removeSuffix("/")).decodeHex() }.multiple()
+    private val urls: List<Url>? by option().convert { Url(it.removeSuffix("/")).decodeHex() }.split(",")
     private val manifestVersion: String? by option()
     private val submit: Boolean by option().flag(default = false)
     private val tokenParameter: String? by option("--token")
@@ -79,7 +79,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             launch {
                 packageVersionPrompt(packageVersion, isCIEnvironment)
                 previousManifestData.remoteInstallerDataJob.join()
-                loopThroughInstallers(parameterUrls = urls.ifEmpty { null }, isCIEnvironment = isCIEnvironment)
+                loopThroughInstallers(parameterUrls = urls, isCIEnvironment = isCIEnvironment)
                 createFiles()
                 if (submit) {
                     commit()
