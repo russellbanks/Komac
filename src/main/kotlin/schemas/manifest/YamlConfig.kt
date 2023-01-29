@@ -1,5 +1,6 @@
 package schemas.manifest
 
+import com.charleskorn.kaml.AmbiguousQuoteStyle
 import com.charleskorn.kaml.MultiLineStringStyle
 import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
@@ -18,9 +19,10 @@ object YamlConfig {
         },
         configuration = YamlConfiguration(
             encodeDefaults = false,
-            singleLineStringStyle = SingleLineStringStyle.Plain,
+            singleLineStringStyle = SingleLineStringStyle.PlainExceptAmbiguous,
             multiLineStringStyle = MultiLineStringStyle.Literal,
-            breakScalarsAt = Int.MAX_VALUE
+            breakScalarsAt = Int.MAX_VALUE,
+            ambiguousQuoteStyle = AmbiguousQuoteStyle.SingleQuoted
         )
     )
 }
