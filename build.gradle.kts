@@ -120,6 +120,7 @@ tasks.jpackage {
     }
 
     mac {
+        appVersion = "1.0.0"
         type = ImageType.DMG
     }
 }
