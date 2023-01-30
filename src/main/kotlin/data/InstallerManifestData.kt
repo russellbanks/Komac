@@ -20,7 +20,7 @@ class InstallerManifestData : KoinComponent {
     lateinit var installerUrl: Url
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
-    lateinit var installerType: InstallerManifest.Installer.InstallerType
+    var installerType: InstallerManifest.Installer.InstallerType? = null
     var installerSwitches = InstallerManifest.Installer.InstallerSwitches()
     var installerLocale: String? = null
     var productCode: String? = null
@@ -49,7 +49,7 @@ class InstallerManifestData : KoinComponent {
                 ?: previousManifest?.platform?.map { it.toPerInstallerPlatform() },
             minimumOSVersion = sharedManifestData.msix?.minVersion,
             architecture = if (::architecture.isInitialized) architecture else previousInstaller?.architecture!!,
-            installerType = if (::installerType.isInitialized) installerType else previousInstaller?.installerType,
+            installerType = if (installerType != null) installerType else previousInstaller?.installerType,
             nestedInstallerType = sharedManifestData.zip?.nestedInstallerType
                 ?: previousInstaller?.nestedInstallerType
                 ?: previousManifest?.nestedInstallerType?.toPerInstallerNestedInstallerType(),
