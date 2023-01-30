@@ -9,16 +9,40 @@ import java.nio.ByteOrder
 object ExeUtils {
     fun File.getInstallerType(): InstallerManifest.Installer.InstallerType? {
         RandomAccessFile(this, readOnly).use {
-            val magicBytes = ByteArray(innoBytes.size)
-            it.read(magicBytes)
             return when {
-                magicBytes.sliceArray(IntRange(0, nullsoftBytes.size.dec())).contentEquals(nullsoftBytes) -> {
-                    InstallerManifest.Installer.InstallerType.NULLSOFT
-                }
-                magicBytes.contentEquals(innoBytes) -> InstallerManifest.Installer.InstallerType.INNO
+                it.isNullsoft() -> InstallerManifest.Installer.InstallerType.NULLSOFT
+                it.isInno() -> InstallerManifest.Installer.InstallerType.INNO
+                it.isBurn() -> InstallerManifest.Installer.InstallerType.BURN
                 else -> null
             }
         }
+    }
+
+    private fun RandomAccessFile.isNullsoft(): Boolean {
+        val magicBytes = ByteArray(nullsoftBytes.size)
+        seek(0)
+        read(magicBytes)
+        return magicBytes.contentEquals(nullsoftBytes)
+    }
+
+    private fun RandomAccessFile.isInno(): Boolean {
+        val magicBytes = ByteArray(innoBytes.size)
+        seek(0)
+        read(magicBytes)
+        return magicBytes.contentEquals(innoBytes)
+    }
+
+    private fun RandomAccessFile.isBurn(): Boolean {
+        val bytes = ByteArray(8)
+        seek(0)
+        skipBytes(UInt.MAX_VALUE.toInt())
+        for (index in 0 until UShort.MAX_VALUE.toInt()) {
+            read(bytes)
+            if (bytes.contentEquals(wixBurnHeader.toByteArray())) {
+                return true
+            }
+        }
+        return false
     }
 
     fun File.getArchitecture(): InstallerManifest.Installer.Architecture {
@@ -45,9 +69,6 @@ object ExeUtils {
         }
     }
 
-    private const val peHeader: Long = 0x3C
-    private const val readOnly = "r"
-
     /**
      * The first 224 bytes of a nullsoft exe are the same
      */
@@ -61,6 +82,7 @@ object ExeUtils {
         86, -46, -29, 80, 102, -46, 46, 86, 96, -46, -24, 80, 102, -46, 82, 105, 99, 104, -23, 80, 102, -46, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 69, 0, 0, 76, 1, 5, 0
     )
+
     /**
      * The first 264 bytes of an inno exe are the same
      */
@@ -75,4 +97,8 @@ object ExeUtils {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 69, 0, 0, 76, 1, 10,
         0
     )
+
+    private const val wixBurnHeader: String = ".wixburn"
+    private const val peHeader: Long = 0x3C
+    private const val readOnly = "r"
 }
