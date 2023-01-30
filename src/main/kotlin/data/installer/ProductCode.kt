@@ -39,7 +39,8 @@ object ProductCode : KoinComponent {
 
     private fun isProductCodeValid(productCode: String): String? {
         return when {
-            productCode.isNotBlank() && productCode.length > productCodeSchema.maxLength -> {
+            productCode.isBlank() -> null
+            productCode.length > productCodeSchema.maxLength -> {
                 Errors.invalidLength(min = productCodeSchema.minLength, max = productCodeSchema.maxLength)
             }
             !productCode.matches(Regex(pattern)) -> Errors.invalidRegex(regex = Regex(pattern))
