@@ -45,18 +45,20 @@ object InstallerType : KoinComponent {
                 installerManifestData.installerType = InstallerManifest.Installer.InstallerType.APPX
             }
             else -> {
-                installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
-                info("Options: ${installerTypeSchema.enum.joinToString(", ")}")
-                installerManifestData.installerType = prompt(
-                    prompt = const,
-                    default = getPreviousValue()?.toInstallerType()?.also { muted("Previous installer type: $it") },
-                    convert = { input ->
-                        isInstallerTypeValid(input)
-                            ?.let { ConversionResult.Invalid(it) }
-                            ?: ConversionResult.Valid(input.toInstallerType())
-                    }
-                ) ?: exitProcess(ExitCode.CtrlC.code)
-                println()
+                if (installerManifestData.installerType == null) {
+                    installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
+                    info("Options: ${installerTypeSchema.enum.joinToString(", ")}")
+                    installerManifestData.installerType = prompt(
+                        prompt = const,
+                        default = getPreviousValue()?.toInstallerType()?.also { muted("Previous installer type: $it") },
+                        convert = { input ->
+                            isInstallerTypeValid(input)
+                                ?.let { ConversionResult.Invalid(it) }
+                                ?: ConversionResult.Valid(input.toInstallerType())
+                        }
+                    ) ?: exitProcess(ExitCode.CtrlC.code)
+                    println()
+                }
             }
         }
     }
