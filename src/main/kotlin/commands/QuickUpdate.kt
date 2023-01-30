@@ -49,12 +49,12 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private lateinit var files: List<Pair<String, String?>>
     private val githubImpl: GitHubImpl by inject()
     private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
-    private val packageIdentifier: String? by option()
-    private val packageVersion: String? by option()
+    private val packageIdentifier: String? by option("--id", "--package-identifier")
+    private val packageVersion: String? by option("--version", "--package-version")
     private val urls: List<Url>? by option().convert { Url(it.removeSuffix("/")).decodeHex() }.split(",")
     private val manifestVersion: String? by option()
     private val submit: Boolean by option().flag(default = false)
-    private val tokenParameter: String? by option("--token")
+    private val tokenParameter: String? by option("-t", "--token")
 
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
