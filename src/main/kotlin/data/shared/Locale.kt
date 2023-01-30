@@ -4,7 +4,6 @@ import Errors
 import ExitCode
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -35,7 +34,7 @@ object Locale : KoinComponent {
         localeInfo(localeType).also { (info, infoColor) -> println(infoColor(info)) }
         info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
         val input = prompt(
-            prompt = brightWhite("$localeType locale"),
+            prompt = "$localeType locale",
             default = when (localeType) {
                 LocaleType.Installer -> getPreviousValue()?.also { muted("Previous value: $it") }
                 LocaleType.Package -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default

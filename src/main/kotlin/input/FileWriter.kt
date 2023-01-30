@@ -2,7 +2,6 @@ package input
 
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.Terminal
 import java.io.File
@@ -12,7 +11,7 @@ object FileWriter {
         do {
             println()
             println(brightYellow("Enter a directory to write the files to:"))
-            val directory = prompt(brightWhite("Directory"))?.let { File(it) }
+            val directory = prompt("Directory")?.let { File(it) }
             if (directory?.isDirectory == true) {
                 writeFilesToDirectory(directory, files)
             } else {

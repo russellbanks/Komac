@@ -34,7 +34,7 @@ object Publisher : KoinComponent {
                             ?.let { ConversionResult.Invalid(it) }
                             ?: ConversionResult.Valid(input.trim())
                     }
-                )?.also { println(it) } ?: exitProcess(ExitCode.CtrlC.code)
+                )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
             }
         }
     }

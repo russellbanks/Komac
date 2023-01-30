@@ -1,7 +1,6 @@
 package data.installer
 
 import Errors
-import ExitCode
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -13,7 +12,6 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
 import schemas.data.InstallerSchema
-import kotlin.system.exitProcess
 
 object Commands : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -34,7 +32,7 @@ object Commands : KoinComponent {
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(input.trim())
             }
-        )?.convertToYamlList() ?: exitProcess(ExitCode.CtrlC.code)
+        )?.convertToYamlList()
         println()
     }
 
