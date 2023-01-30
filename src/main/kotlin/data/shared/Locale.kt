@@ -35,7 +35,7 @@ object Locale : KoinComponent {
         localeInfo(localeType).also { (info, infoColor) -> println(infoColor(info)) }
         info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
         val input = prompt(
-            prompt = brightWhite(localeType.toString()),
+            prompt = brightWhite("$localeType locale"),
             default = when (localeType) {
                 LocaleType.Installer -> getPreviousValue()?.also { muted("Previous value: $it") }
                 LocaleType.Package -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default
@@ -89,7 +89,7 @@ object Locale : KoinComponent {
     private fun localeInfo(localeType: LocaleType): Pair<String, TextColors> {
         return buildString {
             append(if (localeType == LocaleType.Package) Prompts.required else Prompts.optional)
-            append(" Enter the $localeType")
+            append(" Enter the $localeType locale")
         } to if (localeType == LocaleType.Package) brightGreen else brightYellow
     }
 
