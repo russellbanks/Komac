@@ -40,7 +40,7 @@ import schemas.data.DefaultLocaleSchema
 import schemas.data.InstallerSchema
 import schemas.data.RemoteSchema
 import schemas.manifest.InstallerManifest
-import utils.FileUtils.getArchitecture
+import utils.ExeUtils.getArchitecture
 import java.net.ConnectException
 import kotlin.system.exitProcess
 
