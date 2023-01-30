@@ -30,7 +30,6 @@ import ktor.Http
 import ktor.Ktor.decodeHex
 import ktor.Ktor.downloadInstallerFromUrl
 import ktor.Ktor.getRedirectedUrl
-import ktor.Ktor.getURLExtension
 import ktor.Ktor.isRedirect
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -119,36 +118,31 @@ object Url : KoinComponent {
             if (installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
                 sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
             }
-            if (sharedManifestData.gitHubDetection?.sha256?.await() == null &&
-                getURLExtension(installerManifestData.installerUrl).equals(
-                    other = InstallerManifest.InstallerType.EXE.toString(),
-                    ignoreCase = true
-                )
-            ) {
-                val (file, fileDeletionThread) = get<Http>().client.downloadInstallerFromUrl(terminal = this)
-                installerManifestData.installerSha256 = file.hash()
-                when (file.extension.lowercase()) {
-                    InstallerManifest.InstallerType.EXE.toString() -> {
-                        installerManifestData.architecture = file.getArchitecture()
-                        file.getInstallerType()?.let { installerManifestData.installerType = it }
-                    }
-                    InstallerManifest.InstallerType.MSIX.toString(),
-                    InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file)
-                    MsixBundle.msixBundleConst,
-                    MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(file)
-                    InstallerManifest.InstallerType.MSI.toString() -> {
-                        if (Platform.isWindows()) sharedManifestData.msi = Msi(file)
-                    }
-                    InstallerManifest.InstallerType.ZIP.toString() -> sharedManifestData.zip = Zip(
-                        zip = file,
-                        terminal = this@downloadInstaller
-                    )
+            val (file, fileDeletionThread) = get<Http>().client.downloadInstallerFromUrl(terminal = this)
+            installerManifestData.installerSha256 = sharedManifestData.gitHubDetection?.sha256?.await() ?: file.hash()
+            when (file.extension.lowercase()) {
+                InstallerManifest.InstallerType.EXE.toString() -> {
+                    installerManifestData.architecture = file.getArchitecture()
+                    file.getInstallerType()?.let { installerManifestData.installerType = it }
                 }
-                file.delete()
-                Runtime.getRuntime().removeShutdownHook(fileDeletionThread)
-            } else {
-                sharedManifestData.gitHubDetection?.sha256?.await()?.let { installerManifestData.installerSha256 = it }
+                InstallerManifest.InstallerType.MSIX.toString(),
+                InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file).also { msix ->
+                    msix.processorArchitecture?.let { installerManifestData.architecture = it }
+                }
+                MsixBundle.msixBundleConst,
+                MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(file).also { msixBundle ->
+                    msixBundle.packages?.first()?.processorArchitecture?.let { installerManifestData.architecture = it }
+                }
+                InstallerManifest.InstallerType.MSI.toString() -> {
+                    if (Platform.isWindows()) sharedManifestData.msi = Msi(file)
+                }
+                InstallerManifest.InstallerType.ZIP.toString() -> sharedManifestData.zip = Zip(
+                    zip = file,
+                    terminal = this@downloadInstaller
+                )
             }
+            file.delete()
+            Runtime.getRuntime().removeShutdownHook(fileDeletionThread)
         }
     }
 
