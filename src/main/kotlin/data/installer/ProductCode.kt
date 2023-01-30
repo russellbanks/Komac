@@ -11,6 +11,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
+import schemas.manifest.InstallerManifest
 import java.util.UUID
 import kotlin.system.exitProcess
 
@@ -20,21 +21,25 @@ object ProductCode : KoinComponent {
     private val productCodeSchema = get<SchemasImpl>().installerSchema.definitions.productCode
 
     fun Terminal.productCodePrompt() {
-        sharedManifestData.msi?.productCode?.let {
-            installerManifestData.productCode = it
-            return
-        }
-        println(colors.brightYellow(productCodeInfo))
-        info(example)
-        installerManifestData.productCode = prompt(
-            prompt = const,
-            convert = { input ->
-                isProductCodeValid(input)
-                    ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(input.trim().uppercase().ensureProductCodeBrackets())
+        when {
+            sharedManifestData.msi?.productCode != null -> {
+                installerManifestData.productCode = sharedManifestData.msi?.productCode
             }
-        ) ?: exitProcess(ExitCode.CtrlC.code)
-        println()
+            installerManifestData.installerType == InstallerManifest.Installer.InstallerType.PORTABLE -> Unit
+            else -> {
+                println(colors.brightYellow(productCodeInfo))
+                info(example)
+                installerManifestData.productCode = prompt(
+                    prompt = const,
+                    convert = { input ->
+                        isProductCodeValid(input)
+                            ?.let { ConversionResult.Invalid(it) }
+                            ?: ConversionResult.Valid(input.trim().uppercase().ensureProductCodeBrackets())
+                    }
+                ) ?: exitProcess(ExitCode.CtrlC.code)
+                println()
+            }
+        }
     }
 
     private fun isProductCodeValid(productCode: String): String? {
