@@ -39,8 +39,7 @@ import schemas.data.DefaultLocaleSchema
 import schemas.data.InstallerSchema
 import schemas.data.RemoteSchema
 import schemas.manifest.InstallerManifest
-import utils.ExeUtils.getArchitecture
-import utils.ExeUtils.getInstallerType
+import utils.FileUtils
 import java.net.ConnectException
 import kotlin.system.exitProcess
 
@@ -122,8 +121,9 @@ object Url : KoinComponent {
             installerManifestData.installerSha256 = sharedManifestData.gitHubDetection?.sha256?.await() ?: file.hash()
             when (file.extension.lowercase()) {
                 InstallerManifest.InstallerType.EXE.toString() -> {
-                    installerManifestData.architecture = file.getArchitecture()
-                    file.getInstallerType()?.let { installerManifestData.installerType = it }
+                    val fileUtils = FileUtils(file)
+                    installerManifestData.architecture = fileUtils.getArchitecture()!!
+                    fileUtils.getInstallerType()?.let { installerManifestData.installerType = it }
                 }
                 InstallerManifest.InstallerType.MSIX.toString(),
                 InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file).also { msix ->

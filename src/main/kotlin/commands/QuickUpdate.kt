@@ -2,10 +2,9 @@ package commands
 import Errors
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
-import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.mordant.animation.ProgressAnimation
+import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -20,13 +19,29 @@ import data.shared.Locale
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
+import hashing.Hashing.hash
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
 import input.Prompts
 import input.Prompts.pullRequestPrompt
+import io.ktor.client.call.body
+import io.ktor.client.request.prepareGet
 import io.ktor.http.Url
+import io.ktor.http.contentLength
+import io.ktor.http.lastModified
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.core.isNotEmpty
+import io.ktor.utils.io.core.readBytes
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import ktor.Http
+import ktor.Ktor
 import ktor.Ktor.decodeHex
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -38,7 +53,13 @@ import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.YamlConfig
 import token.TokenStore
+import utils.FileUtils
+import java.io.File
 import java.io.IOException
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -103,21 +124,88 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private suspend fun Terminal.loopThroughInstallers(
         parameterUrls: List<Url>? = null,
         isCIEnvironment: Boolean = false
-    ) {
+    ) = coroutineScope {
         val remoteInstallerManifest = previousManifestData.remoteInstallerData
         if (parameterUrls != null) {
-            if (remoteInstallerManifest?.installers?.size != parameterUrls.size) {
-                throw CliktError(
-                    message = "The number of urls provided does not match the number of previous installers",
-                    statusCode = 1
-                )
-            }
-            data.shared.Url.areUrlsValid(parameterUrls)
-                ?.let { throw CliktError(colors.danger(it)) }
-                ?: parameterUrls.forEach { url ->
-                    installerDownloadPrompt(url)
-                    installerManifestData.addInstaller()
+            data.shared.Url.areUrlsValid(parameterUrls.distinct())?.let { throw CliktError(colors.danger(it)) }
+            val listOfAsync = mutableListOf<Deferred<InstallerManifest.Installer>>()
+            val listOfProgress = mutableListOf<ProgressAnimation>()
+            val client = get<Http>().client
+            parameterUrls.distinct().forEach { url ->
+                listOfAsync += async(Dispatchers.IO) {
+                    val file = withContext(Dispatchers.IO) {
+                        val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
+                        File.createTempFile(
+                            "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
+                            ".${Ktor.getURLExtension(url)}"
+                        )
+                    }
+                    val progress = currentContext.terminal.progressAnimation {
+                        Ktor.getFileName(url)?.let { text(it) }
+                        percentage()
+                        progressBar()
+                        completed()
+                        speed("B/s")
+                        timeRemaining()
+                    }
+                    listOfProgress += progress
+                    progress.start()
+                    lateinit var releaseDate: LocalDate
+                    client.prepareGet(url).execute { httpResponse ->
+                        httpResponse.lastModified()?.let {
+                            releaseDate = LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                        }
+                        val channel: ByteReadChannel = httpResponse.body()
+                        while (!channel.isClosedForRead) {
+                            val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                            while (packet.isNotEmpty) {
+                                file.appendBytes(packet.readBytes())
+                                progress.update(file.length(), httpResponse.contentLength())
+                            }
+                        }
+                    }
+                    val fileUtils = FileUtils(file)
+                    try {
+                        InstallerManifest.Installer(
+                            architecture = fileUtils.getArchitecture()!!,
+                            installerType = fileUtils.getInstallerType(),
+                            installerSha256 = file.hash(),
+                            signatureSha256 = fileUtils.getSignatureSha256(),
+                            installerUrl = url,
+                            productCode = fileUtils.getProductCode(),
+                            upgradeBehavior = fileUtils.getUpgradeBehaviour(),
+                            releaseDate = releaseDate
+                        )
+                    } finally {
+                        file.delete()
+                    }
                 }
+            }
+            val installers = listOfAsync.awaitAll().also { listOfProgress.forEach { it.clear() } }
+            val previousInstallers = previousManifestData.remoteInstallerData!!.installers
+            val sortedList1 = installers
+                .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope }))
+            val sortedList2 = previousInstallers
+                .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope }))
+
+            var i = 0
+            var j = 0
+
+            // Loop through both lists from both ends
+            while (i < sortedList1.size && j < sortedList2.size) {
+                val comparison = sortedList2[j].installerType?.let { sortedList1[i].installerType?.compareTo(it) }
+                    ?: sortedList1[i].architecture.compareTo(sortedList2[j].architecture)
+                if (comparison == 0) {
+                    // Pair up objects with matching values
+                    println("Pairing: ${sortedList1[i].installerUrl} - ${sortedList2[j].installerUrl}")
+                    i++
+                    j++
+                } else if (comparison < 0) {
+                    i++
+                } else {
+                    j++
+                }
+            }
         } else if (isCIEnvironment) {
             throw CliktError(colors.danger("${Errors.error} No installers have been provided"), statusCode = 1)
         } else {

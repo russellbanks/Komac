@@ -81,6 +81,7 @@ task("copyJar", Copy::class) {
 }
 
 application {
+    applicationDefaultJvmArgs = listOf("-Dfile.encoding=UTF-8")
     mainClass.set("MainKt")
 }
 
