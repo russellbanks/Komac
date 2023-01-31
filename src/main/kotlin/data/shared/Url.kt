@@ -229,14 +229,6 @@ object Url : KoinComponent {
         }
     }
 
-    suspend fun areUrlsValid(urls: List<Url>?): String? {
-        urls?.forEach {
-            val error = isUrlValid(it, get<SchemasImpl>().installerSchema, false)
-            error?.let { return error }
-        }
-        return null
-    }
-
     suspend fun isUrlValid(url: Url, schema: RemoteSchema, canBeBlank: Boolean): String? {
         val maxLength = when (schema) {
             is InstallerSchema -> schema.definitions.url.maxLength

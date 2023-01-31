@@ -90,18 +90,20 @@ object Ktor : KoinComponent {
     fun fileNameWithoutExtension(url: Url): String? = getFileName(url)?.removeSuffix(getURLExtension(url))
 
     fun detectArchitectureFromUrl(url: Url): InstallerManifest.Installer.Architecture? {
-        var archInUrl = Regex("(x86_64|i[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?)")
-            .find(url.fullPath.lowercase())?.groupValues?.last()
-        when (archInUrl) {
-            "aarch" -> archInUrl = InstallerManifest.Installer.Architecture.ARM.toString()
-            "aarch64" -> archInUrl = InstallerManifest.Installer.Architecture.ARM64.toString()
-            "x86_64" -> archInUrl = InstallerManifest.Installer.Architecture.X64.toString()
-            "i386", "i486", "i586", "i686" -> archInUrl = InstallerManifest.Installer.Architecture.X86.toString()
-        }
-        return try {
-            InstallerManifest.Installer.Architecture.valueOf(archInUrl?.uppercase() ?: "")
-        } catch (_: IllegalArgumentException) {
-            null
+        val archInUrl = Regex("(x86_64|i?[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?|amd64?)", RegexOption.IGNORE_CASE)
+            .find(url.fullPath)?.groupValues?.last()
+        return when (archInUrl?.lowercase()) {
+            "aarch" -> InstallerManifest.Installer.Architecture.ARM
+            "aarch64" -> InstallerManifest.Installer.Architecture.ARM64
+            "x86_64", "amd64" -> InstallerManifest.Installer.Architecture.X64
+            "i386", "386", "i486", "486", "i586", "586", "i686", "686" -> InstallerManifest.Installer.Architecture.X86
+            else -> {
+                try {
+                    InstallerManifest.Installer.Architecture.valueOf(archInUrl?.uppercase() ?: "")
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+            }
         }
     }
 

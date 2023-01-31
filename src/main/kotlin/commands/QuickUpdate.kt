@@ -2,7 +2,10 @@ package commands
 import Errors
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
@@ -43,6 +46,7 @@ import kotlinx.coroutines.withContext
 import ktor.Http
 import ktor.Ktor
 import ktor.Ktor.decodeHex
+import ktor.Ktor.detectArchitectureFromUrl
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -126,8 +130,30 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         isCIEnvironment: Boolean = false
     ) = coroutineScope {
         val remoteInstallerManifest = previousManifestData.remoteInstallerData
+        val previousInstallers = remoteInstallerManifest!!.installers
+        val previousUrls = previousInstallers.map { it.installerUrl }
         if (parameterUrls != null) {
-            data.shared.Url.areUrlsValid(parameterUrls.distinct())?.let { throw CliktError(colors.danger(it)) }
+            if (parameterUrls.distinct().size != previousUrls.distinct().size) {
+                throw CliktError(
+                    colors.danger(
+                        buildString {
+                            append("The number of unique installer urls ")
+                            append(
+                                when {
+                                    parameterUrls.distinct().size > previousUrls.distinct().size -> "is greater than"
+                                    parameterUrls.distinct().size < previousUrls.distinct().size -> "is less than"
+                                    else -> "does not match"
+                                }
+                            )
+                            append(" the number of previous manifest urls")
+                        }
+                    )
+                )
+            }
+            urls?.forEach { url ->
+                data.shared.Url.isUrlValid(url, get<SchemasImpl>().installerSchema, false)
+                    ?.let { throw CliktError(colors.danger("$it on $url")) }
+            }
             val listOfAsync = mutableListOf<Deferred<InstallerManifest.Installer>>()
             val listOfProgress = mutableListOf<ProgressAnimation>()
             val client = get<Http>().client
@@ -150,10 +176,10 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     }
                     listOfProgress += progress
                     progress.start()
-                    lateinit var releaseDate: LocalDate
+                    var releaseDate: LocalDate? = null
                     client.prepareGet(url).execute { httpResponse ->
-                        httpResponse.lastModified()?.let {
-                            releaseDate = LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                        releaseDate = httpResponse.lastModified()?.let {
+                            LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
                         }
                         val channel: ByteReadChannel = httpResponse.body()
                         while (!channel.isClosedForRead) {
@@ -167,7 +193,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     val fileUtils = FileUtils(file)
                     try {
                         InstallerManifest.Installer(
-                            architecture = fileUtils.getArchitecture()!!,
+                            architecture = detectArchitectureFromUrl(url) ?: fileUtils.getArchitecture()!!,
                             installerType = fileUtils.getInstallerType(),
                             installerSha256 = file.hash(),
                             signatureSha256 = fileUtils.getSignatureSha256(),
@@ -182,47 +208,71 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 }
             }
             val installers = listOfAsync.awaitAll().also { listOfProgress.forEach { it.clear() } }
-            val previousInstallers = previousManifestData.remoteInstallerData!!.installers
-            val sortedList1 = installers
-                .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope }))
-            val sortedList2 = previousInstallers
-                .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope }))
 
-            var i = 0
-            var j = 0
-
-            // Loop through both lists from both ends
-            while (i < sortedList1.size && j < sortedList2.size) {
-                val comparison = sortedList2[j].installerType?.let { sortedList1[i].installerType?.compareTo(it) }
-                    ?: sortedList1[i].architecture.compareTo(sortedList2[j].architecture)
-                if (comparison == 0) {
-                    // Pair up objects with matching values
-                    println("Pairing: ${sortedList1[i].installerUrl} - ${sortedList2[j].installerUrl}")
-                    i++
-                    j++
-                } else if (comparison < 0) {
-                    i++
-                } else {
-                    j++
+            val result = mutableListOf<Pair<InstallerManifest.Installer, InstallerManifest.Installer>>()
+            for (previousInstaller in previousInstallers) {
+                var paired = false
+                for (newInstaller in installers) {
+                    if (previousInstaller.architecture == newInstaller.architecture && previousInstaller.installerType == newInstaller.installerType) {
+                        result.add(Pair(previousInstaller, newInstaller))
+                        paired = true
+                        break
+                    }
                 }
+                if (!paired) {
+                    for (newInstaller in installers) {
+                        if (previousInstaller.installerType == newInstaller.installerType) {
+                            result.add(Pair(previousInstaller, newInstaller))
+                            paired = true
+                            break
+                        }
+                    }
+                }
+                if (!paired) {
+                    for (installer2 in installers) {
+                        if (previousInstaller.architecture == installer2.architecture) {
+                            result.add(Pair(previousInstaller, installer2))
+                            paired = true
+                            break
+                        }
+                    }
+                }
+                if (!paired) {
+                    for (installer2 in installers) {
+                        if (Ktor.getURLExtension(previousInstaller.installerUrl) == Ktor.getURLExtension(installer2.installerUrl)) {
+                            result.add(Pair(previousInstaller, installer2))
+                            paired = true
+                            break
+                        }
+                    }
+                }
+            }
+            result.forEach {
+                installerManifestData.installers += it.first.copy(
+                    installerUrl = it.second.installerUrl,
+                    installerSha256 = it.second.installerSha256.uppercase(),
+                    signatureSha256 = it.second.signatureSha256,
+                    productCode = it.second.productCode,
+                    releaseDate = it.second.releaseDate
+                )
             }
         } else if (isCIEnvironment) {
             throw CliktError(colors.danger("${Errors.error} No installers have been provided"), statusCode = 1)
         } else {
-            remoteInstallerManifest?.installers?.forEachIndexed { index, installer ->
+            remoteInstallerManifest.installers.forEachIndexed { index, installer ->
                 info("Installer Entry ${index.inc()}/${remoteInstallerManifest.installers.size}")
                 listOf(
-                    InstallerManifest.Installer.Architecture::name to installer.architecture,
+                    InstallerManifest.Installer.Architecture::class.simpleName!! to installer.architecture,
                     InstallerType.const to (installer.installerType ?: remoteInstallerManifest.installerType),
                     InstallerScope.const to (installer.scope ?: remoteInstallerManifest.scope),
                     Locale.installerLocaleConst to
                         (installer.installerLocale ?: remoteInstallerManifest.installerLocale)
                 ).forEach { (promptType, value) ->
                     value?.let {
-                        println("${" ".repeat(Prompts.optionIndent)} $promptType: ${colors.info(it.toString())}")
+                        echo("${" ".repeat(Prompts.optionIndent)} $promptType: ${colors.info(it.toString())}")
                     }
                 }
-                println()
+                echo()
                 installerDownloadPrompt()
                 installerManifestData.addInstaller()
             }
