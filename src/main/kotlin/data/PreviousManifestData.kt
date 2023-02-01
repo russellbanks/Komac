@@ -6,7 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import ktor.Ktor
+import network.HttpUtils
 import org.kohsuke.github.GHContent
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
@@ -26,7 +26,7 @@ class PreviousManifestData : KoinComponent {
     private val directoryPath: Deferred<MutableList<GHContent>?> = CoroutineScope(Dispatchers.IO).async {
         sharedManifestData.latestVersion?.let {
             repository.await()
-                ?.getDirectoryContent("${Ktor.getDirectoryPath(sharedManifestData.packageIdentifier)}/$it")
+                ?.getDirectoryContent("${HttpUtils.getDirectoryPath(sharedManifestData.packageIdentifier)}/$it")
         }
     }
     var remoteInstallerDataJob: Job = CoroutineScope(Dispatchers.IO).launch {

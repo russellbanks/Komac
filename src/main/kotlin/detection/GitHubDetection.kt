@@ -8,10 +8,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import ktor.Http
-import ktor.Ktor.decodeHex
-import ktor.Ktor.fileNameWithoutExtension
-import ktor.Ktor.getFileName
+import network.Http
+import network.HttpUtils.decodeHex
+import network.HttpUtils.fileNameWithoutExtension
+import network.HttpUtils.getFileName
 import org.kohsuke.github.GHAsset
 import org.kohsuke.github.GHRelease
 import org.kohsuke.github.PagedIterable
@@ -127,6 +127,7 @@ class GitHubDetection(url: Url) : KoinComponent {
             .map { line ->
                 line.trim()
                     .let { if (it.startsWith("* ")) it.replaceFirst("* ", "- ") else it }
+                    .replace(Regex("""\*+([^*]+)\*+"""), "$1")
                     .replace("`", "")
                     .replace(Regex("\\[([^]]+)]\\([^)]+\\)"), "$1")
             }

@@ -12,7 +12,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import ktor.Http
+import network.Http
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 

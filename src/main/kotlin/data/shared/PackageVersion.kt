@@ -9,7 +9,7 @@ import data.GitHubImpl
 import data.SharedManifestData
 import data.VersionUpdateState
 import input.Prompts
-import ktor.Ktor
+import network.HttpUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -61,7 +61,7 @@ object PackageVersion : KoinComponent {
 
     private suspend fun checkIfPackageExistsInRepo(sharedManifestData: SharedManifestData): Boolean {
         return githubImpl.getMicrosoftWingetPkgs()
-            ?.getDirectoryContent(Ktor.getDirectoryPath(sharedManifestData.packageIdentifier))
+            ?.getDirectoryContent(HttpUtils.getDirectoryPath(sharedManifestData.packageIdentifier))
             ?.map { it.name }
             ?.contains(sharedManifestData.packageVersion) ?: false
     }

@@ -1,7 +1,7 @@
 package data
 
 import io.ktor.http.Url
-import ktor.Ktor.decodeHex
+import network.HttpUtils.decodeHex
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject

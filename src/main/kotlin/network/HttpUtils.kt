@@ -1,4 +1,4 @@
-package ktor
+package network
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -30,23 +30,21 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-object Ktor : KoinComponent {
-    suspend fun HttpClient.downloadInstallerFromUrl(terminal: Terminal): Pair<File, Thread> {
+object HttpUtils : KoinComponent {
+    suspend fun HttpClient.downloadFile(url: Url, terminal: Terminal): Pair<File, Thread> {
         val sharedManifestData: SharedManifestData by inject()
-        val installerManifestData: InstallerManifestData by inject()
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
                 "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
-                ".${getURLExtension(installerManifestData.installerUrl)}"
+                ".${getURLExtension(url)}"
             )
         }
         val fileDeletionThread = Thread { file.delete() }
         Runtime.getRuntime().addShutdownHook(fileDeletionThread)
-
         with(terminal) {
             progressAnimation {
-                getFileName(installerManifestData.installerUrl)?.let { text(it) }
+                getFileName(url)?.let { text(it) }
                 percentage()
                 progressBar()
                 completed()
@@ -54,9 +52,12 @@ object Ktor : KoinComponent {
                 timeRemaining()
             }.run {
                 start()
-                prepareGet(installerManifestData.installerUrl).execute { httpResponse ->
+                prepareGet(url).execute { httpResponse ->
                     httpResponse.lastModified()?.let {
-                        installerManifestData.releaseDate = LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                        get<InstallerManifestData>().releaseDate = LocalDate.ofInstant(
+                            /* instant = */ it.toInstant(),
+                            /* zone = */ ZoneId.systemDefault()
+                        )
                     }
                     val channel: ByteReadChannel = httpResponse.body()
                     while (!channel.isClosedForRead) {
@@ -112,7 +113,7 @@ object Ktor : KoinComponent {
     }
 
     suspend fun getRedirectedUrl(installerUrl: Url): Url {
-        val noRedirectClient = get<ktor.Http>().client.config { followRedirects = false }
+        val noRedirectClient = get<Http>().client.config { followRedirects = false }
         var redirectedInstallerUrl: Url = installerUrl
         var response: HttpResponse? = noRedirectClient.head(installerUrl)
 
