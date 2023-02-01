@@ -26,11 +26,11 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
-import ktor.Http
-import ktor.Ktor.decodeHex
-import ktor.Ktor.downloadInstallerFromUrl
-import ktor.Ktor.getRedirectedUrl
-import ktor.Ktor.isRedirect
+import network.Http
+import network.HttpUtils.decodeHex
+import network.HttpUtils.downloadFile
+import network.HttpUtils.getRedirectedUrl
+import network.HttpUtils.isRedirect
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -39,8 +39,7 @@ import schemas.data.DefaultLocaleSchema
 import schemas.data.InstallerSchema
 import schemas.data.RemoteSchema
 import schemas.manifest.InstallerManifest
-import utils.ExeUtils.getArchitecture
-import utils.ExeUtils.getInstallerType
+import utils.FileUtils
 import java.net.ConnectException
 import kotlin.system.exitProcess
 
@@ -118,12 +117,13 @@ object Url : KoinComponent {
             if (installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
                 sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
             }
-            val (file, fileDeletionThread) = get<Http>().client.downloadInstallerFromUrl(terminal = this)
+            val (file, fileDeletionThread) = get<Http>().client.downloadFile(installerManifestData.installerUrl, this)
             installerManifestData.installerSha256 = sharedManifestData.gitHubDetection?.sha256?.await() ?: file.hash()
             when (file.extension.lowercase()) {
                 InstallerManifest.InstallerType.EXE.toString() -> {
-                    installerManifestData.architecture = file.getArchitecture()
-                    file.getInstallerType()?.let { installerManifestData.installerType = it }
+                    val fileUtils = FileUtils(file)
+                    installerManifestData.architecture = fileUtils.getArchitecture()!!
+                    fileUtils.getInstallerType()?.let { installerManifestData.installerType = it }
                 }
                 InstallerManifest.InstallerType.MSIX.toString(),
                 InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file).also { msix ->
@@ -227,14 +227,6 @@ object Url : KoinComponent {
                 println()
             }
         }
-    }
-
-    suspend fun areUrlsValid(urls: List<Url>?): String? {
-        urls?.forEach {
-            val error = isUrlValid(it, get<SchemasImpl>().installerSchema, false)
-            error?.let { return error }
-        }
-        return null
     }
 
     suspend fun isUrlValid(url: Url, schema: RemoteSchema, canBeBlank: Boolean): String? {

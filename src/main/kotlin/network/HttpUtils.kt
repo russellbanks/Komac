@@ -1,4 +1,4 @@
-package ktor
+package network
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -30,23 +30,21 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-object Ktor : KoinComponent {
-    suspend fun HttpClient.downloadInstallerFromUrl(terminal: Terminal): Pair<File, Thread> {
+object HttpUtils : KoinComponent {
+    suspend fun HttpClient.downloadFile(url: Url, terminal: Terminal): Pair<File, Thread> {
         val sharedManifestData: SharedManifestData by inject()
-        val installerManifestData: InstallerManifestData by inject()
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
                 "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
-                ".${getURLExtension(installerManifestData.installerUrl)}"
+                ".${getURLExtension(url)}"
             )
         }
         val fileDeletionThread = Thread { file.delete() }
         Runtime.getRuntime().addShutdownHook(fileDeletionThread)
-
         with(terminal) {
             progressAnimation {
-                getFileName(installerManifestData.installerUrl)?.let { text(it) }
+                getFileName(url)?.let { text(it) }
                 percentage()
                 progressBar()
                 completed()
@@ -54,9 +52,12 @@ object Ktor : KoinComponent {
                 timeRemaining()
             }.run {
                 start()
-                prepareGet(installerManifestData.installerUrl).execute { httpResponse ->
+                prepareGet(url).execute { httpResponse ->
                     httpResponse.lastModified()?.let {
-                        installerManifestData.releaseDate = LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                        get<InstallerManifestData>().releaseDate = LocalDate.ofInstant(
+                            /* instant = */ it.toInstant(),
+                            /* zone = */ ZoneId.systemDefault()
+                        )
                     }
                     val channel: ByteReadChannel = httpResponse.body()
                     while (!channel.isClosedForRead) {
@@ -90,18 +91,20 @@ object Ktor : KoinComponent {
     fun fileNameWithoutExtension(url: Url): String? = getFileName(url)?.removeSuffix(getURLExtension(url))
 
     fun detectArchitectureFromUrl(url: Url): InstallerManifest.Installer.Architecture? {
-        var archInUrl = Regex("(x86_64|i[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?)")
-            .find(url.fullPath.lowercase())?.groupValues?.last()
-        when (archInUrl) {
-            "aarch" -> archInUrl = InstallerManifest.Installer.Architecture.ARM.toString()
-            "aarch64" -> archInUrl = InstallerManifest.Installer.Architecture.ARM64.toString()
-            "x86_64" -> archInUrl = InstallerManifest.Installer.Architecture.X64.toString()
-            "i386", "i486", "i586", "i686" -> archInUrl = InstallerManifest.Installer.Architecture.X86.toString()
-        }
-        return try {
-            InstallerManifest.Installer.Architecture.valueOf(archInUrl?.uppercase() ?: "")
-        } catch (_: IllegalArgumentException) {
-            null
+        val archInUrl = Regex("(x86_64|i?[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?|amd64?)", RegexOption.IGNORE_CASE)
+            .find(url.fullPath)?.groupValues?.last()
+        return when (archInUrl?.lowercase()) {
+            "aarch" -> InstallerManifest.Installer.Architecture.ARM
+            "aarch64" -> InstallerManifest.Installer.Architecture.ARM64
+            "x86_64", "amd64" -> InstallerManifest.Installer.Architecture.X64
+            "i386", "386", "i486", "486", "i586", "586", "i686", "686" -> InstallerManifest.Installer.Architecture.X86
+            else -> {
+                try {
+                    InstallerManifest.Installer.Architecture.valueOf(archInUrl?.uppercase() ?: "")
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+            }
         }
     }
 
@@ -110,7 +113,7 @@ object Ktor : KoinComponent {
     }
 
     suspend fun getRedirectedUrl(installerUrl: Url): Url {
-        val noRedirectClient = get<ktor.Http>().client.config { followRedirects = false }
+        val noRedirectClient = get<Http>().client.config { followRedirects = false }
         var redirectedInstallerUrl: Url = installerUrl
         var response: HttpResponse? = noRedirectClient.head(installerUrl)
 

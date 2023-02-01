@@ -10,7 +10,7 @@ import data.SharedManifestData
 import data.VersionUpdateState
 import input.Prompts
 import kotlinx.coroutines.runBlocking
-import ktor.Ktor
+import network.HttpUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -77,7 +77,7 @@ object PackageIdentifier : KoinComponent {
         return try {
             get<GitHubImpl>()
                 .getMicrosoftWingetPkgs()
-                ?.getDirectoryContent(Ktor.getDirectoryPath(packageIdentifier))
+                ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
                 ?.filter { it.name.matches(Regex(installerSchema.definitions.packageVersion.pattern)) }
                 ?.filter { it.isDirectory }
                 ?.also {

@@ -72,20 +72,17 @@ dependencies {
 
 }
 
-task("copyDependencies", Copy::class) {
-    from(configurations.runtimeClasspath).into("$buildDir/jars")
-}
-
 task("copyJar", Copy::class) {
-    from(tasks.jar).into("$buildDir/jars")
+    from(tasks.shadowJar).into("$buildDir/jars")
 }
 
 application {
+    applicationDefaultJvmArgs = listOf("-Dfile.encoding=UTF-8")
     mainClass.set("MainKt")
 }
 
 tasks.jpackage {
-    dependsOn("build", "copyDependencies", "copyJar")
+    dependsOn("build", "copyJar")
     input  = "$buildDir/jars"
     destination = "$buildDir/distributions"
     addModules = listOf(
@@ -104,7 +101,7 @@ tasks.jpackage {
     copyright = "Copyright (c) Russell Banks"
     licenseFile = "$projectDir/src/main/resources/gpl-3.0.rst"
     vendor = "Russell Banks"
-    mainJar = tasks.jar.get().archiveFileName.get()
+    mainJar = tasks.shadowJar.get().archiveFileName.get()
     mainClass = application.mainClass.get()
     javaOptions = listOf("-Dfile.encoding=UTF-8")
 

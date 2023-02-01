@@ -6,6 +6,8 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.mordant.animation.ProgressAnimation
+import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -14,20 +16,38 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
-import data.installer.InstallerScope
 import data.installer.InstallerType
 import data.shared.Locale
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
+import detection.GitHubDetection
+import detection.ParameterUrls
+import hashing.Hashing.hash
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
 import input.Prompts
 import input.Prompts.pullRequestPrompt
+import io.ktor.client.call.body
+import io.ktor.client.request.prepareGet
 import io.ktor.http.Url
+import io.ktor.http.contentLength
+import io.ktor.http.lastModified
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.core.isNotEmpty
+import io.ktor.utils.io.core.readBytes
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import ktor.Ktor.decodeHex
+import kotlinx.coroutines.withContext
+import network.Http
+import network.HttpUtils
+import network.HttpUtils.decodeHex
+import network.HttpUtils.detectArchitectureFromUrl
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -38,7 +58,13 @@ import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.YamlConfig
 import token.TokenStore
+import utils.FileUtils
+import java.io.File
 import java.io.IOException
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -103,38 +129,96 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private suspend fun Terminal.loopThroughInstallers(
         parameterUrls: List<Url>? = null,
         isCIEnvironment: Boolean = false
-    ) {
+    ) = coroutineScope {
         val remoteInstallerManifest = previousManifestData.remoteInstallerData
+        val previousInstallers = remoteInstallerManifest!!.installers
+        val previousUrls = previousInstallers.map { it.installerUrl }
         if (parameterUrls != null) {
-            if (remoteInstallerManifest?.installers?.size != parameterUrls.size) {
-                throw CliktError(
-                    message = "The number of urls provided does not match the number of previous installers",
-                    statusCode = 1
+            ParameterUrls.assertUniqueUrlsCount(parameterUrls, previousUrls, this@loopThroughInstallers)
+            ParameterUrls.assertUrlsValid(parameterUrls, this@loopThroughInstallers)
+            val downloadTasks = mutableListOf<Deferred<InstallerManifest.Installer>>()
+            val progressTasks = mutableListOf<ProgressAnimation>()
+            val client = get<Http>().client
+            parameterUrls.distinct().forEach { url ->
+                downloadTasks += async(Dispatchers.IO) {
+                    val file = withContext(Dispatchers.IO) {
+                        val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
+                        File.createTempFile(
+                            "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
+                            ".${HttpUtils.getURLExtension(url)}"
+                        )
+                    }
+                    val progress = currentContext.terminal.progressAnimation {
+                        HttpUtils.getFileName(url)?.let { text(it) }
+                        percentage()
+                        progressBar()
+                        completed()
+                        speed("B/s")
+                        timeRemaining()
+                    }
+                    progressTasks += progress
+                    progress.start()
+                    sharedManifestData.gitHubDetection = parameterUrls.firstOrNull {
+                        it.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
+                    }?.let { GitHubDetection(it) }
+                    var releaseDate: LocalDate? = null
+                    client.prepareGet(url).execute { httpResponse ->
+                        releaseDate = httpResponse.lastModified()?.let {
+                            LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                        }
+                        val channel: ByteReadChannel = httpResponse.body()
+                        while (!channel.isClosedForRead) {
+                            val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                            while (packet.isNotEmpty) {
+                                file.appendBytes(packet.readBytes())
+                                progress.update(file.length(), httpResponse.contentLength())
+                            }
+                        }
+                    }
+                    val fileUtils = FileUtils(file)
+                    try {
+                        InstallerManifest.Installer(
+                            architecture = detectArchitectureFromUrl(url) ?: fileUtils.getArchitecture()!!,
+                            installerType = fileUtils.getInstallerType(),
+                            installerSha256 = file.hash(),
+                            signatureSha256 = fileUtils.getSignatureSha256(),
+                            installerUrl = url,
+                            productCode = fileUtils.getProductCode(),
+                            upgradeBehavior = fileUtils.getUpgradeBehaviour(),
+                            releaseDate = sharedManifestData.gitHubDetection?.releaseDate?.await() ?: releaseDate
+                        )
+                    } finally {
+                        file.delete()
+                    }
+                }
+            }
+            val newInstallers = downloadTasks.awaitAll().also { progressTasks.forEach { it.clear() } }
+            ParameterUrls.matchInstallers(newInstallers, previousInstallers).forEach {
+                installerManifestData.installers += it.first.copy(
+                    installerUrl = it.second.installerUrl,
+                    installerSha256 = it.second.installerSha256.uppercase(),
+                    signatureSha256 = it.second.signatureSha256,
+                    productCode = it.second.productCode,
+                    releaseDate = it.second.releaseDate
                 )
             }
-            data.shared.Url.areUrlsValid(parameterUrls)
-                ?.let { throw CliktError(colors.danger(it)) }
-                ?: parameterUrls.forEach { url ->
-                    installerDownloadPrompt(url)
-                    installerManifestData.addInstaller()
-                }
         } else if (isCIEnvironment) {
             throw CliktError(colors.danger("${Errors.error} No installers have been provided"), statusCode = 1)
         } else {
-            remoteInstallerManifest?.installers?.forEachIndexed { index, installer ->
+            remoteInstallerManifest.installers.forEachIndexed { index, installer ->
                 info("Installer Entry ${index.inc()}/${remoteInstallerManifest.installers.size}")
                 listOf(
-                    InstallerManifest.Installer.Architecture::name to installer.architecture,
+                    InstallerManifest.Installer.Architecture::class.simpleName!! to installer.architecture,
                     InstallerType.const to (installer.installerType ?: remoteInstallerManifest.installerType),
-                    InstallerScope.const to (installer.scope ?: remoteInstallerManifest.scope),
+                    InstallerManifest.Scope::class.simpleName!! to (installer.scope ?: remoteInstallerManifest.scope),
                     Locale.installerLocaleConst to
                         (installer.installerLocale ?: remoteInstallerManifest.installerLocale)
                 ).forEach { (promptType, value) ->
                     value?.let {
-                        println("${" ".repeat(Prompts.optionIndent)} $promptType: ${colors.info(it.toString())}")
+                        echo("${" ".repeat(Prompts.optionIndent)} $promptType: ${colors.info(it.toString())}")
                     }
                 }
-                println()
+                echo()
                 installerDownloadPrompt()
                 installerManifestData.addInstaller()
             }

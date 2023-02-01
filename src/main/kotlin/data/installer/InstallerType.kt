@@ -13,7 +13,7 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import detection.files.msix.MsixBundle
 import input.Prompts
-import ktor.Ktor
+import network.HttpUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -28,7 +28,7 @@ object InstallerType : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.installerTypePrompt() {
-        when (Ktor.getURLExtension(installerManifestData.installerUrl)) {
+        when (HttpUtils.getURLExtension(installerManifestData.installerUrl)) {
             InstallerManifest.InstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
                 installerManifestData.installerType = InstallerManifest.Installer.InstallerType.MSIX
             }

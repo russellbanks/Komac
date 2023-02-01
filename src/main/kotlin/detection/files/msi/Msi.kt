@@ -3,6 +3,7 @@ package detection.files.msi
 import com.sun.jna.Native
 import com.sun.jna.Platform
 import com.sun.jna.WString
+import com.sun.jna.platform.win32.WinBase.FILETIME
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import org.koin.core.component.KoinComponent
@@ -19,6 +20,7 @@ class Msi(private val msiFile: File) : KoinComponent {
     var productLanguage: String? = null
     var allUsers: AllUsers? = null
     var isWix: Boolean = false
+    var architecture: InstallerManifest.Installer.Architecture? = null
 
     private val msiLibrary = MsiLibrary.INSTANCE
 
@@ -30,6 +32,8 @@ class Msi(private val msiFile: File) : KoinComponent {
     private fun getValues() {
         val phDatabase = openDatabase() ?: return
 
+        architecture = getArchitecture(phDatabase)
+
         val phView = openView(phDatabase)
 
         if (phView != null) {
@@ -39,6 +43,38 @@ class Msi(private val msiFile: File) : KoinComponent {
             msiLibrary.MsiCloseHandle(phView.value)
         }
         msiLibrary.MsiCloseHandle(phDatabase.value)
+    }
+
+    private fun getArchitecture(phDatabase: PointerByReference): InstallerManifest.Installer.Architecture? {
+        val phSummaryInfo = PointerByReference()
+        var result = msiLibrary.MsiGetSummaryInformationW(phDatabase.value, null, 0, phSummaryInfo)
+        return if (result == 0) {
+            val pcchBuf = IntByReference()
+            val szBuf = CharArray(16)
+            pcchBuf.value = 16
+            result = msiLibrary.MsiSummaryInfoGetPropertyW(
+                hSummaryInfo = phSummaryInfo.value,
+                uiProperty = architecturePropertyOrdinal,
+                puiDataType = IntByReference(),
+                piValue = IntByReference(),
+                pftValue = FILETIME(),
+                szValueBuf = szBuf,
+                pcchValueBuf = pcchBuf
+            )
+            msiLibrary.MsiCloseHandle(phSummaryInfo.value)
+            if (result == 0) {
+                when (Native.toString(szBuf).split(";").first()) {
+                    "x64", "Intel64", "AMD64" -> InstallerManifest.Installer.Architecture.X64
+                    "Intel" -> InstallerManifest.Installer.Architecture.X86
+                    else -> null
+                }
+            } else {
+                null
+            }
+        } else {
+            msiLibrary.MsiCloseHandle(phDatabase.value)
+            null
+        }
     }
 
     private fun openDatabase(): PointerByReference? {
@@ -149,6 +185,7 @@ class Msi(private val msiFile: File) : KoinComponent {
         private const val msiDbOpenReadOnly = "MSIDBOPEN_READONLY"
         private const val propertyBufferSize = 64
         private const val valueBufferSize = 1024
+        private const val architecturePropertyOrdinal = 7
         val values = listOf(
             upgradeCodeConst,
             productCodeConst,
