@@ -17,7 +17,6 @@ import data.installer.InstallerScope.installerScopePrompt
 import data.installer.InstallerSuccessCodes.installerSuccessCodesPrompt
 import data.installer.InstallerSwitch.installerSwitchPrompt
 import data.installer.InstallerType.installerTypePrompt
-import data.installer.ProductCode.productCodePrompt
 import data.installer.Protocols.protocolsPrompt
 import data.installer.UpgradeBehaviour.upgradeBehaviourPrompt
 import data.locale.Author.authorPrompt
@@ -75,7 +74,6 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     installerTypePrompt()
                     InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
                     localePrompt(LocaleType.Installer)
-                    productCodePrompt()
                     installerScopePrompt()
                     upgradeBehaviourPrompt()
                     installerManifestData.addInstaller()

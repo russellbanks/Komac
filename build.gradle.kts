@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.distsDirectory
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.panteleyev.jpackage.ImageType
 
@@ -72,19 +73,15 @@ dependencies {
 
 }
 
-task("copyJar", Copy::class) {
-    from(tasks.shadowJar).into("$buildDir/jars")
-}
-
 application {
     applicationDefaultJvmArgs = listOf("-Dfile.encoding=UTF-8")
     mainClass.set("MainKt")
 }
 
 tasks.jpackage {
-    dependsOn("build", "copyJar")
-    input  = "$buildDir/jars"
-    destination = "$buildDir/distributions"
+    dependsOn("build")
+    input  = tasks.shadowJar.get().destinationDirectory.get().toString()
+    destination = distsDirectory.get().toString()
     addModules = listOf(
         "java.base",
         "java.desktop",

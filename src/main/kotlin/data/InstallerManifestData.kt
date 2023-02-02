@@ -185,8 +185,7 @@ class InstallerManifestData : KoinComponent {
             installers = installers.removeNonDistinctKeys()
                 .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope })),
             manifestType = schemasImpl.installerSchema.properties.manifestType.const,
-            manifestVersion = schemasImpl.manifestOverride
-                ?: schemasImpl.installerSchema.properties.manifestVersion.default
+            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
         ).toEncodedYaml()
     }
 

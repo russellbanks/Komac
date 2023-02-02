@@ -12,6 +12,7 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
 import schemas.data.DefaultLocaleSchema
+import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
 object Moniker : KoinComponent {
@@ -22,7 +23,7 @@ object Moniker : KoinComponent {
         println(colors.brightYellow(monikerInfo))
         info(monikerExample)
         defaultLocaleManifestData.moniker = prompt(
-            prompt = const,
+            prompt = DefaultLocaleManifest::moniker.name.replaceFirstChar { it.titlecase() },
             default = previousManifestData.remoteDefaultLocaleData?.moniker?.also { muted("Previous moniker: $it") },
             convert = { input ->
                 isMonikerValid(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
@@ -44,7 +45,6 @@ object Moniker : KoinComponent {
         }
     }
 
-    private const val const = "Moniker"
     private const val monikerInfo = "${Prompts.optional} Enter the Moniker (friendly name/alias)."
     private const val monikerExample = "Example: vscode"
 }

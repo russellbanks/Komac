@@ -11,9 +11,7 @@ import data.VersionUpdateState
 import input.Prompts
 import network.HttpUtils
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import kotlin.random.Random
 import kotlin.system.exitProcess
 
@@ -33,7 +31,7 @@ object PackageVersion : KoinComponent {
             prompt(
                 prompt = const,
                 convert = { input ->
-                    isPackageVersionValid(input)
+                    getPackageVersionError(input)
                         ?.let { ConversionResult.Invalid(it) }
                         ?: ConversionResult.Valid(input.trim())
                 }
@@ -45,7 +43,7 @@ object PackageVersion : KoinComponent {
     private suspend fun setUpgradeState(sharedManifestData: SharedManifestData) {
         when {
             sharedManifestData.updateState == VersionUpdateState.NewPackage -> Unit
-            checkIfPackageExistsInRepo(sharedManifestData) -> {
+            packageExists(sharedManifestData) -> {
                 sharedManifestData.updateState = VersionUpdateState.UpdateVersion
             }
             else -> {
@@ -59,23 +57,18 @@ object PackageVersion : KoinComponent {
         }
     }
 
-    private suspend fun checkIfPackageExistsInRepo(sharedManifestData: SharedManifestData): Boolean {
+    private suspend fun packageExists(sharedManifestData: SharedManifestData): Boolean {
         return githubImpl.getMicrosoftWingetPkgs()
             ?.getDirectoryContent(HttpUtils.getDirectoryPath(sharedManifestData.packageIdentifier))
             ?.map { it.name }
             ?.contains(sharedManifestData.packageVersion) ?: false
     }
 
-    private fun isPackageVersionValid(version: String): String? {
-        val packageVersionSchema = get<SchemasImpl>().installerSchema.definitions.packageVersion
+    fun getPackageVersionError(version: String): String? {
         return when {
             version.isBlank() -> Errors.blankInput(const)
-            version.length > packageVersionSchema.maxLength -> {
-                Errors.invalidLength(max = packageVersionSchema.maxLength)
-            }
-            !version.matches(Regex(packageVersionSchema.pattern)) -> {
-                Errors.invalidRegex(Regex(packageVersionSchema.pattern))
-            }
+            version.length > maxLength -> Errors.invalidLength(max = maxLength)
+            !version.matches(regex) -> Errors.invalidRegex(regex)
             else -> null
         }
     }
@@ -129,4 +122,7 @@ object PackageVersion : KoinComponent {
     private const val const = "Package Version"
     private const val versionInfo = "${Prompts.required} Enter the version."
     private val example = "Example: ${generateRandomVersion()}"
+    private const val pattern = "^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"
+    private val regex = Regex(pattern)
+    const val maxLength = 128
 }

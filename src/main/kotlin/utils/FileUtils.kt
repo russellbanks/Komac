@@ -41,7 +41,7 @@ class FileUtils(private val file: File) {
         }
     }
 
-    fun getArchitecture(): Architecture? {
+    fun getArchitecture(): Architecture {
         return when (file.extension) {
             InstallerType.MSI.toString() -> msi?.architecture
             InstallerType.MSIX.toString() -> {
@@ -54,7 +54,7 @@ class FileUtils(private val file: File) {
                 "1c0", "1c4" -> Architecture.ARM
                 else -> null
             }
-        }
+        } ?: Architecture.X64
     }
 
     fun getSignatureSha256(): String? = msix?.signatureSha256 ?: msixBundle?.signatureSha256

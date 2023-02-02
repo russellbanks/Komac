@@ -46,7 +46,6 @@ object Description : KoinComponent {
             val error = descriptionValid(
                 description = input,
                 descriptionType = descriptionType,
-                propertiesSchema = propertiesSchema,
                 canBeBlank = descriptionType == DescriptionType.Long
             )
             when (descriptionType) {
@@ -61,7 +60,6 @@ object Description : KoinComponent {
     private fun descriptionValid(
         description: String?,
         descriptionType: DescriptionType,
-        propertiesSchema: DefaultLocaleSchema.Properties,
         canBeBlank: Boolean
     ): String? {
         val minLength = when (descriptionType) {

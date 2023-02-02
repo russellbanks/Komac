@@ -11,6 +11,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
+import schemas.manifest.InstallerManifest
 
 object Protocols : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
@@ -22,7 +23,7 @@ object Protocols : KoinComponent {
             colors.brightYellow("${Prompts.optional} ${protocolsSchema.description} (Max ${protocolsSchema.maxItems})")
         )
         installerManifestData.protocols = prompt(
-            prompt = const,
+            prompt = InstallerManifest::protocols.name.replaceFirstChar { it.titlecase() },
             default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous protocols: $it") },
             convert = {
                 val error = areProtocolsValid(it.trim().convertToYamlList(protocolsSchema.uniqueItems))
@@ -54,6 +55,4 @@ object Protocols : KoinComponent {
             it.protocols ?: it.installers.getOrNull(installerManifestData.installers.size)?.protocols
         }
     }
-
-    private const val const = "Protocols"
 }

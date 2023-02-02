@@ -53,10 +53,9 @@ object Errors {
 
     fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
 
-    fun invalidEnum(validation: Validation?, enum: List<String>): String {
+    fun invalidEnum(enum: List<String>): String {
         return buildString {
             append(error)
-            if (validation != null) append(" $validation")
             append(" - Value must exist in the enum - ")
             append(enum.joinToString(", "))
         }

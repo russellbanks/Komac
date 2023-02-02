@@ -18,7 +18,7 @@ import detection.files.Zip
 import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
-import hashing.Hashing.hash
+import utils.Hashing.hash
 import input.Prompts
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
@@ -36,15 +36,12 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
 import schemas.data.DefaultLocaleSchema
-import schemas.data.InstallerSchema
-import schemas.data.RemoteSchema
 import schemas.manifest.InstallerManifest
 import utils.FileUtils
 import java.net.ConnectException
 import kotlin.system.exitProcess
 
 object Url : KoinComponent {
-    private val schemasImpl: SchemasImpl by inject()
 
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) {
         val installerManifestData: InstallerManifestData by inject()
@@ -62,7 +59,7 @@ object Url : KoinComponent {
         installerManifestData.installerUrl = prompt(
             prompt = installerUrlConst,
             convert = { input ->
-                runBlocking { isUrlValid(url = Url(input), schema = schemasImpl.installerSchema, canBeBlank = false) }
+                runBlocking { isUrlValid(url = Url(input), canBeBlank = false) }
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(Url(input.trim()).decodeHex())
             }
@@ -88,7 +85,7 @@ object Url : KoinComponent {
             )
             if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
                 warning(urlChanged)
-                val error = isUrlValid(url = redirectedUrl, schema = schemasImpl.installerSchema, canBeBlank = false)
+                val error = isUrlValid(url = redirectedUrl, canBeBlank = false)
                 if (error == null) {
                     installerManifestData.installerUrl = redirectedUrl
                     success("URL changed to $redirectedUrl")
@@ -122,7 +119,7 @@ object Url : KoinComponent {
             when (file.extension.lowercase()) {
                 InstallerManifest.InstallerType.EXE.toString() -> {
                     val fileUtils = FileUtils(file)
-                    installerManifestData.architecture = fileUtils.getArchitecture()!!
+                    installerManifestData.architecture = fileUtils.getArchitecture()
                     fileUtils.getInstallerType()?.let { installerManifestData.installerType = it }
                 }
                 InstallerManifest.InstallerType.MSIX.toString(),
@@ -210,7 +207,7 @@ object Url : KoinComponent {
                     default = getPreviousValue(localeUrl)?.also { muted("Previous $localeUrl: $it") },
                     convert = { input ->
                         runBlocking {
-                            isUrlValid(url = Url(input.trim()), schema = defaultLocaleSchema, canBeBlank = true)
+                            isUrlValid(url = Url(input.trim()), canBeBlank = true)
                         }?.let { ConversionResult.Invalid(it) }
                             ?: ConversionResult.Valid(input.trim().ifBlank { null }?.let { Url(it) })
                     }
@@ -229,24 +226,12 @@ object Url : KoinComponent {
         }
     }
 
-    suspend fun isUrlValid(url: Url, schema: RemoteSchema, canBeBlank: Boolean): String? {
-        val maxLength = when (schema) {
-            is InstallerSchema -> schema.definitions.url.maxLength
-            is DefaultLocaleSchema -> schema.definitions.url.maxLength
-            else -> 0
-        }
-        val pattern = Regex(
-            when (schema) {
-                is InstallerSchema -> schema.definitions.url.pattern
-                is DefaultLocaleSchema -> schema.definitions.url.pattern
-                else -> ""
-            }
-        )
+    suspend fun isUrlValid(url: Url, canBeBlank: Boolean): String? {
         return when {
             url == Url(URLBuilder()) && canBeBlank -> null
             url == Url(URLBuilder()) -> Errors.blankInput(installerUrlConst)
             url.toString().length > maxLength -> Errors.invalidLength(max = maxLength)
-            !url.toString().matches(pattern) -> Errors.invalidRegex(pattern)
+            !url.toString().matches(regex) -> Errors.invalidRegex(regex)
             else -> checkUrlResponse(url)
         }
     }
@@ -309,4 +294,8 @@ object Url : KoinComponent {
         "The URL was changed during processing and will be re-validated"
 
     private const val installerUrlConst = "Installer Url"
+
+    private const val maxLength = 2048
+    private const val pattern = "^([Hh][Tt][Tt][Pp][Ss]?)://.+$"
+    private val regex = Regex(pattern)
 }

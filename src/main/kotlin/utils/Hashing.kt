@@ -1,4 +1,4 @@
-package hashing
+package utils
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

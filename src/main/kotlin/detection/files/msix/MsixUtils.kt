@@ -1,6 +1,6 @@
 package detection.files.msix
 
-import hashing.Hashing
+import utils.Hashing
 
 object MsixUtils {
     private const val firstEightBytes = 8

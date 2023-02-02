@@ -2,7 +2,6 @@ package data.installer
 
 import Errors
 import ExitCode
-import Validation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -15,17 +14,15 @@ import detection.files.msix.MsixBundle
 import input.Prompts
 import network.HttpUtils
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
 import kotlin.system.exitProcess
 
 object InstallerType : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val installerTypeSchema = get<SchemasImpl>().installerSchema.definitions.installerType
     private val sharedManifestData: SharedManifestData by inject()
+    private val installerTypesEnum = InstallerManifest.InstallerType.values().map { it.toString() }
 
     fun Terminal.installerTypePrompt() {
         when (HttpUtils.getURLExtension(installerManifestData.installerUrl)) {
@@ -47,7 +44,7 @@ object InstallerType : KoinComponent {
             else -> {
                 if (installerManifestData.installerType == null) {
                     installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
-                    info("Options: ${installerTypeSchema.enum.joinToString(", ")}")
+                    info("Options: ${installerTypesEnum.joinToString(", ")}")
                     installerManifestData.installerType = prompt(
                         prompt = const,
                         default = getPreviousValue()?.toInstallerType()?.also { muted("Previous installer type: $it") },
@@ -66,9 +63,7 @@ object InstallerType : KoinComponent {
     private fun isInstallerTypeValid(installerType: String): String? {
         return when {
             installerType.isBlank() -> Errors.blankInput(const)
-            !installerTypeSchema.enum.contains(installerType) -> {
-                Errors.invalidEnum(Validation.InvalidInstallerType, installerTypeSchema.enum)
-            }
+            !installerTypesEnum.contains(installerType) -> Errors.invalidEnum(installerTypesEnum)
             else -> null
         }
     }

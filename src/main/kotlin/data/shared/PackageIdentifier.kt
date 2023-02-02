@@ -9,28 +9,24 @@ import data.GitHubImpl
 import data.SharedManifestData
 import data.VersionUpdateState
 import input.Prompts
-import kotlinx.coroutines.runBlocking
 import network.HttpUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.Schema
 import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import token.TokenStore
 import java.io.IOException
 import kotlin.system.exitProcess
 
 object PackageIdentifier : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
-    private lateinit var installerSchema: InstallerSchema
     private val tokenStore: TokenStore by inject()
 
     suspend fun Terminal.packageIdentifierPrompt(
         packageIdentifierParameter: String? = null,
         isCIEnvironment: Boolean = false
     ) {
-        val schemasImpl: SchemasImpl = get()
+        get<SchemasImpl>()
         if (packageIdentifierParameter == null && !isCIEnvironment) {
             if (tokenStore.token == null) {
                 tokenStore.promptForToken(this)
@@ -40,15 +36,6 @@ object PackageIdentifier : KoinComponent {
             sharedManifestData.packageIdentifier = prompt(
                 prompt = const,
                 convert = { input ->
-                    if (!::installerSchema.isInitialized) {
-                        runBlocking {
-                            schemasImpl.awaitSchema(
-                                schema = Schema.Installer,
-                                terminal = this@packageIdentifierPrompt
-                            )
-                        }
-                        installerSchema = schemasImpl.installerSchema
-                    }
                     isPackageIdentifierValid(input)
                         ?.let { ConversionResult.Invalid(it) }
                         ?: ConversionResult.Valid(input.trim())
@@ -61,15 +48,13 @@ object PackageIdentifier : KoinComponent {
             sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
             println()
         } else if (packageIdentifierParameter != null) {
-            schemasImpl.awaitSchema(schema = Schema.Installer, terminal = this)
-            installerSchema = schemasImpl.installerSchema
             sharedManifestData.packageIdentifier = packageIdentifierParameter
             sharedManifestData.latestVersion = getLatestVersion(
                 packageIdentifier = packageIdentifierParameter,
                 writeOutput = false
             )
         } else {
-            throw CliktError(colors.danger("Package Identifier not inputted"), statusCode = 1)
+            throw CliktError(colors.danger("${Errors.error} Package Identifier not provided"), statusCode = 1)
         }
     }
 
@@ -78,7 +63,7 @@ object PackageIdentifier : KoinComponent {
             get<GitHubImpl>()
                 .getMicrosoftWingetPkgs()
                 ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
-                ?.filter { it.name.matches(Regex(installerSchema.definitions.packageVersion.pattern)) }
+                ?.filter { it.name.matches(regex) }
                 ?.filter { it.isDirectory }
                 ?.also {
                     if (it.isNotEmpty() && writeOutput) info("Found $packageIdentifier in the winget-pkgs repository")
@@ -95,15 +80,10 @@ object PackageIdentifier : KoinComponent {
     }
 
     private fun isPackageIdentifierValid(identifier: String): String? {
-        val packageIdentifierSchema = installerSchema.definitions.packageIdentifier
         return when {
             identifier.isBlank() -> Errors.blankInput(const)
-            identifier.length > packageIdentifierSchema.maxLength -> {
-                Errors.invalidLength(min = minLength, max = packageIdentifierSchema.maxLength)
-            }
-            !identifier.matches(Regex(packageIdentifierSchema.pattern)) -> {
-                Errors.invalidRegex(Regex(packageIdentifierSchema.pattern))
-            }
+            identifier.length > maxLength -> Errors.invalidLength(min = minLength, max = maxLength)
+            !identifier.matches(regex) -> Errors.invalidRegex(regex)
             else -> null
         }
     }
@@ -112,5 +92,8 @@ object PackageIdentifier : KoinComponent {
     private const val example = "Example: Microsoft.Excel"
     private const val identifierInfo = "${Prompts.required} Enter the $const, " +
         "in the following format <Publisher shortname.Application shortname>"
+    private const val maxLength = 128
     private const val minLength = 4
+    private const val pattern = "^[^.\\s\\\\/:*?\"<>|\\x01-\\x1f]{1,32}(\\.[^.\\s\\\\/:*?\"<>|\\x01-\\x1f]{1,32}){1,7}$"
+    private val regex = Regex(pattern)
 }

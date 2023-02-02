@@ -1,11 +1,6 @@
 enum class Validation {
-    InvalidArchitecture,
-    InvalidInstallerScope,
-    InvalidInstallerType,
-    InvalidInstallMode,
     InvalidLength,
     InvalidPattern,
-    InvalidUpgradeBehaviour,
     Success,
     UnsuccessfulResponseCode;
 

@@ -1,7 +1,5 @@
 package input
 
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -21,14 +19,14 @@ object Prompts {
         println(
             verticalLayout {
                 cell(
-                    brightYellow(
+                    colors.brightYellow(
                         "What would you like to do with " +
                             "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
                     )
                 )
                 ManifestResultOption.values().forEach {
                     cell(
-                        brightWhite(
+                        colors.brightWhite(
                             buildString {
                                 append(" ".repeat(optionIndent))
                                 append("[${it.toString().first().titlecase()}] ")
@@ -40,7 +38,7 @@ object Prompts {
             }
         )
         return prompt(
-            prompt = brightWhite(enterChoice),
+            prompt = enterChoice,
             convert = {
                 ConversionResult.Valid(
                     when (it.firstOrNull()?.lowercase()) {

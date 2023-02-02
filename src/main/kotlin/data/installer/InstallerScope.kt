@@ -2,7 +2,6 @@ package data.installer
 
 import Errors
 import ExitCode
-import Validation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
@@ -83,7 +82,7 @@ object InstallerScope : KoinComponent {
             option == null || option.isWhitespace() -> null
             option != Prompts.noIdea.first() && installerScopeSchema.enum.all {
                 it.first().titlecase() != option.titlecase()
-            } -> Errors.invalidEnum(Validation.InvalidInstallerScope, installerScopeSchema.enum)
+            } -> Errors.invalidEnum(installerScopeSchema.enum)
             else -> null
         }
     }

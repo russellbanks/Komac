@@ -1,6 +1,6 @@
 package detection.files.msix
 
-import hashing.Hashing
+import utils.Hashing
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
 import it.skrape.selects.attribute

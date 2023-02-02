@@ -72,7 +72,6 @@ class Msi(private val msiFile: File) : KoinComponent {
                 null
             }
         } else {
-            msiLibrary.MsiCloseHandle(phDatabase.value)
             null
         }
     }

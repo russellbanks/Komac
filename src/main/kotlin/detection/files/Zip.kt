@@ -287,7 +287,7 @@ class Zip(zip: File, terminal: Terminal) : KoinComponent {
                                 InstallerManifest.Installer.NestedInstallerType.valueOf(string.uppercase())
                             )
                         } else {
-                            ConversionResult.Invalid(Errors.invalidEnum(validation = null, enum = exeNestedTypes))
+                            ConversionResult.Invalid(Errors.invalidEnum(enum = exeNestedTypes))
                         }
                     }
                 ) ?: InstallerManifest.Installer.NestedInstallerType.EXE
@@ -303,7 +303,7 @@ class Zip(zip: File, terminal: Terminal) : KoinComponent {
                                 InstallerManifest.Installer.NestedInstallerType.valueOf(string.uppercase())
                             )
                         } else {
-                            ConversionResult.Invalid(Errors.invalidEnum(validation = null, enum = nestedInstallerTypes))
+                            ConversionResult.Invalid(Errors.invalidEnum(enum = nestedInstallerTypes))
                         }
                     }
                 ) ?: InstallerManifest.Installer.NestedInstallerType.EXE

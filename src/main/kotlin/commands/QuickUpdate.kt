@@ -23,7 +23,7 @@ import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
 import detection.GitHubDetection
 import detection.ParameterUrls
-import hashing.Hashing.hash
+import utils.Hashing.hash
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
 import input.Prompts
@@ -178,7 +178,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     val fileUtils = FileUtils(file)
                     try {
                         InstallerManifest.Installer(
-                            architecture = detectArchitectureFromUrl(url) ?: fileUtils.getArchitecture()!!,
+                            architecture = detectArchitectureFromUrl(url) ?: fileUtils.getArchitecture(),
                             installerType = fileUtils.getInstallerType(),
                             installerSha256 = file.hash(),
                             signatureSha256 = fileUtils.getSignatureSha256(),
@@ -197,7 +197,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 installerManifestData.installers += it.first.copy(
                     installerUrl = it.second.installerUrl,
                     installerSha256 = it.second.installerSha256.uppercase(),
-                    signatureSha256 = it.second.signatureSha256,
+                    signatureSha256 = it.second.signatureSha256?.uppercase(),
                     productCode = it.second.productCode,
                     releaseDate = it.second.releaseDate
                 )

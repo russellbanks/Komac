@@ -1,7 +1,6 @@
 package data.installer
 
 import Errors
-import Validation
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -26,7 +25,7 @@ object InstallModes : KoinComponent {
             prompt = const,
             default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous install modes: $it") },
             convert = { input ->
-                areInstallModesValid(input.convertToYamlList(installModesSchema.uniqueItems)?.toInstallModes())
+                areInstallModesValid(input.convertToYamlList(installModesSchema.uniqueItems).toInstallModes())
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(input.trim())
             }
@@ -41,7 +40,6 @@ object InstallModes : KoinComponent {
             }
             installModes?.any { it !in InstallerManifest.InstallModes.values() } == true -> {
                 Errors.invalidEnum(
-                    Validation.InvalidInstallMode,
                     InstallerManifest.InstallModes.values().map { it.toString() }
                 )
             }

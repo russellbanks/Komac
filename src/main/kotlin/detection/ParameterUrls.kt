@@ -5,11 +5,9 @@ import com.github.ajalt.mordant.terminal.Terminal
 import io.ktor.http.Url
 import network.HttpUtils
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
-import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
 
-object ParameterUrls: KoinComponent {
+object ParameterUrls : KoinComponent {
     fun assertUniqueUrlsCount(parameterUrls: List<Url>, previousUrls: List<Url>, terminal: Terminal) {
         if (parameterUrls.distinct().size != previousUrls.distinct().size) {
             throw CliktError(
@@ -32,7 +30,7 @@ object ParameterUrls: KoinComponent {
 
     suspend fun assertUrlsValid(parameterUrls: List<Url>, terminal: Terminal) {
         parameterUrls.forEach { url ->
-            data.shared.Url.isUrlValid(url, get<SchemasImpl>().installerSchema, false)
+            data.shared.Url.isUrlValid(url, false)
                 ?.let { throw CliktError(terminal.colors.danger("$it on $url")) }
         }
     }
@@ -40,7 +38,7 @@ object ParameterUrls: KoinComponent {
     fun matchInstallers(
         newInstallers: List<InstallerManifest.Installer>,
         previousInstallers: List<InstallerManifest.Installer>
-    ): MutableList<Pair<InstallerManifest.Installer, InstallerManifest.Installer>> {
+    ): List<Pair<InstallerManifest.Installer, InstallerManifest.Installer>> {
         val result = mutableListOf<Pair<InstallerManifest.Installer, InstallerManifest.Installer>>()
         for (previousInstaller in previousInstallers) {
             var newInstaller: InstallerManifest.Installer? = newInstallers.firstOrNull {

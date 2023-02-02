@@ -1,7 +1,6 @@
 package data.installer
 
 import Errors
-import Validation
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -72,7 +71,6 @@ object UpgradeBehaviour : KoinComponent {
             upgradeBehaviourSchema.enum.all {
                 it.first().titlecase() != option?.titlecase()
             } -> Errors.invalidEnum(
-                Validation.InvalidUpgradeBehaviour,
                 upgradeBehaviourSchema.enum
             )
             else -> null

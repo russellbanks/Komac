@@ -26,16 +26,12 @@ object InstallerSuccessCodes : KoinComponent {
             default = getPreviousValue()?.joinToString(", ")?.also {
                 muted("Previous success codes: $it")
             },
-            convert = {
-                val error = areInstallerSuccessCodesValid(convertToInstallerCodeList(it))
-                if (error != null) {
-                    ConversionResult.Invalid(error)
-                } else {
-                    ConversionResult.Valid(it)
-                }
+            convert = { input ->
+                areInstallerSuccessCodesValid(convertToInstallerCodeList(input))
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim())
             }
-        )?.trim()
-            ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
+        )?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
             ?.mapNotNull { it.toIntOrNull() }
             ?.filterNot { it in installerReturnCodeSchema.not.enum }
         println()
@@ -75,7 +71,8 @@ object InstallerSuccessCodes : KoinComponent {
 
     private fun getPreviousValue(): List<Int>? {
         return previousManifestData.remoteInstallerData?.let {
-            it.installerSuccessCodes ?: it.installers.getOrNull(installerManifestData.installers.size)?.installerSuccessCodes
+            it.installerSuccessCodes
+                ?: it.installers.getOrNull(installerManifestData.installers.size)?.installerSuccessCodes
         }
     }
 

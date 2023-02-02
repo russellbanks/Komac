@@ -12,6 +12,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.SchemasImpl
+import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
 object License : KoinComponent {
@@ -31,9 +32,9 @@ object License : KoinComponent {
             prompt = const,
             default = previousManifestData.remoteDefaultLocaleData?.license?.also { muted("Previous license: $it") },
             convert = { input ->
-                isLicenseValid(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input)
+                isLicenseValid(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
-        )?.trim() ?: exitProcess(ExitCode.CtrlC.code)
+        ) ?: exitProcess(ExitCode.CtrlC.code)
         println()
     }
 
@@ -47,7 +48,7 @@ object License : KoinComponent {
         }
     }
 
-    private const val const = "License"
+    private val const = DefaultLocaleManifest::license.name.replaceFirstChar { it.titlecase() }
     private val licenseInfo = "${Prompts.required} Enter ${licenseSchema.description.lowercase()}"
     private const val example = "Example: MIT, GPL-3.0, Freeware, Proprietary"
 }
