@@ -122,9 +122,9 @@ class GitHubDetection(url: Url) : KoinComponent {
      */
     private fun getFormattedReleaseNotes(release: GHRelease): String? {
         val lines = release.body
-            .replace(Regex("<details>.*?</details>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
-            .lines()
-            .map { line ->
+            ?.replace(Regex("<details>.*?</details>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+            ?.lines()
+            ?.map { line ->
                 line.trim()
                     .let { if (it.startsWith("* ")) it.replaceFirst("* ", "- ") else it }
                     .replace(Regex("""\*+([^*]+)\*+"""), "$1")
@@ -132,7 +132,7 @@ class GitHubDetection(url: Url) : KoinComponent {
                     .replace(Regex("\\[([^]]+)]\\([^)]+\\)"), "$1")
             }
         return buildString {
-            lines.forEachIndexed { index, line ->
+            lines?.forEachIndexed { index, line ->
                 when {
                     line.startsWith("#") -> {
                         if (lines[index + 1].startsWith("- ") || lines[index + 2].startsWith("- ")) {
