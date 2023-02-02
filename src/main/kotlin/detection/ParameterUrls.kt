@@ -42,7 +42,22 @@ object ParameterUrls : KoinComponent {
         val result = mutableListOf<Pair<InstallerManifest.Installer, InstallerManifest.Installer>>()
         for (previousInstaller in previousInstallers) {
             var newInstaller: InstallerManifest.Installer? = newInstallers.firstOrNull {
-                it.architecture == previousInstaller.architecture && it.installerType == previousInstaller.installerType
+                it.architecture == previousInstaller.architecture &&
+                    it.installerType == previousInstaller.installerType &&
+                        it.scope == previousInstaller.scope
+            }
+            if (newInstaller == null) {
+                newInstaller = newInstallers.firstOrNull {
+                    it.architecture == previousInstaller.architecture &&
+                        it.installerType == previousInstaller.installerType &&
+                            it.scope == null
+                }
+            }
+            if (newInstaller == null) {
+                newInstaller = newInstallers.firstOrNull {
+                    it.architecture == previousInstaller.architecture &&
+                            it.installerType == previousInstaller.installerType
+                }
             }
             if (newInstaller == null) {
                 newInstaller = newInstallers.firstOrNull {

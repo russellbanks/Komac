@@ -6,7 +6,6 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
-import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
@@ -23,7 +22,6 @@ import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
 import detection.GitHubDetection
 import detection.ParameterUrls
-import utils.Hashing.hash
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
 import input.Prompts
@@ -36,10 +34,7 @@ import io.ktor.http.lastModified
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -48,6 +43,7 @@ import network.Http
 import network.HttpUtils
 import network.HttpUtils.decodeHex
 import network.HttpUtils.detectArchitectureFromUrl
+import network.HttpUtils.detectScopeFromUrl
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -59,6 +55,7 @@ import schemas.manifest.LocaleManifest
 import schemas.manifest.YamlConfig
 import token.TokenStore
 import utils.FileUtils
+import utils.Hashing.hash
 import java.io.File
 import java.io.IOException
 import java.time.LocalDate
@@ -136,64 +133,69 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         if (parameterUrls != null) {
             ParameterUrls.assertUniqueUrlsCount(parameterUrls, previousUrls, this@loopThroughInstallers)
             ParameterUrls.assertUrlsValid(parameterUrls, this@loopThroughInstallers)
-            val downloadTasks = mutableListOf<Deferred<InstallerManifest.Installer>>()
-            val progressTasks = mutableListOf<ProgressAnimation>()
+            val downloadTasks = mutableListOf<InstallerManifest.Installer>()
             val client = get<Http>().client
             parameterUrls.distinct().forEach { url ->
-                downloadTasks += async(Dispatchers.IO) {
-                    val file = withContext(Dispatchers.IO) {
-                        val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
-                        File.createTempFile(
-                            "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
-                            ".${HttpUtils.getURLExtension(url)}"
-                        )
+                val file = withContext(Dispatchers.IO) {
+                    val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
+                    File.createTempFile(
+                        "${sharedManifestData.packageIdentifier} v${sharedManifestData.packageVersion} - $formattedDate",
+                        ".${HttpUtils.getURLExtension(url)}"
+                    )
+                }
+                val progress = currentContext.terminal.progressAnimation {
+                    HttpUtils.getFileName(url)?.let { text(it) }
+                    percentage()
+                    progressBar()
+                    completed()
+                    speed("B/s")
+                    timeRemaining()
+                }
+                progress.start()
+                sharedManifestData.gitHubDetection = parameterUrls.firstOrNull {
+                    it.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
+                }?.let { GitHubDetection(it) }
+                var releaseDate: LocalDate? = null
+                client.prepareGet(url).execute { httpResponse ->
+                    releaseDate = httpResponse.lastModified()?.let {
+                        LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
                     }
-                    val progress = currentContext.terminal.progressAnimation {
-                        HttpUtils.getFileName(url)?.let { text(it) }
-                        percentage()
-                        progressBar()
-                        completed()
-                        speed("B/s")
-                        timeRemaining()
-                    }
-                    progressTasks += progress
-                    progress.start()
-                    sharedManifestData.gitHubDetection = parameterUrls.firstOrNull {
-                        it.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
-                    }?.let { GitHubDetection(it) }
-                    var releaseDate: LocalDate? = null
-                    client.prepareGet(url).execute { httpResponse ->
-                        releaseDate = httpResponse.lastModified()?.let {
-                            LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                    val channel: ByteReadChannel = httpResponse.body()
+                    while (!channel.isClosedForRead) {
+                        val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                        while (packet.isNotEmpty) {
+                            file.appendBytes(packet.readBytes())
+                            progress.update(file.length(), httpResponse.contentLength())
                         }
-                        val channel: ByteReadChannel = httpResponse.body()
-                        while (!channel.isClosedForRead) {
-                            val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-                            while (packet.isNotEmpty) {
-                                file.appendBytes(packet.readBytes())
-                                progress.update(file.length(), httpResponse.contentLength())
-                            }
-                        }
-                    }
-                    val fileUtils = FileUtils(file)
-                    try {
-                        InstallerManifest.Installer(
-                            architecture = detectArchitectureFromUrl(url) ?: fileUtils.getArchitecture(),
-                            installerType = fileUtils.getInstallerType(),
-                            installerSha256 = file.hash(),
-                            signatureSha256 = fileUtils.getSignatureSha256(),
-                            installerUrl = url,
-                            productCode = fileUtils.getProductCode(),
-                            upgradeBehavior = fileUtils.getUpgradeBehaviour(),
-                            releaseDate = sharedManifestData.gitHubDetection?.releaseDate?.await() ?: releaseDate
-                        )
-                    } finally {
-                        file.delete()
                     }
                 }
+                val fileUtils = FileUtils(file)
+                downloadTasks += try {
+                    InstallerManifest.Installer(
+                        architecture = detectArchitectureFromUrl(url) ?: fileUtils.getArchitecture(),
+                        installerType = fileUtils.getInstallerType(),
+                        scope = detectScopeFromUrl(url),
+                        installerSha256 = file.hash(),
+                        signatureSha256 = fileUtils.getSignatureSha256(),
+                        installerUrl = url,
+                        productCode = fileUtils.getProductCode(),
+                        upgradeBehavior = fileUtils.getUpgradeBehaviour(),
+                        releaseDate = sharedManifestData.gitHubDetection?.releaseDate?.await() ?: releaseDate
+                    )
+                } finally {
+                    file.delete()
+                    progress.clear()
+                }
             }
-            val newInstallers = downloadTasks.awaitAll().also { progressTasks.forEach { it.clear() } }
-            ParameterUrls.matchInstallers(newInstallers, previousInstallers).forEach {
+            ParameterUrls.matchInstallers(
+                downloadTasks,
+                previousInstallers.map {
+                    it.copy(
+                        installerType = remoteInstallerManifest.installerType?.toPerInstallerType() ?: it.installerType,
+                        scope = remoteInstallerManifest.scope?.toPerScopeInstallerType() ?: it.scope
+                    )
+                }
+            ).forEach {
                 installerManifestData.installers += it.first.copy(
                     installerUrl = it.second.installerUrl,
                     installerSha256 = it.second.installerSha256.uppercase(),

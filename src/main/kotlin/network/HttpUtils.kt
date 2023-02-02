@@ -108,6 +108,14 @@ object HttpUtils : KoinComponent {
         }
     }
 
+    fun detectScopeFromUrl(url: Url): InstallerManifest.Installer.Scope? {
+        return when {
+            url.fullPath.contains(other = "user", ignoreCase = true) -> InstallerManifest.Installer.Scope.User
+            url.fullPath.contains("machine", ignoreCase = true) -> InstallerManifest.Installer.Scope.Machine
+            else -> null
+        }
+    }
+
     fun HttpStatusCode.isRedirect(): Boolean {
         return value in HttpStatusCode.MovedPermanently.value..HttpStatusCode.PermanentRedirect.value
     }
