@@ -68,6 +68,9 @@
     <!-- Standard required root -->
     <Directory Id="TARGETDIR" Name="SourceDir"/>
 
+    <WixVariable Id="WixUIDialogBmp" Value="$(env.BrandingDialog)"/>
+    <WixVariable Id="WixUIBannerBmp" Value="$(env.BrandingBanner)"/>
+
     <Feature Id="DefaultFeature" Title="!(loc.MainFeatureTitle)" Level="1">
       <ComponentGroupRef Id="Shortcuts"/>
       <ComponentGroupRef Id="Files"/>

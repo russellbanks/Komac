@@ -55,7 +55,7 @@ class VersionTests : FunSpec({
         }
     }
 
-    context("Package Version tests") {
+    context("package version validity tests") {
         withData(
             "1.0.0",
             "v1",
@@ -65,7 +65,6 @@ class VersionTests : FunSpec({
         ) {
             getPackageVersionError(it) shouldBe null
         }
-
 
         test("version greater than max length fails") {
             getPackageVersionError("A".repeat(PackageVersion.maxLength.inc())) shouldNotBe null

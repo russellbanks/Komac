@@ -1,5 +1,6 @@
 <br/>
 <p align="center">
+  <img title="Komac Logo" src="src/main/resources/logo.svg" alt="komac logo" width="80">
   <h3 align="center">Komac</h3>
 <p>
 

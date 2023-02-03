@@ -5,7 +5,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 
 class IdentifierTests : FunSpec({
-    context("Package Identifier tests") {
+    context("package identifier validity tests") {
         test("valid identifier is successful") {
             getPackageIdentifierError("Package.Identifier") shouldBe null
         }

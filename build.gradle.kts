@@ -107,15 +107,22 @@ tasks.jpackage {
     mainJar = tasks.shadowJar.get().archiveFileName.get()
     mainClass = application.mainClass.get()
     javaOptions = listOf("-Dfile.encoding=UTF-8")
+    jpackageEnvironment = mapOf(
+        "BrandingDialog" to "$resourceDir/dialog.bmp",
+        "BrandingBanner" to "$resourceDir/banner.bmp"
+    )
 
     windows {
+        icon = "$projectDir/src/main/resources/logo.ico"
         winPerUserInstall = true
+        winDirChooser = true
         type = ImageType.EXE
         winConsole = true
         winUpgradeUuid = "2D35545F-9065-48C3-A345-42244A3E9FBF"
     }
 
     linux {
+        icon = "$projectDir/src/main/resources/logo.png"
         type = ImageType.DEB
     }
 
