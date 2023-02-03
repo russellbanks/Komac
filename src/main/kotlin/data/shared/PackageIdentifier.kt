@@ -36,7 +36,7 @@ object PackageIdentifier : KoinComponent {
             sharedManifestData.packageIdentifier = prompt(
                 prompt = const,
                 convert = { input ->
-                    isPackageIdentifierValid(input)
+                    getPackageIdentifierError(input)
                         ?.let { ConversionResult.Invalid(it) }
                         ?: ConversionResult.Valid(input.trim())
                 }
@@ -79,7 +79,7 @@ object PackageIdentifier : KoinComponent {
         }
     }
 
-    private fun isPackageIdentifierValid(identifier: String): String? {
+    fun getPackageIdentifierError(identifier: String): String? {
         return when {
             identifier.isBlank() -> Errors.blankInput(const)
             identifier.length > maxLength -> Errors.invalidLength(min = minLength, max = maxLength)
@@ -92,8 +92,8 @@ object PackageIdentifier : KoinComponent {
     private const val example = "Example: Microsoft.Excel"
     private const val identifierInfo = "${Prompts.required} Enter the $const, " +
         "in the following format <Publisher shortname.Application shortname>"
-    private const val maxLength = 128
-    private const val minLength = 4
+    const val maxLength = 128
+    const val minLength = 4
     private const val pattern = "^[^.\\s\\\\/:*?\"<>|\\x01-\\x1f]{1,32}(\\.[^.\\s\\\\/:*?\"<>|\\x01-\\x1f]{1,32}){1,7}$"
     private val regex = Regex(pattern)
 }
