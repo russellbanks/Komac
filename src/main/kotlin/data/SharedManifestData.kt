@@ -1,6 +1,6 @@
 package data
 
-import detection.GitHubDetection
+import detection.github.GitHubDetection
 import detection.files.Zip
 import detection.files.msi.Msi
 import detection.files.msix.Msix

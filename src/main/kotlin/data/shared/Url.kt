@@ -13,7 +13,7 @@ import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.locale.LocaleUrl
-import detection.GitHubDetection
+import detection.github.GitHubDetection
 import detection.files.Zip
 import detection.files.msi.Msi
 import detection.files.msix.Msix

@@ -61,6 +61,9 @@ dependencies {
     implementation(libs.ktor.client.java)
     implementation(libs.ktor.serialization.kotlinx.json)
 
+    // Mockk - https://github.com/mockk/mockk
+    testImplementation(libs.mockk)
+
     // Mordant - https://github.com/ajalt/mordant
     implementation(libs.mordant)
 
@@ -70,6 +73,9 @@ dependencies {
             implementation(libs.jsoup)
         }
     }
+
+    // SLF4J No-operation implementation - https://www.slf4j.org
+    implementation(libs.slf4j.nop)
 
 }
 
@@ -122,6 +128,7 @@ tasks.jpackage {
 tasks.withType<ShadowJar> {
     minimize {
         exclude(dependency(libs.jna.asProvider().get().toString()))
+        exclude(dependency(libs.slf4j.nop.get().toString()))
     }
 }
 

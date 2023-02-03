@@ -16,9 +16,11 @@ kotlin = "1.8.10"
 kotlinx-serialization = "1.4.1"
 ksp = "1.8.10-1.0.9"
 ktor = "2.2.3"
+mockk = "1.13.4"
 mordant = "2.0.0-beta11"
 shadow = "7.1.2"
 skrapeit = "1.2.2"
+slf4j = "2.0.6"
 
 [libraries]
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
@@ -52,9 +54,13 @@ ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+
 mordant = { module = "com.github.ajalt.mordant:mordant", version.ref = "mordant" }
 
 skrapeit-htmlparser = { module = "it.skrape:skrapeit-html-parser", version.ref = "skrapeit" }
+
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 
 [plugins]
 buildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig" }

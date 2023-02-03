@@ -12,7 +12,6 @@
     <a href="https://github.com/russellbanks/Komac/issues">Request Feature</a>
 </p>
 
-![GitHub contributors (via allcontributors.org)](https://img.shields.io/github/all-contributors/russellbanks/Komac/main)
 ![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
 ![License](https://img.shields.io/github/license/russellbanks/Komac)
 

@@ -20,7 +20,7 @@ import data.shared.Locale
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
-import detection.GitHubDetection
+import detection.github.GitHubDetection
 import detection.ParameterUrls
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
