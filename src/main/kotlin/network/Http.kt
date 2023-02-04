@@ -4,7 +4,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.UserAgent
-import io.ktor.client.plugins.cache.HttpCache
 import org.koin.core.annotation.Single
 
 /**
@@ -28,7 +27,6 @@ class Http {
         install(HttpTimeout) {
             connectTimeoutMillis = timeoutMillis
         }
-        install(HttpCache)
     }
 
     companion object {

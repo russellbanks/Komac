@@ -13,12 +13,11 @@ import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.locale.LocaleUrl
-import detection.github.GitHubDetection
 import detection.files.Zip
 import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
-import utils.Hashing.hash
+import detection.github.GitHubDetection
 import input.Prompts
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
@@ -38,6 +37,7 @@ import schemas.SchemasImpl
 import schemas.data.DefaultLocaleSchema
 import schemas.manifest.InstallerManifest
 import utils.FileUtils
+import utils.Hashing.hash
 import java.net.ConnectException
 import kotlin.system.exitProcess
 
@@ -206,9 +206,8 @@ object Url : KoinComponent {
                     prompt = localeUrl.toString(),
                     default = getPreviousValue(localeUrl)?.also { muted("Previous $localeUrl: $it") },
                     convert = { input ->
-                        runBlocking {
-                            isUrlValid(url = Url(input.trim()), canBeBlank = true)
-                        }?.let { ConversionResult.Invalid(it) }
+                        runBlocking { isUrlValid(url = Url(input.trim()), canBeBlank = true) }
+                            ?.let { ConversionResult.Invalid(it) }
                             ?: ConversionResult.Valid(input.trim().ifBlank { null }?.let { Url(it) })
                     }
                 )
