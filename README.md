@@ -1,50 +1,36 @@
-<br/>
-<p align="center">
-  <img title="Komac Logo" src="src/main/resources/logo.svg" alt="komac logo" width="80">
-  <h3 align="center">Komac</h3>
-<p>
+![readme banner](https://user-images.githubusercontent.com/74878137/216779691-70eb2593-f476-4df1-8725-abf2454a3bf1.svg)
 
 <p align="center">
     The Kotlin Manifest Creator for WinGet
     <br/>
     <br/>
     <a href="https://github.com/russellbanks/Komac/issues">Report Bug</a>
-    .
+    •
     <a href="https://github.com/russellbanks/Komac/issues">Request Feature</a>
 </p>
 
 ![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
 ![License](https://img.shields.io/github/license/russellbanks/Komac)
 
-## About The Project
+## Introducing Komac
 
-Komac is a manifest creator for WinGet. It stands for **KO**tlin **MA**nifest **C**reator.
+Komac is an innovative manifest creator specifically designed for WinGet, offering an effortless and streamlined experience. Derived from the words "Kotlin" and "Manifest" and abbreviated as "KO MA C", Komac represents the perfect solution for anyone looking for an efficient and effective way to create manifests for WinGet.
 
-🎉 Komac is currently in it's final stages of development!
+With development now in its final stages, get ready to experience the power and convenience of Komac! 🎉
 
-Komac creates WinGet 1.4 manifests, ready for when they start getting accepted to winget-pkgs!
-
-Below is a development demo of Komac:
-
-![Komac-demo](https://user-images.githubusercontent.com/74878137/212578049-9d929028-daa5-47fc-8beb-2d91a1a44970.gif)
+![Komac-demo](https://user-images.githubusercontent.com/74878137/216784291-de2d5dc8-d6f9-4bde-a059-7a1382c3940b.gif)
 
 ## Why should I use Komac?
 
-Komac allows you to create WinGet manifests for applications with minimal effort. Manifest creation shouldn't be something that's only for long-time winget-pkgs contributors; it's for everyone.
+Komac streamlines the process of crafting WinGet manifests with ease and efficiency. Say goodbye to manual data retrieval and embrace the freedom of effortless manifest creation.
 
-## What about other manifest creation tools? Why Komac over those?
+With Komac, you don't have to be a seasoned winget-pkgs contributor to enjoy the benefits of streamlined manifest creation - it's designed for everyone to use.
 
-Other manifest creation tools are great and have created a solid basis for everything so far in winget-pkgs, but development of those tools is arguably very slow and lacks the advanced detction that Komac has.
+## Why choose Komac over other manifest creation tools?
 
-Komac is also written in Kotlin, meaning it can run on any operating system, not just Windows!
+While other manifest creation tools have made remarkable strides in the winget-pkgs community, their development pace is notably slow and lacks the advanced detection capabilities of Komac.
 
-For example, if you enter an MSI as an installer, Komac is able to identify the InstallerType, Version, Name, Language, UpgradeCode, UpgradeBehaviour and more, meaning the user simply doesn't need to be asked for these.
-
-This is similar for MSIX's, APPX's, MSIXBundles, APPXBundles, Zips, etc, whereby Komac will be doing all it can to detect as much as it can from those types. Other tools just don't have this same advanced detection for these file types.
-
-As another (of many things Komac detects) example, if you enter a Url and it contains x64 (or x86, arm, i686, i386, x86_x64, etc) within it, we can't guarantee that this is what the installer actually is, but 99% of the time it will be, so we can show this to the user and even use it as a default value for the prompt.
-
-Finally, Komac is community-oriented. I'm a sole developer who's passionate about programming and the WinGet Package Manager Community repository.
+Komac's ability to understand the files it downloads and accurately retrieve values sets it apart from the rest. Additionally, Komac is a community-driven tool, created by a developer who is dedicated to the WinGet Package Manager Community repository and passionate about programming.
 
 ## How can I support Komac?
 
