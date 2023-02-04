@@ -20,8 +20,8 @@ import data.shared.Locale
 import data.shared.PackageIdentifier.packageIdentifierPrompt
 import data.shared.PackageVersion.packageVersionPrompt
 import data.shared.Url.installerDownloadPrompt
-import detection.github.GitHubDetection
 import detection.ParameterUrls
+import detection.github.GitHubDetection
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
 import input.Prompts
@@ -77,7 +77,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val urls: List<Url>? by option().convert { Url(it.removeSuffix("/")).decodeHex() }.split(",")
     private val manifestVersion: String? by option()
     private val submit: Boolean by option().flag(default = false)
-    private val tokenParameter: String? by option("-t", "--token")
+    private val tokenParameter: String? by option("-t", "--token", envvar = "GITHUB_TOKEN")
 
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
