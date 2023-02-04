@@ -24,7 +24,6 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
 import java.io.File
-import java.net.URLDecoder
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -111,7 +110,7 @@ object HttpUtils : KoinComponent {
     fun detectScopeFromUrl(url: Url): InstallerManifest.Installer.Scope? {
         return when {
             url.fullPath.contains(other = "user", ignoreCase = true) -> InstallerManifest.Installer.Scope.User
-            url.fullPath.contains("machine", ignoreCase = true) -> InstallerManifest.Installer.Scope.Machine
+            url.fullPath.contains(other = "machine", ignoreCase = true) -> InstallerManifest.Installer.Scope.Machine
             else -> null
         }
     }
@@ -139,14 +138,5 @@ object HttpUtils : KoinComponent {
         }
         noRedirectClient.close()
         return redirectedInstallerUrl
-    }
-
-    /**
-     * Decodes a [Url] using [Charsets.UTF_8]
-     *
-     * @return the decoded url or the original url if there was an exception
-     */
-    fun Url.decodeHex(): Url {
-        return runCatching { Url(URLDecoder.decode(toString(), Charsets.UTF_8)) }.getOrDefault(this)
     }
 }

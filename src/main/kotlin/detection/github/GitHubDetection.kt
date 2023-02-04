@@ -4,12 +4,12 @@ import data.GitHubImpl
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Url
+import io.ktor.http.decodeURLPart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import network.Http
-import network.HttpUtils.decodeHex
 import network.HttpUtils.fileNameWithoutExtension
 import network.HttpUtils.getFileName
 import org.kohsuke.github.GHAsset
@@ -34,7 +34,7 @@ class GitHubDetection(url: Url) : KoinComponent {
     }
     private val assets = CoroutineScope(Dispatchers.IO).async { release.await()?.listAssets() }
     private val asset = CoroutineScope(Dispatchers.IO).async {
-        assets.await()?.firstOrNull { Url(it.browserDownloadUrl).decodeHex() == url.decodeHex() }
+        assets.await()?.firstOrNull { it.browserDownloadUrl.decodeURLPart() == url.toString().decodeURLPart() }
     }
 
     var publisherUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {

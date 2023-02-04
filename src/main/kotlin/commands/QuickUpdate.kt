@@ -41,7 +41,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import network.Http
 import network.HttpUtils
-import network.HttpUtils.decodeHex
 import network.HttpUtils.detectArchitectureFromUrl
 import network.HttpUtils.detectScopeFromUrl
 import org.koin.core.component.KoinComponent
@@ -75,7 +74,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
     private val packageIdentifier: String? by option("--id", "--package-identifier")
     private val packageVersion: String? by option("--version", "--package-version")
-    private val urls: List<Url>? by option().convert { Url(it.removeSuffix("/")).decodeHex() }.split(",")
+    private val urls: List<Url>? by option().convert { Url(it) }.split(",")
     private val manifestVersion: String? by option()
     private val submit: Boolean by option().flag(default = false)
     private val tokenParameter: String? by option("-t", "--token", envvar = "GITHUB_TOKEN")
@@ -119,7 +118,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                                 pullRequest()
                             }
                             ManifestResultOption.WriteToFiles -> writeFiles(files)
-                            else -> echo("Exiting")
+                            else -> return@also
                         }
                     }
                 }

@@ -1,7 +1,6 @@
 package data
 
 import io.ktor.http.Url
-import network.HttpUtils.decodeHex
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -41,36 +40,31 @@ class DefaultLocaleManifestData : KoinComponent {
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
             publisher = sharedManifestData.publisher ?: previousManifestData.remoteDefaultLocaleData?.publisher ?: "",
-            publisherUrl = (publisherUrl
+            publisherUrl = publisherUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.publisherUrl
-                ?: sharedManifestData.gitHubDetection?.publisherUrl?.await())
-                ?.decodeHex(),
-            publisherSupportUrl = (publisherSupportUrl
+                ?: sharedManifestData.gitHubDetection?.publisherUrl?.await(),
+            publisherSupportUrl = publisherSupportUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.publisherSupportUrl
-                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await())
-                ?.decodeHex(),
-            privacyUrl = (publisherPrivacyUrl
+                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await(),
+            privacyUrl = publisherPrivacyUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.privacyUrl
-                ?: sharedManifestData.gitHubDetection?.privacyUrl?.await())
-                ?.decodeHex(),
+                ?: sharedManifestData.gitHubDetection?.privacyUrl?.await(),
             author = author?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.author,
             packageName = sharedManifestData.packageName
                 ?: previousManifestData.remoteDefaultLocaleData?.packageName ?: "",
-            packageUrl = (packageUrl
+            packageUrl = packageUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.packageUrl
-                ?: sharedManifestData.gitHubDetection?.packageUrl?.await())
-                ?.decodeHex(),
+                ?: sharedManifestData.gitHubDetection?.packageUrl?.await(),
             license = when {
                 ::license.isInitialized -> license
                 else -> sharedManifestData.gitHubDetection?.license?.await()
                     ?: previousManifestData.remoteDefaultLocaleData?.license ?: ""
             },
-            licenseUrl = (licenseUrl
+            licenseUrl = licenseUrl
                 ?: previousManifestData.remoteDefaultLocaleData?.licenseUrl
-                ?: sharedManifestData.gitHubDetection?.licenseUrl?.await())
-                ?.decodeHex(),
+                ?: sharedManifestData.gitHubDetection?.licenseUrl?.await(),
             copyright = copyright?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.copyright,
-            copyrightUrl = (copyrightUrl ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl)?.decodeHex(),
+            copyrightUrl = copyrightUrl ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl,
             shortDescription = when {
                 ::shortDescription.isInitialized -> shortDescription
                 else -> {
@@ -83,10 +77,9 @@ class DefaultLocaleManifestData : KoinComponent {
                 ?.trim(),
             moniker = moniker?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
             tags = tags?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.tags,
-            releaseNotesUrl = (releaseNotesUrl
+            releaseNotesUrl = releaseNotesUrl
                 ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await()
-                ?: parameterLocaleMetadata?.releaseNotesUrl)
-                ?.decodeHex(),
+                ?: parameterLocaleMetadata?.releaseNotesUrl,
             releaseNotes = (sharedManifestData.gitHubDetection?.releaseNotes?.await()
                 ?: parameterLocaleMetadata?.releaseNotes)?.trim(),
             manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,

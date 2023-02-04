@@ -26,7 +26,6 @@ import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
 import network.Http
-import network.HttpUtils.decodeHex
 import network.HttpUtils.downloadFile
 import network.HttpUtils.getRedirectedUrl
 import network.HttpUtils.isRedirect
@@ -61,7 +60,7 @@ object Url : KoinComponent {
             convert = { input ->
                 runBlocking { isUrlValid(url = Url(input), canBeBlank = false) }
                     ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(Url(input.trim()).decodeHex())
+                    ?: ConversionResult.Valid(Url(input.trim()))
             }
         ) ?: exitProcess(ExitCode.CtrlC.code)
         println()
