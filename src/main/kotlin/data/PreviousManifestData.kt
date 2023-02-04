@@ -12,10 +12,10 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import schemas.manifest.DefaultLocaleManifest
+import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.VersionManifest
-import schemas.manifest.YamlConfig
 
 @Single
 class PreviousManifestData : KoinComponent {
@@ -34,7 +34,7 @@ class PreviousManifestData : KoinComponent {
             repository.await()?.getFileContent(
                 nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }.path
             )?.read()?.use {
-                remoteInstallerData = YamlConfig.default.decodeFromStream(InstallerManifest.serializer(), it)
+                remoteInstallerData = EncodeConfig.yamlDefault.decodeFromStream(InstallerManifest.serializer(), it)
             }
         }
     }
@@ -42,7 +42,7 @@ class PreviousManifestData : KoinComponent {
         directoryPath.await()?.let { nonNullDirectoryPath ->
             repository.await()?.getFileContent(
                 nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }.path
-            )?.read()?.use { remoteVersionData = YamlConfig.default.decodeFromStream(VersionManifest.serializer(), it) }
+            )?.read()?.use { remoteVersionData = EncodeConfig.yamlDefault.decodeFromStream(VersionManifest.serializer(), it) }
         }
     }.also { job ->
         job.invokeOnCompletion {
@@ -58,7 +58,7 @@ class PreviousManifestData : KoinComponent {
                     it.name == "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
                 }.path
             )?.read()?.use {
-                remoteDefaultLocaleData = YamlConfig.default.decodeFromStream(DefaultLocaleManifest.serializer(), it)
+                remoteDefaultLocaleData = EncodeConfig.yamlDefault.decodeFromStream(DefaultLocaleManifest.serializer(), it)
             }
         }
     }
@@ -76,9 +76,9 @@ class PreviousManifestData : KoinComponent {
                     ?.read()
                     ?.use {
                         remoteLocaleData = if (remoteLocaleData == null) {
-                            listOf(YamlConfig.default.decodeFromStream(LocaleManifest.serializer(), it))
+                            listOf(EncodeConfig.yamlDefault.decodeFromStream(LocaleManifest.serializer(), it))
                         } else {
-                            remoteLocaleData!! + YamlConfig.default.decodeFromStream(LocaleManifest.serializer(), it)
+                            remoteLocaleData!! + EncodeConfig.yamlDefault.decodeFromStream(LocaleManifest.serializer(), it)
                         }
                     }
             }

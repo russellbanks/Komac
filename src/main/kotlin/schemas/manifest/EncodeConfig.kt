@@ -6,16 +6,19 @@ import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
 import io.ktor.http.Url
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
-import schemas.manifest.serializers.LocalDateSerializer
-import schemas.manifest.serializers.UrlSerializer
+import schemas.manifest.serializers.JsonLocalDateSerializer
+import schemas.manifest.serializers.JsonUrlSerializer
+import schemas.manifest.serializers.YamlLocalDateSerializer
+import schemas.manifest.serializers.YamlUrlSerializer
 import java.time.LocalDate
 
-object YamlConfig {
-    val default = Yaml(
+object EncodeConfig {
+    val yamlDefault = Yaml(
         serializersModule = SerializersModule {
-            contextual(LocalDate::class, LocalDateSerializer)
-            contextual(Url::class, UrlSerializer)
+            contextual(LocalDate::class, YamlLocalDateSerializer)
+            contextual(Url::class, YamlUrlSerializer)
         },
         configuration = YamlConfiguration(
             encodeDefaults = false,
@@ -25,4 +28,10 @@ object YamlConfig {
             ambiguousQuoteStyle = AmbiguousQuoteStyle.SingleQuoted
         )
     )
+    val jsonDefault = Json {
+        serializersModule = SerializersModule {
+            contextual(LocalDate::class, JsonLocalDateSerializer)
+            contextual(Url::class, JsonUrlSerializer)
+        }
+    }
 }

@@ -1,12 +1,13 @@
 package data
 
-import detection.github.GitHubDetection
 import detection.files.Zip
 import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
+import detection.github.GitHubDetection
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
+import schemas.AdditionalMetadata
 
 @Single
 class SharedManifestData : KoinComponent {
@@ -23,4 +24,5 @@ class SharedManifestData : KoinComponent {
     var msi: Msi? = null
     var zip: Zip? = null
     var gitHubDetection: GitHubDetection? = null
+    var additionalMetadata: AdditionalMetadata? = null
 }

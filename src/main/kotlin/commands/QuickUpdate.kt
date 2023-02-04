@@ -47,12 +47,13 @@ import network.HttpUtils.detectScopeFromUrl
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.AdditionalMetadata
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
+import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
-import schemas.manifest.YamlConfig
 import token.TokenStore
 import utils.FileUtils
 import utils.Hashing.hash
@@ -78,6 +79,9 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val manifestVersion: String? by option()
     private val submit: Boolean by option().flag(default = false)
     private val tokenParameter: String? by option("-t", "--token", envvar = "GITHUB_TOKEN")
+    private val additionalMetadata by option(hidden = true).convert {
+        EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
+    }
 
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
@@ -234,14 +238,21 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             githubImpl.defaultLocaleManifestName to defaultLocaleManifestData.createDefaultLocaleManifest(),
             githubImpl.versionManifestName to versionManifestData.createVersionManifest()
         ) + previousManifestData.remoteLocaleData?.map { localeManifest ->
+            val allLocale = additionalMetadata?.locales?.find { it.name.equals(other = "all", ignoreCase = true) }
+            val metadataCurrentLocale = additionalMetadata?.locales?.find {
+                it.name.equals(other = localeManifest.packageLocale, ignoreCase = true)
+            }
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
-                manifestVersion = get<SchemasImpl>().localeSchema.properties.manifestVersion.default
+                manifestVersion = get<SchemasImpl>().manifestOverride ?: Schemas.manifestVersion,
+                releaseNotes = allLocale?.releaseNotes ?: metadataCurrentLocale?.releaseNotes,
+                releaseNotesUrl = allLocale?.releaseNotesUrl ?: metadataCurrentLocale?.releaseNotesUrl,
+                documentations = allLocale?.documentations ?: metadataCurrentLocale?.documentations
             ).let {
                 Schemas.buildManifestString(
                     Schema.Locale,
-                    YamlConfig.default.encodeToString(LocaleManifest.serializer(), it)
+                    EncodeConfig.yamlDefault.encodeToString(LocaleManifest.serializer(), it)
                 )
             }
         }.orEmpty()

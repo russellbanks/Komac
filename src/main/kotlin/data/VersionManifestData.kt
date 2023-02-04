@@ -6,8 +6,8 @@ import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
+import schemas.manifest.EncodeConfig
 import schemas.manifest.VersionManifest
-import schemas.manifest.YamlConfig
 
 @Single
 class VersionManifestData : KoinComponent {
@@ -26,7 +26,7 @@ class VersionManifestData : KoinComponent {
     private fun VersionManifest.toEncodedYaml(): String {
         return Schemas.buildManifestString(
             schema = Schema.Version,
-            rawString = YamlConfig.default.encodeToString(
+            rawString = EncodeConfig.yamlDefault.encodeToString(
                 serializer = VersionManifest.serializer(),
                 value = this@toEncodedYaml
             )

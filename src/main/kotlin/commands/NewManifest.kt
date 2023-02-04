@@ -47,8 +47,8 @@ import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
+import schemas.manifest.EncodeConfig
 import schemas.manifest.LocaleManifest
-import schemas.manifest.YamlConfig
 import java.io.IOException
 import kotlin.system.exitProcess
 
@@ -125,11 +125,11 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
-                manifestVersion = Schemas.manifestVersion
+                manifestVersion = get<SchemasImpl>().manifestOverride ?: Schemas.manifestVersion
             ).let {
                 Schemas.buildManifestString(
                     Schema.Locale,
-                    YamlConfig.default.encodeToString(LocaleManifest.serializer(), it)
+                    EncodeConfig.yamlDefault.encodeToString(LocaleManifest.serializer(), it)
                 )
             }
         }.orEmpty()

@@ -7,11 +7,9 @@ import kotlinx.coroutines.coroutineScope
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
-import schemas.manifest.YamlConfig
 import java.time.LocalDate
 
 @Single
@@ -74,16 +72,20 @@ class InstallerManifestData : KoinComponent {
                 ?: previousInstaller?.upgradeBehavior
                 ?: previousManifest?.upgradeBehavior?.toPerInstallerUpgradeBehaviour(),
             productCode = sharedManifestData.msi?.productCode
+                ?: sharedManifestData.additionalMetadata?.productCode?.ifBlank { null }
                 ?: productCode?.ifBlank { null }
                 ?: previousManifest?.productCode,
-            releaseDate = sharedManifestData.gitHubDetection?.releaseDate?.await() ?: releaseDate,
-            appsAndFeaturesEntries = previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
-                appsAndFeaturesEntry.fillARPEntry()
-            } ?: previousManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
-                appsAndFeaturesEntry.toInstallerAppsAndFeaturesEntry().fillARPEntry()
-            } ?: listOfNotNull(
-                InstallerManifest.Installer.AppsAndFeaturesEntry().fillARPEntry().takeUnless { it.areAllNull() }
-            ).ifEmpty { null },
+            releaseDate = sharedManifestData.gitHubDetection?.releaseDate?.await()
+                ?: sharedManifestData.additionalMetadata?.releaseDate
+                ?: releaseDate,
+            appsAndFeaturesEntries = sharedManifestData.additionalMetadata?.appsAndFeaturesEntries
+                ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
+                    appsAndFeaturesEntry.fillARPEntry()
+                } ?: previousManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
+                    appsAndFeaturesEntry.toInstallerAppsAndFeaturesEntry().fillARPEntry()
+                } ?: listOfNotNull(
+                    InstallerManifest.Installer.AppsAndFeaturesEntry().fillARPEntry().takeUnless { it.areAllNull() }
+                ).ifEmpty { null },
         )
         when (sharedManifestData.msixBundle) {
             null -> installers += installer
@@ -183,10 +185,10 @@ class InstallerManifestData : KoinComponent {
                 else -> null
             },
             installers = installers.removeNonDistinctKeys()
-                .sortedWith(compareBy({ it.installerLocale }, { it.installerType }, { it.architecture }, { it.scope })),
+                .sortedWith(compareBy({ it.installerLocale }, { it.architecture }, { it.installerType }, { it.scope })),
             manifestType = schemasImpl.installerSchema.properties.manifestType.const,
             manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
-        ).toEncodedYaml()
+        ).toString()
     }
 
     private fun getInstallerManifestBase(): InstallerManifest {
@@ -248,16 +250,6 @@ class InstallerManifestData : KoinComponent {
             architecture = InstallerManifest.Installer.Architecture.NEUTRAL,
             installerSha256 = "",
             installerUrl = Url(URLBuilder())
-        )
-    }
-
-    private fun InstallerManifest.toEncodedYaml(): String {
-        return Schemas.buildManifestString(
-            schema = Schema.Installer,
-            rawString = YamlConfig.default.encodeToString(
-                serializer = InstallerManifest.serializer(),
-                value = this@toEncodedYaml
-            )
         )
     }
 

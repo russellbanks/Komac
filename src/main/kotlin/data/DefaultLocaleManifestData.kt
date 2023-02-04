@@ -9,7 +9,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.SchemasImpl
 import schemas.manifest.DefaultLocaleManifest
-import schemas.manifest.YamlConfig
+import schemas.manifest.EncodeConfig
 
 @Single
 class DefaultLocaleManifestData : KoinComponent {
@@ -31,6 +31,9 @@ class DefaultLocaleManifestData : KoinComponent {
     private val sharedManifestData: SharedManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val schemasImpl: SchemasImpl by inject()
+    private val parameterLocaleMetadata = sharedManifestData.additionalMetadata?.locales?.find {
+        it.name.equals(other = sharedManifestData.defaultLocale, ignoreCase = true)
+    }
 
     suspend fun createDefaultLocaleManifest(): String {
         return getDefaultLocaleManifestBase().copy(
@@ -81,9 +84,11 @@ class DefaultLocaleManifestData : KoinComponent {
             moniker = moniker?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
             tags = tags?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.tags,
             releaseNotesUrl = (releaseNotesUrl
-                ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await())
+                ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await()
+                ?: parameterLocaleMetadata?.releaseNotesUrl)
                 ?.decodeHex(),
-            releaseNotes = sharedManifestData.gitHubDetection?.releaseNotes?.await()?.trim(),
+            releaseNotes = (sharedManifestData.gitHubDetection?.releaseNotes?.await()
+                ?: parameterLocaleMetadata?.releaseNotes)?.trim(),
             manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
             manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
         ).toEncodedYaml()
@@ -106,7 +111,7 @@ class DefaultLocaleManifestData : KoinComponent {
     private fun DefaultLocaleManifest.toEncodedYaml(): String {
         return Schemas.buildManifestString(
             schema = Schema.DefaultLocale,
-            rawString = YamlConfig.default.encodeToString(
+            rawString = EncodeConfig.yamlDefault.encodeToString(
                 serializer = DefaultLocaleManifest.serializer(),
                 value = this@toEncodedYaml
             )

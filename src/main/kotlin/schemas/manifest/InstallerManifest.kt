@@ -5,6 +5,8 @@ import io.ktor.http.Url
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import schemas.Schema
+import schemas.Schemas
 import schemas.manifest.InstallerManifest.AppsAndFeaturesEntry
 import java.time.LocalDate
 
@@ -53,6 +55,14 @@ data class InstallerManifest(
     @SerialName("ManifestType") val manifestType: String,
     @SerialName("ManifestVersion") val manifestVersion: String
 ) {
+    override fun toString() = Schemas.buildManifestString(
+        schema = Schema.Installer,
+        rawString = EncodeConfig.yamlDefault.encodeToString(
+            serializer = serializer(),
+            value = this
+        )
+    )
+
     enum class Platform {
         @SerialName("Windows.Desktop") WindowsDesktop,
         @SerialName("Windows.Universal") WindowsUniversal;

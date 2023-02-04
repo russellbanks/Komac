@@ -55,7 +55,7 @@ object Tags : KoinComponent {
     private val tagsInfo = buildString {
         append(Prompts.optional)
         append(" Enter any tags that would be useful to discover this tool. ")
-        append("(Max ${maxCount})")
+        append("(Max $maxCount)")
     }
 
     private const val example = "Example: zip, c++, photos, OBS"

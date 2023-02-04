@@ -7,7 +7,7 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-object UrlSerializer : KSerializer<Url> {
+object YamlUrlSerializer : KSerializer<Url> {
     override val descriptor = PrimitiveSerialDescriptor(Url::class.simpleName!!, PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: Url) {
