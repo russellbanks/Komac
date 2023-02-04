@@ -19,7 +19,9 @@ object Schemas {
 
     fun buildManifestString(schema: Schema, rawString: String): String {
         return buildString {
-            appendLine(Comments.createdBy)
+            append("# Created with ")
+            System.getenv("KMC_CRTD_WITH")?.let { append("$it using ") }
+            appendLine("${BuildConfig.appName} ${BuildConfig.appVersion}")
             appendLine(Comments.languageServer(schema))
             appendLine()
             appendLine(rawString)
@@ -27,7 +29,6 @@ object Schemas {
     }
 
     object Comments : KoinComponent {
-        const val createdBy = "# Created with ${BuildConfig.appName} ${BuildConfig.appVersion}"
         fun languageServer(schema: Schema): String {
             val schemaUrl = when (schema) {
                 Schema.Installer -> installerSchema
