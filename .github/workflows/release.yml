@@ -1,6 +1,6 @@
 name: Build & Release
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
@@ -14,6 +14,8 @@ jobs:
       - name: Checkout code 👋
         uses: actions/checkout@v3
 
+      - uses: gradle/wrapper-validation-action@v1
+
       - name: Setup JDK
         uses: actions/setup-java@v3
         with:
@@ -23,15 +25,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
 
-      - name: Build with Gradle
-        run: ./gradlew build
-
       - name: Should I publish a release?
         id: decide_whether_to_release
         uses: actions/github-script@v6
         with:
           script: |
-            if (context.eventName === 'push' && context.ref == 'refs/heads/main') {
+            if (context.ref == 'refs/heads/main') {
               core.setOutput('conclusion', true);
               if (context.ref.startsWith('refs/tags/')) {
                 const tag_name = context.ref.replace('refs/tags/', '');
@@ -53,7 +52,17 @@ jobs:
         if: steps.decide_whether_to_release.outputs.conclusion
         run: ./gradlew jpackage
 
-      - name: Release
+      - name: Release JAR
+        if: steps.decide_whether_to_release.outputs.conclusion == 'true' && matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ steps.decide_whether_to_release.outputs.name }}
+          tag_name: ${{ steps.decide_whether_to_release.outputs.tag_name }}
+          prerelease: ${{ steps.decide_whether_to_release.outputs.prerelease }}
+          generate_release_notes: ${{ steps.decide_whether_to_release.outputs.gen_rel_notes }}
+          files: build/libs/*.jar
+
+      - name: Release binaries
         if: steps.decide_whether_to_release.outputs.conclusion == 'true'
         uses: softprops/action-gh-release@v1
         with:
@@ -65,7 +74,6 @@ jobs:
             build/distributions/*.dmg
             build/distributions/*.deb
             build/distributions/*.exe
-            build/libs/*-all.jar
 
       - name: Release to Winget
         if: |
