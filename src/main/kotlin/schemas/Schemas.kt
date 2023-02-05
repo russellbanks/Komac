@@ -19,7 +19,7 @@ object Schemas {
         return buildString {
             append("# Created with ")
             System.getenv(customToolEnv)?.let { append("$it using ") }
-            appendLine("${BuildConfig.appName} ${BuildConfig.appVersion}")
+            appendLine("${BuildConfig.appName} v${BuildConfig.appVersion}")
             appendLine(Comments.languageServer(schema))
             appendLine()
             appendLine(rawString)
