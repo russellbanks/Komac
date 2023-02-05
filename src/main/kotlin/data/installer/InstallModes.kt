@@ -8,15 +8,12 @@ import data.PreviousManifestData
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
 
 object InstallModes : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val installModesSchema = get<SchemasImpl>().installerSchema.definitions.installModes
 
     fun Terminal.installModesPrompt() {
         println(colors.brightYellow(installModesInfo))
@@ -25,19 +22,17 @@ object InstallModes : KoinComponent {
             prompt = const,
             default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous install modes: $it") },
             convert = { input ->
-                areInstallModesValid(input.convertToYamlList(installModesSchema.uniqueItems).toInstallModes())
+                areInstallModesValid(input.convertToYamlList(uniqueItems).toInstallModes())
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(input.trim())
             }
-        )?.convertToYamlList(installModesSchema.uniqueItems)?.toInstallModes()
+        )?.convertToYamlList(uniqueItems)?.toInstallModes()
         println()
     }
 
     private fun areInstallModesValid(installModes: Iterable<InstallerManifest.InstallModes>?): String? {
         return when {
-            (installModes?.count() ?: 0) > installModesSchema.maxItems -> {
-                Errors.invalidLength(max = installModesSchema.maxItems)
-            }
+            (installModes?.count() ?: 0) > maxItems -> Errors.invalidLength(max = maxItems)
             installModes?.any { it !in InstallerManifest.InstallModes.values() } == true -> {
                 Errors.invalidEnum(
                     InstallerManifest.InstallModes.values().map { it.toString() }
@@ -53,7 +48,7 @@ object InstallModes : KoinComponent {
         }
     }
 
-    private val installModesInfo = "${Prompts.optional} ${installModesSchema.description}"
+    private const val installModesInfo = "${Prompts.optional} Enter the ist of supported installer modes"
     private val installModesExample = "Options: ${InstallerManifest.InstallModes.values().joinToString(", ")}"
 
     private fun List<String>.toInstallModes(): List<InstallerManifest.InstallModes>? {
@@ -63,4 +58,6 @@ object InstallModes : KoinComponent {
     }
 
     private const val const = "Install Modes"
+    private const val maxItems = 3
+    private const val uniqueItems = true
 }

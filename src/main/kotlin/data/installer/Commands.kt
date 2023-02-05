@@ -8,48 +8,35 @@ import data.PreviousManifestData
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
-import schemas.data.InstallerSchema
+import schemas.manifest.InstallerManifest
 
 object Commands : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val commandsSchema = get<SchemasImpl>().installerSchema.definitions.commands
 
     fun Terminal.commandsPrompt() {
-        println(
-            colors.brightYellow(
-                "${Prompts.optional} ${commandsSchema.description} (Max ${commandsSchema.maxItems})"
-            )
-        )
+        println(colors.brightYellow("${Prompts.optional} $description (Max $maxItems)"))
         installerManifestData.commands = prompt(
-            prompt = const,
+            prompt = InstallerManifest::commands.name.replaceFirstChar { it.titlecase() },
             default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous commands: $it") },
             convert = { input ->
                 areCommandsValid(input.convertToYamlList())
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(input.trim())
             }
-        )?.convertToYamlList()
+        )?.convertToYamlList(uniqueItems)
         println()
     }
 
-    private fun areCommandsValid(
-        commands: Iterable<String>?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): String? {
-        val commandsSchema = installerSchema.definitions.commands
+    private fun areCommandsValid(commands: Iterable<String>): String? {
         return when {
-            (commands?.count() ?: 0) > commandsSchema.maxItems -> {
-                Errors.invalidLength(max = commandsSchema.maxItems)
-            }
-            commands?.any { it.length > commandsSchema.items.maxLength } == true -> {
+            commands.count() > maxItems -> Errors.invalidLength(max = maxItems)
+            commands.any { it.length > maxItemLength } -> {
                 Errors.invalidLength(
-                    min = commandsSchema.items.minLength,
-                    max = commandsSchema.items.maxLength,
-                    items = commands.filter { it.length > commandsSchema.items.maxLength }
+                    min = minItemLength,
+                    max = maxItemLength,
+                    items = commands.filter { it.length > maxItemLength }
                 )
             }
             else -> null
@@ -62,5 +49,9 @@ object Commands : KoinComponent {
         }
     }
 
-    private const val const = "Commands"
+    private const val description = "List of commands or aliases to run the package"
+    private const val maxItems = 16
+    private const val minItemLength = 1
+    private const val maxItemLength = 40
+    private const val uniqueItems = true
 }

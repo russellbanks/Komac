@@ -32,8 +32,6 @@ import network.HttpUtils.isRedirect
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
-import schemas.data.DefaultLocaleSchema
 import schemas.manifest.InstallerManifest
 import utils.FileUtils
 import utils.Hashing.hash
@@ -180,7 +178,6 @@ object Url : KoinComponent {
     }
 
     suspend fun Terminal.localeUrlPrompt(localeUrl: LocaleUrl) {
-        val defaultLocaleSchema: DefaultLocaleSchema = get<SchemasImpl>().defaultLocaleSchema
         val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         val gitHubDetection: GitHubDetection? = get<SharedManifestData>().gitHubDetection
         when {
@@ -200,7 +197,7 @@ object Url : KoinComponent {
                 defaultLocaleManifestData.publisherSupportUrl = gitHubDetection.publisherSupportUrl.await()
             }
             else -> {
-                println(colors.brightYellow(localeUrlInfo(localeUrl, defaultLocaleSchema.properties)))
+                println(colors.brightYellow(localeUrlInfo(localeUrl)))
                 val input = prompt(
                     prompt = localeUrl.toString(),
                     default = getPreviousValue(localeUrl)?.also { muted("Previous $localeUrl: $it") },
@@ -264,15 +261,15 @@ object Url : KoinComponent {
         }
     }
 
-    private fun localeUrlInfo(publisherUrl: LocaleUrl, schemaProperties: DefaultLocaleSchema.Properties): String {
+    private fun localeUrlInfo(publisherUrl: LocaleUrl): String {
         val description = when (publisherUrl) {
-            LocaleUrl.CopyrightUrl -> schemaProperties.copyrightUrl.description
-            LocaleUrl.LicenseUrl -> schemaProperties.licenseUrl.description
-            LocaleUrl.PackageUrl -> schemaProperties.packageUrl.description
-            LocaleUrl.PublisherUrl -> schemaProperties.publisherUrl.description
-            LocaleUrl.PublisherSupportUrl -> schemaProperties.publisherSupportUrl.description
-            LocaleUrl.PublisherPrivacyUrl -> schemaProperties.privacyUrl.description
-            LocaleUrl.ReleaseNotesUrl -> schemaProperties.releaseNotesUrl.description
+            LocaleUrl.CopyrightUrl -> "The package copyright"
+            LocaleUrl.LicenseUrl -> "The license page"
+            LocaleUrl.PackageUrl -> "The package home page"
+            LocaleUrl.PublisherUrl -> "The publisher home page"
+            LocaleUrl.PublisherSupportUrl -> "The publisher support page"
+            LocaleUrl.PublisherPrivacyUrl -> "The publisher privacy page or the package privacy page"
+            LocaleUrl.ReleaseNotesUrl -> "The package release notes url"
         }
         return "${Prompts.optional} Enter ${description.lowercase()}"
     }

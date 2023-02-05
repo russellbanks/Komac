@@ -1,65 +1,45 @@
 package data.installer
 
 import Errors
-import Validation
+import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 
 object FileExtensions : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val fileExtensionsSchema = get<SchemasImpl>().installerSchema.definitions.fileExtensions
 
     fun Terminal.fileExtensionsPrompt() {
-        do {
-            println(
-                colors.brightYellow(
-                    "${Prompts.optional} ${fileExtensionsSchema.description} (Max ${fileExtensionsSchema.maxItems})"
-                )
-            )
-            val input = prompt(
-                prompt = const,
-                default = getPreviousValue()?.joinToString(", ")?.also {
-                    muted("Previous file extensions: $it")
-                }
-            )?.trim()?.convertToYamlList(fileExtensionsSchema.uniqueItems)
-            val (fileExtensionsValid, error) = areFileExtensionsValid(input)
-            if (fileExtensionsValid == Validation.Success) installerManifestData.fileExtensions = input
-            error?.let { danger(it) }
-            println()
-        } while (fileExtensionsValid != Validation.Success)
+        println(colors.brightYellow("${Prompts.optional} $description (Max $maxItems)"))
+        installerManifestData.fileExtensions = prompt(
+            prompt = const,
+            default = getPreviousValue()?.joinToString(", ")?.also {
+                muted("Previous file extensions: $it")
+            },
+            convert = { input ->
+                areFileExtensionsValid(input.convertToYamlList())
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim())
+            }
+        )?.convertToYamlList(uniqueItems)
+        println()
     }
 
-    private fun areFileExtensionsValid(
-        fileExtensions: Iterable<String>?,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    ): Pair<Validation, String?> {
-        val fileExtensionsSchema = installerSchema.definitions.fileExtensions
+    private fun areFileExtensionsValid(fileExtensions: Iterable<String>): String? {
         return when {
-            (fileExtensions?.count() ?: 0) > fileExtensionsSchema.maxItems -> {
-                Validation.InvalidLength to Errors.invalidLength(max = fileExtensionsSchema.maxItems)
+            fileExtensions.count() > maxItems -> Errors.invalidLength(max = maxItems)
+            fileExtensions.any { !it.matches(regex) } -> {
+                Errors.invalidRegex(regex = regex, items = fileExtensions.filterNot { it.matches(regex) })
             }
-            fileExtensions?.any { !it.matches(Regex(fileExtensionsSchema.items.pattern)) } == true -> {
-                Validation.InvalidPattern to Errors.invalidRegex(
-                    regex = Regex(fileExtensionsSchema.items.pattern),
-                    items = fileExtensions.filterNot { it.matches(Regex(fileExtensionsSchema.items.pattern)) }
-                )
+            fileExtensions.any { it.length > maxItemLength } -> {
+                Errors.invalidLength(max = maxItemLength, items = fileExtensions.filter { it.length > maxItemLength })
             }
-            fileExtensions?.any { it.length > fileExtensionsSchema.items.maxLength } == true -> {
-                Validation.InvalidLength to Errors.invalidLength(
-                    max = fileExtensionsSchema.items.maxLength,
-                    items = fileExtensions.filter { it.length > fileExtensionsSchema.items.maxLength }
-                )
-            }
-            else -> Validation.Success to null
+            else -> null
         }
     }
 
@@ -70,4 +50,10 @@ object FileExtensions : KoinComponent {
     }
 
     private const val const = "File Extensions"
+    private const val description = "List of file extensions the package could support"
+    private const val maxItems = 512
+    private const val maxItemLength = 64
+    private const val pattern = "^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"
+    private val regex = Regex(pattern)
+    private const val uniqueItems = true
 }

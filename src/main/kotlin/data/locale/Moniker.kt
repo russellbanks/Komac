@@ -8,10 +8,7 @@ import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
-import schemas.data.DefaultLocaleSchema
 import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
@@ -32,14 +29,10 @@ object Moniker : KoinComponent {
         println()
     }
 
-    private fun isMonikerValid(
-        moniker: String,
-        monikerSchema: DefaultLocaleSchema.Definitions.Tag = get<SchemasImpl>().defaultLocaleSchema.definitions.tag
-    ): String? {
+    private fun isMonikerValid(moniker: String): String? {
         return when {
-            moniker.isNotBlank() &&
-                (moniker.length < monikerSchema.minLength || moniker.length > monikerSchema.maxLength) -> {
-                Errors.invalidLength(min = monikerSchema.minLength, max = monikerSchema.maxLength)
+            moniker.isNotBlank() && (moniker.length < minLength || moniker.length > maxLength) -> {
+                Errors.invalidLength(min = minLength, max = maxLength)
             }
             else -> null
         }
@@ -47,4 +40,6 @@ object Moniker : KoinComponent {
 
     private const val monikerInfo = "${Prompts.optional} Enter the Moniker (friendly name/alias)."
     private const val monikerExample = "Example: vscode"
+    private const val minLength = 1
+    private const val maxLength = 40
 }

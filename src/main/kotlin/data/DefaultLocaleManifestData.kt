@@ -82,7 +82,7 @@ class DefaultLocaleManifestData : KoinComponent {
                 ?: parameterLocaleMetadata?.releaseNotesUrl,
             releaseNotes = (sharedManifestData.gitHubDetection?.releaseNotes?.await()
                 ?: parameterLocaleMetadata?.releaseNotes)?.trim(),
-            manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
+            manifestType = Schemas.defaultLocaleManifestType,
             manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
         ).toEncodedYaml()
     }
@@ -96,8 +96,8 @@ class DefaultLocaleManifestData : KoinComponent {
             packageName = sharedManifestData.packageName!!,
             license = license,
             shortDescription = shortDescription,
-            manifestType = schemasImpl.defaultLocaleSchema.properties.manifestType.const,
-            manifestVersion = Schemas.manifestVersion
+            manifestType = Schemas.defaultLocaleManifestType,
+            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
         )
     }
 

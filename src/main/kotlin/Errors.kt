@@ -7,7 +7,7 @@ object Errors {
 
     fun invalidLength(min: Number? = null, max: Number? = null, items: Iterable<String>? = null): String {
         return buildString {
-            append("$error ${Validation.InvalidLength}")
+            append("$error Invalid Length")
             if (min != null || max != null) {
                 append(" -${items?.let { "Item" } ?: ""} ${items?.let { "Length" } ?: "length"} must be ")
             }
@@ -28,7 +28,7 @@ object Errors {
 
     fun invalidRegex(regex: Regex? = null, items: Iterable<String>? = null): String {
         return buildString {
-            append("$error ${Validation.InvalidPattern}")
+            append("$error Invalid Pattern")
             regex?.let { append(" - Must match regex: $it") }
             items?.let { nonNullItems ->
                 appendLine()
@@ -42,7 +42,7 @@ object Errors {
 
     fun unsuccessfulUrlResponse(response: HttpResponse?): String {
         return buildString {
-            append("$error ${Validation.UnsuccessfulResponseCode} - The server ")
+            append("$error Unsuccessful Response Code - The server ")
             append(response?.let { "responded with ${it.status}" } ?: "did not return a successful response")
         }
     }

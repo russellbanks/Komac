@@ -12,16 +12,12 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
-import schemas.data.DefaultLocaleSchema
 import kotlin.system.exitProcess
 
 object Description : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val propertiesSchema: DefaultLocaleSchema.Properties = get<SchemasImpl>().defaultLocaleSchema.properties
     private val sharedManifestData: SharedManifestData by inject()
 
     suspend fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
@@ -62,19 +58,11 @@ object Description : KoinComponent {
         descriptionType: DescriptionType,
         canBeBlank: Boolean
     ): String? {
-        val minLength = when (descriptionType) {
-            DescriptionType.Short -> propertiesSchema.shortDescription.minLength
-            DescriptionType.Long -> propertiesSchema.description.minLength
-        }
-        val maxLength = when (descriptionType) {
-            DescriptionType.Short -> propertiesSchema.shortDescription.maxLength
-            DescriptionType.Long -> propertiesSchema.description.maxLength
-        }
         return when {
             description.isNullOrBlank() && canBeBlank -> null
             description.isNullOrBlank() -> Errors.blankInput(descriptionType)
-            description.length < minLength || description.length > maxLength -> {
-                Errors.invalidLength(min = minLength, max = maxLength)
+            description.length < descriptionType.minLength || description.length > descriptionType.maxLength -> {
+                Errors.invalidLength(min = descriptionType.minLength, max = descriptionType.maxLength)
             }
             else -> null
         }
@@ -90,8 +78,8 @@ object Description : KoinComponent {
 
     private fun descriptionInfo(descriptionType: DescriptionType): String {
         val description = when (descriptionType) {
-            DescriptionType.Short -> propertiesSchema.shortDescription.description
-            DescriptionType.Long -> propertiesSchema.description.description
+            DescriptionType.Short -> "The short package description"
+            DescriptionType.Long -> "The full package description"
         }
         val inputNecessary = if (descriptionType == DescriptionType.Short) Prompts.required else Prompts.optional
         return "$inputNecessary Enter ${description.lowercase()}"

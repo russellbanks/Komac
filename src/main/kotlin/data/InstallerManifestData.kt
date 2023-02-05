@@ -29,7 +29,7 @@ class InstallerManifestData : KoinComponent {
     var fileExtensions: List<String>? = null
     var protocols: List<String>? = null
     var commands: List<String>? = null
-    var installerSuccessCodes: List<Int>? = null
+    var installerSuccessCodes: List<Long>? = null
     var installModes: List<InstallerManifest.InstallModes>? = null
     private val schemasImpl: SchemasImpl by inject()
     private val previousManifestData: PreviousManifestData by inject()
@@ -186,7 +186,7 @@ class InstallerManifestData : KoinComponent {
             },
             installers = installers.removeNonDistinctKeys()
                 .sortedWith(compareBy({ it.installerLocale }, { it.architecture }, { it.installerType }, { it.scope })),
-            manifestType = schemasImpl.installerSchema.properties.manifestType.const,
+            manifestType = Schemas.installerManifestType,
             manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
         ).toString()
     }
@@ -195,9 +195,8 @@ class InstallerManifestData : KoinComponent {
         return previousManifestData.remoteInstallerData ?: InstallerManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
-            manifestType = Schemas.manifestType(schemasImpl.installerSchema),
-            manifestVersion = schemasImpl.manifestOverride
-                ?: schemasImpl.installerSchema.properties.manifestVersion.default
+            manifestType = Schemas.installerManifestType,
+            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
         )
     }
 

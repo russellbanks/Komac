@@ -13,8 +13,6 @@ object Prompts {
 
     const val enterChoice = "Enter Choice"
 
-    const val noIdea = "No idea"
-
     fun Terminal.pullRequestPrompt(sharedManifestData: SharedManifestData): ManifestResultOption? {
         println(
             verticalLayout {

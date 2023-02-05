@@ -8,19 +8,14 @@ import data.DefaultLocaleManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import org.koin.core.component.inject
-import schemas.SchemasImpl
 import kotlin.system.exitProcess
 
 object Copyright : KoinComponent {
-    private val copyrightSchema = get<SchemasImpl>().defaultLocaleSchema.properties.copyright
-
     fun Terminal.copyrightPrompt() {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
         println(colors.brightYellow(copyrightInfo))
         info(example)
-        defaultLocaleManifestData.copyright = prompt(
-            prompt = const,
+        get<DefaultLocaleManifestData>().copyright = prompt(
+            prompt = DefaultLocaleManifestData::copyright.name.replaceFirstChar { it.titlecase() },
             convert = { input ->
                 isCopyrightValid(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
@@ -31,14 +26,15 @@ object Copyright : KoinComponent {
     private fun isCopyrightValid(copyright: String): String? {
         return when {
             copyright.isNotBlank() &&
-                (copyright.length < copyrightSchema.minLength || copyright.length > copyrightSchema.maxLength) -> {
-                Errors.invalidLength(min = copyrightSchema.minLength, max = copyrightSchema.maxLength)
+                (copyright.length < minLength || copyright.length > maxLength) -> {
+                Errors.invalidLength(min = minLength, max = maxLength)
             }
             else -> null
         }
     }
 
-    private const val const = "Copyright"
-    private val copyrightInfo = "${Prompts.optional} Enter ${copyrightSchema.description.lowercase()}"
+    private const val copyrightInfo = "${Prompts.optional} Enter the package copyright"
     private const val example = "Example: Copyright (c) Microsoft Corporation"
+    private const val minLength = 3
+    private const val maxLength = 512
 }

@@ -8,14 +8,12 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
+import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
 object Publisher : KoinComponent {
     private val previousManifestData: PreviousManifestData by inject()
-    private val publisherSchema = get<SchemasImpl>().defaultLocaleSchema.properties.publisher
     private val sharedManifestData: SharedManifestData by inject()
 
     fun Terminal.publisherPrompt() {
@@ -30,7 +28,7 @@ object Publisher : KoinComponent {
                     default = previousManifestData.remoteDefaultLocaleData?.publisher
                         ?.also { muted("Previous publisher: $it") },
                     convert = { input ->
-                        publisherValid(input)
+                        getPublisherError(input)
                             ?.let { ConversionResult.Invalid(it) }
                             ?: ConversionResult.Valid(input.trim())
                     }
@@ -39,17 +37,19 @@ object Publisher : KoinComponent {
         }
     }
 
-    private fun publisherValid(publisher: String): String? {
+    private fun getPublisherError(publisher: String): String? {
         return when {
             publisher.isBlank() -> Errors.blankInput(const)
-            publisher.length < publisherSchema.minLength || publisher.length > publisherSchema.maxLength -> {
-                Errors.invalidLength(min = publisherSchema.minLength, max = publisherSchema.maxLength)
+            publisher.length < minLength || publisher.length > maxLength -> {
+                Errors.invalidLength(min = minLength, max = maxLength)
             }
             else -> null
         }
     }
 
-    private const val const = "Publisher"
-    private val publisherInfo = "${Prompts.required} Enter ${publisherSchema.description.lowercase()}"
+    private val const = DefaultLocaleManifest::publisher.name.replaceFirstChar { it.titlecase() }
+    private const val publisherInfo = "${Prompts.required} Enter the publisher name"
     private const val example = "Example: Microsoft Corporation"
+    private const val minLength = 2
+    private const val maxLength = 256
 }

@@ -65,8 +65,16 @@ object PackageIdentifier : KoinComponent {
                 ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
                 ?.filter { it.name.matches(regex) }
                 ?.filter { it.isDirectory }
+                ?.filterNot { ghContent -> ghContent.name.all { it.isLetter() } }
                 ?.also {
-                    if (it.isNotEmpty() && writeOutput) info("Found $packageIdentifier in the winget-pkgs repository")
+                    if (it.isEmpty()) {
+                        sharedManifestData.updateState = VersionUpdateState.NewPackage
+                        return null
+                    } else {
+                        if (writeOutput) {
+                            info("Found $packageIdentifier in the winget-pkgs repository")
+                        }
+                    }
                 }
                 ?.map { it.name }
                 ?.also { sharedManifestData.allVersions = it }

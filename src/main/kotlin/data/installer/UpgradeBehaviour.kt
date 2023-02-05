@@ -9,14 +9,11 @@ import data.PreviousManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
 
 object UpgradeBehaviour : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val schemasImpl: SchemasImpl by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val upgradeBehaviourSchema = schemasImpl.installerSchema.definitions.upgradeBehavior
 
     fun Terminal.upgradeBehaviourPrompt() {
         if (installerManifestData.installerType == InstallerManifest.Installer.InstallerType.PORTABLE) return
@@ -49,7 +46,7 @@ object UpgradeBehaviour : KoinComponent {
             default = previousValue?.toString()?.firstOrNull()?.toString()
                 ?: InstallerManifest.UpgradeBehavior.Install.toString().first().toString(),
             convert = { input ->
-                isUpgradeBehaviourValid(input.firstOrNull())
+                getUpgradeBehaviourError(input.trim())
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(input.trim())
             }
@@ -66,13 +63,12 @@ object UpgradeBehaviour : KoinComponent {
         }
     }
 
-    private fun isUpgradeBehaviourValid(option: Char?): String? {
+    private fun getUpgradeBehaviourError(option: String): String? {
+        val upgradeBehaviourValues = InstallerManifest.UpgradeBehavior.values().map { it.toString() }
         return when {
-            upgradeBehaviourSchema.enum.all {
-                it.first().titlecase() != option?.titlecase()
-            } -> Errors.invalidEnum(
-                upgradeBehaviourSchema.enum
-            )
+            option.firstOrNull() !in upgradeBehaviourValues.map { it.first() } -> {
+                Errors.invalidEnum(upgradeBehaviourValues)
+            }
             else -> null
         }
     }

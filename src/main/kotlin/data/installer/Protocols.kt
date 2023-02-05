@@ -8,43 +8,32 @@ import data.PreviousManifestData
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
 
 object Protocols : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val protocolsSchema = get<SchemasImpl>().installerSchema.definitions.protocols
 
     fun Terminal.protocolsPrompt() {
-        println(
-            colors.brightYellow("${Prompts.optional} ${protocolsSchema.description} (Max ${protocolsSchema.maxItems})")
-        )
+        println(colors.brightYellow("${Prompts.optional} $description (Max $maxItems)"))
         installerManifestData.protocols = prompt(
             prompt = InstallerManifest::protocols.name.replaceFirstChar { it.titlecase() },
             default = getPreviousValue()?.joinToString(", ")?.also { muted("Previous protocols: $it") },
-            convert = {
-                val error = areProtocolsValid(it.trim().convertToYamlList(protocolsSchema.uniqueItems))
-                if (error != null) {
-                    ConversionResult.Invalid(error)
-                } else {
-                    ConversionResult.Valid(it.trim())
-                }
+            convert = { input ->
+                areProtocolsValid(input.trim().convertToYamlList(uniqueItems))
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim())
             }
-        )?.convertToYamlList(protocolsSchema.uniqueItems)
+        )?.convertToYamlList(uniqueItems)
         println()
     }
 
     private fun areProtocolsValid(protocols: Iterable<String>?): String? {
         return when {
-            (protocols?.count() ?: 0) > protocolsSchema.maxItems -> Errors.invalidLength(max = protocolsSchema.maxItems)
-            protocols?.any { it.length > protocolsSchema.items.maxLength } == true -> {
-                Errors.invalidLength(
-                    max = protocolsSchema.items.maxLength,
-                    items = protocols.filter { it.length > protocolsSchema.items.maxLength }
-                )
+            (protocols?.count() ?: 0) > maxItems -> Errors.invalidLength(max = maxItems)
+            protocols?.any { it.length > maxLength } == true -> {
+                Errors.invalidLength(max = maxLength, items = protocols.filter { it.length > maxLength })
             }
             else -> null
         }
@@ -55,4 +44,9 @@ object Protocols : KoinComponent {
             it.protocols ?: it.installers.getOrNull(installerManifestData.installers.size)?.protocols
         }
     }
+
+    private const val maxItems = 64
+    private const val maxLength = 2048
+    private const val uniqueItems = true
+    private const val description = "List of protocols the package provides a handler for"
 }

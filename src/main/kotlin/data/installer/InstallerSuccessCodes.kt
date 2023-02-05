@@ -9,14 +9,10 @@ import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 
 object InstallerSuccessCodes : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val schemasImpl: SchemasImpl by inject()
-    private val installerSuccessCodesSchema = schemasImpl.installerSchema.definitions.installerSuccessCodes
-    private val installerReturnCodeSchema = schemasImpl.installerSchema.definitions.installerReturnCode
 
     fun Terminal.installerSuccessCodesPrompt() {
         println(colors.brightYellow(installerSuccessCodeInfo))
@@ -31,32 +27,28 @@ object InstallerSuccessCodes : KoinComponent {
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(input.trim())
             }
-        )?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
-            ?.mapNotNull { it.toIntOrNull() }
-            ?.filterNot { it in installerReturnCodeSchema.not.enum }
+        ).let { convertToInstallerCodeList(it) }
         println()
     }
 
-    private fun convertToInstallerCodeList(input: String?): Iterable<Int>? {
+    private fun convertToInstallerCodeList(input: String?): List<Long>? {
         return input?.trim()
-            ?.convertToYamlList(installerSuccessCodesSchema.uniqueItems)
-            ?.mapNotNull { it.toIntOrNull() }
-            ?.filterNot { it in installerReturnCodeSchema.not.enum }
+            ?.convertToYamlList(uniqueItems)
+            ?.mapNotNull { it.toLongOrNull() }
+            ?.filterNot { it == 0L }
     }
 
-    private fun areInstallerSuccessCodesValid(installerSuccessCodes: Iterable<Int>?): String? {
+    private fun areInstallerSuccessCodesValid(installerSuccessCodes: List<Long>?): String? {
         return when {
-            (installerSuccessCodes?.count() ?: 0) > installerSuccessCodesSchema.maxItems -> {
-                Errors.invalidLength(max = installerSuccessCodesSchema.maxItems)
-            }
+            (installerSuccessCodes?.count() ?: 0) > maxItems -> Errors.invalidLength(max = maxItems)
             installerSuccessCodes?.any {
-                it < installerReturnCodeSchema.minimum || it > installerReturnCodeSchema.maximum
+                it < Int.MIN_VALUE.toLong() || it > UInt.MAX_VALUE.toLong()
             } == true -> {
                 Errors.invalidLength(
-                    min = installerReturnCodeSchema.minimum,
-                    max = installerReturnCodeSchema.maximum,
+                    min = Int.MIN_VALUE,
+                    max = UInt.MAX_VALUE.toLong(),
                     items = installerSuccessCodes.filter {
-                        it < installerReturnCodeSchema.minimum || it > installerReturnCodeSchema.maximum
+                        it < Int.MIN_VALUE || it > UInt.MAX_VALUE.toLong()
                     }.map { it.toString() }
                 )
             }
@@ -69,16 +61,19 @@ object InstallerSuccessCodes : KoinComponent {
         return installerSuccessCodes.shuffled().take(3).sorted()
     }
 
-    private fun getPreviousValue(): List<Int>? {
+    private fun getPreviousValue(): List<Long>? {
         return previousManifestData.remoteInstallerData?.let {
             it.installerSuccessCodes
                 ?: it.installers.getOrNull(installerManifestData.installers.size)?.installerSuccessCodes
         }
     }
 
+    private const val maxItems = 16
+    private const val uniqueItems = true
     private const val const = "Installer Success Codes"
-    private val installerSuccessCodeInfo =
-        "${Prompts.optional} ${installerSuccessCodesSchema.description} (Max ${installerSuccessCodesSchema.maxItems})"
+    private const val description =
+        "List of additional non-zero installer success exit codes other than known default values by winget"
+    private const val installerSuccessCodeInfo = "${Prompts.optional} $description (Max $maxItems)"
     private val installerSuccessCodesExample =
         "Example: ${generateRandomInstallerSuccessCodes().joinToString(", ")}"
 }

@@ -3,7 +3,6 @@ package schemas
 import com.russellbanks.Komac.BuildConfig
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import schemas.data.InstallerSchema
 
 object Schemas {
     const val manifestVersion = "1.4.0"
@@ -11,12 +10,10 @@ object Schemas {
     const val defaultLocaleSchema = "https://aka.ms/winget-manifest.defaultLocale.$manifestVersion.schema.json"
     const val localeSchema = "https://aka.ms/winget-manifest.locale.$manifestVersion.schema.json"
     const val versionSchema = "https://aka.ms/winget-manifest.version.$manifestVersion.schema.json"
-    const val installerType = "installer"
+    const val installerManifestType = "installer"
+    const val defaultLocaleManifestType = "defaultLocale"
+    const val versionManifestType = "version"
     private const val customToolEnv = "KMC_CRTD_WITH"
-
-    fun manifestType(installerSchema: InstallerSchema): String {
-        return installerSchema.properties.manifestType.const
-    }
 
     fun buildManifestString(schema: Schema, rawString: String): String {
         return buildString {

@@ -2,9 +2,7 @@ package data.shared
 
 import Errors
 import ExitCode
-import com.github.ajalt.mordant.rendering.TextColors
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
+import com.github.ajalt.mordant.rendering.TextStyle
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
@@ -13,9 +11,7 @@ import data.SharedManifestData
 import input.LocaleType
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import java.util.Locale
 import kotlin.system.exitProcess
 
@@ -37,15 +33,14 @@ object Locale : KoinComponent {
             prompt = "$localeType locale",
             default = when (localeType) {
                 LocaleType.Installer -> getPreviousValue()?.also { muted("Previous value: $it") }
-                LocaleType.Package -> get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale.default
+                LocaleType.Package -> defaultLocale
             },
             convert = { input ->
-                val error = if (localeType == LocaleType.Installer) {
+                if (localeType == LocaleType.Installer) {
                     isInstallerLocaleValid(input)
                 } else {
                     isPackageLocaleValid(input)
-                }
-                error?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
+                }?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
         ) ?: exitProcess(ExitCode.CtrlC.code)
         if (localeType == LocaleType.Installer) {
@@ -57,12 +52,9 @@ object Locale : KoinComponent {
     }
 
     private fun isInstallerLocaleValid(locale: String): String? {
-        val installerLocale = get<SchemasImpl>().installerSchema.definitions.locale
         return when {
-            locale.isNotBlank() && !locale.matches(Regex(installerLocale.pattern)) -> {
-                Errors.invalidRegex(Regex(installerLocale.pattern))
-            }
-            locale.length > installerLocale.maxLength -> Errors.invalidLength(max = installerLocale.maxLength)
+            locale.isNotBlank() && !locale.matches(regex) -> Errors.invalidRegex(regex)
+            locale.length > maxLength -> Errors.invalidLength(max = maxLength)
             else -> null
         }
     }
@@ -74,23 +66,24 @@ object Locale : KoinComponent {
     }
 
     private fun isPackageLocaleValid(locale: String): String? {
-        val packageLocaleSchema = get<SchemasImpl>().defaultLocaleSchema.properties.packageLocale
         return when {
             locale.isBlank() -> Errors.blankInput(LocaleType.Package)
-            !locale.matches(Regex(packageLocaleSchema.pattern)) -> {
-                Errors.invalidRegex(Regex(packageLocaleSchema.pattern))
-            }
-            locale.length > packageLocaleSchema.maxLength -> Errors.invalidLength(max = packageLocaleSchema.maxLength)
+            !locale.matches(regex) -> Errors.invalidRegex(regex)
+            locale.length > maxLength -> Errors.invalidLength(max = maxLength)
             else -> null
         }
     }
 
-    private fun localeInfo(localeType: LocaleType): Pair<String, TextColors> {
+    private fun Terminal.localeInfo(localeType: LocaleType): Pair<String, TextStyle> {
         return buildString {
             append(if (localeType == LocaleType.Package) Prompts.required else Prompts.optional)
             append(" Enter the $localeType locale")
-        } to if (localeType == LocaleType.Package) brightGreen else brightYellow
+        } to if (localeType == LocaleType.Package) colors.brightGreen else colors.brightYellow
     }
 
     const val installerLocaleConst = "Installer Locale"
+    private const val maxLength = 20
+    private const val pattern = "^([a-zA-Z]{2,3}|[iI]-[a-zA-Z]+|[xX]-[a-zA-Z]{1,8})(-[a-zA-Z]{1,8})*$"
+    private val regex = Regex(pattern)
+    private const val defaultLocale = "en-US"
 }

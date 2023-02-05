@@ -11,10 +11,7 @@ import data.PreviousManifestData
 import input.InstallerSwitch
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
 
 object InstallerSwitch : KoinComponent {
@@ -48,10 +45,9 @@ object InstallerSwitch : KoinComponent {
     private fun isInstallerSwitchValid(
         switch: String,
         installerSwitch: InstallerSwitch,
-        canBeBlank: Boolean = false,
-        installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
+        canBeBlank: Boolean = false
     ): String? {
-        val (minBoundary, maxBoundary) = installerSwitch.getLengthBoundary(installerSchema)
+        val (minBoundary, maxBoundary) = 1 to if (installerSwitch == InstallerSwitch.Custom) 2048 else 512
         return when {
             switch.isBlank() && !canBeBlank -> Errors.blankInput(installerSwitch.toString())
             switch.length > maxBoundary -> Errors.invalidLength(min = minBoundary, max = maxBoundary)

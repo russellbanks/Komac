@@ -8,15 +8,12 @@ import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import kotlin.system.exitProcess
 
 object Author : KoinComponent {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val authorSchema = get<SchemasImpl>().defaultLocaleSchema.properties.author
 
     fun Terminal.authorPrompt() {
         println(colors.brightYellow(authorInfo))
@@ -32,14 +29,15 @@ object Author : KoinComponent {
 
     private fun isAuthorValid(author: String): String? {
         return when {
-            author.isNotBlank() &&
-                (author.length < authorSchema.minLength || author.length > authorSchema.maxLength) -> {
-                Errors.invalidLength(min = authorSchema.minLength, max = authorSchema.maxLength)
+            author.isNotBlank() && (author.length < minLength || author.length > maxLength) -> {
+                Errors.invalidLength(min = minLength, max = maxLength)
             }
             else -> null
         }
     }
 
     private const val const = "Author"
-    private val authorInfo = "${Prompts.optional} Enter ${authorSchema.description.lowercase()}"
+    private const val authorInfo = "${Prompts.optional} Enter the package author"
+    private const val minLength = 2
+    private const val maxLength = 256
 }

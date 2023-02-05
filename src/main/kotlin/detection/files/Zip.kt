@@ -1,12 +1,6 @@
 package detection.files
 
 import Errors
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
-import com.github.ajalt.mordant.rendering.TextColors.brightYellow
-import com.github.ajalt.mordant.rendering.TextColors.cyan
-import com.github.ajalt.mordant.rendering.TextStyles.bold
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -14,21 +8,15 @@ import com.github.ajalt.mordant.terminal.YesNoPrompt
 import detection.files.msi.Msi
 import detection.files.msix.MsixBundle
 import input.Prompts
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
-import schemas.SchemasImpl
-import schemas.data.InstallerSchema
 import schemas.manifest.InstallerManifest
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 
-class Zip(zip: File, terminal: Terminal) : KoinComponent {
+class Zip(zip: File, terminal: Terminal) {
     var nestedInstallerType: InstallerManifest.Installer.NestedInstallerType? = null
     var nestedInstallerFiles: List<InstallerManifest.Installer.NestedInstallerFiles>? = null
     private var installerTypeCounts: Map<String, Int>
-    private val installerSchema: InstallerSchema = get<SchemasImpl>().installerSchema
-    private val nestedInstallerPropertiesSchema = installerSchema.definitions.nestedInstallerFiles.items.properties
 
     init {
         require(zip.extension.lowercase() == InstallerManifest.InstallerType.ZIP.toString()) {
@@ -103,14 +91,14 @@ class Zip(zip: File, terminal: Terminal) : KoinComponent {
     private fun Terminal.nestedInstallersPrompt() {
         do {
             do {
-                println(brightGreen("${Prompts.required} Enter the relative nested installer path"))
-                println(cyan("Example: dart-sdk\\bin\\dart.exe"))
+                println(colors.brightGreen("${Prompts.required} Enter the relative nested installer path"))
+                info("Example: dart-sdk\\bin\\dart.exe")
                 val input = prompt(
                     InstallerManifest.Installer.NestedInstallerFiles::relativeFilePath.name
                         .replaceFirstChar { it.titlecase() }
                         .replace(Regex("([A-Z])"), " $1").trim()
                 )
-                val error = isRelativeFilePathValid(input)?.also { println(brightRed(it)) }
+                val error = isRelativeFilePathValid(input)?.also { danger(it) }
                 var portableCommandAlias: String? = null
                 if (nestedInstallerType == InstallerManifest.Installer.NestedInstallerType.PORTABLE) {
                     println()
@@ -135,64 +123,51 @@ class Zip(zip: File, terminal: Terminal) : KoinComponent {
                 }
             } while (error != null)
             val shouldLoop = YesNoPrompt(
-                prompt = brightWhite("${Prompts.optional} Would you like to add another nested installer?"),
+                prompt = "${Prompts.optional} Would you like to add another nested installer?",
                 terminal = this
             ).ask()
         } while (shouldLoop == true)
     }
 
     private fun Terminal.portableCommandAliasPrompt(relativeFilePath: String? = null): String? {
-        val portableCommandAliasSchema = nestedInstallerPropertiesSchema.portableCommandAlias
         var portableCommandAlias: String?
         do {
             println(
-                brightYellow(
-                    buildString {
-                        append(Prompts.optional)
-                        append(" Enter ")
-                        append(portableCommandAliasSchema.description.lowercase().replaceAfter(".", ""))
-                    }
+                colors.brightYellow(
+                    "${Prompts.optional} Enter the command line alias to be used for calling the package"
                 )
             )
-            println(cyan(if (relativeFilePath != null) "Installer: $relativeFilePath" else "Example: dart"))
+            info(if (relativeFilePath != null) "Installer: $relativeFilePath" else "Example: dart")
             portableCommandAlias = prompt(
                 InstallerManifest.Installer.NestedInstallerFiles::portableCommandAlias.name
                     .replaceFirstChar { it.titlecase() }
                     .replace(Regex("([A-Z])"), " $1").trim()
             )?.trim()
-            val error = isPortableCommandAliasValid(portableCommandAlias)?.also { println(brightRed(it)) }
+            val error = isPortableCommandAliasValid(portableCommandAlias)?.also { danger(it) }
             println()
         } while (error != null)
         return portableCommandAlias.takeIf { it?.isNotBlank() == true }
     }
 
     private fun isPortableCommandAliasValid(portableCommandAlias: String?): String? {
-        val portableCommandAliasSchema = nestedInstallerPropertiesSchema.portableCommandAlias
         return when {
             portableCommandAlias.isNullOrBlank() -> null
-            portableCommandAlias.length > portableCommandAliasSchema.maxLength -> {
-                Errors.invalidLength(
-                    min = portableCommandAliasSchema.minLength,
-                    max = portableCommandAliasSchema.maxLength
-                )
+            portableCommandAlias.length > portableCommandAliasMaxLength -> {
+                Errors.invalidLength(min = portableCommandAliasMinLength, max = portableCommandAliasMaxLength)
             }
             else -> null
         }
     }
 
     private fun isRelativeFilePathValid(relativeFilePath: String?): String? {
-        val relativeFilePathSchema = installerSchema.definitions.nestedInstallerFiles.items.properties.relativeFilePath
         return when {
             relativeFilePath.isNullOrBlank() -> Errors.blankInput(
                 InstallerManifest.Installer.NestedInstallerFiles::relativeFilePath.name
                     .replaceFirstChar { it.titlecase() }
                     .replace(Regex("([A-Z])"), " $1").trim()
             )
-            relativeFilePath.length > relativeFilePathSchema.maxLength -> {
-                Errors.invalidLength(
-                    min = relativeFilePathSchema.minLength,
-                    max = relativeFilePathSchema.maxLength
-                )
+            relativeFilePath.length > relativeFilePathMaxLength -> {
+                Errors.invalidLength(min = relativeFilePathMinLength, max = relativeFilePathMaxLength)
             }
             else -> null
         }
@@ -204,9 +179,9 @@ class Zip(zip: File, terminal: Terminal) : KoinComponent {
             zipEntries.forEachIndexed { index, zipEntry ->
                 println(
                     verticalLayout {
-                        cell(brightGreen("${Prompts.required} Would you like to use ${zipEntry.name}?"))
+                        cell(colors.brightGreen("${Prompts.required} Would you like to use ${zipEntry.name}?"))
                         cell(
-                            cyan(
+                            colors.cyan(
                                 buildString {
                                     append("Detected ")
                                     append(zipEntry.name.substringAfterLast(".").lowercase())
@@ -219,12 +194,12 @@ class Zip(zip: File, terminal: Terminal) : KoinComponent {
                         )
                     }
                 )
-                YesNoPrompt(prompt = brightWhite(Prompts.enterChoice), terminal = this).ask()?.let {
+                YesNoPrompt(prompt = Prompts.enterChoice, terminal = this).ask()?.let {
                     if (it) chosenZipEntries.add(zipEntry)
                 }
             }
             if (chosenZipEntries.isEmpty()) {
-                val redAndBold = brightRed + bold
+                val redAndBold = colors.brightRed + colors.bold
                 println(
                     verticalLayout {
                         cell("")
@@ -277,8 +252,8 @@ class Zip(zip: File, terminal: Terminal) : KoinComponent {
                     InstallerManifest.Installer.NestedInstallerType.NULLSOFT,
                     InstallerManifest.Installer.NestedInstallerType.PORTABLE
                 ).map { it.toString() }
-                println(brightGreen("${Prompts.required} Enter the nested installer type"))
-                println(cyan("Options: ${exeNestedTypes.joinToString(", ")}"))
+                println(colors.brightGreen("${Prompts.required} Enter the nested installer type"))
+                info("Options: ${exeNestedTypes.joinToString(", ")}")
                 prompt(
                     prompt = Prompts.enterChoice,
                     convert = { string ->
@@ -309,5 +284,12 @@ class Zip(zip: File, terminal: Terminal) : KoinComponent {
                 ) ?: InstallerManifest.Installer.NestedInstallerType.EXE
             }
         }.also { println() }
+    }
+
+    companion object {
+        private const val relativeFilePathMinLength = 1
+        private const val relativeFilePathMaxLength = 512
+        private const val portableCommandAliasMinLength = 1
+        private const val portableCommandAliasMaxLength = 40
     }
 }

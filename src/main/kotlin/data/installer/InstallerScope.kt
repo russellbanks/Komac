@@ -12,14 +12,11 @@ import data.SharedManifestData
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
 import kotlin.system.exitProcess
 
 object InstallerScope : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val schemasImpl: SchemasImpl by inject()
-    private val installerScopeSchema = schemasImpl.installerSchema.definitions.scope
     private val previousManifestData: PreviousManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
 
@@ -57,7 +54,7 @@ object InstallerScope : KoinComponent {
                         prompt = Prompts.enterChoice,
                         default = previousValue?.toString()?.first()?.toString(),
                         convert = { input ->
-                            isInstallerScopeValid(input.firstOrNull())
+                            getInstallerScopeError(input.trim())
                                 ?.let { ConversionResult.Invalid(it) }
                                 ?: ConversionResult.Valid(input.trim())
                         }
@@ -77,17 +74,14 @@ object InstallerScope : KoinComponent {
         }
     }
 
-    private fun isInstallerScopeValid(option: Char?): String? {
+    private fun getInstallerScopeError(option: String): String? {
+        val installerScopeValues = InstallerManifest.Scope.values().map { it.toString() }
         return when {
-            option == null || option.isWhitespace() -> null
-            option != Prompts.noIdea.first() && installerScopeSchema.enum.all {
-                it.first().titlecase() != option.titlecase()
-            } -> Errors.invalidEnum(installerScopeSchema.enum)
+            option.firstOrNull() !in installerScopeValues.map { it.first() } -> Errors.invalidEnum(installerScopeValues)
             else -> null
         }
     }
 
     const val const = "Installer Scope"
-
     private const val installerScopeInfo = "${Prompts.optional} Enter the $const"
 }
