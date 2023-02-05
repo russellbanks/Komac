@@ -60,7 +60,7 @@ jobs:
           tag_name: ${{ steps.decide_whether_to_release.outputs.tag_name }}
           prerelease: ${{ steps.decide_whether_to_release.outputs.prerelease }}
           generate_release_notes: ${{ steps.decide_whether_to_release.outputs.gen_rel_notes }}
-          files: build/libs/*.jar
+          files: build/libs/*-all.jar
 
       - name: Release binaries
         if: steps.decide_whether_to_release.outputs.conclusion == 'true'
