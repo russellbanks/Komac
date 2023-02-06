@@ -63,8 +63,11 @@ class InstallerManifestData : KoinComponent {
             } else {
                 scope ?: previousInstaller?.scope ?: previousManifest?.scope?.toPerScopeInstallerType()
             },
-            installerSwitches = installerSwitches
-                .takeUnless { it.areAllNullOrBlank() }
+            packageFamilyName = sharedManifestData.msix?.packageFamilyName
+                ?: sharedManifestData.msixBundle?.packageFamilyName
+                ?: previousInstaller?.packageFamilyName
+                ?: previousManifest?.packageFamilyName,
+            installerSwitches = installerSwitches.takeUnless { it.areAllNullOrBlank() }
                 ?: previousInstaller?.installerSwitches
                 ?: previousManifest?.installerSwitches?.toPerInstallerSwitches(),
             upgradeBehavior = upgradeBehavior?.toPerInstallerUpgradeBehaviour()
@@ -125,55 +128,52 @@ class InstallerManifestData : KoinComponent {
     }
 
     fun createInstallerManifest(): String {
-        val installersLocaleDistinct = installers.mapNotNull { it.installerLocale }.distinct().size == 1
-        val releaseDateDistinct = installers.mapNotNull { it.releaseDate }.distinct().size == 1
-        val installerScopeDistinct = installers.mapNotNull { it.scope }.distinct().size == 1
-        val upgradeBehaviourDistinct = installers.mapNotNull { it.upgradeBehavior }.distinct().size == 1
-        val installerSwitchesDistinct = installers.mapNotNull { it.installerSwitches }.distinct().size == 1
-        val installerTypeDistinct = installers.mapNotNull { it.installerType }.distinct().size == 1
-        val platformDistinct = installers.mapNotNull { it.platform }.distinct().size == 1
-        val minimumOSVersionDistinct = installers.mapNotNull { it.minimumOSVersion }.distinct().size == 1
         return getInstallerManifestBase().copy(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
-            installerLocale = when {
-                installersLocaleDistinct -> installers.firstNotNullOf { it.installerLocale }.ifBlank { null }
+            installerLocale = when (installers.mapNotNull { it.installerLocale }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.installerLocale }.ifBlank { null }
                 else -> previousManifestData.remoteInstallerData?.installerLocale
             },
-            platform = when {
-                platformDistinct -> installers.firstNotNullOf { it.platform }.map { it.toManifestPlatform() }
+            platform = when (installers.mapNotNull { it.platform }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.platform }.map { it.toManifestPlatform() }
                 else -> previousManifestData.remoteInstallerData?.platform
             },
-            minimumOSVersion = when {
-                minimumOSVersionDistinct -> installers.firstNotNullOf { it.minimumOSVersion }
+            minimumOSVersion = when (installers.mapNotNull { it.minimumOSVersion }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.minimumOSVersion }
                 else -> previousManifestData.remoteInstallerData?.minimumOSVersion
             },
-            installerType = when {
-                installerTypeDistinct -> installers.firstNotNullOf { it.installerType }.toManifestInstallerType()
+            installerType = when (installers.mapNotNull { it.installerType }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.installerType }.toManifestInstallerType()
                 else -> previousManifestData.remoteInstallerData?.installerType
             },
-            scope = when {
-                installerScopeDistinct -> installers.firstNotNullOf { it.scope }.toManifestScope()
+            scope = when (installers.mapNotNull { it.scope }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.scope }.toManifestScope()
                 else -> previousManifestData.remoteInstallerData?.scope
             },
+            packageFamilyName = when (installers.mapNotNull { it.packageFamilyName }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.packageFamilyName }
+                else -> previousManifestData.remoteInstallerData?.packageFamilyName
+            },
             installModes = installModes?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.installModes,
-            installerSwitches = when {
-                installerSwitchesDistinct -> {
-                    installers.firstNotNullOf { it.installerSwitches }.toManifestInstallerSwitches()
-                }
+            installerSwitches = when (installers.mapNotNull { it.installerSwitches }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.installerSwitches }.toManifestInstallerSwitches()
                 else -> previousManifestData.remoteInstallerData?.installerSwitches
             },
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null }
                 ?: previousManifestData.remoteInstallerData?.installerSuccessCodes,
-            upgradeBehavior = when {
-                upgradeBehaviourDistinct -> installers.firstNotNullOf { it.upgradeBehavior }.toManifestUpgradeBehaviour()
+            upgradeBehavior = when (installers.mapNotNull { it.upgradeBehavior }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.upgradeBehavior }.toManifestUpgradeBehaviour()
                 else -> previousManifestData.remoteInstallerData?.upgradeBehavior
             },
             commands = commands?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.commands,
             protocols = protocols?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.protocols,
             fileExtensions = fileExtensions?.ifEmpty { null }
                 ?: previousManifestData.remoteInstallerData?.fileExtensions,
-            releaseDate = if (releaseDateDistinct) installers.map { it.releaseDate }.first() else null,
+            releaseDate = when (installers.mapNotNull { it.releaseDate }.distinct().size) {
+                1 -> installers.map { it.releaseDate }.first()
+                else -> null
+            },
             appsAndFeaturesEntries = when (installers.distinctBy { it.appsAndFeaturesEntries }.size) {
                 0 -> previousManifestData.remoteInstallerData?.appsAndFeaturesEntries
                 1 -> {
@@ -220,6 +220,11 @@ class InstallerManifestData : KoinComponent {
                     installer.installerType
                 },
                 scope = if (installers.mapNotNull { it.scope }.distinct().size == 1) null else installer.scope,
+                packageFamilyName = if (installers.mapNotNull { it.packageFamilyName }.distinct().size == 1) {
+                    null
+                } else {
+                    installer.packageFamilyName
+                },
                 releaseDate = if (installers.mapNotNull { it.releaseDate }.distinct().size == 1) {
                     null
                 } else {

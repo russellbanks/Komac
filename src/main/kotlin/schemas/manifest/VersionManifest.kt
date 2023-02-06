@@ -16,7 +16,7 @@ data class VersionManifest(
     @SerialName("ManifestType") val manifestType: String,
     @SerialName("ManifestVersion") val manifestVersion: String
 ) {
-    override fun toString() = Schemas.buildManifestString(
+    override fun toString() = Schemas().buildManifestString(
         schema = Schema.Version,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )

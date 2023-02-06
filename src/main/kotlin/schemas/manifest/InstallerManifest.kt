@@ -630,7 +630,7 @@ data class InstallerManifest(
         }
     }
 
-    override fun toString() = Schemas.buildManifestString(
+    override fun toString() = Schemas().buildManifestString(
         schema = Schema.Installer,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )

@@ -2,6 +2,7 @@ package commands
 import ExitCode
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
@@ -59,7 +60,9 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private var previousManifestData: PreviousManifestData? = null
     private lateinit var files: List<Pair<String, String?>>
     private val githubImpl: GitHubImpl by inject()
-    private val manifestVersion: String? by option()
+    private val manifestVersion: String? by option().validate {
+        require(Regex("^\\d+\\.\\d+\\.\\d+$").matches(it)) { "Manifest version must be in the format X.X.X" }
+    }
 
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<Schemas>().manifestOverride = it }
@@ -126,7 +129,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 packageVersion = sharedManifestData.packageVersion,
                 manifestVersion = get<Schemas>().manifestOverride ?: Schemas.manifestVersion
             ).let {
-                Schemas.buildManifestString(
+                Schemas().buildManifestString(
                     Schema.Locale,
                     EncodeConfig.yamlDefault.encodeToString(LocaleManifest.serializer(), it)
                 )

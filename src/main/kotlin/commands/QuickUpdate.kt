@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
@@ -74,7 +75,9 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val packageIdentifier: String? by option("--id", "--package-identifier")
     private val packageVersion: String? by option("--version", "--package-version")
     private val urls: List<Url>? by option().convert { Url(it) }.split(",")
-    private val manifestVersion: String? by option()
+    private val manifestVersion: String? by option().validate {
+        require(Regex("^\\d+\\.\\d+\\.\\d+$").matches(it)) { "Manifest version must be in the format X.X.X" }
+    }
     private val submit: Boolean by option().flag(default = false)
     private val tokenParameter: String? by option("-t", "--token", envvar = "GITHUB_TOKEN")
     private val additionalMetadata by option(hidden = true).convert {
@@ -240,15 +243,16 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             val metadataCurrentLocale = additionalMetadata?.locales?.find {
                 it.name.equals(other = localeManifest.packageLocale, ignoreCase = true)
             }
+            val schemas: Schemas by inject()
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
-                manifestVersion = get<Schemas>().manifestOverride ?: Schemas.manifestVersion,
+                manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion,
                 releaseNotes = allLocale?.releaseNotes ?: metadataCurrentLocale?.releaseNotes,
                 releaseNotesUrl = allLocale?.releaseNotesUrl ?: metadataCurrentLocale?.releaseNotesUrl,
                 documentations = allLocale?.documentations ?: metadataCurrentLocale?.documentations
             ).let {
-                Schemas.buildManifestString(
+                schemas.buildManifestString(
                     Schema.Locale,
                     EncodeConfig.yamlDefault.encodeToString(LocaleManifest.serializer(), it)
                 )
