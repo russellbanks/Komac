@@ -8,7 +8,6 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.Schemas
-import schemas.SchemasImpl
 import schemas.manifest.InstallerManifest
 import java.time.LocalDate
 
@@ -31,7 +30,7 @@ class InstallerManifestData : KoinComponent {
     var commands: List<String>? = null
     var installerSuccessCodes: List<Long>? = null
     var installModes: List<InstallerManifest.InstallModes>? = null
-    private val schemasImpl: SchemasImpl by inject()
+    private val schemas: Schemas by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
     suspend fun addInstaller() {
@@ -188,7 +187,7 @@ class InstallerManifestData : KoinComponent {
             installers = installers.removeNonDistinctKeys()
                 .sortedWith(compareBy({ it.installerLocale }, { it.architecture }, { it.installerType }, { it.scope })),
             manifestType = Schemas.installerManifestType,
-            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
+            manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
         ).toString()
     }
 
@@ -197,7 +196,7 @@ class InstallerManifestData : KoinComponent {
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             manifestType = Schemas.installerManifestType,
-            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
+            manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
         )
     }
 

@@ -2,9 +2,8 @@ package schemas
 
 import com.russellbanks.Komac.BuildConfig
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 
-object Schemas {
+object Schemas : KoinComponent {
     const val manifestVersion = "1.4.0"
     const val installerSchema = "https://aka.ms/winget-manifest.installer.$manifestVersion.schema.json"
     const val defaultLocaleSchema = "https://aka.ms/winget-manifest.defaultLocale.$manifestVersion.schema.json"
@@ -14,6 +13,7 @@ object Schemas {
     const val defaultLocaleManifestType = "defaultLocale"
     const val versionManifestType = "version"
     private const val customToolEnv = "KMC_CRTD_WITH"
+    var manifestOverride: String? = null
 
     fun buildManifestString(schema: Schema, rawString: String): String {
         return buildString {
@@ -26,7 +26,7 @@ object Schemas {
         }
     }
 
-    object Comments : KoinComponent {
+    object Comments {
         fun languageServer(schema: Schema): String {
             val schemaUrl = when (schema) {
                 Schema.Installer -> installerSchema
@@ -34,7 +34,7 @@ object Schemas {
                 Schema.Locale -> localeSchema
                 Schema.Version -> versionSchema
             }.let { schemaUrl ->
-                get<SchemasImpl>().manifestOverride?.let { schemaUrl.replace(manifestVersion, it) } ?: schemaUrl
+                manifestOverride?.let { schemaUrl.replace(manifestVersion, it) } ?: schemaUrl
             }
             return "# yaml-language-server: \$schema=$schemaUrl"
         }

@@ -6,7 +6,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
-import schemas.SchemasImpl
 import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.EncodeConfig
 
@@ -29,7 +28,7 @@ class DefaultLocaleManifestData : KoinComponent {
 
     private val sharedManifestData: SharedManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val schemasImpl: SchemasImpl by inject()
+    private val schemas: Schemas by inject()
     private val parameterLocaleMetadata = sharedManifestData.additionalMetadata?.locales?.find {
         it.name.equals(other = sharedManifestData.defaultLocale, ignoreCase = true)
     }
@@ -83,7 +82,7 @@ class DefaultLocaleManifestData : KoinComponent {
             releaseNotes = (sharedManifestData.gitHubDetection?.releaseNotes?.await()
                 ?: parameterLocaleMetadata?.releaseNotes)?.trim(),
             manifestType = Schemas.defaultLocaleManifestType,
-            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
+            manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
         ).toEncodedYaml()
     }
 
@@ -97,7 +96,7 @@ class DefaultLocaleManifestData : KoinComponent {
             license = license,
             shortDescription = shortDescription,
             manifestType = Schemas.defaultLocaleManifestType,
-            manifestVersion = schemasImpl.manifestOverride ?: Schemas.manifestVersion
+            manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
         )
     }
 

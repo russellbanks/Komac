@@ -13,7 +13,6 @@ import network.HttpUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import schemas.SchemasImpl
 import token.TokenStore
 import java.io.IOException
 import kotlin.system.exitProcess
@@ -26,7 +25,6 @@ object PackageIdentifier : KoinComponent {
         packageIdentifierParameter: String? = null,
         isCIEnvironment: Boolean = false
     ) {
-        get<SchemasImpl>()
         if (packageIdentifierParameter == null && !isCIEnvironment) {
             if (tokenStore.token == null) {
                 tokenStore.promptForToken(this)

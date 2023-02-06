@@ -46,7 +46,6 @@ import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schema
 import schemas.Schemas
-import schemas.SchemasImpl
 import schemas.manifest.EncodeConfig
 import schemas.manifest.LocaleManifest
 import java.io.IOException
@@ -63,7 +62,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val manifestVersion: String? by option()
 
     override fun run(): Unit = runBlocking {
-        manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
+        manifestVersion?.let { get<Schemas>().manifestOverride = it }
         with(currentContext.terminal) {
             packageIdentifierPrompt()
             launch { if (sharedManifestData.updateState != VersionUpdateState.NewPackage) previousManifestData = get() }
@@ -125,7 +124,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
-                manifestVersion = get<SchemasImpl>().manifestOverride ?: Schemas.manifestVersion
+                manifestVersion = get<Schemas>().manifestOverride ?: Schemas.manifestVersion
             ).let {
                 Schemas.buildManifestString(
                     Schema.Locale,

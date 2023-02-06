@@ -49,7 +49,6 @@ import org.koin.core.component.inject
 import schemas.AdditionalMetadata
 import schemas.Schema
 import schemas.Schemas
-import schemas.SchemasImpl
 import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
@@ -83,7 +82,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     }
 
     override fun run(): Unit = runBlocking {
-        manifestVersion?.let { get<SchemasImpl>().manifestOverride = it }
+        manifestVersion?.let { get<Schemas>().manifestOverride = it }
         with(currentContext.terminal) {
             if (isCIEnvironment) {
                 info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
@@ -244,7 +243,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
-                manifestVersion = get<SchemasImpl>().manifestOverride ?: Schemas.manifestVersion,
+                manifestVersion = get<Schemas>().manifestOverride ?: Schemas.manifestVersion,
                 releaseNotes = allLocale?.releaseNotes ?: metadataCurrentLocale?.releaseNotes,
                 releaseNotesUrl = allLocale?.releaseNotesUrl ?: metadataCurrentLocale?.releaseNotesUrl,
                 documentations = allLocale?.documentations ?: metadataCurrentLocale?.documentations
