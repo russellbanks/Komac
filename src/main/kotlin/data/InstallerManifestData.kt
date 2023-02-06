@@ -46,7 +46,7 @@ class InstallerManifestData : KoinComponent {
                 ?: previousInstaller?.platform
                 ?: previousManifest?.platform?.map { it.toPerInstallerPlatform() },
             minimumOSVersion = sharedManifestData.msix?.minVersion,
-            architecture = if (::architecture.isInitialized) architecture else previousInstaller?.architecture!!,
+            architecture = previousInstaller?.architecture ?: architecture,
             installerType = if (installerType != null) installerType else previousInstaller?.installerType,
             nestedInstallerType = sharedManifestData.zip?.nestedInstallerType
                 ?: previousInstaller?.nestedInstallerType
