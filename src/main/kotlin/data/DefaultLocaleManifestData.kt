@@ -4,10 +4,8 @@ import io.ktor.http.Url
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import schemas.Schema
 import schemas.Schemas
 import schemas.manifest.DefaultLocaleManifest
-import schemas.manifest.EncodeConfig
 
 @Single
 class DefaultLocaleManifestData : KoinComponent {
@@ -83,7 +81,7 @@ class DefaultLocaleManifestData : KoinComponent {
                 ?: parameterLocaleMetadata?.releaseNotes)?.trim(),
             manifestType = Schemas.defaultLocaleManifestType,
             manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
-        ).toEncodedYaml()
+        ).toString()
     }
 
     private fun getDefaultLocaleManifestBase(): DefaultLocaleManifest {
@@ -97,16 +95,6 @@ class DefaultLocaleManifestData : KoinComponent {
             shortDescription = shortDescription,
             manifestType = Schemas.defaultLocaleManifestType,
             manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
-        )
-    }
-
-    private fun DefaultLocaleManifest.toEncodedYaml(): String {
-        return Schemas.buildManifestString(
-            schema = Schema.DefaultLocale,
-            rawString = EncodeConfig.yamlDefault.encodeToString(
-                serializer = DefaultLocaleManifest.serializer(),
-                value = this@toEncodedYaml
-            )
         )
     }
 }

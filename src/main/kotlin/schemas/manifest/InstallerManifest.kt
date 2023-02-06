@@ -55,14 +55,6 @@ data class InstallerManifest(
     @SerialName("ManifestType") val manifestType: String,
     @SerialName("ManifestVersion") val manifestVersion: String
 ) {
-    override fun toString() = Schemas.buildManifestString(
-        schema = Schema.Installer,
-        rawString = EncodeConfig.yamlDefault.encodeToString(
-            serializer = serializer(),
-            value = this
-        )
-    )
-
     enum class Platform {
         @SerialName("Windows.Desktop") WindowsDesktop,
         @SerialName("Windows.Universal") WindowsUniversal;
@@ -637,4 +629,9 @@ data class InstallerManifest(
             }
         }
     }
+
+    override fun toString() = Schemas.buildManifestString(
+        schema = Schema.Installer,
+        rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
+    )
 }

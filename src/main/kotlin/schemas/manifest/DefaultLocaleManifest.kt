@@ -4,6 +4,8 @@ import io.ktor.http.Url
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import schemas.Schema
+import schemas.Schemas
 
 /**
  * A representation of a multiple-file manifest representing a default app metadata in the OWC. v1.4.0
@@ -48,5 +50,10 @@ data class DefaultLocaleManifest(
     data class Documentation(
         @SerialName("DocumentLabel") val documentLabel: String? = null,
         @SerialName("DocumentUrl") @Contextual val documentUrl: Url? = null
+    )
+
+    override fun toString() = Schemas.buildManifestString(
+        schema = Schema.DefaultLocale,
+        rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )
 }
