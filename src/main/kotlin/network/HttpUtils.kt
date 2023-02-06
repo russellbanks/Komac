@@ -89,7 +89,7 @@ object HttpUtils : KoinComponent {
 
     fun fileNameWithoutExtension(url: Url): String? = getFileName(url)?.removeSuffix(getURLExtension(url))
 
-    fun detectArchitectureFromUrl(url: Url): InstallerManifest.Installer.Architecture? {
+    fun getArchitectureFromUrl(url: Url): InstallerManifest.Installer.Architecture? {
         val archInUrl = Regex("(x86_64|i?[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?|amd64?)", RegexOption.IGNORE_CASE)
             .find(url.fullPath)?.groupValues?.last()
         return when (archInUrl?.lowercase()) {

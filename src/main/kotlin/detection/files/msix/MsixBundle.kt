@@ -1,10 +1,10 @@
 package detection.files.msix
 
-import utils.Hashing
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
 import it.skrape.selects.attribute
 import schemas.manifest.InstallerManifest
+import utils.Hashing
 import java.io.File
 import java.util.zip.ZipFile
 

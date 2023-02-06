@@ -3,9 +3,7 @@ package data
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import network.HttpUtils
 import org.kohsuke.github.GHContent
 import org.koin.core.annotation.Single
@@ -20,68 +18,55 @@ import schemas.manifest.VersionManifest
 @Single
 class PreviousManifestData : KoinComponent {
     var sharedManifestData: SharedManifestData = get()
-    var remoteInstallerData: InstallerManifest? = null
-    private val githubImpl = get<GitHubImpl>()
-    private val repository = CoroutineScope(Dispatchers.IO).async { githubImpl.getMicrosoftWingetPkgs() }
-    private val directoryPath: Deferred<MutableList<GHContent>?> = CoroutineScope(Dispatchers.IO).async {
+    val scope = CoroutineScope(Dispatchers.IO)
+    private val repository = scope.async { get<GitHubImpl>().getMicrosoftWingetPkgs() }
+    private val directoryPath: Deferred<MutableList<GHContent>?> = scope.async {
         sharedManifestData.latestVersion?.let {
             repository.await()
                 ?.getDirectoryContent("${HttpUtils.getDirectoryPath(sharedManifestData.packageIdentifier)}/$it")
         }
     }
-    var remoteInstallerDataJob: Job = CoroutineScope(Dispatchers.IO).launch {
+    var remoteInstallerData: Deferred<InstallerManifest?> = scope.async {
         directoryPath.await()?.let { nonNullDirectoryPath ->
             repository.await()?.getFileContent(
                 nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }.path
             )?.read()?.use {
-                remoteInstallerData = EncodeConfig.yamlDefault.decodeFromStream(InstallerManifest.serializer(), it)
+                EncodeConfig.yamlDefault.decodeFromStream(InstallerManifest.serializer(), it)
             }
         }
     }
-    var remoteVersionDataJob: Job = CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
-        directoryPath.await()?.let { nonNullDirectoryPath ->
-            repository.await()?.getFileContent(
-                nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }.path
-            )?.read()?.use { remoteVersionData = EncodeConfig.yamlDefault.decodeFromStream(VersionManifest.serializer(), it) }
-        }
-    }.also { job ->
-        job.invokeOnCompletion {
-            remoteVersionData?.defaultLocale?.let { sharedManifestData.defaultLocale = it }
-        }
-    }
-    var remoteDefaultLocaleData: DefaultLocaleManifest? = null
-    var remoteDefaultLocaleDataJob: Job = CoroutineScope(Dispatchers.IO).launch(Dispatchers.IO) {
-        remoteVersionDataJob.join()
+    var remoteDefaultLocaleData: Deferred<DefaultLocaleManifest?> = scope.async {
         directoryPath.await()?.let { nonNullDirectoryPath ->
             repository.await()?.getFileContent(
                 nonNullDirectoryPath.first {
                     it.name == "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
                 }.path
             )?.read()?.use {
-                remoteDefaultLocaleData = EncodeConfig.yamlDefault.decodeFromStream(DefaultLocaleManifest.serializer(), it)
+                EncodeConfig.yamlDefault.decodeFromStream(DefaultLocaleManifest.serializer(), it)
             }
         }
     }
-    var remoteLocaleData: List<LocaleManifest>? = null
-    var remoteLocaleDataJob: Job = CoroutineScope(Dispatchers.IO).launch {
-        remoteVersionDataJob.join()
-        directoryPath
-            .await()
+    var remoteLocaleData: Deferred<List<LocaleManifest>?> = scope.async {
+        directoryPath.await()
             ?.filter {
                 it.name.matches(Regex("${Regex.escape(sharedManifestData.packageIdentifier)}.locale\\..*\\.yaml"))
             }
-            ?.filterNot { it.name.contains(sharedManifestData.defaultLocale) }
-            ?.forEach { ghContent ->
+            ?.filterNot { ghContent ->
+                remoteVersionData.await()?.defaultLocale?.let { ghContent.name.contains(it) } == true
+            }
+            ?.mapNotNull { ghContent ->
                 repository.await()?.getFileContent(ghContent.path)
                     ?.read()
                     ?.use {
-                        remoteLocaleData = if (remoteLocaleData == null) {
-                            listOf(EncodeConfig.yamlDefault.decodeFromStream(LocaleManifest.serializer(), it))
-                        } else {
-                            remoteLocaleData!! + EncodeConfig.yamlDefault.decodeFromStream(LocaleManifest.serializer(), it)
-                        }
+                        EncodeConfig.yamlDefault.decodeFromStream(LocaleManifest.serializer(), it)
                     }
             }
     }
-    var remoteVersionData: VersionManifest? = null
+    var remoteVersionData: Deferred<VersionManifest?> = scope.async {
+        directoryPath.await()?.let { nonNullDirectoryPath ->
+            repository.await()?.getFileContent(
+                nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }.path
+            )?.read()?.use { EncodeConfig.yamlDefault.decodeFromStream(VersionManifest.serializer(), it) }
+        }
+    }
 }

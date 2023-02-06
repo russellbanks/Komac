@@ -4,34 +4,34 @@ import com.github.ajalt.mordant.terminal.Terminal
 import java.io.File
 
 object FileWriter {
-    fun Terminal.writeFiles(files: List<Pair<String, String?>>) {
+    fun writeFiles(files: List<Pair<String, String?>>, terminal: Terminal) = with(terminal) {
         do {
             println()
             println(colors.brightYellow("Enter a directory to write the files to:"))
             val directory = prompt("Directory")?.let { File(it) }
             if (directory?.isDirectory == true) {
-                writeFilesToDirectory(directory, files)
+                writeFilesToDirectory(directory, files, terminal)
             } else {
                 warning("The directory entered is not a valid directory")
             }
         } while (directory?.isDirectory != true)
     }
 
-    private fun Terminal.writeFilesToDirectory(directory: File, files: List<Pair<String, String?>>) {
+    fun writeFilesToDirectory(directory: File, files: List<Pair<String, String?>>, terminal: Terminal) {
         files.forEach { file ->
             file.second?.let { manifestText ->
-                writeFileToDirectory(directory, file.first, manifestText)
+                writeFileToDirectory(directory, file.first, manifestText, terminal)
             }
         }
     }
 
-    private fun Terminal.writeFileToDirectory(directory: File, fileName: String, fileText: String) {
+    private fun writeFileToDirectory(directory: File, fileName: String, fileText: String, terminal: Terminal) {
         File(directory, fileName).apply {
             writeText(fileText.replace("\n", "\r\n"))
             if (exists()) {
-                success("Successfully written $name to ${directory.path}")
+                terminal.success("Successfully written $name to ${directory.path}")
             } else {
-                danger("Failed to write $name")
+                terminal.danger("Failed to write $name")
             }
         }
     }

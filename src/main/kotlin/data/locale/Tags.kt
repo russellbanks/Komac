@@ -3,49 +3,51 @@ package data.locale
 import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import commands.CommandPrompt
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
+import input.ExitCode
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.manifest.DefaultLocaleManifest
+import kotlin.system.exitProcess
 
-object Tags : KoinComponent {
+object Tags : KoinComponent, CommandPrompt<List<String>> {
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
 
-    suspend fun Terminal.tagsPrompt() {
-        sharedManifestData.gitHubDetection?.topics?.await()?.let {
-            defaultLocaleManifestData.tags = it
-            return
+    override suspend fun prompt(terminal: Terminal): List<String> = with(terminal) {
+        return sharedManifestData.gitHubDetection?.topics?.await() ?: let {
+            println(colors.brightYellow(tagsInfo))
+            info(example)
+            prompt(
+                prompt = DefaultLocaleManifest::tags.name.replaceFirstChar { it.titlecase() },
+                default = previousManifestData.remoteDefaultLocaleData.await()?.tags?.also {
+                    muted("Previous tags: $it")
+                },
+                convert = { input ->
+                    getError(input)
+                        ?.let { ConversionResult.Invalid(it) }
+                        ?: ConversionResult.Valid(input.trim().convertToYamlList(uniqueItems))
+                }
+            ) ?: exitProcess(ExitCode.CtrlC.code)
         }
-        println(colors.brightYellow(tagsInfo))
-        info(example)
-        defaultLocaleManifestData.tags = prompt(
-            prompt = DefaultLocaleManifest::tags.name.replaceFirstChar { it.titlecase() },
-            default = previousManifestData.remoteDefaultLocaleData?.tags?.joinToString(", ")?.also {
-                muted("Previous tags: $it")
-            },
-            convert = { input ->
-                areTagsValid(input.trim().convertToYamlList(true))
-                    ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(input.trim())
-            }
-        )?.convertToYamlList(true)
-        println()
     }
 
-    private fun areTagsValid(tags: Iterable<String>): String? {
+    override fun getError(input: String?): String? {
+        val convertedInput = input?.trim()?.convertToYamlList(uniqueItems)
         return when {
-            tags.count() > maxCount -> Errors.invalidLength(max = maxCount)
-            tags.any { it.length > maxLength } -> {
+            convertedInput == null -> null
+            convertedInput.count() > maxCount -> Errors.invalidLength(max = maxCount)
+            convertedInput.any { it.length > maxLength } -> {
                 Errors.invalidLength(
                     min = minLength,
                     max = maxLength,
-                    items = tags.filter { it.length > maxLength }
+                    items = convertedInput.filter { it.length > maxLength }
                 )
             }
             else -> null
@@ -62,4 +64,5 @@ object Tags : KoinComponent {
     private const val maxCount = 16
     private const val maxLength = 40
     private const val minLength = 1
+    private const val uniqueItems = true
 }

@@ -1,37 +1,37 @@
 package data.locale
 
 import Errors
-import ExitCode
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
-import data.DefaultLocaleManifestData
+import commands.CommandPrompt
 import data.PreviousManifestData
+import input.ExitCode
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
-object Moniker : KoinComponent {
-    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
+object Moniker : KoinComponent, CommandPrompt<String> {
     private val previousManifestData: PreviousManifestData by inject()
 
-    fun Terminal.monikerPrompt() {
+    override suspend fun prompt(terminal: Terminal): String = with(terminal) {
         println(colors.brightYellow(monikerInfo))
         info(monikerExample)
-        defaultLocaleManifestData.moniker = prompt(
+        return prompt(
             prompt = DefaultLocaleManifest::moniker.name.replaceFirstChar { it.titlecase() },
-            default = previousManifestData.remoteDefaultLocaleData?.moniker?.also { muted("Previous moniker: $it") },
+            default = previousManifestData.remoteDefaultLocaleData.await()?.moniker
+                ?.also { muted("Previous moniker: $it") },
             convert = { input ->
-                isMonikerValid(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
+                getError(input.trim())?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
-        ) ?: exitProcess(ExitCode.CtrlC.code)
-        println()
+        )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    private fun isMonikerValid(moniker: String): String? {
+    override fun getError(input: String?): String? {
         return when {
-            moniker.isNotBlank() && (moniker.length < minLength || moniker.length > maxLength) -> {
+            input == null -> null
+            input.isNotBlank() && (input.length < minLength || input.length > maxLength) -> {
                 Errors.invalidLength(min = minLength, max = maxLength)
             }
             else -> null

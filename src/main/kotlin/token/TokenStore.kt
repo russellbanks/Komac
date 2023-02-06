@@ -1,8 +1,8 @@
 package token
 
-import ExitCode
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import input.ExitCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -16,14 +16,13 @@ import kotlin.system.exitProcess
 @Single
 class TokenStore {
     private val credentialStore = StorageProvider.getTokenStorage()
-        ?: throw UnsupportedOperationException("Could not find secure token storage for the current operating system")
-    private var storedToken = credentialStore[credentialKey]
+    private var storedToken = credentialStore?.get(credentialKey)
     val token: String?
         get() = storedToken?.value
     var isTokenValid: Deferred<Boolean> = CoroutineScope(Dispatchers.IO).async { checkIfTokenValid(token) }
 
     suspend fun putToken(tokenString: String) = coroutineScope {
-        credentialStore.add(credentialKey, Token(tokenString))
+        credentialStore?.add(credentialKey, Token(tokenString))
         storedToken = Token(tokenString)
         isTokenValid = async { true }
     }
@@ -34,7 +33,7 @@ class TokenStore {
         return isTokenValid.await()
     }
 
-    fun deleteToken() = credentialStore.delete(credentialKey)
+    fun deleteToken() = credentialStore?.delete(credentialKey)
 
     suspend fun promptForToken(terminal: Terminal): String {
         return terminal.prompt(

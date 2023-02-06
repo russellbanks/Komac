@@ -1,6 +1,6 @@
 import data.shared.PackageVersion
 import data.shared.PackageVersion.getHighestVersion
-import data.shared.PackageVersion.getPackageVersionError
+import data.shared.PackageVersion.getError
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -63,19 +63,19 @@ class VersionTests : FunSpec({
             "14.0.1",
             "1.10"
         ) {
-            getPackageVersionError(it) shouldBe null
+            getError(it) shouldBe null
         }
 
         test("version greater than max length fails") {
-            getPackageVersionError("A".repeat(PackageVersion.maxLength.inc())) shouldNotBe null
+            getError("A".repeat(PackageVersion.maxLength.inc())) shouldNotBe null
         }
 
         test("blank or empty string fails") {
-            getPackageVersionError(" ".repeat(10)) shouldNotBe null
+            getError(" ".repeat(10)) shouldNotBe null
         }
 
         test("invalid version pattern fails") {
-            getPackageVersionError("£$%^&*()") shouldNotBe null
+            getError("£$%^&*()") shouldNotBe null
         }
     }
 })

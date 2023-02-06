@@ -15,7 +15,7 @@ object UpgradeBehaviour : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
-    fun Terminal.upgradeBehaviourPrompt() {
+    suspend fun Terminal.upgradeBehaviourPrompt() {
         if (installerManifestData.installerType == InstallerManifest.Installer.InstallerType.PORTABLE) return
         val previousValue = getPreviousValue()
         println(
@@ -51,14 +51,14 @@ object UpgradeBehaviour : KoinComponent {
                     ?: ConversionResult.Valid(input.trim())
             }
         )
-        installerManifestData.upgradeBehavior = InstallerManifest.UpgradeBehavior.values().firstOrNull {
+        installerManifestData.upgradeBehavior = InstallerManifest.Installer.UpgradeBehavior.values().firstOrNull {
             it.name.firstOrNull()?.titlecase() == input?.firstOrNull()?.titlecase()
         }
         println()
     }
 
-    private fun getPreviousValue(): Enum<*>? {
-        return previousManifestData.remoteInstallerData?.let {
+    private suspend fun getPreviousValue(): Enum<*>? {
+        return previousManifestData.remoteInstallerData.await()?.let {
             it.upgradeBehavior ?: it.installers.getOrNull(installerManifestData.installers.size)?.upgradeBehavior
         }
     }

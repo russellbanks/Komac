@@ -1,9 +1,9 @@
 package commands
-import ExitCode
+
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
-import com.github.ajalt.mordant.terminal.Terminal
+import commands.CommandUtils.prompt
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
 import data.InstallerManifestData
@@ -11,33 +11,34 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
-import data.installer.Commands.commandsPrompt
-import data.installer.FileExtensions.fileExtensionsPrompt
-import data.installer.InstallModes.installModesPrompt
+import data.installer.Commands
+import data.installer.FileExtensions
+import data.installer.InstallModes
 import data.installer.InstallerScope.installerScopePrompt
-import data.installer.InstallerSuccessCodes.installerSuccessCodesPrompt
+import data.installer.InstallerSuccessCodes
 import data.installer.InstallerSwitch.installerSwitchPrompt
-import data.installer.InstallerType.installerTypePrompt
-import data.installer.Protocols.protocolsPrompt
+import data.installer.InstallerType
+import data.installer.Protocols
 import data.installer.UpgradeBehaviour.upgradeBehaviourPrompt
-import data.locale.Author.authorPrompt
-import data.locale.Copyright.copyrightPrompt
+import data.locale.Author
+import data.locale.Copyright
 import data.locale.Description.descriptionPrompt
 import data.locale.DescriptionType
-import data.locale.License.licensePrompt
+import data.locale.License
 import data.locale.LocaleUrl
-import data.locale.Moniker.monikerPrompt
-import data.locale.Tags.tagsPrompt
-import data.shared.Locale.localePrompt
-import data.shared.PackageIdentifier.packageIdentifierPrompt
-import data.shared.PackageName.packageNamePrompt
-import data.shared.PackageVersion.packageVersionPrompt
-import data.shared.Publisher.publisherPrompt
+import data.locale.Moniker
+import data.locale.Tags
+import data.shared.Locale
+import data.shared.PackageIdentifier
+import data.shared.PackageIdentifier.getLatestVersion
+import data.shared.PackageName
+import data.shared.PackageVersion
+import data.shared.Publisher
 import data.shared.Url.installerDownloadPrompt
 import data.shared.Url.localeUrlPrompt
+import input.ExitCode
 import input.FileWriter.writeFiles
 import input.InstallerSwitch
-import input.LocaleType
 import input.ManifestResultOption
 import input.Prompts.pullRequestPrompt
 import kotlinx.coroutines.launch
@@ -49,16 +50,14 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.manifest.EncodeConfig
 import schemas.manifest.LocaleManifest
-import java.io.IOException
 import kotlin.system.exitProcess
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
-    private val defaultLocalManifestData: DefaultLocaleManifestData by inject()
+    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val versionManifestData: VersionManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private var previousManifestData: PreviousManifestData? = null
-    private lateinit var files: List<Pair<String, String?>>
     private val githubImpl: GitHubImpl by inject()
     private val manifestVersion: String? by option().validate {
         require(Regex("^\\d+\\.\\d+\\.\\d+$").matches(it)) { "Manifest version must be in the format X.X.X" }
@@ -67,63 +66,65 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<Schemas>().manifestOverride = it }
         with(currentContext.terminal) {
-            packageIdentifierPrompt()
+            sharedManifestData.packageIdentifier = prompt(PackageIdentifier)
+            sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
             launch { if (sharedManifestData.updateState != VersionUpdateState.NewPackage) previousManifestData = get() }
             launch {
-                packageVersionPrompt()
+                sharedManifestData.packageVersion = prompt(PackageVersion)
+                PackageVersion.setUpgradeState(PackageVersion.sharedManifestData)
                 do {
                     installerDownloadPrompt()
-                    installerTypePrompt()
+                    installerManifestData.installerType = installerManifestData.installerType ?: prompt(InstallerType)
                     InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
-                    localePrompt(LocaleType.Installer)
+                    installerManifestData.installerLocale = prompt(Locale.Installer)
                     installerScopePrompt()
                     upgradeBehaviourPrompt()
                     installerManifestData.addInstaller()
-                    val shouldContinue = confirm(colors.brightYellow(additionalInstallerInfo))
-                        ?: exitProcess(ExitCode.CtrlC.code)
-                } while (shouldContinue)
-                fileExtensionsPrompt()
-                protocolsPrompt()
-                commandsPrompt()
-                installerSuccessCodesPrompt()
-                installModesPrompt()
-                localePrompt(LocaleType.Package)
-                publisherPrompt()
-                packageNamePrompt()
-                monikerPrompt()
-                localeUrlPrompt(LocaleUrl.PublisherUrl)
-                localeUrlPrompt(LocaleUrl.PublisherSupportUrl)
-                localeUrlPrompt(LocaleUrl.PublisherPrivacyUrl)
-                authorPrompt()
-                localeUrlPrompt(LocaleUrl.PackageUrl)
-                licensePrompt()
-                localeUrlPrompt(LocaleUrl.LicenseUrl)
-                copyrightPrompt()
-                localeUrlPrompt(LocaleUrl.CopyrightUrl)
-                tagsPrompt()
+                    val loop = confirm(colors.info(additionalInstallerInfo)) ?: exitProcess(ExitCode.CtrlC.code)
+                } while (loop)
+                with(installerManifestData) {
+                    fileExtensions = prompt(FileExtensions)
+                    protocols = prompt(Protocols)
+                    commands = prompt(Commands)
+                    installerSuccessCodes = prompt(InstallerSuccessCodes)
+                    installModes = prompt(InstallModes)
+                }
+                with(sharedManifestData) {
+                    defaultLocale = prompt(Locale.Package)
+                    publisher = prompt(Publisher)
+                    packageName = prompt(PackageName)
+                }
+                with(defaultLocaleManifestData) {
+                    moniker = prompt(Moniker)
+                    localeUrlPrompt(LocaleUrl.PublisherUrl)
+                    author = prompt(Author)
+                    localeUrlPrompt(LocaleUrl.PackageUrl)
+                    license = prompt(License)
+                    localeUrlPrompt(LocaleUrl.LicenseUrl)
+                    copyright = prompt(Copyright)
+                    localeUrlPrompt(LocaleUrl.CopyrightUrl)
+                    tags = prompt(Tags)
+                }
                 DescriptionType.values().forEach { descriptionPrompt(it) }
                 localeUrlPrompt(LocaleUrl.ReleaseNotesUrl)
-                createFiles()
+                val files = createFiles()
                 pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                     when (manifestResultOption) {
-                        ManifestResultOption.PullRequest -> {
-                            commit()
-                            pullRequest()
-                        }
-                        ManifestResultOption.WriteToFiles -> writeFiles(files)
-                        else -> echo("Exiting")
+                        ManifestResultOption.PullRequest -> githubImpl.commitAndPullRequest(files, this@with)
+                        ManifestResultOption.WriteToFiles -> writeFiles(files, this@with)
+                        else -> return@also
                     }
                 }
             }
         }
     }
 
-    private suspend fun createFiles() {
-        files = listOf(
+    private suspend fun createFiles(): List<Pair<String, String>> {
+        return listOf(
             githubImpl.installerManifestName to installerManifestData.createInstallerManifest(),
-            githubImpl.defaultLocaleManifestName to defaultLocalManifestData.createDefaultLocaleManifest(),
-            githubImpl.versionManifestName to versionManifestData.createVersionManifest(),
-        ) + previousManifestData?.remoteLocaleData?.map { localeManifest ->
+            githubImpl.defaultLocaleManifestName to defaultLocaleManifestData.createDefaultLocaleManifest(),
+            githubImpl.versionManifestName to versionManifestData.createVersionManifest()
+        ) + previousManifestData?.remoteLocaleData?.await()?.map { localeManifest ->
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,
                 packageVersion = sharedManifestData.packageVersion,
@@ -135,35 +136,6 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 )
             }
         }.orEmpty()
-    }
-
-    private suspend fun Terminal.commit() {
-        previousManifestData?.apply {
-            remoteVersionDataJob.join()
-            remoteLocaleDataJob.join()
-            remoteDefaultLocaleDataJob.join()
-        }
-        val repository = githubImpl.getWingetPkgsFork(terminal = this) ?: return
-        val ref = githubImpl.createBranchFromDefaultBranch(repository = repository, terminal = this) ?: return
-        githubImpl.commitFiles(
-            repository = repository,
-            branch = ref,
-            files = files.map { "${githubImpl.baseGitHubPath}/${it.first}" to it.second }
-        )
-    }
-
-    private suspend fun Terminal.pullRequest() {
-        val ghRepository = githubImpl.getMicrosoftWingetPkgs() ?: return
-        try {
-            ghRepository.createPullRequest(
-                /* title = */ githubImpl.getCommitTitle(),
-                /* head = */ "${githubImpl.github.await().myself.login}:${githubImpl.pullRequestBranch?.ref}",
-                /* base = */ ghRepository.defaultBranch,
-                /* body = */ githubImpl.getPullRequestBody()
-            ).also { success("Pull request created: ${it.htmlUrl}") }
-        } catch (ioException: IOException) {
-            danger(ioException.message ?: "Failed to create pull request")
-        }
     }
 
     companion object {

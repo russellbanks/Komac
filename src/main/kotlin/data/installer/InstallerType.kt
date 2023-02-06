@@ -1,69 +1,45 @@
 package data.installer
 
 import Errors
-import ExitCode
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import commands.CommandPrompt
 import data.InstallerManifestData
 import data.PreviousManifestData
-import data.SharedManifestData
-import detection.files.msix.MsixBundle
+import input.ExitCode
 import input.Prompts
-import network.HttpUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
 import kotlin.system.exitProcess
 
-object InstallerType : KoinComponent {
+object InstallerType : KoinComponent, CommandPrompt<InstallerManifest.Installer.InstallerType> {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
     private val installerTypesEnum = InstallerManifest.InstallerType.values().map { it.toString() }
 
-    fun Terminal.installerTypePrompt() {
-        when (HttpUtils.getURLExtension(installerManifestData.installerUrl)) {
-            InstallerManifest.InstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
-                installerManifestData.installerType = InstallerManifest.Installer.InstallerType.MSIX
+    override suspend fun prompt(terminal: Terminal): InstallerManifest.Installer.InstallerType = with(terminal) {
+        installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
+        info("Options: ${installerTypesEnum.joinToString(", ")}")
+        return prompt(
+            prompt = const,
+            default = getPreviousValue()?.toInstallerType()?.also { muted("Previous installer type: $it") },
+            convert = { input ->
+                getError(input)
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.toInstallerType())
             }
-            InstallerManifest.InstallerType.MSI.toString() -> {
-                installerManifestData.installerType = when (sharedManifestData.msi?.isWix) {
-                    true -> InstallerManifest.Installer.InstallerType.WIX
-                    else -> InstallerManifest.Installer.InstallerType.MSI
-                }
-            }
-            InstallerManifest.Installer.InstallerType.ZIP.toString() -> {
-                installerManifestData.installerType = InstallerManifest.Installer.InstallerType.ZIP
-            }
-            InstallerManifest.InstallerType.APPX.toString(), MsixBundle.appxBundleConst -> {
-                installerManifestData.installerType = InstallerManifest.Installer.InstallerType.APPX
-            }
-            else -> {
-                if (installerManifestData.installerType == null) {
-                    installerTypeInfo().also { (info, infoColor) -> println(infoColor(info)) }
-                    info("Options: ${installerTypesEnum.joinToString(", ")}")
-                    installerManifestData.installerType = prompt(
-                        prompt = const,
-                        default = getPreviousValue()?.toInstallerType()?.also { muted("Previous installer type: $it") },
-                        convert = { input ->
-                            isInstallerTypeValid(input)
-                                ?.let { ConversionResult.Invalid(it) }
-                                ?: ConversionResult.Valid(input.toInstallerType())
-                        }
-                    ) ?: exitProcess(ExitCode.CtrlC.code)
-                    println()
-                }
-            }
-        }
+        )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    private fun isInstallerTypeValid(installerType: String): String? {
+    override fun getError(input: String?): String? {
         return when {
-            installerType.isBlank() -> Errors.blankInput(const)
-            !installerTypesEnum.contains(installerType) -> Errors.invalidEnum(installerTypesEnum)
+            input == null -> null
+            input.isBlank() -> Errors.blankInput(const)
+            !installerTypesEnum.contains(input) -> Errors.invalidEnum(installerTypesEnum)
             else -> null
         }
     }
@@ -73,14 +49,14 @@ object InstallerType : KoinComponent {
         throw IllegalArgumentException("Invalid installer type: $this")
     }
 
-    private fun getPreviousValue(): String? {
-        return previousManifestData.remoteInstallerData?.let {
+    private suspend fun getPreviousValue(): String? {
+        return previousManifestData.remoteInstallerData.await()?.let {
             it.installerType?.toString()
                 ?: it.installers.getOrNull(installerManifestData.installers.size)?.installerType?.toString()
         }
     }
 
-    private fun installerTypeInfo(): Pair<String, TextColors> {
+    private suspend fun installerTypeInfo(): Pair<String, TextColors> {
         return buildString {
             append(if (getPreviousValue() == null) Prompts.required else Prompts.optional)
             append(" Enter the installer type")

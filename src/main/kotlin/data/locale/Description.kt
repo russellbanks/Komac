@@ -1,7 +1,6 @@
 package data.locale
 
 import Errors
-import ExitCode
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightRed
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
@@ -10,6 +9,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
+import input.ExitCode
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -68,11 +68,11 @@ object Description : KoinComponent {
         }
     }
 
-    private fun getPreviousValue(descriptionType: DescriptionType): String? {
+    private suspend fun getPreviousValue(descriptionType: DescriptionType): String? {
         val remoteDefaultLocaleData = previousManifestData.remoteDefaultLocaleData
         return when (descriptionType) {
-            DescriptionType.Short -> remoteDefaultLocaleData?.shortDescription
-            DescriptionType.Long -> remoteDefaultLocaleData?.description
+            DescriptionType.Short -> remoteDefaultLocaleData.await()?.shortDescription
+            DescriptionType.Long -> remoteDefaultLocaleData.await()?.description
         }
     }
 

@@ -1,62 +1,38 @@
 package data.shared
 
 import Errors
-import ExitCode
-import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import commands.CommandPrompt
 import data.GitHubImpl
 import data.SharedManifestData
 import data.VersionUpdateState
+import input.ExitCode
 import input.Prompts
 import network.HttpUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
-import token.TokenStore
 import java.io.IOException
 import kotlin.system.exitProcess
 
-object PackageIdentifier : KoinComponent {
+object PackageIdentifier : KoinComponent, CommandPrompt<String> {
     private val sharedManifestData: SharedManifestData by inject()
-    private val tokenStore: TokenStore by inject()
 
-    suspend fun Terminal.packageIdentifierPrompt(
-        packageIdentifierParameter: String? = null,
-        isCIEnvironment: Boolean = false
-    ) {
-        if (packageIdentifierParameter == null && !isCIEnvironment) {
-            if (tokenStore.token == null) {
-                tokenStore.promptForToken(this)
+    override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+        println(colors.brightGreen(identifierInfo))
+        info(example)
+        return prompt(
+            prompt = const,
+            convert = { input ->
+                getError(input)
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim())
             }
-            println(colors.brightGreen(identifierInfo))
-            info(example)
-            sharedManifestData.packageIdentifier = prompt(
-                prompt = const,
-                convert = { input ->
-                    getPackageIdentifierError(input)
-                        ?.let { ConversionResult.Invalid(it) }
-                        ?: ConversionResult.Valid(input.trim())
-                }
-            ) ?: exitProcess(ExitCode.CtrlC.code)
-            if (!tokenStore.isTokenValid.await()) {
-                println()
-                tokenStore.invalidTokenPrompt(this)
-            }
-            sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
-            println()
-        } else if (packageIdentifierParameter != null) {
-            sharedManifestData.packageIdentifier = packageIdentifierParameter
-            sharedManifestData.latestVersion = getLatestVersion(
-                packageIdentifier = packageIdentifierParameter,
-                writeOutput = false
-            )
-        } else {
-            throw CliktError(colors.danger("${Errors.error} Package Identifier not provided"), statusCode = 1)
-        }
+        )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    private suspend fun Terminal.getLatestVersion(packageIdentifier: String, writeOutput: Boolean = true): String? {
+    suspend fun Terminal.getLatestVersion(packageIdentifier: String, writeOutput: Boolean = true): String? {
         return try {
             get<GitHubImpl>()
                 .getMicrosoftWingetPkgs()
@@ -85,11 +61,12 @@ object PackageIdentifier : KoinComponent {
         }
     }
 
-    fun getPackageIdentifierError(identifier: String): String? {
+    override fun getError(input: String?): String? {
         return when {
-            identifier.isBlank() -> Errors.blankInput(const)
-            identifier.length > maxLength -> Errors.invalidLength(min = minLength, max = maxLength)
-            !identifier.matches(regex) -> Errors.invalidRegex(regex)
+            input == null -> null
+            input.isBlank() -> Errors.blankInput(const)
+            input.length > maxLength -> Errors.invalidLength(min = minLength, max = maxLength)
+            !input.matches(regex) -> Errors.invalidRegex(regex)
             else -> null
         }
     }

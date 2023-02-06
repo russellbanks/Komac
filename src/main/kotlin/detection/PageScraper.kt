@@ -11,7 +11,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import network.Http
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -24,28 +23,21 @@ import org.koin.core.component.get
  * @param url of the website
  */
 class PageScraper(url: Url) : KoinComponent {
-    lateinit var supportUrl: Deferred<Url?>
-    lateinit var faqUrl: Deferred<Url?>
-    lateinit var privacyUrl: Deferred<Url?>
-
     private val urlRoot = URLBuilder(url).apply { pathSegments = emptyList() }.build()
     private val client = get<Http>().client
-    private lateinit var linksMap: HashMap<String, String>
-
-    init {
-        CoroutineScope(Dispatchers.IO).launch {
-            linksMap = htmlDocument(client.get(urlRoot).bodyAsText()) {
-                a {
-                    findAll {
-                        eachLink as HashMap<String, String>
-                    }
+    private val scope = CoroutineScope(Dispatchers.IO)
+    private var linksMap: Deferred<HashMap<String, String>> = scope.async {
+        htmlDocument(client.get(urlRoot).bodyAsText()) {
+            a {
+                findAll {
+                    eachLink as HashMap<String, String>
                 }
             }
-            supportUrl = async { getUrlForSearchValue(support, help) }
-            faqUrl = async { getUrlForSearchValue(faq) }
-            privacyUrl = async { getUrlForSearchValue(privacy) }
         }
     }
+    var supportUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(support, help) }
+    var faqUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(faq) }
+    var privacyUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(privacy) }
 
     /**
      * This abstracts [findFirstLink] and cleans up the returned String to ensure that it is always in the format of
@@ -54,7 +46,7 @@ class PageScraper(url: Url) : KoinComponent {
      * @param searchValues the values to sequentially search for
      * @return the link as a [Url] or null if no matching links are found
      */
-    private fun getUrlForSearchValue(vararg searchValues: String): Url? {
+    private suspend fun getUrlForSearchValue(vararg searchValues: String): Url? {
         val result = findFirstLink(*searchValues)?.removeSuffix("/")
         return when {
             result == null -> null
@@ -74,7 +66,8 @@ class PageScraper(url: Url) : KoinComponent {
      * @param searchValues the values to sequentially search for
      * @return the link as a [String] or null if no matching links are found
      */
-    private fun findFirstLink(vararg searchValues: String): String? {
+    private suspend fun findFirstLink(vararg searchValues: String): String? {
+        val linksMap = linksMap.await()
         var result: String? = null
         outer@ for (searchValue in searchValues) {
             for (value in linksMap.values) {
