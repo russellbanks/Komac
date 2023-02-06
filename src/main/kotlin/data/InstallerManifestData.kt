@@ -74,7 +74,8 @@ class InstallerManifestData : KoinComponent {
             productCode = sharedManifestData.msi?.productCode
                 ?: sharedManifestData.additionalMetadata?.productCode?.ifBlank { null }
                 ?: productCode?.ifBlank { null }
-                ?: previousManifest?.productCode,
+                ?: previousManifest?.productCode
+                ?: previousInstaller?.productCode,
             releaseDate = sharedManifestData.gitHubDetection?.releaseDate?.await()
                 ?: sharedManifestData.additionalMetadata?.releaseDate
                 ?: releaseDate,
