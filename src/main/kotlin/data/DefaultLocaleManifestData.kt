@@ -3,6 +3,7 @@ package data
 import io.ktor.http.Url
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schemas
 import schemas.manifest.DefaultLocaleManifest
@@ -13,8 +14,6 @@ class DefaultLocaleManifestData : KoinComponent {
     lateinit var shortDescription: String
     var moniker: String? = null
     var publisherUrl: Url? = null
-    var publisherSupportUrl: Url? = null
-    var publisherPrivacyUrl: Url? = null
     var author: String? = null
     var packageUrl: Url? = null
     var licenseUrl: Url? = null
@@ -25,67 +24,76 @@ class DefaultLocaleManifestData : KoinComponent {
     var releaseNotesUrl: Url? = null
 
     private val sharedManifestData: SharedManifestData by inject()
-    private val previousManifestData: PreviousManifestData by inject()
     private val schemas: Schemas by inject()
     private val parameterLocaleMetadata = sharedManifestData.additionalMetadata?.locales?.find {
         it.name.equals(other = sharedManifestData.defaultLocale, ignoreCase = true)
     }
 
     suspend fun createDefaultLocaleManifest(): String {
+        val previousDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData.await()
         return getDefaultLocaleManifestBase().copy(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,
-            publisher = sharedManifestData.publisher ?: previousManifestData.remoteDefaultLocaleData?.publisher ?: "",
+            publisher = sharedManifestData.publisher ?: previousDefaultLocaleData?.publisher ?: "",
             publisherUrl = publisherUrl
-                ?: previousManifestData.remoteDefaultLocaleData?.publisherUrl
+                ?: previousDefaultLocaleData?.publisherUrl
                 ?: sharedManifestData.gitHubDetection?.publisherUrl?.await(),
-            publisherSupportUrl = publisherSupportUrl
-                ?: previousManifestData.remoteDefaultLocaleData?.publisherSupportUrl
-                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await(),
-            privacyUrl = publisherPrivacyUrl
-                ?: previousManifestData.remoteDefaultLocaleData?.privacyUrl
-                ?: sharedManifestData.gitHubDetection?.privacyUrl?.await(),
-            author = author?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.author,
+            publisherSupportUrl = previousDefaultLocaleData?.publisherSupportUrl
+                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await()
+                ?: sharedManifestData.pageScraper?.supportUrl?.await(),
+            privacyUrl = previousDefaultLocaleData?.privacyUrl
+                ?: sharedManifestData.gitHubDetection?.privacyUrl?.await()
+                ?: sharedManifestData.pageScraper?.privacyUrl?.await(),
+            author = author?.ifEmpty { null } ?: previousDefaultLocaleData?.author,
             packageName = sharedManifestData.packageName
-                ?: previousManifestData.remoteDefaultLocaleData?.packageName ?: "",
+                ?: previousDefaultLocaleData?.packageName ?: "",
             packageUrl = packageUrl
-                ?: previousManifestData.remoteDefaultLocaleData?.packageUrl
+                ?: previousDefaultLocaleData?.packageUrl
                 ?: sharedManifestData.gitHubDetection?.packageUrl?.await(),
             license = when {
                 ::license.isInitialized -> license
                 else -> sharedManifestData.gitHubDetection?.license?.await()
-                    ?: previousManifestData.remoteDefaultLocaleData?.license ?: ""
+                    ?: previousDefaultLocaleData?.license ?: ""
             },
             licenseUrl = licenseUrl
-                ?: previousManifestData.remoteDefaultLocaleData?.licenseUrl
+                ?: previousDefaultLocaleData?.licenseUrl
                 ?: sharedManifestData.gitHubDetection?.licenseUrl?.await(),
-            copyright = copyright?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.copyright,
-            copyrightUrl = copyrightUrl ?: previousManifestData.remoteDefaultLocaleData?.copyrightUrl,
+            copyright = copyright?.ifEmpty { null } ?: previousDefaultLocaleData?.copyright,
+            copyrightUrl = copyrightUrl ?: previousDefaultLocaleData?.copyrightUrl,
             shortDescription = when {
                 ::shortDescription.isInitialized -> shortDescription
                 else -> {
-                    previousManifestData.remoteDefaultLocaleData?.shortDescription
+                    previousDefaultLocaleData?.shortDescription
                         ?: sharedManifestData.gitHubDetection?.shortDescription?.await() ?: ""
                 }
             },
-            description = (description?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.description)
+            description = (description?.ifEmpty { null } ?: previousDefaultLocaleData?.description)
                 ?.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n")
                 ?.trim(),
-            moniker = moniker?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.moniker,
-            tags = tags?.ifEmpty { null } ?: previousManifestData.remoteDefaultLocaleData?.tags,
+            moniker = moniker?.ifEmpty { null } ?: previousDefaultLocaleData?.moniker,
+            tags = tags?.ifEmpty { null } ?: previousDefaultLocaleData?.tags,
             releaseNotesUrl = releaseNotesUrl
                 ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await()
                 ?: parameterLocaleMetadata?.releaseNotesUrl,
             releaseNotes = (sharedManifestData.gitHubDetection?.releaseNotes?.await()
                 ?: parameterLocaleMetadata?.releaseNotes)?.trim(),
+            documentations = if (previousDefaultLocaleData?.documentations == null) {
+                listOfNotNull(
+                    sharedManifestData.pageScraper?.faqUrl?.await()?.let {
+                        DefaultLocaleManifest.Documentation(documentLabel = "FAQ", documentUrl = it)
+                    }
+                ).ifEmpty { null }
+            } else {
+                previousDefaultLocaleData.documentations
+            },
             manifestType = Schemas.defaultLocaleManifestType,
             manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
         ).toString()
     }
 
-    private fun getDefaultLocaleManifestBase(): DefaultLocaleManifest {
-        return previousManifestData.remoteDefaultLocaleData ?: DefaultLocaleManifest(
+    private suspend fun getDefaultLocaleManifestBase(): DefaultLocaleManifest {
+        return get<PreviousManifestData>().remoteDefaultLocaleData.await() ?: DefaultLocaleManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             packageLocale = sharedManifestData.defaultLocale,

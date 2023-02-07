@@ -1,13 +1,14 @@
 package data.shared
 
 import Errors
-import ExitCode
 import com.github.ajalt.mordant.rendering.TextStyle
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import commands.CommandPrompt
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
+import input.ExitCode
 import input.LocaleType
 import input.Prompts
 import org.koin.core.component.KoinComponent
@@ -20,57 +21,57 @@ object Locale : KoinComponent {
     val sharedManifestData: SharedManifestData by inject()
     val previousManifestData: PreviousManifestData by inject()
 
-    fun Terminal.localePrompt(localeType: LocaleType) {
-        if (localeType == LocaleType.Installer) {
-            sharedManifestData.msi?.productLanguage?.let {
-                installerManifestData.installerLocale = it
-                return
+    object Installer : CommandPrompt<String> {
+        override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+            return sharedManifestData.msi?.productLanguage ?: let {
+                localeInfo(LocaleType.Installer).also { (info, infoColor) -> println(infoColor(info)) }
+                info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
+                prompt(
+                    prompt = "Installer locale",
+                    default = getPreviousValue()?.also { muted("Previous value: $it") },
+                    convert = { input ->
+                        getError(input.trim())
+                            ?.let { ConversionResult.Invalid(it) }
+                            ?: ConversionResult.Valid(input.trim())
+                    }
+                ).also { println() } ?: exitProcess(ExitCode.CtrlC.code)
             }
         }
-        localeInfo(localeType).also { (info, infoColor) -> println(infoColor(info)) }
-        info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
-        val input = prompt(
-            prompt = "$localeType locale",
-            default = when (localeType) {
-                LocaleType.Installer -> getPreviousValue()?.also { muted("Previous value: $it") }
-                LocaleType.Package -> defaultLocale
-            },
-            convert = { input ->
-                if (localeType == LocaleType.Installer) {
-                    isInstallerLocaleValid(input)
-                } else {
-                    isPackageLocaleValid(input)
-                }?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
-            }
-        ) ?: exitProcess(ExitCode.CtrlC.code)
-        if (localeType == LocaleType.Installer) {
-            installerManifestData.installerLocale = input
-        } else {
-            sharedManifestData.defaultLocale = input
-        }
-        println()
+
+        override fun getError(input: String?): String? = getError(input, LocaleType.Installer)
     }
 
-    private fun isInstallerLocaleValid(locale: String): String? {
+    object Package: CommandPrompt<String> {
+        override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+            localeInfo(LocaleType.Package).also { (info, infoColor) -> println(infoColor(info)) }
+            info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
+            prompt(
+                prompt = "Package locale",
+                default = defaultLocale,
+                convert = { input ->
+                    getError(input.trim())
+                        ?.let { ConversionResult.Invalid(it) }
+                        ?: ConversionResult.Valid(input.trim())
+                }
+            ) ?: exitProcess(ExitCode.CtrlC.code)
+        }
+
+        override fun getError(input: String?) = getError(input, LocaleType.Package)
+    }
+
+    fun getError(input: String?, localeType: LocaleType): String? {
         return when {
-            locale.isNotBlank() && !locale.matches(regex) -> Errors.invalidRegex(regex)
-            locale.length > maxLength -> Errors.invalidLength(max = maxLength)
+            input == null -> null
+            input.isBlank() -> if (localeType == LocaleType.Package) Errors.blankInput(localeType) else null
+            !input.matches(regex) -> Errors.invalidRegex(regex)
+            input.length > maxLength -> Errors.invalidLength(max = maxLength)
             else -> null
         }
     }
 
-    private fun getPreviousValue(): String? {
-        return previousManifestData.remoteInstallerData?.let {
+    private suspend fun getPreviousValue(): String? {
+        return previousManifestData.remoteInstallerData.await()?.let {
             it.installerLocale ?: it.installers[installerManifestData.installers.size].installerLocale
-        }
-    }
-
-    private fun isPackageLocaleValid(locale: String): String? {
-        return when {
-            locale.isBlank() -> Errors.blankInput(LocaleType.Package)
-            !locale.matches(regex) -> Errors.invalidRegex(regex)
-            locale.length > maxLength -> Errors.invalidLength(max = maxLength)
-            else -> null
         }
     }
 

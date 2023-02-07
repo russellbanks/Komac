@@ -1,7 +1,6 @@
 package data.shared
 
 import Errors
-import ExitCode
 import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.table.verticalLayout
@@ -13,11 +12,13 @@ import data.InstallerManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.locale.LocaleUrl
+import detection.PageScraper
 import detection.files.Zip
 import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
 import detection.github.GitHubDetection
+import input.ExitCode
 import input.Prompts
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
@@ -33,7 +34,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
-import utils.FileUtils
+import utils.FileAnalyser
 import utils.Hashing.hash
 import java.net.ConnectException
 import kotlin.system.exitProcess
@@ -110,23 +111,21 @@ object Url : KoinComponent {
         } else {
             if (installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
                 sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
+            } else {
+                sharedManifestData.pageScraper = PageScraper(installerManifestData.installerUrl)
             }
             val (file, fileDeletionThread) = get<Http>().client.downloadFile(installerManifestData.installerUrl, this)
+            val fileAnalyser = FileAnalyser(file)
+            installerManifestData.installerType = fileAnalyser.getInstallerType()
+            installerManifestData.architecture = fileAnalyser.getArchitecture()
+            installerManifestData.scope = fileAnalyser.getScope()
+            installerManifestData.upgradeBehavior = fileAnalyser.getUpgradeBehaviour()
             installerManifestData.installerSha256 = sharedManifestData.gitHubDetection?.sha256?.await() ?: file.hash()
             when (file.extension.lowercase()) {
-                InstallerManifest.InstallerType.EXE.toString() -> {
-                    val fileUtils = FileUtils(file)
-                    installerManifestData.architecture = fileUtils.getArchitecture()
-                    fileUtils.getInstallerType()?.let { installerManifestData.installerType = it }
-                }
                 InstallerManifest.InstallerType.MSIX.toString(),
-                InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file).also { msix ->
-                    msix.processorArchitecture?.let { installerManifestData.architecture = it }
-                }
+                InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file)
                 MsixBundle.msixBundleConst,
-                MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(file).also { msixBundle ->
-                    msixBundle.packages?.first()?.processorArchitecture?.let { installerManifestData.architecture = it }
-                }
+                MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(file)
                 InstallerManifest.InstallerType.MSI.toString() -> {
                     if (Platform.isWindows()) sharedManifestData.msi = Msi(file)
                 }
@@ -193,9 +192,6 @@ object Url : KoinComponent {
             gitHubDetection?.packageUrl != null && localeUrl == LocaleUrl.PackageUrl -> {
                 defaultLocaleManifestData.packageUrl = gitHubDetection.packageUrl.await()
             }
-            gitHubDetection?.publisherSupportUrl != null && localeUrl == LocaleUrl.PublisherSupportUrl -> {
-                defaultLocaleManifestData.publisherSupportUrl = gitHubDetection.publisherSupportUrl.await()
-            }
             else -> {
                 println(colors.brightYellow(localeUrlInfo(localeUrl)))
                 val input = prompt(
@@ -212,8 +208,6 @@ object Url : KoinComponent {
                     LocaleUrl.LicenseUrl -> defaultLocaleManifestData.licenseUrl = input
                     LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
                     LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
-                    LocaleUrl.PublisherSupportUrl -> defaultLocaleManifestData.publisherSupportUrl = input
-                    LocaleUrl.PublisherPrivacyUrl -> defaultLocaleManifestData.publisherPrivacyUrl = input
                     LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
                 }
                 println()
@@ -248,15 +242,13 @@ object Url : KoinComponent {
         }
     }
 
-    private fun getPreviousValue(localeUrl: LocaleUrl): Url? {
-        val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
+    private suspend fun getPreviousValue(localeUrl: LocaleUrl): Url? {
+        val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData.await()
         return when (localeUrl) {
             LocaleUrl.CopyrightUrl -> remoteDefaultLocaleData?.copyrightUrl
             LocaleUrl.LicenseUrl -> remoteDefaultLocaleData?.licenseUrl
             LocaleUrl.PackageUrl -> remoteDefaultLocaleData?.packageUrl
             LocaleUrl.PublisherUrl -> remoteDefaultLocaleData?.publisherUrl
-            LocaleUrl.PublisherSupportUrl -> remoteDefaultLocaleData?.publisherSupportUrl
-            LocaleUrl.PublisherPrivacyUrl -> remoteDefaultLocaleData?.privacyUrl
             LocaleUrl.ReleaseNotesUrl -> remoteDefaultLocaleData?.releaseNotesUrl
         }
     }
@@ -267,8 +259,6 @@ object Url : KoinComponent {
             LocaleUrl.LicenseUrl -> "The license page"
             LocaleUrl.PackageUrl -> "The package home page"
             LocaleUrl.PublisherUrl -> "The publisher home page"
-            LocaleUrl.PublisherSupportUrl -> "The publisher support page"
-            LocaleUrl.PublisherPrivacyUrl -> "The publisher privacy page or the package privacy page"
             LocaleUrl.ReleaseNotesUrl -> "The package release notes url"
         }
         return "${Prompts.optional} Enter ${description.lowercase()}"

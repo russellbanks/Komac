@@ -439,6 +439,8 @@ data class InstallerManifest(
             @SerialName("interactive") Interactive,
             @SerialName("silent") Silent,
             @SerialName("silentWithProgress") SilentWithProgress;
+
+            fun toManifestInstallMode() = InstallerManifest.InstallModes.valueOf(name)
         }
 
         @Serializable

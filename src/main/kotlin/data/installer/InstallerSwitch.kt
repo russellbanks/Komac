@@ -18,7 +18,7 @@ object InstallerSwitch : KoinComponent {
     private val installerManifestData: InstallerManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
-    fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
+    suspend fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
         if (
             installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE ||
             installerSwitch == InstallerSwitch.Custom
@@ -55,8 +55,8 @@ object InstallerSwitch : KoinComponent {
         }
     }
 
-    private fun getPreviousValue(installerSwitch: InstallerSwitch): String? {
-        return previousManifestData.remoteInstallerData?.let {
+    private suspend fun getPreviousValue(installerSwitch: InstallerSwitch): String? {
+        return previousManifestData.remoteInstallerData.await()?.let {
             when (installerSwitch) {
                 InstallerSwitch.Silent -> {
                     it.installerSwitches?.silent
@@ -77,7 +77,7 @@ object InstallerSwitch : KoinComponent {
         }
     }
 
-    private fun switchInfo(
+    private suspend fun switchInfo(
         installerType: InstallerManifest.Installer.InstallerType?,
         installerSwitch: InstallerSwitch
     ): Pair<String, TextColors> {

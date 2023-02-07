@@ -1,13 +1,13 @@
 package data.shared
 
 import Errors
-import ExitCode
-import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import commands.CommandPrompt
 import data.GitHubImpl
 import data.SharedManifestData
 import data.VersionUpdateState
+import input.ExitCode
 import input.Prompts
 import network.HttpUtils
 import org.koin.core.component.KoinComponent
@@ -15,32 +15,24 @@ import org.koin.core.component.inject
 import kotlin.random.Random
 import kotlin.system.exitProcess
 
-object PackageVersion : KoinComponent {
+object PackageVersion : KoinComponent, CommandPrompt<String> {
     private val githubImpl: GitHubImpl by inject()
+    val sharedManifestData: SharedManifestData by inject()
 
-    suspend fun Terminal.packageVersionPrompt(versionParameter: String? = null, isCIEnvironment: Boolean = false) {
-        val sharedManifestData: SharedManifestData by inject()
-        if (versionParameter == null && isCIEnvironment) {
-            throw CliktError(colors.danger("Package Version not inputted"), statusCode = 1)
-        }
-        sharedManifestData.packageVersion = if (versionParameter != null) {
-            versionParameter
-        } else {
-            println(colors.brightGreen(versionInfo))
-            info(example)
-            prompt(
-                prompt = const,
-                convert = { input ->
-                    getPackageVersionError(input)
-                        ?.let { ConversionResult.Invalid(it) }
-                        ?: ConversionResult.Valid(input.trim())
-                }
-            )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
-        }
-        setUpgradeState(sharedManifestData)
+    override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+        println(colors.brightGreen(versionInfo))
+        info(example)
+        prompt(
+            prompt = const,
+            convert = { input ->
+                getError(input)
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim())
+            }
+        )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    private suspend fun setUpgradeState(sharedManifestData: SharedManifestData) {
+    suspend fun setUpgradeState(sharedManifestData: SharedManifestData) {
         when {
             sharedManifestData.updateState == VersionUpdateState.NewPackage -> Unit
             packageExists(sharedManifestData) -> {
@@ -64,11 +56,12 @@ object PackageVersion : KoinComponent {
             ?.contains(sharedManifestData.packageVersion) ?: false
     }
 
-    fun getPackageVersionError(version: String): String? {
+    override fun getError(input: String?): String? {
         return when {
-            version.isBlank() -> Errors.blankInput(const)
-            version.length > maxLength -> Errors.invalidLength(max = maxLength)
-            !version.matches(regex) -> Errors.invalidRegex(regex)
+            input == null -> null
+            input.isBlank() -> Errors.blankInput(const)
+            input.length > maxLength -> Errors.invalidLength(max = maxLength)
+            !input.matches(regex) -> Errors.invalidRegex(regex)
             else -> null
         }
     }

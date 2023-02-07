@@ -22,7 +22,7 @@ class InstallerManifestData : KoinComponent {
     var installerLocale: String? = null
     var productCode: String? = null
     var scope: InstallerManifest.Installer.Scope? = null
-    var upgradeBehavior: InstallerManifest.UpgradeBehavior? = null
+    var upgradeBehavior: InstallerManifest.Installer.UpgradeBehavior? = null
     var releaseDate: LocalDate? = null
     var installers = listOf<InstallerManifest.Installer>()
     var fileExtensions: List<String>? = null
@@ -34,8 +34,7 @@ class InstallerManifestData : KoinComponent {
     private val previousManifestData: PreviousManifestData by inject()
 
     suspend fun addInstaller() {
-        previousManifestData.remoteInstallerDataJob.join()
-        val previousManifest = previousManifestData.remoteInstallerData
+        val previousManifest = previousManifestData.remoteInstallerData.await()
         val previousInstaller = previousManifest?.installers?.getOrNull(installers.size)
         val installer = getInstallerBase(previousInstaller).copy(
             installerLocale = sharedManifestData.msi?.productLanguage
@@ -50,19 +49,14 @@ class InstallerManifestData : KoinComponent {
             nestedInstallerType = sharedManifestData.zip?.nestedInstallerType
                 ?: previousInstaller?.nestedInstallerType
                 ?: previousManifest?.nestedInstallerType?.toPerInstallerNestedInstallerType(),
-            nestedInstallerFiles = sharedManifestData.zip?.nestedInstallerFiles
-                ?.ifEmpty { null }
+            nestedInstallerFiles = sharedManifestData.zip?.nestedInstallerFiles?.ifEmpty { null }
                 ?: previousInstaller?.nestedInstallerFiles
                 ?: previousManifest?.nestedInstallerFiles?.map { it.toPerInstallerNestedInstallerFiles() },
             installerUrl = installerUrl,
             installerSha256 = (sharedManifestData.gitHubDetection?.sha256?.await() ?: installerSha256).uppercase(),
             signatureSha256 = sharedManifestData.msix?.signatureSha256
                 ?: sharedManifestData.msixBundle?.signatureSha256,
-            scope = if (sharedManifestData.msi?.allUsers != null) {
-                sharedManifestData.msi?.allUsers?.toInstallerScope()
-            } else {
-                scope ?: previousInstaller?.scope ?: previousManifest?.scope?.toPerScopeInstallerType()
-            },
+            scope = scope ?: previousInstaller?.scope ?: previousManifest?.scope?.toPerScopeInstallerType(),
             packageFamilyName = sharedManifestData.msix?.packageFamilyName
                 ?: sharedManifestData.msixBundle?.packageFamilyName
                 ?: previousInstaller?.packageFamilyName
@@ -70,7 +64,7 @@ class InstallerManifestData : KoinComponent {
             installerSwitches = installerSwitches.takeUnless { it.areAllNullOrBlank() }
                 ?: previousInstaller?.installerSwitches
                 ?: previousManifest?.installerSwitches?.toPerInstallerSwitches(),
-            upgradeBehavior = upgradeBehavior?.toPerInstallerUpgradeBehaviour()
+            upgradeBehavior = upgradeBehavior
                 ?: previousInstaller?.upgradeBehavior
                 ?: previousManifest?.upgradeBehavior?.toPerInstallerUpgradeBehaviour(),
             productCode = sharedManifestData.msi?.productCode
@@ -106,12 +100,13 @@ class InstallerManifestData : KoinComponent {
         resetValues()
     }
 
-    private fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry():
+    private suspend fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry():
         InstallerManifest.Installer.AppsAndFeaturesEntry {
+        val remoteDefaultLocaleData = previousManifestData.remoteDefaultLocaleData.await()
         val arpDisplayName = sharedManifestData.msi?.productName ?: displayName
-        val packageName = sharedManifestData.packageName ?: previousManifestData.remoteDefaultLocaleData?.packageName
+        val packageName = sharedManifestData.packageName ?: remoteDefaultLocaleData?.packageName
         val arpPublisher = sharedManifestData.msi?.manufacturer ?: publisher
-        val publisher = sharedManifestData.publisher ?: previousManifestData.remoteDefaultLocaleData?.publisher
+        val publisher = sharedManifestData.publisher ?: remoteDefaultLocaleData?.publisher
         val displayVersion = sharedManifestData.msi?.productVersion ?: displayVersion
         return copy(
             displayName = if (arpDisplayName != packageName) arpDisplayName?.updateDisplayName() else null,
@@ -127,55 +122,56 @@ class InstallerManifestData : KoinComponent {
             ?: this
     }
 
-    fun createInstallerManifest(): String {
+    suspend fun createInstallerManifest(): String {
+        val remoteInstallerData = previousManifestData.remoteInstallerData.await()
         return getInstallerManifestBase().copy(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             installerLocale = when (installers.mapNotNull { it.installerLocale }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.installerLocale }.ifBlank { null }
-                else -> previousManifestData.remoteInstallerData?.installerLocale
+                else -> remoteInstallerData?.installerLocale
             },
             platform = when (installers.mapNotNull { it.platform }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.platform }.map { it.toManifestPlatform() }
-                else -> previousManifestData.remoteInstallerData?.platform
+                else -> remoteInstallerData?.platform
             },
             minimumOSVersion = when (installers.mapNotNull { it.minimumOSVersion }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.minimumOSVersion }
-                else -> previousManifestData.remoteInstallerData?.minimumOSVersion
+                else -> remoteInstallerData?.minimumOSVersion
             },
             installerType = when (installers.mapNotNull { it.installerType }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.installerType }.toManifestInstallerType()
-                else -> previousManifestData.remoteInstallerData?.installerType
+                else -> remoteInstallerData?.installerType
             },
             scope = when (installers.mapNotNull { it.scope }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.scope }.toManifestScope()
-                else -> previousManifestData.remoteInstallerData?.scope
+                else -> remoteInstallerData?.scope
             },
             packageFamilyName = when (installers.mapNotNull { it.packageFamilyName }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.packageFamilyName }
-                else -> previousManifestData.remoteInstallerData?.packageFamilyName
+                else -> remoteInstallerData?.packageFamilyName
             },
-            installModes = installModes?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.installModes,
+            installModes = installModes?.ifEmpty { null } ?: remoteInstallerData?.installModes,
             installerSwitches = when (installers.mapNotNull { it.installerSwitches }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.installerSwitches }.toManifestInstallerSwitches()
-                else -> previousManifestData.remoteInstallerData?.installerSwitches
+                else -> remoteInstallerData?.installerSwitches
             },
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null }
-                ?: previousManifestData.remoteInstallerData?.installerSuccessCodes,
+                ?: remoteInstallerData?.installerSuccessCodes,
             upgradeBehavior = when (installers.mapNotNull { it.upgradeBehavior }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.upgradeBehavior }.toManifestUpgradeBehaviour()
-                else -> previousManifestData.remoteInstallerData?.upgradeBehavior
+                else -> remoteInstallerData?.upgradeBehavior
             },
-            commands = commands?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.commands,
-            protocols = protocols?.ifEmpty { null } ?: previousManifestData.remoteInstallerData?.protocols,
+            commands = commands?.ifEmpty { null } ?: remoteInstallerData?.commands,
+            protocols = protocols?.ifEmpty { null } ?: remoteInstallerData?.protocols,
             fileExtensions = fileExtensions?.ifEmpty { null }
-                ?: previousManifestData.remoteInstallerData?.fileExtensions,
+                ?: remoteInstallerData?.fileExtensions,
             releaseDate = when (installers.mapNotNull { it.releaseDate }.distinct().size) {
                 1 -> installers.map { it.releaseDate }.first()
                 else -> null
             },
             appsAndFeaturesEntries = when (installers.distinctBy { it.appsAndFeaturesEntries }.size) {
-                0 -> previousManifestData.remoteInstallerData?.appsAndFeaturesEntries
+                0 -> remoteInstallerData?.appsAndFeaturesEntries
                 1 -> {
                     installers
                         .first()
@@ -191,8 +187,8 @@ class InstallerManifestData : KoinComponent {
         ).toString()
     }
 
-    private fun getInstallerManifestBase(): InstallerManifest {
-        return previousManifestData.remoteInstallerData ?: InstallerManifest(
+    private suspend fun getInstallerManifestBase(): InstallerManifest {
+        return previousManifestData.remoteInstallerData.await() ?: InstallerManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
             manifestType = Schemas.installerManifestType,

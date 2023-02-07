@@ -1,4 +1,4 @@
-![readme banner](https://user-images.githubusercontent.com/74878137/216779691-70eb2593-f476-4df1-8725-abf2454a3bf1.svg)
+![readme banner](https://user-images.githubusercontent.com/74878137/217098245-7aa8957b-b34e-4cba-b822-ca7a2448c3b7.svg)
 
 <p align="center">
     The Kotlin Manifest Creator for WinGet

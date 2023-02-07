@@ -44,19 +44,19 @@ object ParameterUrls : KoinComponent {
             var newInstaller: InstallerManifest.Installer? = newInstallers.firstOrNull {
                 it.architecture == previousInstaller.architecture &&
                     it.installerType == previousInstaller.installerType &&
-                        it.scope == previousInstaller.scope
+                    it.scope == previousInstaller.scope
             }
             if (newInstaller == null) {
                 newInstaller = newInstallers.firstOrNull {
                     it.architecture == previousInstaller.architecture &&
                         it.installerType == previousInstaller.installerType &&
-                            it.scope == null
+                        it.scope == null
                 }
             }
             if (newInstaller == null) {
                 newInstaller = newInstallers.firstOrNull {
                     it.architecture == previousInstaller.architecture &&
-                            it.installerType == previousInstaller.installerType
+                        it.installerType == previousInstaller.installerType
                 }
             }
             if (newInstaller == null) {

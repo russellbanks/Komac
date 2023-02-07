@@ -1,5 +1,6 @@
 package data
 
+import detection.PageScraper
 import detection.files.Zip
 import detection.files.msi.Msi
 import detection.files.msix.Msix
@@ -24,5 +25,6 @@ class SharedManifestData : KoinComponent {
     var msi: Msi? = null
     var zip: Zip? = null
     var gitHubDetection: GitHubDetection? = null
+    var pageScraper: PageScraper? = null
     var additionalMetadata: AdditionalMetadata? = null
 }
