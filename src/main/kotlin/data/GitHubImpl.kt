@@ -1,8 +1,5 @@
 package data
 
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightRed
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.terminal.Terminal
 import com.russellbanks.Komac.BuildConfig
 import kotlinx.coroutines.CoroutineScope

@@ -25,8 +25,9 @@ import data.locale.Copyright
 import data.locale.Description.descriptionPrompt
 import data.locale.DescriptionType
 import data.locale.License
-import data.locale.LocaleUrl
 import data.locale.Moniker
+import data.locale.PackageUrl
+import data.locale.ReleaseNotesUrl
 import data.locale.Tags
 import data.shared.Locale
 import data.shared.PackageIdentifier
@@ -35,7 +36,6 @@ import data.shared.PackageName
 import data.shared.PackageVersion
 import data.shared.Publisher
 import data.shared.Url.installerDownloadPrompt
-import data.shared.Url.localeUrlPrompt
 import input.ExitCode
 import input.FileWriter.writeFiles
 import input.InstallerSwitch
@@ -96,17 +96,17 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                 }
                 with(defaultLocaleManifestData) {
                     moniker = prompt(Moniker)
-                    localeUrlPrompt(LocaleUrl.PublisherUrl)
+                    publisherUrl = prompt(Publisher.Url)
                     author = prompt(Author)
-                    localeUrlPrompt(LocaleUrl.PackageUrl)
+                    packageUrl = prompt(PackageUrl)
                     license = prompt(License)
-                    localeUrlPrompt(LocaleUrl.LicenseUrl)
+                    licenseUrl = prompt(License.Url)
                     copyright = prompt(Copyright)
-                    localeUrlPrompt(LocaleUrl.CopyrightUrl)
+                    copyrightUrl = prompt(Copyright.Url)
                     tags = prompt(Tags)
+                    DescriptionType.values().forEach { descriptionPrompt(it) }
+                    releaseNotesUrl = prompt(ReleaseNotesUrl)
                 }
-                DescriptionType.values().forEach { descriptionPrompt(it) }
-                localeUrlPrompt(LocaleUrl.ReleaseNotesUrl)
                 val files = createFiles()
                 pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                     when (manifestResultOption) {

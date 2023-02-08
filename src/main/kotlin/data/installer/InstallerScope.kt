@@ -70,7 +70,9 @@ object InstallerScope : KoinComponent {
         val installerScopeValues = InstallerManifest.Scope.values().map { it.toString() }
         return when {
             option.isBlank() -> null
-            option.firstOrNull() !in installerScopeValues.map { it.first() } -> Errors.invalidEnum(installerScopeValues)
+            option.firstOrNull()?.lowercaseChar() !in installerScopeValues.map { it.first().lowercaseChar() } -> {
+                Errors.invalidEnum(installerScopeValues)
+            }
             else -> null
         }
     }

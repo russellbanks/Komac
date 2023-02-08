@@ -34,14 +34,14 @@ object Locale : KoinComponent {
                             ?.let { ConversionResult.Invalid(it) }
                             ?: ConversionResult.Valid(input.trim())
                     }
-                ).also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+                )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
             }
         }
 
         override fun getError(input: String?): String? = getError(input, LocaleType.Installer)
     }
 
-    object Package: CommandPrompt<String> {
+    object Package : CommandPrompt<String> {
         override suspend fun prompt(terminal: Terminal): String = with(terminal) {
             localeInfo(LocaleType.Package).also { (info, infoColor) -> println(infoColor(info)) }
             info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
@@ -53,7 +53,7 @@ object Locale : KoinComponent {
                         ?.let { ConversionResult.Invalid(it) }
                         ?: ConversionResult.Valid(input.trim())
                 }
-            ) ?: exitProcess(ExitCode.CtrlC.code)
+            )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
         }
 
         override fun getError(input: String?) = getError(input, LocaleType.Package)

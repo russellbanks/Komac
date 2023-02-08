@@ -4,7 +4,6 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import data.SharedManifestData
 import input.ExitCode
@@ -16,7 +15,6 @@ import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
 object Tags : KoinComponent, CommandPrompt<List<String>> {
-    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
 

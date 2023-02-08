@@ -66,7 +66,7 @@ object UpgradeBehaviour : KoinComponent {
     private fun getUpgradeBehaviourError(option: String): String? {
         val upgradeBehaviourValues = InstallerManifest.UpgradeBehavior.values().map { it.toString() }
         return when {
-            option.firstOrNull() !in upgradeBehaviourValues.map { it.first() } -> {
+            option.firstOrNull()?.lowercaseChar() !in upgradeBehaviourValues.map { it.first().lowercaseChar() } -> {
                 Errors.invalidEnum(upgradeBehaviourValues)
             }
             else -> null

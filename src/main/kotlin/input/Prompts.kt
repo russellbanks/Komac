@@ -37,6 +37,7 @@ object Prompts {
         )
         return prompt(
             prompt = enterChoice,
+            default = ManifestResultOption.Quit,
             convert = {
                 ConversionResult.Valid(
                     when (it.firstOrNull()?.lowercase()) {

@@ -11,7 +11,7 @@ import java.time.LocalDate
 @Serializable
 data class AdditionalMetadata(
     @SerialName("Locales") val locales: List<Locale>? = null,
-    @SerialName("ProductCode" ) val productCode: String? = null,
+    @SerialName("ProductCode") val productCode: String? = null,
     @SerialName("ReleaseDate") @Contextual val releaseDate: LocalDate? = null,
     @SerialName("AppsAndFeaturesEntries")
     val appsAndFeaturesEntries: List<InstallerManifest.Installer.AppsAndFeaturesEntry>? = null

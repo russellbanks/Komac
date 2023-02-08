@@ -7,11 +7,8 @@ import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Platform
-import data.DefaultLocaleManifestData
 import data.InstallerManifestData
-import data.PreviousManifestData
 import data.SharedManifestData
-import data.locale.LocaleUrl
 import detection.PageScraper
 import detection.files.Zip
 import detection.files.msi.Msi
@@ -176,47 +173,9 @@ object Url : KoinComponent {
         }
     }
 
-    suspend fun Terminal.localeUrlPrompt(localeUrl: LocaleUrl) {
-        val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-        val gitHubDetection: GitHubDetection? = get<SharedManifestData>().gitHubDetection
-        when {
-            gitHubDetection?.licenseUrl != null && localeUrl == LocaleUrl.LicenseUrl -> {
-                defaultLocaleManifestData.licenseUrl = gitHubDetection.licenseUrl.await()
-            }
-            gitHubDetection?.publisherUrl != null && localeUrl == LocaleUrl.PublisherUrl -> {
-                defaultLocaleManifestData.publisherUrl = gitHubDetection.publisherUrl.await()
-            }
-            gitHubDetection?.releaseNotesUrl != null && localeUrl == LocaleUrl.ReleaseNotesUrl -> {
-                defaultLocaleManifestData.releaseNotesUrl = gitHubDetection.releaseNotesUrl.await()
-            }
-            gitHubDetection?.packageUrl != null && localeUrl == LocaleUrl.PackageUrl -> {
-                defaultLocaleManifestData.packageUrl = gitHubDetection.packageUrl.await()
-            }
-            else -> {
-                println(colors.brightYellow(localeUrlInfo(localeUrl)))
-                val input = prompt(
-                    prompt = localeUrl.toString(),
-                    default = getPreviousValue(localeUrl)?.also { muted("Previous $localeUrl: $it") },
-                    convert = { input ->
-                        runBlocking { isUrlValid(url = Url(input.trim()), canBeBlank = true) }
-                            ?.let { ConversionResult.Invalid(it) }
-                            ?: ConversionResult.Valid(input.trim().ifBlank { null }?.let { Url(it) })
-                    }
-                )
-                when (localeUrl) {
-                    LocaleUrl.CopyrightUrl -> defaultLocaleManifestData.copyrightUrl = input
-                    LocaleUrl.LicenseUrl -> defaultLocaleManifestData.licenseUrl = input
-                    LocaleUrl.PackageUrl -> defaultLocaleManifestData.packageUrl = input
-                    LocaleUrl.PublisherUrl -> defaultLocaleManifestData.publisherUrl = input
-                    LocaleUrl.ReleaseNotesUrl -> defaultLocaleManifestData.releaseNotesUrl = input
-                }
-                println()
-            }
-        }
-    }
-
-    suspend fun isUrlValid(url: Url, canBeBlank: Boolean): String? {
+    suspend fun isUrlValid(url: Url?, canBeBlank: Boolean): String? {
         return when {
+            url == null -> null
             url == Url(URLBuilder()) && canBeBlank -> null
             url == Url(URLBuilder()) -> Errors.blankInput(installerUrlConst)
             url.toString().length > maxLength -> Errors.invalidLength(max = maxLength)
@@ -240,28 +199,6 @@ object Url : KoinComponent {
                 Errors.connectionFailure
             }
         }
-    }
-
-    private suspend fun getPreviousValue(localeUrl: LocaleUrl): Url? {
-        val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData.await()
-        return when (localeUrl) {
-            LocaleUrl.CopyrightUrl -> remoteDefaultLocaleData?.copyrightUrl
-            LocaleUrl.LicenseUrl -> remoteDefaultLocaleData?.licenseUrl
-            LocaleUrl.PackageUrl -> remoteDefaultLocaleData?.packageUrl
-            LocaleUrl.PublisherUrl -> remoteDefaultLocaleData?.publisherUrl
-            LocaleUrl.ReleaseNotesUrl -> remoteDefaultLocaleData?.releaseNotesUrl
-        }
-    }
-
-    private fun localeUrlInfo(publisherUrl: LocaleUrl): String {
-        val description = when (publisherUrl) {
-            LocaleUrl.CopyrightUrl -> "The package copyright"
-            LocaleUrl.LicenseUrl -> "The license page"
-            LocaleUrl.PackageUrl -> "The package home page"
-            LocaleUrl.PublisherUrl -> "The publisher home page"
-            LocaleUrl.ReleaseNotesUrl -> "The package release notes url"
-        }
-        return "${Prompts.optional} Enter ${description.lowercase()}"
     }
 
     private const val installerUrlInfo = "${Prompts.required} Enter the download url to the installer"

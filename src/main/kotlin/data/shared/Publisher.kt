@@ -8,13 +8,16 @@ import data.PreviousManifestData
 import data.SharedManifestData
 import input.ExitCode
 import input.Prompts
+import io.ktor.http.Url
+import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
 object Publisher : KoinComponent, CommandPrompt<String> {
-    private val previousManifestData: PreviousManifestData by inject()
+    private val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
     private val sharedManifestData: SharedManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
@@ -23,8 +26,7 @@ object Publisher : KoinComponent, CommandPrompt<String> {
             info(example)
             prompt(
                 prompt = const,
-                default = previousManifestData.remoteDefaultLocaleData.await()?.publisher
-                    ?.also { muted("Previous publisher: $it") },
+                default = remoteDefaultLocaleData.await()?.publisher?.also { muted("Previous publisher: $it") },
                 convert = { input ->
                     getError(input)
                         ?.let { ConversionResult.Invalid(it) }
@@ -42,6 +44,28 @@ object Publisher : KoinComponent, CommandPrompt<String> {
                 Errors.invalidLength(min = minLength, max = maxLength)
             }
             else -> null
+        }
+    }
+
+    object Url : CommandPrompt<io.ktor.http.Url> {
+        override suspend fun prompt(terminal: Terminal): io.ktor.http.Url = with(terminal) {
+            return sharedManifestData.gitHubDetection?.publisherUrl?.await() ?: let {
+                println(colors.brightYellow("${Prompts.optional} Enter the publisher home page"))
+                prompt(
+                    prompt = "Publisher url",
+                    default = remoteDefaultLocaleData.await()?.publisherUrl
+                        ?.also { muted("Previous publisher url: $it") },
+                    convert = { input ->
+                        runBlocking { data.shared.Url.isUrlValid(url = Url(input.trim()), canBeBlank = true) }
+                            ?.let { ConversionResult.Invalid(it) }
+                            ?: ConversionResult.Valid(Url(input.trim()))
+                    }
+                )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+            }
+        }
+
+        override fun getError(input: String?): String? = runBlocking {
+            data.shared.Url.isUrlValid(url = input?.trim()?.let { Url(it) }, canBeBlank = true)
         }
     }
 
