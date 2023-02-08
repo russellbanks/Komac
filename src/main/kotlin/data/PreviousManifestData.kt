@@ -39,7 +39,7 @@ class PreviousManifestData : KoinComponent {
         directoryPath.await()?.let { nonNullDirectoryPath ->
             repository.await()?.getFileContent(
                 nonNullDirectoryPath.first {
-                    it.name == "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
+                    it.name == "${sharedManifestData.packageIdentifier}.locale.${remoteVersionData.await()?.defaultLocale}.yaml"
                 }.path
             )?.read()?.use {
                 EncodeConfig.yamlDefault.decodeFromStream(DefaultLocaleManifest.serializer(), it)
