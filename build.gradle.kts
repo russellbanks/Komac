@@ -127,6 +127,7 @@ tasks.jpackage {
     }
 
     mac {
+        icon = "$projectDir/src/main/resources/logo.icns"
         appVersion = "1.0.0"
         type = ImageType.DMG
     }
