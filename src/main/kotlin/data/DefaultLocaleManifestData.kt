@@ -1,6 +1,7 @@
 package data
 
 import data.shared.Locale
+import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
@@ -38,16 +39,16 @@ class DefaultLocaleManifestData : KoinComponent {
             packageLocale = (sharedManifestData.defaultLocale
                 ?: previousManifestData.remoteVersionData.await()?.defaultLocale)!!,
             publisher = sharedManifestData.publisher ?: previousDefaultLocaleData?.publisher ?: "",
-            publisherUrl = publisherUrl
+            publisherUrl = (publisherUrl
                 ?: previousDefaultLocaleData?.publisherUrl
-                ?: sharedManifestData.gitHubDetection?.publisherUrl?.await(),
+                ?: sharedManifestData.gitHubDetection?.publisherUrl?.await())?.ifBlank { null },
             publisherSupportUrl = previousDefaultLocaleData?.publisherSupportUrl
                 ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await()
                 ?: sharedManifestData.pageScraper?.supportUrl?.await(),
-            privacyUrl = previousDefaultLocaleData?.privacyUrl
+            privacyUrl = previousDefaultLocaleData?.privacyUrl?.ifBlank { null }
                 ?: sharedManifestData.gitHubDetection?.privacyUrl?.await()
                 ?: sharedManifestData.pageScraper?.privacyUrl?.await(),
-            author = author?.ifEmpty { null } ?: previousDefaultLocaleData?.author,
+            author = author?.ifBlank { null } ?: previousDefaultLocaleData?.author,
             packageName = sharedManifestData.packageName
                 ?: previousDefaultLocaleData?.packageName ?: "",
             packageUrl = packageUrl
@@ -58,11 +59,11 @@ class DefaultLocaleManifestData : KoinComponent {
                 else -> sharedManifestData.gitHubDetection?.license?.await()
                     ?: previousDefaultLocaleData?.license ?: ""
             },
-            licenseUrl = licenseUrl
+            licenseUrl = licenseUrl?.ifBlank { null }
                 ?: previousDefaultLocaleData?.licenseUrl
                 ?: sharedManifestData.gitHubDetection?.licenseUrl?.await(),
-            copyright = copyright?.ifEmpty { null } ?: previousDefaultLocaleData?.copyright,
-            copyrightUrl = copyrightUrl ?: previousDefaultLocaleData?.copyrightUrl,
+            copyright = copyright?.ifBlank { null } ?: previousDefaultLocaleData?.copyright,
+            copyrightUrl = copyrightUrl?.ifBlank { null } ?: previousDefaultLocaleData?.copyrightUrl,
             shortDescription = when {
                 ::shortDescription.isInitialized -> shortDescription
                 else -> {
@@ -70,12 +71,12 @@ class DefaultLocaleManifestData : KoinComponent {
                         ?: sharedManifestData.gitHubDetection?.shortDescription?.await() ?: ""
                 }
             },
-            description = (description?.ifEmpty { null } ?: previousDefaultLocaleData?.description)
+            description = (description?.ifBlank { null } ?: previousDefaultLocaleData?.description)
                 ?.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n")
                 ?.trim(),
-            moniker = moniker?.ifEmpty { null } ?: previousDefaultLocaleData?.moniker,
+            moniker = moniker?.ifBlank { null } ?: previousDefaultLocaleData?.moniker,
             tags = tags?.ifEmpty { null } ?: previousDefaultLocaleData?.tags,
-            releaseNotesUrl = releaseNotesUrl
+            releaseNotesUrl = releaseNotesUrl?.ifBlank { null }
                 ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await()
                 ?: parameterLocaleMetadata?.releaseNotesUrl,
             releaseNotes = (sharedManifestData.gitHubDetection?.releaseNotes?.await()
@@ -93,6 +94,9 @@ class DefaultLocaleManifestData : KoinComponent {
             manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
         ).toString()
     }
+
+    private inline fun Url.ifBlank(defaultValue: () -> Url?): Url? =
+        if (this == Url(URLBuilder())) defaultValue() else this
 
     private suspend fun getDefaultLocaleManifestBase(): DefaultLocaleManifest {
         return previousManifestData.remoteDefaultLocaleData.await() ?: DefaultLocaleManifest(

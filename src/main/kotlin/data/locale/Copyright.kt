@@ -23,7 +23,7 @@ object Copyright : CommandPrompt<String> {
             convert = { input ->
                 getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
-        ).also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+        )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
     override fun getError(input: String?): String? {

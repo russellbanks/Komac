@@ -7,6 +7,7 @@ import commands.CommandUtils.prompt
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
 import data.InstallerManifestData
+import data.ManifestUtils
 import data.PreviousManifestData
 import data.SharedManifestData
 import data.VersionManifestData
@@ -57,7 +58,6 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val tokenStore: TokenStore by inject()
     private val installerManifestData: InstallerManifestData by inject()
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-    private val versionManifestData: VersionManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private var previousManifestData: PreviousManifestData? = null
     private val githubImpl: GitHubImpl by inject()
@@ -122,6 +122,9 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     releaseNotesUrl = prompt(ReleaseNotesUrl)
                 }
                 val files = createFiles()
+                files.forEach { manifest ->
+                    ManifestUtils.formattedManifestLinesFlow(manifest.second, colors).collect { echo(it) }
+                }
                 pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
                     when (manifestResultOption) {
                         ManifestResultOption.PullRequest -> githubImpl.commitAndPullRequest(files, this@with)
@@ -137,7 +140,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
         return listOf(
             githubImpl.installerManifestName to installerManifestData.createInstallerManifest(),
             githubImpl.getDefaultLocaleManifestName() to defaultLocaleManifestData.createDefaultLocaleManifest(),
-            githubImpl.versionManifestName to versionManifestData.createVersionManifest()
+            githubImpl.versionManifestName to VersionManifestData.createVersionManifest()
         ) + previousManifestData?.remoteLocaleData?.await()?.map { localeManifest ->
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = sharedManifestData.packageIdentifier,

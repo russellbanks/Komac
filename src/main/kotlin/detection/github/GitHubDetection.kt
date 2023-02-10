@@ -38,11 +38,11 @@ class GitHubDetection(url: Url) : KoinComponent {
     }
 
     var publisherUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
-        if (repository.await().hasIssues()) Url("https://github.com/${repository.await().fullName}/issues") else null
+        runCatching { repository.await().owner.blog }.getOrNull()?.let { Url(it) }
     }
     var shortDescription: Deferred<String?> = CoroutineScope(Dispatchers.IO).async { repository.await().description }
     var publisherSupportUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
-        runCatching { repository.await().owner.blog }.getOrNull()?.let { Url(it) }
+        if (repository.await().hasIssues()) Url("https://github.com/${repository.await().fullName}/issues") else null
     }
     var license: Deferred<String?> = CoroutineScope(Dispatchers.IO).async {
         runCatching {
