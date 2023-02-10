@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "com.russellbanks"
-version = "0.9.0"
+version = "1.0.0"
 
 repositories {
     mavenCentral()
@@ -128,7 +128,6 @@ tasks.jpackage {
 
     mac {
         icon = "$projectDir/assets/logo.icns"
-        appVersion = "1.0.0"
         type = ImageType.DMG
     }
 }
