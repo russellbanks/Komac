@@ -193,6 +193,17 @@ class GitHubImpl : KoinComponent {
                     .create()
                     .sha
             )
+            ?.let {
+                if (System.getenv("GIT_COMMITTER_NAME") != null && System.getenv("GIT_COMMITTER_EMAIL") != null) {
+                    it.committer(
+                        /* name = */ System.getenv("GIT_COMMITTER_NAME"),
+                        /* email = */ System.getenv("GIT_COMMITTER_EMAIL"),
+                        /* date = */ null
+                    )
+                } else {
+                    it
+                }
+            }
             ?.create()
             ?.also { branch.updateTo(it.shA1) }
     }
