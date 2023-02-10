@@ -16,7 +16,7 @@ class SharedManifestData : KoinComponent {
     lateinit var packageVersion: String
     var publisher: String? = null
     var packageName: String? = null
-    var defaultLocale: String = ""
+    var defaultLocale: String? = null
     var updateState: VersionUpdateState? = null
     var latestVersion: String? = null
     var allVersions: List<String>? = null

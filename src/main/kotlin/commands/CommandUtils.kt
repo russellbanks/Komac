@@ -20,7 +20,14 @@ object CommandUtils {
             }
             parameter != null && parameter is T -> parameter
             isCIEnvironment -> throw CliktError(
-                message = colors.danger("${Errors.error} Parameter not provided"),
+                message = colors.danger(
+                    buildString {
+                        append(Errors.error)
+                        append(" ")
+                        append(commandPrompt::class.simpleName?.replace(Regex("([A-Z])"), " $1")?.trim() ?: "Parameter")
+                        append(" not provided")
+                    }
+                ),
                 statusCode = 1
             )
             else -> commandPrompt.prompt(this)

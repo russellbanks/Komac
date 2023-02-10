@@ -50,9 +50,11 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.manifest.EncodeConfig
 import schemas.manifest.LocaleManifest
+import token.TokenStore
 import kotlin.system.exitProcess
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
+    private val tokenStore: TokenStore by inject()
     private val installerManifestData: InstallerManifestData by inject()
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
     private val versionManifestData: VersionManifestData by inject()
@@ -66,11 +68,23 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<Schemas>().manifestOverride = it }
         with(currentContext.terminal) {
+            if (tokenStore.token == null) {
+                tokenStore.promptForToken(this)
+            }
             sharedManifestData.packageIdentifier = prompt(PackageIdentifier)
+            if (!tokenStore.isTokenValid.await()) {
+                tokenStore.invalidTokenPrompt(this)
+                echo()
+            }
             sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
             launch { if (sharedManifestData.updateState != VersionUpdateState.NewPackage) previousManifestData = get() }
             launch {
                 sharedManifestData.packageVersion = prompt(PackageVersion)
+                githubImpl.promptIfPullRequestExists(
+                    identifier = sharedManifestData.packageIdentifier,
+                    version = sharedManifestData.packageVersion,
+                    terminal = this@with
+                )
                 PackageVersion.setUpgradeState(PackageVersion.sharedManifestData)
                 do {
                     installerDownloadPrompt()
@@ -122,7 +136,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private suspend fun createFiles(): List<Pair<String, String>> {
         return listOf(
             githubImpl.installerManifestName to installerManifestData.createInstallerManifest(),
-            githubImpl.defaultLocaleManifestName to defaultLocaleManifestData.createDefaultLocaleManifest(),
+            githubImpl.getDefaultLocaleManifestName() to defaultLocaleManifestData.createDefaultLocaleManifest(),
             githubImpl.versionManifestName to versionManifestData.createVersionManifest()
         ) + previousManifestData?.remoteLocaleData?.await()?.map { localeManifest ->
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(

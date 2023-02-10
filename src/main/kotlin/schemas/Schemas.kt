@@ -43,6 +43,6 @@ class Schemas {
         const val installerManifestType = "installer"
         const val defaultLocaleManifestType = "defaultLocale"
         const val versionManifestType = "version"
-        private const val customToolEnv = "KMC_CRTD_WITH"
+        const val customToolEnv = "KMC_CRTD_WITH"
     }
 }

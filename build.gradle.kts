@@ -102,7 +102,7 @@ tasks.jpackage {
     appName = project.name
     appVersion = project.version.toString()
     copyright = "Copyright (c) Russell Banks"
-    licenseFile = "$projectDir/src/main/resources/gpl-3.0.rst"
+    licenseFile = "$projectDir/assets/gpl-3.0.rst"
     vendor = "Russell Banks"
     mainJar = tasks.shadowJar.get().archiveFileName.get()
     mainClass = application.mainClass.get()
@@ -113,7 +113,7 @@ tasks.jpackage {
     )
 
     windows {
-        icon = "$projectDir/src/main/resources/logo.ico"
+        icon = "$projectDir/assets/logo.ico"
         winPerUserInstall = true
         winDirChooser = true
         type = ImageType.EXE
@@ -122,12 +122,12 @@ tasks.jpackage {
     }
 
     linux {
-        icon = "$projectDir/src/main/resources/logo.png"
+        icon = "$projectDir/assets/logo.png"
         type = ImageType.DEB
     }
 
     mac {
-        icon = "$projectDir/src/main/resources/logo.icns"
+        icon = "$projectDir/assets/logo.icns"
         appVersion = "1.0.0"
         type = ImageType.DMG
     }

@@ -19,7 +19,7 @@ import schemas.manifest.VersionManifest
 class PreviousManifestData : KoinComponent {
     var sharedManifestData: SharedManifestData = get()
     val scope = CoroutineScope(Dispatchers.IO)
-    private val repository = scope.async { get<GitHubImpl>().getMicrosoftWingetPkgs() }
+    private val repository = scope.async { get<GitHubImpl>().getMicrosoftWinGetPkgs() }
     private val directoryPath: Deferred<MutableList<GHContent>?> = scope.async {
         sharedManifestData.latestVersion?.let {
             repository.await()

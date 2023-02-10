@@ -1,9 +1,9 @@
 package data
 
+import data.shared.Locale
 import io.ktor.http.Url
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import schemas.Schemas
 import schemas.manifest.DefaultLocaleManifest
@@ -24,17 +24,19 @@ class DefaultLocaleManifestData : KoinComponent {
     var releaseNotesUrl: Url? = null
 
     private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     private val schemas: Schemas by inject()
     private val parameterLocaleMetadata = sharedManifestData.additionalMetadata?.locales?.find {
         it.name.equals(other = sharedManifestData.defaultLocale, ignoreCase = true)
     }
 
     suspend fun createDefaultLocaleManifest(): String {
-        val previousDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData.await()
+        val previousDefaultLocaleData = previousManifestData.remoteDefaultLocaleData.await()
         return getDefaultLocaleManifestBase().copy(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
-            packageLocale = sharedManifestData.defaultLocale,
+            packageLocale = (sharedManifestData.defaultLocale
+                ?: previousManifestData.remoteVersionData.await()?.defaultLocale)!!,
             publisher = sharedManifestData.publisher ?: previousDefaultLocaleData?.publisher ?: "",
             publisherUrl = publisherUrl
                 ?: previousDefaultLocaleData?.publisherUrl
@@ -93,10 +95,10 @@ class DefaultLocaleManifestData : KoinComponent {
     }
 
     private suspend fun getDefaultLocaleManifestBase(): DefaultLocaleManifest {
-        return get<PreviousManifestData>().remoteDefaultLocaleData.await() ?: DefaultLocaleManifest(
+        return previousManifestData.remoteDefaultLocaleData.await() ?: DefaultLocaleManifest(
             packageIdentifier = sharedManifestData.packageIdentifier,
             packageVersion = sharedManifestData.packageVersion,
-            packageLocale = sharedManifestData.defaultLocale,
+            packageLocale = Locale.defaultLocale,
             publisher = sharedManifestData.publisher!!,
             packageName = sharedManifestData.packageName!!,
             license = license,

@@ -17,9 +17,9 @@ import java.util.Locale
 import kotlin.system.exitProcess
 
 object Locale : KoinComponent {
-    val installerManifestData: InstallerManifestData by inject()
-    val sharedManifestData: SharedManifestData by inject()
-    val previousManifestData: PreviousManifestData by inject()
+    private val installerManifestData: InstallerManifestData by inject()
+    private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
 
     object Installer : CommandPrompt<String> {
         override suspend fun prompt(terminal: Terminal): String = with(terminal) {
@@ -86,5 +86,5 @@ object Locale : KoinComponent {
     private const val maxLength = 20
     private const val pattern = "^([a-zA-Z]{2,3}|[iI]-[a-zA-Z]+|[xX]-[a-zA-Z]{1,8})(-[a-zA-Z]{1,8})*$"
     private val regex = Regex(pattern)
-    private const val defaultLocale = "en-US"
+    const val defaultLocale = "en-US"
 }

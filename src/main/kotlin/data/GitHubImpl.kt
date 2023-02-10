@@ -1,6 +1,7 @@
 package data
 
 import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.terminal.YesNoPrompt
 import com.russellbanks.Komac.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -8,6 +9,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import network.Http
 import network.KtorGitHubConnector
+import org.kohsuke.github.GHDirection
+import org.kohsuke.github.GHIssueSearchBuilder
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
@@ -16,8 +19,12 @@ import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
+import schemas.Schemas
 import token.TokenStore
 import java.io.IOException
+import java.time.LocalDate
+import kotlin.random.Random
+import kotlin.system.exitProcess
 
 @Single
 class GitHubImpl : KoinComponent {
@@ -28,11 +35,17 @@ class GitHubImpl : KoinComponent {
             .build()
     }
     private val sharedManifestData: SharedManifestData by inject()
+    private val previousManifestData: PreviousManifestData by inject()
     val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
-    val defaultLocaleManifestName
-        get() = "${sharedManifestData.packageIdentifier}.locale.${sharedManifestData.defaultLocale}.yaml"
     val versionManifestName = "${sharedManifestData.packageIdentifier}.yaml"
     private var pullRequestBranch: GHRef? = null
+
+    suspend fun getDefaultLocaleManifestName() = buildString {
+        append(sharedManifestData.packageIdentifier)
+        append(".locale.")
+        append(sharedManifestData.defaultLocale ?: previousManifestData.remoteVersionData.await()?.defaultLocale!!)
+        append(".yaml")
+    }
 
     val packageVersionsPath
         get() = buildString {
@@ -74,7 +87,33 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    suspend fun getMicrosoftWingetPkgs(): GHRepository? {
+    private suspend fun getExistingPullRequest(identifier: String, version: String) = github.await().searchIssues()
+        .q("repo:$Microsoft/$wingetpkgs")
+        .q("is:pr")
+        .q(identifier)
+        .q(version)
+        .q("in:path")
+        .q("created:>${LocalDate.now().minusWeeks(2)}")
+        .sort(GHIssueSearchBuilder.Sort.CREATED)
+        .order(GHDirection.DESC)
+        .list()
+        .withPageSize(1)
+        .firstOrNull()
+
+    suspend fun promptIfPullRequestExists(identifier: String, version: String, terminal: Terminal) = with(terminal) {
+        val ghIssue = getExistingPullRequest(identifier, version) ?: return
+        warning("A pull request for $identifier $version was created on ${ghIssue.createdAt}")
+        info(ghIssue.htmlUrl)
+        if (
+            System.getenv("CI")?.toBooleanStrictOrNull() != true &&
+            YesNoPrompt("Would you like to proceed?", terminal = this).ask() != true
+        ) {
+            exitProcess(0)
+        }
+        println()
+    }
+
+    suspend fun getMicrosoftWinGetPkgs(): GHRepository? {
         return try {
             github.await().getRepository("$Microsoft/$wingetpkgs")
         } catch (_: IOException) {
@@ -104,15 +143,16 @@ class GitHubImpl : KoinComponent {
 
     private fun getPullRequestBody(): String {
         return buildString {
-            if (
-                sharedManifestData.latestVersion != null &&
-                sharedManifestData.updateState == VersionUpdateState.NewVersion
-            ) {
-                appendLine("#### Previous version: ${sharedManifestData.latestVersion}")
-            }
-            appendLine("#### Created with ${BuildConfig.appName} v${BuildConfig.appVersion}")
+            append("### Pull request has been created with ")
+            append(System.getenv(Schemas.customToolEnv) ?: "${BuildConfig.appName} ${BuildConfig.appVersion}")
+            append(" ")
+            append(if (Random.nextInt(100) == 0) ":${fruits[Random.nextInt(fruits.size)]}:" else ":rocket:")
         }
     }
+
+    private val fruits = listOf(
+        "cherries", "grapes", "green_apple", "lemon", "melon", "pineapple", "strawberry", "tangerine", "watermelon"
+    )
 
     suspend fun commitAndPullRequest(files: List<Pair<String, String>>, terminal: Terminal) {
         commitFiles(files.map { "$baseGitHubPath/${it.first}" to it.second }, terminal)
@@ -120,7 +160,7 @@ class GitHubImpl : KoinComponent {
     }
 
     private suspend fun createPullRequest(terminal: Terminal) {
-        val ghRepository = getMicrosoftWingetPkgs() ?: return
+        val ghRepository = getMicrosoftWinGetPkgs() ?: return
         try {
             ghRepository.createPullRequest(
                 /* title = */ getCommitTitle(),

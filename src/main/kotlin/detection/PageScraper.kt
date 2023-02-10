@@ -23,17 +23,21 @@ import org.koin.core.component.get
  * @param url of the website
  */
 class PageScraper(url: Url) : KoinComponent {
-    private val urlRoot = URLBuilder(url).apply { pathSegments = emptyList() }.build()
-    private val client = get<Http>().client
+    private val urlRoot = URLBuilder(url).apply {
+        host = host.split(".").takeLast(2).joinToString(".")
+        pathSegments = emptyList()
+    }.build()
     private val scope = CoroutineScope(Dispatchers.IO)
     private var linksMap: Deferred<HashMap<String, String>> = scope.async {
-        htmlDocument(client.get(urlRoot).bodyAsText()) {
-            a {
-                findAll {
-                    eachLink as HashMap<String, String>
+        runCatching {
+            htmlDocument(get<Http>().client.get(urlRoot).bodyAsText()) {
+                a {
+                    findAll {
+                        eachLink as HashMap<String, String>
+                    }
                 }
             }
-        }
+        }.getOrDefault(HashMap())
     }
     var supportUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(support, help) }
     var faqUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(faq) }

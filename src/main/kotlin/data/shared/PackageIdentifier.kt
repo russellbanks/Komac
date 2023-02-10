@@ -34,8 +34,7 @@ object PackageIdentifier : KoinComponent, CommandPrompt<String> {
 
     suspend fun Terminal.getLatestVersion(packageIdentifier: String, writeOutput: Boolean = true): String? {
         return try {
-            get<GitHubImpl>()
-                .getMicrosoftWingetPkgs()
+            get<GitHubImpl>().getMicrosoftWinGetPkgs()
                 ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
                 ?.filter { it.name.matches(regex) }
                 ?.filter { it.isDirectory }

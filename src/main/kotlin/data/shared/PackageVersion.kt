@@ -50,7 +50,7 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
     }
 
     private suspend fun packageExists(sharedManifestData: SharedManifestData): Boolean {
-        return githubImpl.getMicrosoftWingetPkgs()
+        return githubImpl.getMicrosoftWinGetPkgs()
             ?.getDirectoryContent(HttpUtils.getDirectoryPath(sharedManifestData.packageIdentifier))
             ?.map { it.name }
             ?.contains(sharedManifestData.packageVersion) ?: false

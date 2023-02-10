@@ -20,30 +20,42 @@ import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHContent
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import token.TokenStore
 import java.io.IOException
 import kotlin.system.exitProcess
 
 class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
+    private val tokenStore: TokenStore by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private val githubImpl by inject<GitHubImpl>()
     private val identifierParam: String? by option("--id", "--package-identifier")
-    var packageIdentifier: String? = null
-    var packageVersion: String? = null
 
     override fun run(): Unit = runBlocking {
         with (currentContext.terminal) {
+            if (tokenStore.token == null) {
+                tokenStore.promptForToken(this)
+            }
             warning(message = "Packages should only be removed when necessary.")
             echo()
-            packageIdentifier = prompt(PackageIdentifier, parameter = identifierParam)
+            sharedManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = identifierParam)
+            if (!tokenStore.isTokenValid.await()) {
+                tokenStore.invalidTokenPrompt(this)
+                echo()
+            }
             sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
             if (sharedManifestData.updateState == VersionUpdateState.NewPackage) { throw doesNotExistError() }
-            packageVersion = prompt(PackageVersion)
-            githubImpl.getMicrosoftWingetPkgs()?.getDirectoryContent(githubImpl.packageVersionsPath)
+            sharedManifestData.packageVersion = prompt(PackageVersion)
+            githubImpl.promptIfPullRequestExists(
+                identifier = sharedManifestData.packageIdentifier,
+                version = sharedManifestData.packageVersion,
+                terminal = this
+            )
+            githubImpl.getMicrosoftWinGetPkgs()?.getDirectoryContent(githubImpl.packageVersionsPath)
                 ?.find { it.name == sharedManifestData.packageVersion }
                 ?: throw doesNotExistError()
             val deletionReason = promptForDeletionReason()
             val shouldRemoveManifest = confirm(
-                text = "Would you like to make a pull request to remove $packageIdentifier $packageVersion?"
+                text = "Would you like to make a pull request to remove ${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
             ) ?: exitProcess(ExitCode.CtrlC.code)
             if (!shouldRemoveManifest) return@runBlocking
             echo()
@@ -63,10 +75,10 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
                 progress.update(index.inc().toLong(), directoryContent.size.toLong())
             }
             progress.clear()
-            val wingetPkgs = githubImpl.getMicrosoftWingetPkgs() ?: return@runBlocking
+            val wingetPkgs = githubImpl.getMicrosoftWinGetPkgs() ?: return@runBlocking
             try {
                 wingetPkgs.createPullRequest(
-                    /* title = */ "Remove: $packageIdentifier version $packageVersion",
+                    /* title = */ "Remove: ${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}",
                     /* head = */ "${githubImpl.github.await().myself.login}:${ref.ref}",
                     /* base = */ wingetPkgs.defaultBranch,
                     /* body = */ "## $deletionReason"
@@ -107,6 +119,6 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
 
     companion object {
         const val minimumReasonLength = 4
-        const val maximumReasonLength = 64
+        const val maximumReasonLength = 128
     }
 }

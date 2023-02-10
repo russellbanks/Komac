@@ -67,7 +67,6 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private val tokenStore: TokenStore by inject()
     private val installerManifestData: InstallerManifestData by inject()
     private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-    private val versionManifestData: VersionManifestData by inject()
     private val sharedManifestData: SharedManifestData by inject()
     private lateinit var previousManifestData: PreviousManifestData
     private val githubImpl: GitHubImpl by inject()
@@ -99,11 +98,11 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 tokenParameter?.let { get<TokenStore>().useTokenParameter(it) }
             }
             sharedManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifier)
-            sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier, !isCIEnvironment)
             if (!tokenStore.isTokenValid.await()) {
-                echo()
                 tokenStore.invalidTokenPrompt(this)
+                echo()
             }
+            sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier, !isCIEnvironment)
             previousManifestData = get()
             if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
                 throw CliktError(
@@ -117,6 +116,11 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 )
             }
             sharedManifestData.packageVersion = prompt(PackageVersion, parameter = packageVersion)
+            githubImpl.promptIfPullRequestExists(
+                identifier = sharedManifestData.packageIdentifier,
+                version = sharedManifestData.packageVersion,
+                terminal = this
+            )
             PackageVersion.setUpgradeState(PackageVersion.sharedManifestData)
             loopThroughInstallers(parameterUrls = urls, isCIEnvironment = isCIEnvironment)
             val files = createFiles()
@@ -242,11 +246,10 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     }
 
     private suspend fun createFiles(): List<Pair<String, String>> {
-        sharedManifestData.defaultLocale = previousManifestData.remoteVersionData.await()?.defaultLocale!!
         return listOf(
             githubImpl.installerManifestName to installerManifestData.createInstallerManifest(),
-            githubImpl.defaultLocaleManifestName to defaultLocaleManifestData.createDefaultLocaleManifest(),
-            githubImpl.versionManifestName to versionManifestData.createVersionManifest()
+            githubImpl.getDefaultLocaleManifestName() to defaultLocaleManifestData.createDefaultLocaleManifest(),
+            githubImpl.versionManifestName to VersionManifestData.createVersionManifest()
         ) + previousManifestData.remoteLocaleData.await()?.map { localeManifest ->
             val allLocale = additionalMetadata?.locales?.find { it.name.equals(other = "all", ignoreCase = true) }
             val metadataCurrentLocale = additionalMetadata?.locales?.find {
