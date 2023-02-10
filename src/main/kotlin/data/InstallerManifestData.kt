@@ -49,9 +49,10 @@ class InstallerManifestData : KoinComponent {
             nestedInstallerType = sharedManifestData.zip?.nestedInstallerType
                 ?: previousInstaller?.nestedInstallerType
                 ?: previousManifest?.nestedInstallerType?.toPerInstallerNestedInstallerType(),
-            nestedInstallerFiles = sharedManifestData.zip?.nestedInstallerFiles?.ifEmpty { null }
+            nestedInstallerFiles = (sharedManifestData.zip?.nestedInstallerFiles?.ifEmpty { null }
                 ?: previousInstaller?.nestedInstallerFiles
-                ?: previousManifest?.nestedInstallerFiles?.map { it.toPerInstallerNestedInstallerFiles() },
+                ?: previousManifest?.nestedInstallerFiles?.map { it.toPerInstallerNestedInstallerFiles() })
+                ?.map { it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString()) },
             installerUrl = installerUrl,
             installerSha256 = (sharedManifestData.gitHubDetection?.sha256?.await() ?: installerSha256).uppercase(),
             signatureSha256 = sharedManifestData.msix?.signatureSha256
@@ -109,14 +110,14 @@ class InstallerManifestData : KoinComponent {
         val publisher = sharedManifestData.publisher ?: remoteDefaultLocaleData?.publisher
         val displayVersion = sharedManifestData.msi?.productVersion ?: displayVersion
         return copy(
-            displayName = if (arpDisplayName != packageName) arpDisplayName?.updateDisplayName() else null,
+            displayName = if (arpDisplayName != packageName) arpDisplayName?.updateVersionInString() else null,
             publisher = if (arpPublisher != publisher) arpPublisher else null,
             displayVersion = if (displayVersion != sharedManifestData.packageVersion) displayVersion else null,
             upgradeCode = sharedManifestData.msi?.upgradeCode ?: upgradeCode
         )
     }
 
-    private fun String.updateDisplayName(): String {
+    private fun String.updateVersionInString(): String {
         return sharedManifestData.allVersions?.joinToString("|") { it }
             ?.let { replaceFirst(Regex(it), sharedManifestData.packageVersion) }
             ?: this
