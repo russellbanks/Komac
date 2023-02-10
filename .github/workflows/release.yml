@@ -30,23 +30,20 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            if (context.ref == 'refs/heads/main') {
+            if (context.ref.startsWith('refs/tags/')) {
+              const tag_name = context.ref.replace('refs/tags/', '');
+              core.setOutput('name', `Release ${tag_name}`);
+              core.setOutput('tag_name', tag_name);
+              core.setOutput('prerelease', false);
+              core.setOutput('gen_rel_notes', true);
               core.setOutput('conclusion', true);
-              if (context.ref.startsWith('refs/tags/')) {
-                const tag_name = context.ref.replace('refs/tags/', '');
-                core.setOutput('name', `Release ${tag_name}`);
-                core.setOutput('tag_name', tag_name);
-                core.setOutput('prerelease', false);
-                core.setOutput('gen_rel_notes', true);
-              } else {
-                core.setOutput('name', `Nightly release`);
-                core.setOutput('tag_name', 'nightly');
-                core.setOutput('prerelease', true);
-                core.setOutput('gen_rel_notes', false);
-              }
-            } else {
-              core.setOutput('conclusion', false);
-            }
+            } else if (context.ref == 'refs/heads/main') {
+              core.setOutput('name', `Nightly release`);
+              core.setOutput('tag_name', 'nightly');
+              core.setOutput('prerelease', true);
+              core.setOutput('gen_rel_notes', false);
+              core.setOutput('conclusion', true);
+            } else core.setOutput('conclusion', false);
 
       - name: Build binaries
         if: steps.decide_whether_to_release.outputs.conclusion
