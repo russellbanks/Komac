@@ -144,7 +144,7 @@ class GitHubImpl : KoinComponent {
     private fun getPullRequestBody(): String {
         return buildString {
             append("### Pull request has been created with ")
-            append(System.getenv(Schemas.customToolEnv) ?: "${BuildConfig.appName} ${BuildConfig.appVersion}")
+            append(System.getenv(Schemas.customToolEnv) ?: "${BuildConfig.appName} v${BuildConfig.appVersion}")
             append(" ")
             append(if (Random.nextInt(100) == 0) ":${fruits[Random.nextInt(fruits.size)]}:" else ":rocket:")
         }
