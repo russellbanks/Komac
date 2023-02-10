@@ -89,13 +89,13 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
 
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<Schemas>().manifestOverride = it }
+        tokenParameter?.let { tokenStore.useTokenParameter(it) }
         with(currentContext.terminal) {
             if (tokenStore.token == null) {
                 tokenStore.promptForToken(this)
             }
             if (isCIEnvironment) {
                 info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
-                tokenParameter?.let { get<TokenStore>().useTokenParameter(it) }
             }
             sharedManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifier)
             if (!tokenStore.isTokenValid.await()) {
