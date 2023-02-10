@@ -146,7 +146,7 @@ class GitHubImpl : KoinComponent {
             append("### Pull request has been created with ")
             append(System.getenv(Schemas.customToolEnv) ?: "${BuildConfig.appName} ${BuildConfig.appVersion}")
             append(" ")
-            append(if (Random.nextInt(100) == 0) ":${fruits[Random.nextInt(fruits.size)]}:" else ":rocket:")
+            append(if (Random.nextInt(25) == 0) ":${fruits[Random.nextInt(fruits.size)]}:" else ":rocket:")
         }
     }
 
@@ -195,7 +195,7 @@ class GitHubImpl : KoinComponent {
             )
             ?.let {
                 if (System.getenv("GIT_COMMITTER_NAME") != null && System.getenv("GIT_COMMITTER_EMAIL") != null) {
-                    it.committer(
+                    it.author(
                         /* name = */ System.getenv("GIT_COMMITTER_NAME"),
                         /* email = */ System.getenv("GIT_COMMITTER_EMAIL"),
                         /* date = */ null
