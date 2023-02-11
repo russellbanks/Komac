@@ -78,7 +78,7 @@ jobs:
             matrix.os == 'windows-latest' &&
             steps.decide_whether_to_release.outputs.tag_name != 'nightly' &&
             github.repository == 'russellbanks/Komac'
-        uses: vedantmgoyal2009/winget-releaser@v1
+        uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: RussellBanks.Komac
           token: ${{ secrets.WINGET_TOKEN }}
