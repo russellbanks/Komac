@@ -71,7 +71,7 @@ class GitHubImpl : KoinComponent {
 
     suspend fun getWingetPkgsFork(terminal: Terminal): GHRepository? = with(terminal) {
         return try {
-            github.await().getRepository("${github.await().myself.login}/$wingetpkgs").also {
+            github.await().getRepository("${System.getenv(customForkOwnerEnv) ?: github.await().myself.login}/$wingetpkgs").also {
                 success("Found forked $wingetpkgs repository: ${it.fullName}")
             }
         } catch (_: IOException) {
@@ -211,6 +211,7 @@ class GitHubImpl : KoinComponent {
     companion object {
         const val Microsoft = "Microsoft"
         const val wingetpkgs = "winget-pkgs"
+        private const val customForkOwnerEnv = "KMC_FRK_OWNER"
         private const val uniqueBranchIdentifierLength = 14
     }
 }
