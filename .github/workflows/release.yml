@@ -43,6 +43,21 @@ jobs:
               core.setOutput('prerelease', true);
               core.setOutput('gen_rel_notes', false);
               core.setOutput('conclusion', true);
+
+              // delete existing nightly release and tag
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: (await github.rest.repos.listReleases({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                })).data.find(release => release.tag_name === 'nightly').id,
+              });
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'tags/nightly',
+              });
             } else core.setOutput('conclusion', false);
 
       - name: Build binaries
