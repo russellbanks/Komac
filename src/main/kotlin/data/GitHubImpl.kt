@@ -164,7 +164,7 @@ class GitHubImpl : KoinComponent {
         try {
             ghRepository.createPullRequest(
                 /* title = */ getCommitTitle(),
-                /* head = */ "${github.await().myself.login}:${pullRequestBranch?.ref}",
+                /* head = */ "${System.getenv(customForkOwnerEnv) ?: github.await().myself.login}:${pullRequestBranch?.ref}",
                 /* base = */ ghRepository.defaultBranch,
                 /* body = */ getPullRequestBody()
             ).also { terminal.success("Pull request created: ${it.htmlUrl}") }
