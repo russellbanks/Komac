@@ -38,6 +38,7 @@ class TokenStore {
     suspend fun promptForToken(terminal: Terminal): String {
         return terminal.prompt(
             prompt = terminal.colors.brightGreen("Please enter your GitHub personal access token"),
+            hideInput = true,
             convert = {
                 if (checkIfTokenValid(it)) {
                     ConversionResult.Valid(it)
