@@ -20,6 +20,7 @@ import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHContent
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import token.Token
 import token.TokenStore
 import java.io.IOException
 import kotlin.system.exitProcess
@@ -32,9 +33,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
 
     override fun run(): Unit = runBlocking {
         with (currentContext.terminal) {
-            if (tokenStore.token == null) {
-                tokenStore.promptForToken(this)
-            }
+            if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
             warning(message = "Packages should only be removed when necessary.")
             echo()
             sharedManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = identifierParam)

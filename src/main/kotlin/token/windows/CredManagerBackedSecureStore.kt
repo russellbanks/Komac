@@ -5,12 +5,12 @@ import com.sun.jna.Memory
 import com.sun.jna.Platform
 import com.sun.jna.Pointer
 import token.SecretStore
-import token.Token
+import token.TokenData
 
 /**
  * This class exposes functions to interact with Windows Credential Manager
  */
-abstract class CredManagerBackedSecureStore<E : Token?> : SecretStore<E> {
+abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
     private val instance = credAdvapi32Instance
 
     /**

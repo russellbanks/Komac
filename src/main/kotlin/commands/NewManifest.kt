@@ -51,6 +51,7 @@ import schemas.Schema
 import schemas.Schemas
 import schemas.manifest.EncodeConfig
 import schemas.manifest.LocaleManifest
+import token.Token
 import token.TokenStore
 import kotlin.system.exitProcess
 
@@ -68,9 +69,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<Schemas>().manifestOverride = it }
         with(currentContext.terminal) {
-            if (tokenStore.token == null) {
-                tokenStore.promptForToken(this)
-            }
+            if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
             sharedManifestData.packageIdentifier = prompt(PackageIdentifier)
             if (!tokenStore.isTokenValid.await()) {
                 tokenStore.invalidTokenPrompt(this)

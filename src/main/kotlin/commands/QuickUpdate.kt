@@ -55,6 +55,7 @@ import schemas.Schemas
 import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
+import token.Token
 import token.TokenStore
 import utils.FileAnalyser
 import utils.FileUtils
@@ -91,9 +92,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         manifestVersion?.let { get<Schemas>().manifestOverride = it }
         tokenParameter?.let { tokenStore.useTokenParameter(it) }
         with(currentContext.terminal) {
-            if (tokenStore.token == null) {
-                tokenStore.promptForToken(this)
-            }
+            if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
             if (isCIEnvironment) {
                 info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
             }

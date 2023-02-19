@@ -1,15 +1,15 @@
 package token.windows
 
-import token.Token
+import token.TokenData
 
-class CredManagerBackedTokenStore : CredManagerBackedSecureStore<Token>() {
-    override fun create(username: String, secret: String): Token {
-        return Token(secret)
+class CredManagerBackedTokenStore : CredManagerBackedSecureStore<TokenData>() {
+    override fun create(username: String, secret: String): TokenData {
+        return TokenData(secret)
     }
 
-    override fun getUsername(secret: Token): String = TOKEN_USERNAME
+    override fun getUsername(secret: TokenData): String = TOKEN_USERNAME
 
-    override fun getCredentialBlob(secret: Token): String = secret.value
+    override fun getCredentialBlob(secret: TokenData): String = secret.value
 
     companion object {
         const val TOKEN_USERNAME = "PersonalAccessToken"

@@ -5,7 +5,7 @@ package token
  *
  * @param <E> a secret
 </E> */
-interface SecretStore<E : Token?> {
+interface SecretStore<E : TokenData?> {
     /**
      * Retrieve a secret identified by the key from this store.
      *
