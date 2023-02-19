@@ -9,6 +9,7 @@ import schemas.manifest.InstallerManifest.Installer.InstallerType
 import schemas.manifest.InstallerManifest.Installer.Scope
 import schemas.manifest.InstallerManifest.Installer.UpgradeBehavior
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -128,17 +129,21 @@ class FileAnalyser(private val file: File) {
         return false
     }
 
-    private fun getPEArchitectureValue(): String {
-        RandomAccessFile(file, readOnly).use {
-            it.seek(peHeaderLocation)
-            val peSignatureBuffer = ByteArray(Int.SIZE_BYTES)
-            it.read(peSignatureBuffer)
-            val offset: Int = ByteBuffer.wrap(peSignatureBuffer).order(ByteOrder.LITTLE_ENDIAN).int
-            it.seek((offset + Int.SIZE_BYTES).toLong())
-            val machineBuffer = ByteArray(Short.SIZE_BYTES)
-            it.read(machineBuffer)
-            val machine: Short = ByteBuffer.wrap(machineBuffer).order(ByteOrder.LITTLE_ENDIAN).short
-            return Integer.toHexString(machine.toInt() and UShort.MAX_VALUE.toInt())
+    private fun getPEArchitectureValue(): String? {
+        return try {
+            RandomAccessFile(file, readOnly).use {
+                it.seek(peHeaderLocation)
+                val peSignatureBuffer = ByteArray(Int.SIZE_BYTES)
+                it.read(peSignatureBuffer)
+                val offset: Int = ByteBuffer.wrap(peSignatureBuffer).order(ByteOrder.LITTLE_ENDIAN).int
+                it.seek((offset + Int.SIZE_BYTES).toLong())
+                val machineBuffer = ByteArray(Short.SIZE_BYTES)
+                it.read(machineBuffer)
+                val machine: Short = ByteBuffer.wrap(machineBuffer).order(ByteOrder.LITTLE_ENDIAN).short
+                Integer.toHexString(machine.toInt() and UShort.MAX_VALUE.toInt())
+            }
+        } catch (_: IOException) {
+            null
         }
     }
 
