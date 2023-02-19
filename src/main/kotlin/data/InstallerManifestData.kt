@@ -144,6 +144,14 @@ class InstallerManifestData : KoinComponent {
                 1 -> installers.firstNotNullOf { it.installerType }.toManifestInstallerType()
                 else -> remoteInstallerData?.installerType
             },
+            nestedInstallerType = when (installers.mapNotNull { it.nestedInstallerType }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.nestedInstallerType }.toManifestNestedInstallerType()
+                else -> remoteInstallerData?.nestedInstallerType
+            },
+            nestedInstallerFiles = when (installers.mapNotNull { it.nestedInstallerFiles }.distinct().size) {
+                1 -> installers.firstNotNullOf { it.nestedInstallerFiles }.map { it.toManifestNestedInstallerFiles() }
+                else -> remoteInstallerData?.nestedInstallerFiles
+            },
             scope = when (installers.mapNotNull { it.scope }.distinct().size) {
                 1 -> installers.firstNotNullOf { it.scope }.toManifestScope()
                 else -> remoteInstallerData?.scope
@@ -215,6 +223,16 @@ class InstallerManifestData : KoinComponent {
                     null
                 } else {
                     installer.installerType
+                },
+                nestedInstallerType = if (installers.mapNotNull { it.nestedInstallerType }.distinct().size == 1) {
+                    null
+                } else {
+                    installer.nestedInstallerType
+                },
+                nestedInstallerFiles = if (installers.mapNotNull { it.nestedInstallerFiles }.distinct().size == 1) {
+                    null
+                } else {
+                    installer.nestedInstallerFiles
                 },
                 scope = if (installers.mapNotNull { it.scope }.distinct().size == 1) null else installer.scope,
                 packageFamilyName = if (installers.mapNotNull { it.packageFamilyName }.distinct().size == 1) {
