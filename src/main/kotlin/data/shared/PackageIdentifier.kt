@@ -36,7 +36,7 @@ object PackageIdentifier : KoinComponent, CommandPrompt<String> {
         return try {
             get<GitHubImpl>().getMicrosoftWinGetPkgs()
                 ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
-                ?.filter { it.name.matches(regex) }
+                ?.filter { it.name.matches(PackageVersion.regex) }
                 ?.filter { it.isDirectory }
                 ?.filterNot { ghContent -> ghContent.name.all { it.isLetter() } }
                 ?.also {

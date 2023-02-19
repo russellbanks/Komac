@@ -116,6 +116,6 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
     private const val versionInfo = "${Prompts.required} Enter the version."
     private val example = "Example: ${generateRandomVersion()}"
     private const val pattern = "^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"
-    private val regex = Regex(pattern)
+    val regex = Regex(pattern)
     const val maxLength = 128
 }
