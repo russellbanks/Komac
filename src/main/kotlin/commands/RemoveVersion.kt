@@ -59,7 +59,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
             if (!shouldRemoveManifest) return@runBlocking
             echo()
             val forkRepository = githubImpl.getWingetPkgsFork(this) ?: return@runBlocking
-            val ref = githubImpl.createBranchFromDefaultBranch(forkRepository, this) ?: return@runBlocking
+            val ref = githubImpl.createBranchFromUpstreamDefaultBranch(forkRepository, this) ?: return@runBlocking
             val directoryContent: MutableList<GHContent> =
                 forkRepository.getDirectoryContent(githubImpl.baseGitHubPath, ref.ref)
             val progress = progressAnimation {
