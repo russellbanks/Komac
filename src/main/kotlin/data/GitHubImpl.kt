@@ -121,12 +121,14 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    fun createBranchFromDefaultBranch(repository: GHRepository, terminal: Terminal): GHRef? {
+    suspend fun createBranchFromUpstreamDefaultBranch(repository: GHRepository, terminal: Terminal): GHRef? {
         return try {
-            repository.createRef(
-                /* name = */ "refs/heads/${getBranchName()}",
-                /* sha = */ repository.getBranch(repository.defaultBranch).shA1
-            ).also { pullRequestBranch = it }
+            getMicrosoftWinGetPkgs()?.let { upstreamRepository ->
+                repository.createRef(
+                    /* name = */ "refs/heads/${getBranchName()}",
+                    /* sha = */ upstreamRepository.getBranch(upstreamRepository.defaultBranch).shA1
+                ).also { pullRequestBranch = it }
+            }
         } catch (ioException: IOException) {
             terminal.danger(ioException.message ?: "Failed to create branch.")
             null
@@ -175,7 +177,7 @@ class GitHubImpl : KoinComponent {
 
     private suspend fun commitFiles(files: List<Pair<String, String?>>, terminal: Terminal) {
         val repository = getWingetPkgsFork(terminal) ?: return
-        val branch = createBranchFromDefaultBranch(repository, terminal) ?: return
+        val branch = createBranchFromUpstreamDefaultBranch(repository, terminal) ?: return
         repository.createCommit()
             ?.message(getCommitTitle())
             ?.parent(branch.getObject()?.sha)
