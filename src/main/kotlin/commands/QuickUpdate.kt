@@ -137,7 +137,14 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     }
                 }
             } else {
-                FileWriter.writeFilesToDirectory(File(System.getProperty("user.dir"), "${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}"), files, this@with)
+                FileWriter.writeFilesToDirectory(
+                    directory = File(
+                        System.getProperty("user.dir"),
+                        "${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}"
+                    ),
+                    files = files,
+                    terminal = this@with
+                )
             }
         }
     }
