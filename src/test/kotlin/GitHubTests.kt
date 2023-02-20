@@ -153,5 +153,45 @@ class GitHubTests : FunSpec({
             }
             getFormattedReleaseNotes(ghRelease) shouldBe null
         }
+
+        test("pull request links are converted to their pull request number") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns "- New feature in https://github.com/user/repository/pull/1234"
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe "- New feature in #1234"
+        }
+
+        test("issue links are converted to their issue number") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns "- Issue reported in https://github.com/user/repository/issues/4321"
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe "- Issue reported in #4321"
+        }
+
+        test("multiple pull request or issue links in a string are converted to their pull request numbers") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns buildString {
+                    append("- New features in ")
+                    append("https://github.com/user/repository/issues/1234")
+                    append(" and ")
+                    append("https://github.com/user/repository/pull/4321")
+                }
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe "- New features in #1234 and #4321"
+        }
+
+        test("pull requests without a number don't get converted") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns "- https://github.com/user/repository/pull"
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe "- https://github.com/user/repository/pull"
+        }
+
+        test("issues without a number don't get converted") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns "- https://github.com/user/repository/issues"
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe "- https://github.com/user/repository/issues"
+        }
     }
 })

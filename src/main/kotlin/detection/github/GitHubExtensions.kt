@@ -28,6 +28,7 @@ object GitHubExtensions {
                     .replace(Regex("""\*+([^*]+)\*+"""), "$1")
                     .replace("`", "")
                     .replace(Regex("\\[([^]]+)]\\([^)]+\\)"), "$1")
+                    .replace(Regex("https?://github.com/\\w+/\\w+/(pull|issues)/(\\d+)")) { "#${it.groupValues[2]}" }
             }
         return buildString {
             lines?.forEachIndexed { index, line ->
