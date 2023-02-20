@@ -154,6 +154,20 @@ class GitHubTests : FunSpec({
             getFormattedReleaseNotes(ghRelease) shouldBe null
         }
 
+        test("images get removed") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns "- ![Alt text](image link)"
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe null
+        }
+
+        test("linked images get removed") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns "- [![Alt text](image link)](link)"
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe null
+        }
+
         test("pull request links are converted to their pull request number") {
             val ghRelease: GHRelease = mockk {
                 every { body } returns "- New feature in https://github.com/user/repository/pull/1234"
