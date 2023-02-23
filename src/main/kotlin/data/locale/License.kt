@@ -20,7 +20,7 @@ object License : KoinComponent, CommandPrompt<String> {
     private val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
 
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
-        return gitHubDetection?.license?.await() ?: let {
+        return gitHubDetection?.license ?: let {
             println(colors.brightGreen(licenseInfo))
             info(example)
             prompt(
@@ -46,7 +46,7 @@ object License : KoinComponent, CommandPrompt<String> {
 
     object Url : CommandPrompt<io.ktor.http.Url> {
         override suspend fun prompt(terminal: Terminal): io.ktor.http.Url = with(terminal) {
-            return gitHubDetection?.licenseUrl?.await() ?: let {
+            return gitHubDetection?.licenseUrl ?: let {
                 println(colors.brightYellow("${Prompts.optional} Enter the license page url"))
                 prompt(
                     prompt = "License url",

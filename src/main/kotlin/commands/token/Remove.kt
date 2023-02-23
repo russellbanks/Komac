@@ -13,9 +13,13 @@ class Remove : CliktCommand(), KoinComponent {
     private val skipPrompt: Boolean by option("-y", "--yes").flag(default = false)
 
     override fun run() = runBlocking {
-        val shouldDelete = if (skipPrompt) true else confirm(
-            text = currentContext.terminal.colors.warning("Would you like to remove the currently stored token?")
-        )
+        val shouldDelete = if (skipPrompt) {
+            true
+        } else {
+            confirm(
+                text = currentContext.terminal.colors.warning("Would you like to remove the currently stored token?")
+            )
+        }
         if (shouldDelete == true) {
             tokenStore.deleteToken()
             currentContext.terminal.success("The token has successfully been removed")

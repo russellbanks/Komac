@@ -3,10 +3,6 @@ package data
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
 import com.russellbanks.Komac.BuildConfig
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import network.Http
 import network.KtorGitHubConnector
 import org.kohsuke.github.GHDirection
@@ -28,12 +24,10 @@ import kotlin.system.exitProcess
 
 @Single
 class GitHubImpl : KoinComponent {
-    val github: Deferred<GitHub> = CoroutineScope(Dispatchers.IO).async {
-        GitHubBuilder()
-            .withConnector(KtorGitHubConnector(get<Http>().client))
-            .withOAuthToken(get<TokenStore>().token)
-            .build()
-    }
+    val github: GitHub = GitHubBuilder()
+        .withConnector(KtorGitHubConnector(get<Http>().client))
+        .withOAuthToken(get<TokenStore>().token)
+        .build()
     private val sharedManifestData: SharedManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
@@ -69,15 +63,17 @@ class GitHubImpl : KoinComponent {
         append(List(uniqueBranchIdentifierLength) { (('A'..'Z') + ('0'..'9')).random() }.joinToString(""))
     }
 
+    val forkOwner = System.getenv(customForkOwnerEnv) ?: github.myself.login
+
     suspend fun getWingetPkgsFork(terminal: Terminal): GHRepository? = with(terminal) {
         return try {
-            github.await().getRepository("${System.getenv(customForkOwnerEnv) ?: github.await().myself.login}/$wingetpkgs").also {
+            github.getRepository("$forkOwner/$wingetpkgs").also {
                 success("Found forked $wingetpkgs repository: ${it.fullName}")
             }
         } catch (_: IOException) {
             info("Fork of $wingetpkgs not found. Forking...")
             try {
-                github.await().getRepository("$Microsoft/$wingetpkgs").fork().also {
+                github.getRepository("$Microsoft/$wingetpkgs").fork().also {
                     success("Forked $wingetpkgs repository: ${it.fullName}")
                 }
             } catch (ioException: IOException) {
@@ -87,7 +83,7 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    private suspend fun getExistingPullRequest(identifier: String, version: String) = github.await().searchIssues()
+    private suspend fun getExistingPullRequest(identifier: String, version: String) = github.searchIssues()
         .q("repo:$Microsoft/$wingetpkgs")
         .q("is:pr")
         .q(identifier)
@@ -113,15 +109,15 @@ class GitHubImpl : KoinComponent {
         println()
     }
 
-    suspend fun getMicrosoftWinGetPkgs(): GHRepository? {
+    fun getMicrosoftWinGetPkgs(): GHRepository? {
         return try {
-            github.await().getRepository("$Microsoft/$wingetpkgs")
+            github.getRepository("$Microsoft/$wingetpkgs")
         } catch (_: IOException) {
             null
         }
     }
 
-    suspend fun createBranchFromUpstreamDefaultBranch(repository: GHRepository, terminal: Terminal): GHRef? {
+    fun createBranchFromUpstreamDefaultBranch(repository: GHRepository, terminal: Terminal): GHRef? {
         return try {
             getMicrosoftWinGetPkgs()?.let { upstreamRepository ->
                 repository.createRef(
@@ -166,7 +162,7 @@ class GitHubImpl : KoinComponent {
         try {
             ghRepository.createPullRequest(
                 /* title = */ getCommitTitle(),
-                /* head = */ "${System.getenv(customForkOwnerEnv) ?: github.await().myself.login}:${pullRequestBranch?.ref}",
+                /* head = */ "$forkOwner:${pullRequestBranch?.ref}",
                 /* base = */ ghRepository.defaultBranch,
                 /* body = */ getPullRequestBody()
             ).also { terminal.success("Pull request created: ${it.htmlUrl}") }

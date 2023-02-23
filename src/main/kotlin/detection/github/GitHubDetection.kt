@@ -22,61 +22,44 @@ import java.time.ZoneId
 
 class GitHubDetection(url: Url) : KoinComponent {
     private val pathSegments = url.pathSegments.filterNot { it.isBlank() }
-    private val repository = CoroutineScope(Dispatchers.IO).async {
-        get<GitHubImpl>().github.await().getRepository(/* name = */ "${pathSegments[0]}/${pathSegments[1]}")
+    private val repository = get<GitHubImpl>().github.getRepository("${pathSegments[0]}/${pathSegments[1]}")
+    private val release: GHRelease? = runCatching {
+        repository.listReleases().find {
+            it.tagName.contains(other = pathSegments.dropLast(1).last(), ignoreCase = true)
+        }
+    }.getOrNull()
+    private val assets = release?.listAssets()
+    private val asset = assets?.firstOrNull { it.browserDownloadUrl.decodeURLPart() == url.toString().decodeURLPart() }
+    var publisherUrl: Url? = runCatching { repository.owner.blog }.getOrNull()?.let { Url(it) }
+    var shortDescription: String? = repository.description
+    var publisherSupportUrl: Url? = if (repository.hasIssues()) {
+        Url("https://github.com/${repository.fullName}/issues")
+    } else {
+        null
     }
-    private val release: Deferred<GHRelease?> = CoroutineScope(Dispatchers.IO).async {
-        runCatching {
-            repository.await().listReleases().find {
-                it.tagName.contains(other = pathSegments.dropLast(1).last(), ignoreCase = true)
-            }
-        }.getOrNull()
-    }
-    private val assets = CoroutineScope(Dispatchers.IO).async { release.await()?.listAssets() }
-    private val asset = CoroutineScope(Dispatchers.IO).async {
-        assets.await()?.firstOrNull { it.browserDownloadUrl.decodeURLPart() == url.toString().decodeURLPart() }
-    }
-
-    var publisherUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
-        runCatching { repository.await().owner.blog }.getOrNull()?.let { Url(it) }
-    }
-    var shortDescription: Deferred<String?> = CoroutineScope(Dispatchers.IO).async { repository.await().description }
-    var publisherSupportUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
-        if (repository.await().hasIssues()) Url("https://github.com/${repository.await().fullName}/issues") else null
-    }
-    var license: Deferred<String?> = CoroutineScope(Dispatchers.IO).async {
-        runCatching {
-            repository.await()
-                .license
-                ?.key
-                ?.uppercase()
-                ?.takeUnless { it.equals(other = "other", ignoreCase = true) }
-        }.getOrNull()
-    }
-    var licenseUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
-        repository.await().licenseContent?.htmlUrl?.let { Url(it) }
-    }
-    var packageUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async { Url(repository.await().htmlUrl.toURI()) }
-    var releaseDate: Deferred<LocalDate?> = CoroutineScope(Dispatchers.IO).async {
-        runCatching {
-            asset.await()?.let { LocalDate.ofInstant(it.createdAt.toInstant(), ZoneId.systemDefault()) }
-        }.getOrNull()
-    }
-    var releaseNotesUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
-        release.await()?.htmlUrl?.let { Url(it.toURI()) }
-    }
-    var releaseNotes: Deferred<String?> = CoroutineScope(Dispatchers.IO).async {
-        release.await()?.let { GitHubExtensions.getFormattedReleaseNotes(it) }
-    }
+    var license: String? = runCatching {
+        repository
+            .license
+            ?.key
+            ?.uppercase()
+            ?.takeUnless { it.equals(other = "other", ignoreCase = true) }
+    }.getOrNull()
+    var licenseUrl: Url? = repository.licenseContent?.htmlUrl?.let { Url(it) }
+    var packageUrl: Url? = Url(repository.htmlUrl.toURI())
+    var releaseDate: LocalDate? = runCatching {
+        asset?.let { LocalDate.ofInstant(it.createdAt.toInstant(), ZoneId.systemDefault()) }
+    }.getOrNull()
+    var releaseNotesUrl: Url? = release?.htmlUrl?.let { Url(it.toURI()) }
+    var releaseNotes: String? = release?.let { GitHubExtensions.getFormattedReleaseNotes(it) }
     var privacyUrl: Deferred<Url?> = CoroutineScope(Dispatchers.IO).async {
-        repository.await()
+        repository
             .getDirectoryContent("")
             .find { it.name.lowercase().contains(other = "privacy", ignoreCase = true) }
             ?.htmlUrl
             ?.let { Url(it) }
     }
-    var topics: Deferred<List<String>?> = CoroutineScope(Dispatchers.IO).async { repository.await().listTopics() }
-    var sha256: Deferred<String?> = CoroutineScope(Dispatchers.IO).async { findSha256(url, assets.await()) }
+    var topics: List<String>? = runCatching { repository.listTopics() }.getOrNull()
+    var sha256: Deferred<String?> = CoroutineScope(Dispatchers.IO).async { findSha256(url, assets) }
 
     private val client = get<Http>().client
 

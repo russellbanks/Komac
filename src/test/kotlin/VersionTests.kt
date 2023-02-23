@@ -1,6 +1,6 @@
 import data.shared.PackageVersion
-import data.shared.PackageVersion.getHighestVersion
 import data.shared.PackageVersion.getError
+import data.shared.PackageVersion.getHighestVersion
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe

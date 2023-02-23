@@ -35,6 +35,9 @@ dependencies {
     // Detekt Formatting Plugin - https://github.com/detekt/detekt
     detektPlugins(libs.detekt.formatting)
 
+    // JLine - https://github.com/jline/jline3
+    implementation(libs.jline.terminal.jna)
+
     // JNA - https://github.com/java-native-access/jna
     implementation(libs.jna)
     implementation(libs.jna.platform)
@@ -76,12 +79,20 @@ dependencies {
 
     // SLF4J No-operation implementation - https://www.slf4j.org
     implementation(libs.slf4j.nop)
-
 }
 
 application {
     applicationDefaultJvmArgs = listOf("-Dfile.encoding=UTF-8")
     mainClass.set("MainKt")
+}
+
+tasks.withType<ShadowJar> {
+    minimize {
+        exclude(dependency(libs.jna.asProvider().get().toString()))
+        exclude(dependency(libs.slf4j.nop.get().toString()))
+        exclude(dependency(libs.jline.terminal.asProvider().get().toString()))
+        exclude(dependency(libs.jline.terminal.jna.get().toString()))
+    }
 }
 
 tasks.jpackage {
@@ -129,13 +140,6 @@ tasks.jpackage {
     mac {
         icon = "$projectDir/assets/logo.icns"
         type = ImageType.DMG
-    }
-}
-
-tasks.withType<ShadowJar> {
-    minimize {
-        exclude(dependency(libs.jna.asProvider().get().toString()))
-        exclude(dependency(libs.slf4j.nop.get().toString()))
     }
 }
 

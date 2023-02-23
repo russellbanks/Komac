@@ -4,6 +4,7 @@ clikt = "4.0.0.198-SNAPSHOT"
 coroutines = "1.6.4"
 detekt = "1.22.0"
 github-api = "1.313"
+jline = "3.22.0"
 jna = "5.13.0"
 jpackage = "1.5.1"
 jsoup = "1.15.4"
@@ -30,6 +31,9 @@ coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", ve
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 
 github-api = { module = "org.kohsuke:github-api", version.ref = "github-api" }
+
+jline-terminal = { module = "org.jline:jline-terminal", version.ref = "jline" }
+jline-terminal-jna = { module = "org.jline:jline-terminal-jna", version.ref = "jline" }
 
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }

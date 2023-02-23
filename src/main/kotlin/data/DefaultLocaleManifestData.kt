@@ -41,9 +41,9 @@ class DefaultLocaleManifestData : KoinComponent {
             publisher = sharedManifestData.publisher ?: previousDefaultLocaleData?.publisher ?: "",
             publisherUrl = (publisherUrl
                 ?: previousDefaultLocaleData?.publisherUrl
-                ?: sharedManifestData.gitHubDetection?.publisherUrl?.await())?.ifBlank { null },
+                ?: sharedManifestData.gitHubDetection?.publisherUrl)?.ifBlank { null },
             publisherSupportUrl = previousDefaultLocaleData?.publisherSupportUrl
-                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl?.await()
+                ?: sharedManifestData.gitHubDetection?.publisherSupportUrl
                 ?: sharedManifestData.pageScraper?.supportUrl?.await(),
             privacyUrl = previousDefaultLocaleData?.privacyUrl?.ifBlank { null }
                 ?: sharedManifestData.gitHubDetection?.privacyUrl?.await()
@@ -53,22 +53,21 @@ class DefaultLocaleManifestData : KoinComponent {
                 ?: previousDefaultLocaleData?.packageName ?: "",
             packageUrl = packageUrl
                 ?: previousDefaultLocaleData?.packageUrl
-                ?: sharedManifestData.gitHubDetection?.packageUrl?.await(),
+                ?: sharedManifestData.gitHubDetection?.packageUrl,
             license = when {
                 ::license.isInitialized -> license
-                else -> sharedManifestData.gitHubDetection?.license?.await()
-                    ?: previousDefaultLocaleData?.license ?: ""
+                else -> sharedManifestData.gitHubDetection?.license ?: previousDefaultLocaleData?.license ?: ""
             },
             licenseUrl = licenseUrl?.ifBlank { null }
                 ?: previousDefaultLocaleData?.licenseUrl
-                ?: sharedManifestData.gitHubDetection?.licenseUrl?.await(),
+                ?: sharedManifestData.gitHubDetection?.licenseUrl,
             copyright = copyright?.ifBlank { null } ?: previousDefaultLocaleData?.copyright,
             copyrightUrl = copyrightUrl?.ifBlank { null } ?: previousDefaultLocaleData?.copyrightUrl,
             shortDescription = when {
                 ::shortDescription.isInitialized -> shortDescription
                 else -> {
                     previousDefaultLocaleData?.shortDescription
-                        ?: sharedManifestData.gitHubDetection?.shortDescription?.await() ?: ""
+                        ?: sharedManifestData.gitHubDetection?.shortDescription ?: ""
                 }
             },
             description = (description?.ifBlank { null } ?: previousDefaultLocaleData?.description)
@@ -77,9 +76,9 @@ class DefaultLocaleManifestData : KoinComponent {
             moniker = moniker?.ifBlank { null } ?: previousDefaultLocaleData?.moniker,
             tags = tags?.ifEmpty { null } ?: previousDefaultLocaleData?.tags,
             releaseNotesUrl = releaseNotesUrl?.ifBlank { null }
-                ?: sharedManifestData.gitHubDetection?.releaseNotesUrl?.await()
+                ?: sharedManifestData.gitHubDetection?.releaseNotesUrl
                 ?: parameterLocaleMetadata?.releaseNotesUrl,
-            releaseNotes = (sharedManifestData.gitHubDetection?.releaseNotes?.await()
+            releaseNotes = (sharedManifestData.gitHubDetection?.releaseNotes
                 ?: parameterLocaleMetadata?.releaseNotes)?.trim(),
             documentations = if (previousDefaultLocaleData?.documentations == null) {
                 listOfNotNull(

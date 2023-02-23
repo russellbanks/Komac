@@ -2,8 +2,6 @@ package data
 
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import org.koin.core.annotation.Single
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -73,17 +71,17 @@ class InstallerManifestData : KoinComponent {
                 ?: productCode?.ifBlank { null }
                 ?: previousManifest?.productCode
                 ?: previousInstaller?.productCode,
-            releaseDate = sharedManifestData.gitHubDetection?.releaseDate?.await()
+            releaseDate = sharedManifestData.gitHubDetection?.releaseDate
                 ?: sharedManifestData.additionalMetadata?.releaseDate
                 ?: releaseDate,
             appsAndFeaturesEntries = sharedManifestData.additionalMetadata?.appsAndFeaturesEntries
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                     appsAndFeaturesEntry.fillARPEntry()
                 } ?: previousManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
-                    appsAndFeaturesEntry.toInstallerAppsAndFeaturesEntry().fillARPEntry()
-                } ?: listOfNotNull(
-                    InstallerManifest.Installer.AppsAndFeaturesEntry().fillARPEntry().takeUnless { it.areAllNull() }
-                ).ifEmpty { null },
+                appsAndFeaturesEntry.toInstallerAppsAndFeaturesEntry().fillARPEntry()
+            } ?: listOfNotNull(
+                InstallerManifest.Installer.AppsAndFeaturesEntry().fillARPEntry().takeUnless { it.areAllNull() }
+            ).ifEmpty { null },
         )
         when (sharedManifestData.msixBundle) {
             null -> installers += installer
@@ -272,7 +270,7 @@ class InstallerManifestData : KoinComponent {
         )
     }
 
-    private suspend fun resetValues() = coroutineScope {
+    private fun resetValues() {
         installerLocale = null
         scope = null
         installerSwitches = InstallerManifest.Installer.InstallerSwitches()
@@ -283,6 +281,6 @@ class InstallerManifestData : KoinComponent {
         sharedManifestData.msix?.resetExceptShared()
         sharedManifestData.msixBundle?.resetExceptShared()
         sharedManifestData.zip = null
-        sharedManifestData.gitHubDetection?.releaseDate = async { null }
+        sharedManifestData.gitHubDetection?.releaseDate = null
     }
 }
