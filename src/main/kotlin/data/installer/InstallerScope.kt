@@ -23,7 +23,8 @@ object InstallerScope : KoinComponent {
             previousValue?.let { println(colors.muted("Previous value: $previousValue")) }
             installerManifestData.scope = menu(
                 items = InstallerManifest.Installer.Scope.values().toList(),
-                default = previousValue
+                default = previousValue,
+                optionalItemName = "No idea"
             ).prompt()
             println()
         }

@@ -63,9 +63,9 @@ class GitHubImpl : KoinComponent {
         append(List(uniqueBranchIdentifierLength) { (('A'..'Z') + ('0'..'9')).random() }.joinToString(""))
     }
 
-    val forkOwner = System.getenv(customForkOwnerEnv) ?: github.myself.login
+    val forkOwner: String = System.getenv(customForkOwnerEnv) ?: github.myself.login
 
-    suspend fun getWingetPkgsFork(terminal: Terminal): GHRepository? = with(terminal) {
+    fun getWingetPkgsFork(terminal: Terminal): GHRepository? = with(terminal) {
         return try {
             github.getRepository("$forkOwner/$wingetpkgs").also {
                 success("Found forked $wingetpkgs repository: ${it.fullName}")
@@ -83,7 +83,7 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    private suspend fun getExistingPullRequest(identifier: String, version: String) = github.searchIssues()
+    private fun getExistingPullRequest(identifier: String, version: String) = github.searchIssues()
         .q("repo:$Microsoft/$wingetpkgs")
         .q("is:pr")
         .q(identifier)
@@ -96,7 +96,7 @@ class GitHubImpl : KoinComponent {
         .withPageSize(1)
         .firstOrNull()
 
-    suspend fun promptIfPullRequestExists(identifier: String, version: String, terminal: Terminal) = with(terminal) {
+    fun promptIfPullRequestExists(identifier: String, version: String, terminal: Terminal) = with(terminal) {
         val ghIssue = getExistingPullRequest(identifier, version) ?: return
         warning("A pull request for $identifier $version was created on ${ghIssue.createdAt}")
         info(ghIssue.htmlUrl)
@@ -157,7 +157,7 @@ class GitHubImpl : KoinComponent {
         createPullRequest(terminal)
     }
 
-    private suspend fun createPullRequest(terminal: Terminal) {
+    private fun createPullRequest(terminal: Terminal) {
         val ghRepository = getMicrosoftWinGetPkgs() ?: return
         try {
             ghRepository.createPullRequest(

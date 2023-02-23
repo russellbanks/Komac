@@ -20,7 +20,7 @@ object UpgradeBehaviour : KoinComponent {
         previousValue?.let { println(colors.muted("Previous value: $previousValue")) }
         installerManifestData.upgradeBehavior = menu(
             items = InstallerManifest.Installer.UpgradeBehavior.values().toList(),
-            default = previousValue
+            default = previousValue ?: InstallerManifest.Installer.UpgradeBehavior.Install
         ).prompt()
         println()
     }

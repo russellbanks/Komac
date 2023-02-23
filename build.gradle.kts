@@ -153,7 +153,7 @@ sourceSets.main {
 
 buildConfig {
     buildConfigField("String", "appName", "\"${project.name}\"")
-    buildConfigField("String", "appVersion", provider { "\"${project.version}\"" })
+    buildConfigField("String", "appVersion", "\"${project.version}\"")
 }
 
 tasks.withType<KotlinCompile> {

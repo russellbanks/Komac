@@ -32,7 +32,7 @@ object PackageIdentifier : KoinComponent, CommandPrompt<String> {
         )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    suspend fun Terminal.getLatestVersion(packageIdentifier: String, writeOutput: Boolean = true): String? {
+    fun Terminal.getLatestVersion(packageIdentifier: String, writeOutput: Boolean = true): String? {
         return try {
             get<GitHubImpl>().getMicrosoftWinGetPkgs()
                 ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
