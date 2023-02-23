@@ -19,7 +19,7 @@ object Tags : KoinComponent, CommandPrompt<List<String>> {
     private val sharedManifestData: SharedManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): List<String> = with(terminal) {
-        return sharedManifestData.gitHubDetection?.topics?.await() ?: let {
+        return sharedManifestData.gitHubDetection?.topics ?: let {
             println(colors.brightYellow(tagsInfo))
             info(example)
             prompt(

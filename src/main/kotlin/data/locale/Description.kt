@@ -23,10 +23,10 @@ object Description : KoinComponent {
     suspend fun Terminal.descriptionPrompt(descriptionType: DescriptionType) {
         if (
             descriptionType == DescriptionType.Short &&
-            sharedManifestData.gitHubDetection?.shortDescription?.await() != null &&
+            sharedManifestData.gitHubDetection?.shortDescription != null &&
             getPreviousValue(descriptionType) == null
         ) {
-            defaultLocaleManifestData.shortDescription = sharedManifestData.gitHubDetection?.shortDescription?.await()!!
+            defaultLocaleManifestData.shortDescription = sharedManifestData.gitHubDetection?.shortDescription!!
             return
         }
         do {

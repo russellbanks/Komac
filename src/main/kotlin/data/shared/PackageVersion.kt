@@ -49,7 +49,7 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
         }
     }
 
-    private suspend fun packageExists(sharedManifestData: SharedManifestData): Boolean {
+    private fun packageExists(sharedManifestData: SharedManifestData): Boolean {
         return githubImpl.getMicrosoftWinGetPkgs()
             ?.getDirectoryContent(HttpUtils.getDirectoryPath(sharedManifestData.packageIdentifier))
             ?.map { it.name }

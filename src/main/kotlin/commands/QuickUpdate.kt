@@ -204,7 +204,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                         installerUrl = url,
                         productCode = fileAnalyser.getProductCode(),
                         upgradeBehavior = fileAnalyser.getUpgradeBehaviour(),
-                        releaseDate = sharedManifestData.gitHubDetection?.releaseDate?.await() ?: releaseDate
+                        releaseDate = sharedManifestData.gitHubDetection?.releaseDate ?: releaseDate
                     )
                 } finally {
                     file.delete()

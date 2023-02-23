@@ -78,7 +78,7 @@ class RemoveVersion : CliktCommand(name = "remove"), KoinComponent {
             try {
                 wingetPkgs.createPullRequest(
                     /* title = */ "Remove: ${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}",
-                    /* head = */ "${githubImpl.github.await().myself.login}:${ref.ref}",
+                    /* head = */ "${githubImpl.forkOwner}:${ref.ref}",
                     /* base = */ wingetPkgs.defaultBranch,
                     /* body = */ "## $deletionReason"
                 ).also { success("Pull request created: ${it.htmlUrl}") }

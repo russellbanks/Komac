@@ -14,7 +14,7 @@ import kotlin.system.exitProcess
 
 object ReleaseNotesUrl : KoinComponent, CommandPrompt<Url> {
     override suspend fun prompt(terminal: Terminal): Url = with(terminal) {
-        return get<SharedManifestData>().gitHubDetection?.releaseNotesUrl?.await() ?: let {
+        return get<SharedManifestData>().gitHubDetection?.releaseNotesUrl ?: let {
             println(colors.brightYellow("${Prompts.optional} Enter the package release notes url"))
             prompt(
                 prompt = "Release notes url",

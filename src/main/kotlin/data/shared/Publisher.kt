@@ -49,7 +49,7 @@ object Publisher : KoinComponent, CommandPrompt<String> {
 
     object Url : CommandPrompt<io.ktor.http.Url> {
         override suspend fun prompt(terminal: Terminal): io.ktor.http.Url = with(terminal) {
-            return sharedManifestData.gitHubDetection?.publisherUrl?.await() ?: let {
+            return sharedManifestData.gitHubDetection?.publisherUrl ?: let {
                 println(colors.brightYellow("${Prompts.optional} Enter the publisher home page"))
                 prompt(
                     prompt = "Publisher url",

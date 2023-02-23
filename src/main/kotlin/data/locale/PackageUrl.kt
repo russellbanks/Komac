@@ -17,7 +17,7 @@ object PackageUrl : KoinComponent, CommandPrompt<Url> {
     val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
 
     override suspend fun prompt(terminal: Terminal): Url = with(terminal) {
-        return get<SharedManifestData>().gitHubDetection?.packageUrl?.await() ?: let {
+        return get<SharedManifestData>().gitHubDetection?.packageUrl ?: let {
             println(colors.brightYellow("${Prompts.optional} Enter the package home page"))
             return prompt(
                 prompt = "Package Url",
