@@ -1,6 +1,9 @@
 name: Release
 
-on: [push]
+on:
+  push:
+    tags:
+      - "v*.*.*"
 
 jobs:
   build:
@@ -11,10 +14,11 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout code 👋
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - uses: gradle/wrapper-validation-action@v1
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1
 
       - name: Setup JDK
         uses: actions/setup-java@v3
@@ -25,59 +29,34 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
 
-      - name: Should I publish a release?
-        id: decide_whether_to_release
-        uses: actions/github-script@v6
-        with:
-          script: |
-            if (context.ref.startsWith('refs/tags/')) {
-              const tag_name = context.ref.replace('refs/tags/', '');
-              core.setOutput('name', `Release ${tag_name}`);
-              core.setOutput('tag_name', tag_name);
-              core.setOutput('prerelease', false);
-              core.setOutput('gen_rel_notes', true);
-              core.setOutput('conclusion', true);
-            } else if (context.ref == 'refs/heads/main') {
-              core.setOutput('name', `Nightly release`);
-              core.setOutput('tag_name', 'nightly');
-              core.setOutput('prerelease', true);
-              core.setOutput('gen_rel_notes', false);
-              core.setOutput('conclusion', true);
-            } else core.setOutput('conclusion', false);
+      - name: Build with Gradle
+        run: ./gradlew build
 
       - name: Build binaries
-        if: steps.decide_whether_to_release.outputs.conclusion
         run: ./gradlew jpackage
 
-      - name: Release JAR
-        if: steps.decide_whether_to_release.outputs.conclusion == 'true' && matrix.os == 'ubuntu-latest'
+      - name: Release nightly JAR
+        if: matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ steps.decide_whether_to_release.outputs.name }}
-          tag_name: ${{ steps.decide_whether_to_release.outputs.tag_name }}
-          prerelease: ${{ steps.decide_whether_to_release.outputs.prerelease }}
-          generate_release_notes: ${{ steps.decide_whether_to_release.outputs.gen_rel_notes }}
+          generate_release_notes: true
           files: build/libs/*-all.jar
 
-      - name: Release binaries
-        if: steps.decide_whether_to_release.outputs.conclusion == 'true'
+      - name: Release nightly binaries
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ steps.decide_whether_to_release.outputs.name }}
-          tag_name: ${{ steps.decide_whether_to_release.outputs.tag_name }}
-          prerelease: ${{ steps.decide_whether_to_release.outputs.prerelease }}
-          generate_release_notes: ${{ steps.decide_whether_to_release.outputs.gen_rel_notes }}
+          generate_release_notes: true
           files: |
-            build/distributions/*.dmg
-            build/distributions/*.deb
             build/distributions/*.exe
+            build/distributions/*.deb
+            build/distributions/*.dmg
 
+  release-to-winget:
+    needs: [ build ]
+    runs-on: windows-latest
+    steps:
       - name: Release to Winget
-        if: |
-          steps.decide_whether_to_release.outputs.conclusion == 'true' &&
-            matrix.os == 'windows-latest' &&
-            steps.decide_whether_to_release.outputs.tag_name != 'nightly' &&
-            github.repository == 'russellbanks/Komac'
+        if: matrix.os == 'windows-latest'
         uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: RussellBanks.Komac

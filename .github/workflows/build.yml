@@ -2,6 +2,11 @@ name: Build
 
 on: [push, pull_request]
 
+env:
+  RELEASE_NAME: Nightly release
+  RELEASE_TAG_NAME: nightly
+  RELEASE_IS_PRERELEASE: true
+
 jobs:
   build:
     strategy:
@@ -11,10 +16,11 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout code 👋
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - uses: gradle/wrapper-validation-action@v1
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1
 
       - name: Setup JDK
         uses: actions/setup-java@v3
@@ -27,3 +33,35 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew build
+
+      - name: Build binaries
+        run: ./gradlew jpackage
+
+      - name: Rename assets to Komac-nightly
+        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse -Filter "Komac*" -Include "*-all.jar","*.dmg","*.exe","*.deb" | ForEach-Object {
+            Rename-Item $_.FullName -NewName "Komac-nightly$($_.Extension)"
+          }
+
+      - name: Release nightly JAR
+        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main' && matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{env.RELEASE_NAME}}
+          tag_name: ${{env.RELEASE_TAG_NAME}}
+          prerelease: ${{env.RELEASE_IS_PRERELEASE}}
+          files: build/libs/Komac-nightly.jar
+
+      - name: Release nightly binaries
+        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{env.RELEASE_NAME}}
+          tag_name: ${{env.RELEASE_TAG_NAME}}
+          prerelease: ${{env.RELEASE_IS_PRERELEASE}}
+          files: |
+            build/distributions/Komac-nightly.exe
+            build/distributions/Komac-nightly.deb
+            build/distributions/Komac-nightly.dmg
