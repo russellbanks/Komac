@@ -19,17 +19,19 @@ object GitHubExtensions {
      */
     fun getFormattedReleaseNotes(release: GHRelease): String? {
         val lines = release.body
-            ?.replace(Regex("<details>.*?</details>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+            ?.replace("<details>.*?</details>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
             ?.lines()
             ?.map { line ->
                 line.trim()
                     .let { if (it.startsWith("* ")) it.replaceFirst("* ", "- ") else it }
-                    .replace(Regex("""~+([^~]+)~+"""), "$1")
-                    .replace(Regex("""\*+([^*]+)\*+"""), "$1")
+                    .replace("""~+([^~]+)~+""".toRegex(), "$1")
+                    .replace("""\*+([^*]+)\*+""".toRegex(), "$1")
                     .replace("`", "")
-                    .replace(Regex("\\[?!\\[(.*?)]\\((.*?)\\)(?:]\\((.*?)\\))?"), "")
-                    .replace(Regex("\\[([^]]+)]\\([^)]+\\)"), "$1")
-                    .replace(Regex("https?://github.com/\\w+/\\w+/(pull|issues)/(\\d+)")) { "#${it.groupValues[2]}" }
+                    .replace("\\[?!\\[(.*?)]\\((.*?)\\)(?:]\\((.*?)\\))?".toRegex(), "")
+                    .replace("\\[([^]]+)]\\([^)]+\\)".toRegex(), "$1")
+                    .replace("https?://github.com/([\\w-]+)/([\\w-]+)/(pull|issues)/(\\d+)".toRegex()) {
+                        "#${it.value.substringAfterLast("/")}"
+                    }
                     .trim()
             }
         return buildString {
