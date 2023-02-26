@@ -17,14 +17,14 @@ object InstallerManifestData : KoinComponent {
         val previousInstaller = previousManifest?.installers?.getOrNull(installers.size)
         val installer = getInstallerBase(previousInstaller).copy(
             installerLocale = msi?.productLanguage
-                ?: allManifestData.installerLocale?.ifBlank { null }
+                ?: installerLocale?.ifBlank { null }
                 ?: previousInstaller?.installerLocale,
             platform = msix?.targetDeviceFamily?.let { listOf(it.toPerInstallerPlatform()) }
                 ?: previousInstaller?.platform
                 ?: previousManifest?.platform?.map { it.toPerInstallerPlatform() },
             minimumOSVersion = msix?.minVersion,
-            architecture = previousInstaller?.architecture ?: allManifestData.architecture,
-            installerType = allManifestData.installerType ?: previousInstaller?.installerType,
+            architecture = previousInstaller?.architecture ?: architecture,
+            installerType = installerType ?: previousInstaller?.installerType,
             nestedInstallerType = zip?.nestedInstallerType
                 ?: previousInstaller?.nestedInstallerType
                 ?: previousManifest?.nestedInstallerType?.toPerInstallerNestedInstallerType(),
@@ -33,30 +33,25 @@ object InstallerManifestData : KoinComponent {
                     ?: previousInstaller?.nestedInstallerFiles
                     ?: previousManifest?.nestedInstallerFiles?.map { it.toPerInstallerNestedInstallerFiles() }
                 )?.map { it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString()) },
-            installerUrl = allManifestData.installerUrl,
+            installerUrl = installerUrl,
             installerSha256 = (gitHubDetection?.sha256?.await() ?: installerSha256).uppercase(),
-            signatureSha256 = msix?.signatureSha256
-                ?: msixBundle?.signatureSha256,
-            scope = allManifestData.scope
-                ?: previousInstaller?.scope
-                ?: previousManifest?.scope?.toPerScopeInstallerType(),
+            signatureSha256 = msix?.signatureSha256 ?: msixBundle?.signatureSha256,
+            scope = scope ?: previousInstaller?.scope ?: previousManifest?.scope?.toPerScopeInstallerType(),
             packageFamilyName = msix?.packageFamilyName
                 ?: msixBundle?.packageFamilyName
                 ?: previousInstaller?.packageFamilyName
                 ?: previousManifest?.packageFamilyName,
-            installerSwitches = allManifestData.installerSwitches.takeUnless { it.areAllNullOrBlank() }
+            installerSwitches = installerSwitches.takeUnless { it.areAllNullOrBlank() }
                 ?: previousInstaller?.installerSwitches
                 ?: previousManifest?.installerSwitches?.toPerInstallerSwitches(),
-            upgradeBehavior = allManifestData.upgradeBehavior
+            upgradeBehavior = upgradeBehavior
                 ?: previousInstaller?.upgradeBehavior
                 ?: previousManifest?.upgradeBehavior?.toPerInstallerUpgradeBehaviour(),
             productCode = msi?.productCode
                 ?: additionalMetadata?.productCode?.ifBlank { null }
                 ?: previousManifest?.productCode
                 ?: previousInstaller?.productCode,
-            releaseDate = gitHubDetection?.releaseDate
-                ?: additionalMetadata?.releaseDate
-                ?: allManifestData.releaseDate,
+            releaseDate = gitHubDetection?.releaseDate ?: additionalMetadata?.releaseDate ?: releaseDate,
             appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                     appsAndFeaturesEntry.fillARPEntry()

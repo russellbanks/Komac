@@ -1,6 +1,7 @@
 package input
 
 import com.github.ajalt.mordant.terminal.Terminal
+import utils.yesNoMenu
 import java.io.File
 
 object FileWriter {
@@ -12,9 +13,23 @@ object FileWriter {
             if (directory?.isDirectory == true) {
                 writeFilesToDirectory(directory, files, terminal)
             } else {
-                warning("The directory entered is not a valid directory")
+                createDirectoryIfNecessary(directory, files, terminal)
             }
         } while (directory?.isDirectory != true)
+    }
+
+    private fun createDirectoryIfNecessary(directory: File?, files: List<Pair<String, String?>>, terminal: Terminal) {
+        with(terminal) {
+            warning("The directory entered does not exist. Would you like to create it?")
+            if (yesNoMenu(default = true)) {
+                if (directory?.mkdirs() == true) {
+                    success("Successfully created ${directory.path}")
+                    writeFilesToDirectory(directory, files, terminal)
+                } else {
+                    danger("Failed to create ${directory?.path}")
+                }
+            }
+        }
     }
 
     fun writeFilesToDirectory(directory: File, files: List<Pair<String, String?>>, terminal: Terminal) {
