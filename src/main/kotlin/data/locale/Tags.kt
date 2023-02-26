@@ -4,8 +4,8 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
+import data.AllManifestData
 import data.PreviousManifestData
-import data.SharedManifestData
 import input.ExitCode
 import input.Prompts
 import input.YamlExtensions.convertToYamlList
@@ -16,10 +16,10 @@ import kotlin.system.exitProcess
 
 object Tags : KoinComponent, CommandPrompt<List<String>> {
     private val previousManifestData: PreviousManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): List<String> = with(terminal) {
-        return sharedManifestData.gitHubDetection?.topics ?: let {
+        return allManifestData.gitHubDetection?.topics ?: let {
             println(colors.brightYellow(tagsInfo))
             info(example)
             prompt(

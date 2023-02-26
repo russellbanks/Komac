@@ -4,7 +4,7 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.InstallerManifestData
+import data.AllManifestData
 import data.PreviousManifestData
 import input.ExitCode
 import input.Prompts
@@ -14,7 +14,7 @@ import org.koin.core.component.inject
 import kotlin.system.exitProcess
 
 object InstallerSuccessCodes : KoinComponent, CommandPrompt<List<Long>> {
-    private val installerManifestData: InstallerManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): List<Long> = with(terminal) {
@@ -61,10 +61,10 @@ object InstallerSuccessCodes : KoinComponent, CommandPrompt<List<Long>> {
         return installerSuccessCodes.shuffled().take(3).sorted()
     }
 
-    private suspend fun getPreviousValue(): List<Long>? {
+    private suspend fun getPreviousValue(): List<Long>? = with(allManifestData) {
         return previousManifestData.remoteInstallerData.await()?.let {
             it.installerSuccessCodes
-                ?: it.installers.getOrNull(installerManifestData.installers.size)?.installerSuccessCodes
+                ?: it.installers.getOrNull(installers.size)?.installerSuccessCodes
         }
     }
 

@@ -4,12 +4,12 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import input.ExitCode
 import input.Prompts
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
 object Author : KoinComponent, CommandPrompt<String> {
@@ -18,7 +18,7 @@ object Author : KoinComponent, CommandPrompt<String> {
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
         println(colors.brightYellow(authorInfo))
         return prompt(
-            prompt = DefaultLocaleManifestData::author.name.replaceFirstChar { it.titlecase() },
+            prompt = DefaultLocaleManifest::author.name.replaceFirstChar { it.titlecase() },
             default = previousManifestData.remoteDefaultLocaleData.await()?.author
                 ?.also { muted("Previous author: $it") },
             convert = { input ->

@@ -28,37 +28,37 @@ class GitHubImpl : KoinComponent {
         .withConnector(KtorGitHubConnector(get<Http>().client))
         .withOAuthToken(get<TokenStore>().token)
         .build()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
-    val installerManifestName = "${sharedManifestData.packageIdentifier}.installer.yaml"
-    val versionManifestName = "${sharedManifestData.packageIdentifier}.yaml"
+    val installerManifestName = "${allManifestData.packageIdentifier}.installer.yaml"
+    val versionManifestName = "${allManifestData.packageIdentifier}.yaml"
     private var pullRequestBranch: GHRef? = null
 
     suspend fun getDefaultLocaleManifestName() = buildString {
-        append(sharedManifestData.packageIdentifier)
+        append(allManifestData.packageIdentifier)
         append(".locale.")
-        append(sharedManifestData.defaultLocale ?: previousManifestData.remoteVersionData.await()?.defaultLocale!!)
+        append(allManifestData.defaultLocale ?: previousManifestData.remoteVersionData.await()?.defaultLocale!!)
         append(".yaml")
     }
 
     val packageVersionsPath
         get() = buildString {
             append("manifests/")
-            append("${sharedManifestData.packageIdentifier.first().lowercase()}/")
-            append(sharedManifestData.packageIdentifier.replace(".", "/"))
+            append("${allManifestData.packageIdentifier.first().lowercase()}/")
+            append(allManifestData.packageIdentifier.replace(".", "/"))
         }
 
     val baseGitHubPath
-        get() = "$packageVersionsPath/${sharedManifestData.packageVersion}"
+        get() = "$packageVersionsPath/${allManifestData.packageVersion}"
 
     fun getLocaleManifestName(locale: String): String {
-        return "${sharedManifestData.packageIdentifier}.locale.$locale.yaml"
+        return "${allManifestData.packageIdentifier}.locale.$locale.yaml"
     }
 
     private fun getBranchName() = buildString {
-        append(sharedManifestData.packageIdentifier)
+        append(allManifestData.packageIdentifier)
         append("-")
-        append(sharedManifestData.packageVersion)
+        append(allManifestData.packageVersion)
         append("-")
         append(List(uniqueBranchIdentifierLength) { (('A'..'Z') + ('0'..'9')).random() }.joinToString(""))
     }
@@ -132,11 +132,11 @@ class GitHubImpl : KoinComponent {
     }
 
     private fun getCommitTitle() = buildString {
-        append(sharedManifestData.updateState)
+        append(allManifestData.updateState)
         append(": ")
-        append(sharedManifestData.packageIdentifier)
+        append(allManifestData.packageIdentifier)
         append(" version ")
-        append(sharedManifestData.packageVersion)
+        append(allManifestData.packageVersion)
     }
 
     private fun getPullRequestBody(): String {
@@ -171,7 +171,7 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    private suspend fun commitFiles(files: List<Pair<String, String?>>, terminal: Terminal) {
+    private fun commitFiles(files: List<Pair<String, String?>>, terminal: Terminal) {
         val repository = getWingetPkgsFork(terminal) ?: return
         val branch = createBranchFromUpstreamDefaultBranch(repository, terminal) ?: return
         repository.createCommit()
@@ -184,7 +184,7 @@ class GitHubImpl : KoinComponent {
                     .apply {
                         files.forEach { (path, content) ->
                             if (content != null) {
-                                add(path, content.replace("\n", "\r\n"), false)
+                                add(path, content.replace("\n", "\r\n").trimEnd(), false)
                             }
                         }
                     }
@@ -209,6 +209,7 @@ class GitHubImpl : KoinComponent {
     companion object {
         const val Microsoft = "Microsoft"
         const val wingetpkgs = "winget-pkgs"
+        const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
         private const val customForkOwnerEnv = "KMC_FRK_OWNER"
         private const val uniqueBranchIdentifierLength = 14
     }

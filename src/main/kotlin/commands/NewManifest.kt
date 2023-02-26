@@ -4,12 +4,12 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
 import commands.CommandUtils.prompt
+import data.AllManifestData
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
 import data.InstallerManifestData
 import data.ManifestUtils
 import data.PreviousManifestData
-import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
 import data.installer.Commands
@@ -57,9 +57,7 @@ import kotlin.system.exitProcess
 
 class NewManifest : CliktCommand(name = "new"), KoinComponent {
     private val tokenStore: TokenStore by inject()
-    private val installerManifestData: InstallerManifestData by inject()
-    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
     private var previousManifestData: PreviousManifestData? = null
     private val githubImpl: GitHubImpl by inject()
     private val manifestVersion: String? by option().validate {
@@ -69,45 +67,38 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
     override fun run(): Unit = runBlocking {
         manifestVersion?.let { get<Schemas>().manifestOverride = it }
         with(currentContext.terminal) {
-            if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
-            sharedManifestData.packageIdentifier = prompt(PackageIdentifier)
-            if (!tokenStore.isTokenValid.await()) {
-                tokenStore.invalidTokenPrompt(this)
-                echo()
-            }
-            sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier)
-            launch { if (sharedManifestData.updateState != VersionUpdateState.NewPackage) previousManifestData = get() }
-            launch {
-                sharedManifestData.packageVersion = prompt(PackageVersion)
-                githubImpl.promptIfPullRequestExists(
-                    identifier = sharedManifestData.packageIdentifier,
-                    version = sharedManifestData.packageVersion,
-                    terminal = this@with
-                )
-                PackageVersion.setUpgradeState(PackageVersion.sharedManifestData)
-                do {
-                    installerDownloadPrompt()
-                    installerManifestData.installerType = installerManifestData.installerType ?: prompt(InstallerType)
-                    InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
-                    installerManifestData.installerLocale = prompt(Locale.Installer)
-                    installerScopePrompt()
-                    upgradeBehaviourPrompt()
-                    installerManifestData.addInstaller()
-                    val loop = confirm(colors.info(additionalInstallerInfo)) ?: exitProcess(ExitCode.CtrlC.code)
-                } while (loop)
-                with(installerManifestData) {
+            with(allManifestData) {
+                if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
+                packageIdentifier = prompt(PackageIdentifier)
+                if (!tokenStore.isTokenValid.await()) tokenStore.invalidTokenPrompt(currentContext.terminal)
+                latestVersion = getLatestVersion(packageIdentifier)
+                launch { if (updateState != VersionUpdateState.NewPackage) previousManifestData = get() }
+                launch {
+                    packageVersion = prompt(PackageVersion)
+                    githubImpl.promptIfPullRequestExists(
+                        identifier = packageIdentifier,
+                        version = packageVersion,
+                        terminal = currentContext.terminal
+                    )
+                    PackageVersion.setUpgradeState(allManifestData)
+                    do {
+                        installerDownloadPrompt()
+                        installerType = installerType ?: prompt(InstallerType)
+                        InstallerSwitch.values().forEach { installerSwitchPrompt(it) }
+                        installerLocale = prompt(Locale.Installer)
+                        installerScopePrompt()
+                        upgradeBehaviourPrompt()
+                        if (!skipAddInstaller) InstallerManifestData.addInstaller() else skipAddInstaller = false
+                        val loop = confirm(colors.info(additionalInstallerInfo)) ?: exitProcess(ExitCode.CtrlC.code)
+                    } while (loop)
                     fileExtensions = prompt(FileExtensions)
                     protocols = prompt(Protocols)
                     commands = prompt(Commands)
                     installerSuccessCodes = prompt(InstallerSuccessCodes)
                     installModes = prompt(InstallModes)
-                }
-                with(sharedManifestData) {
                     defaultLocale = prompt(Locale.Package)
                     publisher = prompt(Publisher)
                     packageName = prompt(PackageName)
-                }
-                with(defaultLocaleManifestData) {
                     moniker = prompt(Moniker)
                     publisherUrl = prompt(Publisher.Url)
                     author = prompt(Author)
@@ -119,31 +110,33 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     tags = prompt(Tags)
                     DescriptionType.values().forEach { descriptionPrompt(it) }
                     releaseNotesUrl = prompt(ReleaseNotesUrl)
-                }
-                val files = createFiles()
-                files.forEach { manifest ->
-                    ManifestUtils.formattedManifestLinesFlow(manifest.second, colors).collect { echo(it) }
-                }
-                pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
-                    when (manifestResultOption) {
-                        ManifestResultOption.PullRequest -> githubImpl.commitAndPullRequest(files, this@with)
-                        ManifestResultOption.WriteToFiles -> writeFiles(files, this@with)
-                        else -> return@also
+                    val files = createFiles()
+                    files.forEach { manifest ->
+                        ManifestUtils.formattedManifestLinesFlow(manifest.second, colors).collect { echo(it) }
+                    }
+                    pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
+                        when (manifestResultOption) {
+                            ManifestResultOption.PullRequest -> {
+                                githubImpl.commitAndPullRequest(files, currentContext.terminal)
+                            }
+                            ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
+                            else -> return@also
+                        }
                     }
                 }
             }
         }
     }
 
-    private suspend fun createFiles(): List<Pair<String, String>> {
+    private suspend fun createFiles(): List<Pair<String, String>> = with(allManifestData) {
         return listOf(
-            githubImpl.installerManifestName to installerManifestData.createInstallerManifest(),
-            githubImpl.getDefaultLocaleManifestName() to defaultLocaleManifestData.createDefaultLocaleManifest(),
+            githubImpl.installerManifestName to InstallerManifestData.createInstallerManifest(),
+            githubImpl.getDefaultLocaleManifestName() to DefaultLocaleManifestData.createDefaultLocaleManifest(),
             githubImpl.versionManifestName to VersionManifestData.createVersionManifest()
         ) + previousManifestData?.remoteLocaleData?.await()?.map { localeManifest ->
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
-                packageIdentifier = sharedManifestData.packageIdentifier,
-                packageVersion = sharedManifestData.packageVersion,
+                packageIdentifier = packageIdentifier,
+                packageVersion = packageVersion,
                 manifestVersion = get<Schemas>().manifestOverride ?: Schemas.manifestVersion
             ).let {
                 Schemas().buildManifestString(

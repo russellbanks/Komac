@@ -4,7 +4,6 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.DefaultLocaleManifestData
 import data.PreviousManifestData
 import input.ExitCode
 import input.Prompts
@@ -12,6 +11,7 @@ import io.ktor.http.Url
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
+import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
 object Copyright : CommandPrompt<String> {
@@ -19,7 +19,7 @@ object Copyright : CommandPrompt<String> {
         println(colors.brightYellow(copyrightInfo))
         info(example)
         return prompt(
-            prompt = DefaultLocaleManifestData::copyright.name.replaceFirstChar { it.titlecase() },
+            prompt = DefaultLocaleManifest::copyright.name.replaceFirstChar { it.titlecase() },
             convert = { input ->
                 getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }

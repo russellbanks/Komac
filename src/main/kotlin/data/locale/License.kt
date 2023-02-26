@@ -4,8 +4,8 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
+import data.AllManifestData
 import data.PreviousManifestData
-import data.SharedManifestData
 import input.ExitCode
 import input.Prompts
 import io.ktor.http.Url
@@ -16,7 +16,7 @@ import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
 object License : KoinComponent, CommandPrompt<String> {
-    private val gitHubDetection = get<SharedManifestData>().gitHubDetection
+    private val gitHubDetection = get<AllManifestData>().gitHubDetection
     private val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
 
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {

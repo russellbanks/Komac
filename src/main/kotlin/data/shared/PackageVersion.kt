@@ -4,8 +4,8 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
+import data.AllManifestData
 import data.GitHubImpl
-import data.SharedManifestData
 import data.VersionUpdateState
 import input.ExitCode
 import input.Prompts
@@ -17,7 +17,7 @@ import kotlin.system.exitProcess
 
 object PackageVersion : KoinComponent, CommandPrompt<String> {
     private val githubImpl: GitHubImpl by inject()
-    val sharedManifestData: SharedManifestData by inject()
+    val allManifestData: AllManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
         println(colors.brightGreen(versionInfo))
@@ -32,16 +32,14 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
         )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    suspend fun setUpgradeState(sharedManifestData: SharedManifestData) {
+    fun setUpgradeState(allManifestData: AllManifestData) = with(allManifestData) {
         when {
-            sharedManifestData.updateState == VersionUpdateState.NewPackage -> Unit
-            packageExists(sharedManifestData) -> {
-                sharedManifestData.updateState = VersionUpdateState.UpdateVersion
-            }
+            updateState == VersionUpdateState.NewPackage -> Unit
+            packageExists(packageIdentifier, packageVersion) -> updateState = VersionUpdateState.UpdateVersion
             else -> {
-                val versionsToCompare = listOf(sharedManifestData.packageVersion, sharedManifestData.latestVersion)
+                val versionsToCompare = listOf(packageVersion, latestVersion)
                 val highestVersion = getHighestVersion(versionsToCompare.filterNotNull())
-                sharedManifestData.updateState = when (sharedManifestData.packageVersion) {
+                updateState = when (packageVersion) {
                     highestVersion -> VersionUpdateState.NewVersion
                     else -> VersionUpdateState.AddVersion
                 }
@@ -49,11 +47,12 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
         }
     }
 
-    private fun packageExists(sharedManifestData: SharedManifestData): Boolean {
+    private fun packageExists(packageIdentifier: String, packageVersion: String): Boolean {
         return githubImpl.getMicrosoftWinGetPkgs()
-            ?.getDirectoryContent(HttpUtils.getDirectoryPath(sharedManifestData.packageIdentifier))
+            ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
             ?.map { it.name }
-            ?.contains(sharedManifestData.packageVersion) ?: false
+            ?.contains(packageVersion)
+            ?: false
     }
 
     override fun getError(input: String?): String? {

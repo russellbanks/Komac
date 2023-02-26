@@ -3,7 +3,7 @@ package utils
 import io.ktor.http.Url
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import network.HttpUtils
+import network.getExtension
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -14,7 +14,7 @@ object FileUtils {
             val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
             File.createTempFile(
                 /* prefix = */ "$identifier v$version - $formattedDate",
-                /* suffix = */ ".${HttpUtils.getURLExtension(url)}"
+                /* suffix = */ ".${url.getExtension()}}"
             )
         }
     }

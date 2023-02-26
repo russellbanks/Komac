@@ -8,6 +8,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import token.Token
 import token.TokenStore
+import utils.yesNoMenu
 
 class Update : CliktCommand(), KoinComponent {
     private val tokenStore: TokenStore by inject()
@@ -20,10 +21,10 @@ class Update : CliktCommand(), KoinComponent {
                 success("Token set successfully")
             } else {
                 val confirmed = when (tokenParameter) {
-                    null -> confirm(text = "Would you like to change the currently stored token?", default = true)
+                    null -> yesNoMenu(default = true)
                     else -> true
                 }
-                if (confirmed == true) {
+                if (confirmed) {
                     prompt(Token, tokenParameter).also { tokenStore.putToken(it) }
                     success("Token changed successfully")
                 } else {

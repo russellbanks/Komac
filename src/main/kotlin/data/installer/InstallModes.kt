@@ -4,7 +4,7 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.InstallerManifestData
+import data.AllManifestData
 import data.PreviousManifestData
 import input.ExitCode
 import input.Prompts
@@ -15,7 +15,7 @@ import schemas.manifest.InstallerManifest
 import kotlin.system.exitProcess
 
 object InstallModes : KoinComponent, CommandPrompt<List<InstallerManifest.InstallModes>> {
-    private val installerManifestData: InstallerManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): List<InstallerManifest.InstallModes> = with(terminal) {
@@ -44,11 +44,11 @@ object InstallModes : KoinComponent, CommandPrompt<List<InstallerManifest.Instal
         }
     }
 
-    private suspend fun getPreviousValue(): List<InstallerManifest.InstallModes>? {
+    private suspend fun getPreviousValue(): List<InstallerManifest.InstallModes>? = with(allManifestData) {
         return previousManifestData.remoteInstallerData.await()?.let { installerManifest ->
             installerManifest.installModes
                 ?: installerManifest.installers
-                    .getOrNull(installerManifestData.installers.size)
+                    .getOrNull(installers.size)
                     ?.installModes
                     ?.map { it.toManifestInstallMode() }
         }

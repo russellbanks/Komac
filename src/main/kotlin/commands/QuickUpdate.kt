@@ -8,15 +8,14 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.options.validate
-import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandUtils.prompt
+import data.AllManifestData
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
 import data.InstallerManifestData
 import data.ManifestUtils.formattedManifestLinesFlow
 import data.PreviousManifestData
-import data.SharedManifestData
 import data.VersionManifestData
 import data.VersionUpdateState
 import data.installer.InstallerType
@@ -39,12 +38,11 @@ import io.ktor.http.lastModified
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils
-import network.HttpUtils.detectScopeFromUrl
-import network.HttpUtils.getArchitectureFromUrl
+import network.findArchitecture
+import network.findScope
 import org.kohsuke.github.GitHub
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -62,18 +60,16 @@ import utils.FileUtils
 import utils.Hashing.hash
 import java.io.File
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 
 class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
+    private val allManifestData: AllManifestData by inject()
     private val tokenStore: TokenStore by inject()
-    private val installerManifestData: InstallerManifestData by inject()
-    private val defaultLocaleManifestData: DefaultLocaleManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
     private lateinit var previousManifestData: PreviousManifestData
     private val githubImpl: GitHubImpl by inject()
     private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
-    private val packageIdentifier: String? by option("--id", "--package-identifier")
-    private val packageVersion: String? by option("--version", "--package-version")
+    private val packageIdentifierParam: String? by option("--id", "--package-identifier")
+    private val packageVersionParam: String? by option("--version", "--package-version")
     private val urls: List<Url>? by option().convert { Url(it) }.split(",")
     private val manifestVersion: String? by option().validate {
         require(Regex("^\\d+\\.\\d+\\.\\d+$").matches(it)) { "Manifest version must be in the format X.X.X" }
@@ -84,7 +80,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             currentContext.terminal.colors.danger("The token is invalid or has expired")
         }
     }
-    private val additionalMetadata by option(hidden = true).convert {
+    private val additionalMetadataParam by option(hidden = true).convert {
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
     }
 
@@ -92,59 +88,60 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         manifestVersion?.let { get<Schemas>().manifestOverride = it }
         tokenParameter?.let { tokenStore.useTokenParameter(it) }
         with(currentContext.terminal) {
-            if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
-            if (isCIEnvironment) {
-                info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
-            }
-            sharedManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifier)
-            if (!tokenStore.isTokenValid.await()) {
-                tokenStore.invalidTokenPrompt(this)
-                echo()
-            }
-            sharedManifestData.latestVersion = getLatestVersion(sharedManifestData.packageIdentifier, !isCIEnvironment)
-            previousManifestData = get()
-            if (sharedManifestData.updateState == VersionUpdateState.NewPackage) {
-                throw CliktError(
-                    colors.warning(
-                        buildString {
-                            appendLine("${sharedManifestData.packageIdentifier} does not exist in the ${GitHubImpl.wingetpkgs} repository.")
-                            appendLine("Please use the 'new' command to create a new manifest.")
-                        }
-                    ),
-                    statusCode = 1
-                )
-            }
-            sharedManifestData.packageVersion = prompt(PackageVersion, parameter = packageVersion)
-            githubImpl.promptIfPullRequestExists(
-                identifier = sharedManifestData.packageIdentifier,
-                version = sharedManifestData.packageVersion,
-                terminal = this
-            )
-            PackageVersion.setUpgradeState(PackageVersion.sharedManifestData)
-            loopThroughInstallers(parameterUrls = urls, isCIEnvironment = isCIEnvironment)
-            val files = createFiles()
-            files.forEach { manifest ->
-                formattedManifestLinesFlow(manifest.second, colors).collect { echo(it) }
-            }
-            if (submit) {
-                githubImpl.commitAndPullRequest(files, this@with)
-            } else if (!isCIEnvironment) {
-                pullRequestPrompt(sharedManifestData).also { manifestResultOption ->
-                    when (manifestResultOption) {
-                        ManifestResultOption.PullRequest -> githubImpl.commitAndPullRequest(files, this@with)
-                        ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, this@with)
-                        else -> return@also
-                    }
+            with(allManifestData) {
+                if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
+                if (isCIEnvironment) {
+                    info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
                 }
-            } else {
-                FileWriter.writeFilesToDirectory(
-                    directory = File(
-                        System.getProperty("user.dir"),
-                        "${sharedManifestData.packageIdentifier} version ${sharedManifestData.packageVersion}"
-                    ),
-                    files = files,
-                    terminal = this@with
+                packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
+                if (!tokenStore.isTokenValid.await()) {
+                    tokenStore.invalidTokenPrompt(currentContext.terminal)
+                    echo()
+                }
+                latestVersion = getLatestVersion(packageIdentifier, !isCIEnvironment)
+                previousManifestData = get()
+                if (updateState == VersionUpdateState.NewPackage) {
+                    throw CliktError(
+                        colors.warning(
+                            buildString {
+                                appendLine("$packageIdentifier does not exist in ${GitHubImpl.wingetpkgs}.")
+                                appendLine("Please use the 'new' command to create a new manifest.")
+                            }
+                        ),
+                        statusCode = 1
+                    )
+                }
+                packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
+                githubImpl.promptIfPullRequestExists(
+                    identifier = packageIdentifier,
+                    version = packageVersion,
+                    terminal = currentContext.terminal
                 )
+                PackageVersion.setUpgradeState(allManifestData)
+                loopThroughInstallers(parameterUrls = urls, isCIEnvironment = isCIEnvironment)
+                val files = createFiles()
+                files.forEach { manifest ->
+                    formattedManifestLinesFlow(manifest.second, colors).collect { echo(it) }
+                }
+                if (submit) {
+                    githubImpl.commitAndPullRequest(files, currentContext.terminal)
+                } else if (!isCIEnvironment) {
+                    pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
+                        when (manifestResultOption) {
+                            ManifestResultOption.PullRequest -> {
+                                githubImpl.commitAndPullRequest(files, currentContext.terminal)
+                            }
+                            ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, currentContext.terminal)
+                            else -> return@also
+                        }
+                    }
+                } else {
+                    FileWriter.writeFilesToDirectory(
+                        directory = File(System.getProperty("user.dir"), "$packageIdentifier version $packageVersion"),
+                        files = files,
+                        terminal = currentContext.terminal
+                    )
+                }
             }
         }
     }
@@ -152,82 +149,10 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
     private suspend fun Terminal.loopThroughInstallers(
         parameterUrls: List<Url>? = null,
         isCIEnvironment: Boolean = false
-    ) = coroutineScope {
+    ) = with(allManifestData) {
         val remoteInstallerManifest = previousManifestData.remoteInstallerData.await()!!
-        val previousInstallers = remoteInstallerManifest.installers
-        val previousUrls = previousInstallers.map { it.installerUrl }
         if (parameterUrls != null) {
-            ParameterUrls.assertUniqueUrlsCount(parameterUrls, previousUrls, this@loopThroughInstallers)
-            ParameterUrls.assertUrlsValid(parameterUrls, this@loopThroughInstallers)
-            val downloadTasks = mutableListOf<InstallerManifest.Installer>()
-            val client = get<Http>().client
-            parameterUrls.distinct().forEach { url ->
-                val file = FileUtils.createTempFile(
-                    identifier = sharedManifestData.packageIdentifier,
-                    version = sharedManifestData.packageVersion,
-                    url = url
-                )
-                val progress = progressAnimation {
-                    HttpUtils.getFileName(url)?.let { text(it) }
-                    percentage()
-                    progressBar()
-                    completed()
-                    speed("B/s")
-                    timeRemaining()
-                }
-                progress.start()
-                sharedManifestData.gitHubDetection = parameterUrls.firstOrNull {
-                    it.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
-                }?.let { GitHubDetection(it) }
-                var releaseDate: LocalDate? = null
-                client.prepareGet(url).execute { httpResponse ->
-                    releaseDate = httpResponse.lastModified()?.let {
-                        LocalDate.ofInstant(it.toInstant(), ZoneId.systemDefault())
-                    }
-                    val channel: ByteReadChannel = httpResponse.body()
-                    while (!channel.isClosedForRead) {
-                        val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-                        while (packet.isNotEmpty) {
-                            file.appendBytes(packet.readBytes())
-                            progress.update(file.length(), httpResponse.contentLength())
-                        }
-                    }
-                }
-                val fileAnalyser = FileAnalyser(file)
-                downloadTasks += try {
-                    InstallerManifest.Installer(
-                        architecture = getArchitectureFromUrl(url) ?: fileAnalyser.getArchitecture(),
-                        installerType = fileAnalyser.getInstallerType(),
-                        scope = detectScopeFromUrl(url),
-                        installerSha256 = file.hash(),
-                        signatureSha256 = fileAnalyser.getSignatureSha256(),
-                        installerUrl = url,
-                        productCode = fileAnalyser.getProductCode(),
-                        upgradeBehavior = fileAnalyser.getUpgradeBehaviour(),
-                        releaseDate = sharedManifestData.gitHubDetection?.releaseDate ?: releaseDate
-                    )
-                } finally {
-                    file.delete()
-                    progress.clear()
-                }
-            }
-            ParameterUrls.matchInstallers(
-                downloadTasks,
-                previousInstallers.map {
-                    it.copy(
-                        installerType = remoteInstallerManifest.installerType?.toPerInstallerType() ?: it.installerType,
-                        scope = remoteInstallerManifest.scope?.toPerScopeInstallerType() ?: it.scope
-                    )
-                }
-            ).forEach {
-                installerManifestData.installers += it.first.copy(
-                    installerUrl = it.second.installerUrl,
-                    installerSha256 = it.second.installerSha256.uppercase(),
-                    signatureSha256 = it.second.signatureSha256?.uppercase(),
-                    productCode = it.second.productCode,
-                    releaseDate = it.second.releaseDate
-                )
-            }
+            loopParameterUrls(parameterUrls = parameterUrls, remoteInstallerManifest = remoteInstallerManifest)
         } else if (isCIEnvironment) {
             throw CliktError(colors.danger("${Errors.error} No installers have been provided"), statusCode = 1)
         } else {
@@ -246,25 +171,90 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 }
                 echo()
                 installerDownloadPrompt()
-                installerManifestData.addInstaller()
+                if (!skipAddInstaller) InstallerManifestData.addInstaller() else skipAddInstaller = false
             }
         }
     }
 
-    private suspend fun createFiles(): List<Pair<String, String>> {
+    private suspend fun Terminal.loopParameterUrls(
+        parameterUrls: List<Url>,
+        remoteInstallerManifest: InstallerManifest
+    ) = with(allManifestData) {
+        val previousInstallers = remoteInstallerManifest.installers
+        val previousUrls = previousInstallers.map { it.installerUrl }
+        ParameterUrls.assertUniqueUrlsCount(parameterUrls, previousUrls, this@loopParameterUrls)
+        ParameterUrls.assertUrlsValid(parameterUrls, this@loopParameterUrls)
+        val downloadTasks = mutableListOf<InstallerManifest.Installer>()
+        val client = get<Http>().client
+        parameterUrls.distinct().forEach { url ->
+            val file = FileUtils.createTempFile(identifier = packageIdentifier, version = packageVersion, url = url)
+            val progress = HttpUtils.getDownloadProgressBar(url, this@loopParameterUrls).also { it.start() }
+            gitHubDetection = parameterUrls
+                .firstOrNull { it.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true) }
+                ?.let { GitHubDetection(it) }
+            var releaseDate: LocalDate? = null
+            client.prepareGet(url).execute { httpResponse ->
+                releaseDate = httpResponse.lastModified()?.toInstant()?.atZone(ZoneOffset.UTC)?.toLocalDate()
+                val channel: ByteReadChannel = httpResponse.body()
+                while (!channel.isClosedForRead) {
+                    val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                    while (packet.isNotEmpty) {
+                        file.appendBytes(packet.readBytes())
+                        progress.update(file.length(), httpResponse.contentLength())
+                    }
+                }
+            }
+            val fileAnalyser = FileAnalyser(file)
+            downloadTasks += try {
+                InstallerManifest.Installer(
+                    architecture = url.findArchitecture() ?: fileAnalyser.getArchitecture(),
+                    installerType = fileAnalyser.getInstallerType(),
+                    scope = url.findScope(),
+                    installerSha256 = file.hash(),
+                    signatureSha256 = fileAnalyser.getSignatureSha256(),
+                    installerUrl = url,
+                    productCode = fileAnalyser.getProductCode(),
+                    upgradeBehavior = fileAnalyser.getUpgradeBehaviour(),
+                    releaseDate = gitHubDetection?.releaseDate ?: releaseDate
+                )
+            } finally {
+                file.delete()
+                progress.clear()
+            }
+        }
+        ParameterUrls.matchInstallers(
+            downloadTasks,
+            previousInstallers.map {
+                it.copy(
+                    installerType = remoteInstallerManifest.installerType?.toPerInstallerType() ?: it.installerType,
+                    scope = remoteInstallerManifest.scope?.toPerScopeInstallerType() ?: it.scope
+                )
+            }
+        ).forEach {
+            installers += it.first.copy(
+                installerUrl = it.second.installerUrl,
+                installerSha256 = it.second.installerSha256.uppercase(),
+                signatureSha256 = it.second.signatureSha256?.uppercase(),
+                productCode = it.second.productCode,
+                releaseDate = it.second.releaseDate
+            )
+        }
+    }
+
+    private suspend fun createFiles(): List<Pair<String, String>> = with(allManifestData) {
         return listOf(
-            githubImpl.installerManifestName to installerManifestData.createInstallerManifest(),
-            githubImpl.getDefaultLocaleManifestName() to defaultLocaleManifestData.createDefaultLocaleManifest(),
+            githubImpl.installerManifestName to InstallerManifestData.createInstallerManifest(),
+            githubImpl.getDefaultLocaleManifestName() to DefaultLocaleManifestData.createDefaultLocaleManifest(),
             githubImpl.versionManifestName to VersionManifestData.createVersionManifest()
         ) + previousManifestData.remoteLocaleData.await()?.map { localeManifest ->
-            val allLocale = additionalMetadata?.locales?.find { it.name.equals(other = "all", ignoreCase = true) }
-            val metadataCurrentLocale = additionalMetadata?.locales?.find {
+            val allLocale = additionalMetadataParam?.locales?.find { it.name.equals(other = "all", ignoreCase = true) }
+            val metadataCurrentLocale = additionalMetadataParam?.locales?.find {
                 it.name.equals(other = localeManifest.packageLocale, ignoreCase = true)
             }
             val schemas: Schemas by inject()
             githubImpl.getLocaleManifestName(localeManifest.packageLocale) to localeManifest.copy(
-                packageIdentifier = sharedManifestData.packageIdentifier,
-                packageVersion = sharedManifestData.packageVersion,
+                packageIdentifier = packageIdentifier,
+                packageVersion = packageVersion,
                 manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion,
                 releaseNotes = allLocale?.releaseNotes ?: metadataCurrentLocale?.releaseNotes,
                 releaseNotesUrl = allLocale?.releaseNotesUrl ?: metadataCurrentLocale?.releaseNotesUrl,

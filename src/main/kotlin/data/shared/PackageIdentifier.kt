@@ -4,8 +4,8 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
+import data.AllManifestData
 import data.GitHubImpl
-import data.SharedManifestData
 import data.VersionUpdateState
 import input.ExitCode
 import input.Prompts
@@ -17,7 +17,7 @@ import java.io.IOException
 import kotlin.system.exitProcess
 
 object PackageIdentifier : KoinComponent, CommandPrompt<String> {
-    private val sharedManifestData: SharedManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
         println(colors.brightGreen(identifierInfo))
@@ -32,7 +32,10 @@ object PackageIdentifier : KoinComponent, CommandPrompt<String> {
         )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    fun Terminal.getLatestVersion(packageIdentifier: String, writeOutput: Boolean = true): String? {
+    fun Terminal.getLatestVersion(
+        packageIdentifier: String,
+        writeOutput: Boolean = true
+    ): String? = with(allManifestData) {
         return try {
             get<GitHubImpl>().getMicrosoftWinGetPkgs()
                 ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
@@ -41,7 +44,7 @@ object PackageIdentifier : KoinComponent, CommandPrompt<String> {
                 ?.filterNot { ghContent -> ghContent.name.all { it.isLetter() } }
                 ?.also {
                     if (it.isEmpty()) {
-                        sharedManifestData.updateState = VersionUpdateState.NewPackage
+                        updateState = VersionUpdateState.NewPackage
                         return null
                     } else {
                         if (writeOutput) {
@@ -50,12 +53,12 @@ object PackageIdentifier : KoinComponent, CommandPrompt<String> {
                     }
                 }
                 ?.map { it.name }
-                ?.also { sharedManifestData.allVersions = it }
+                ?.also { allVersions = it }
                 ?.let { PackageVersion.getHighestVersion(it) }
                 ?.also { if (writeOutput) info("Found latest version: $it") }
-                .also { sharedManifestData.latestVersion = it }
+                .also { latestVersion = it }
         } catch (_: IOException) {
-            sharedManifestData.updateState = VersionUpdateState.NewPackage
+            updateState = VersionUpdateState.NewPackage
             null
         }
     }

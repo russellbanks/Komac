@@ -83,11 +83,25 @@ class MenuCreator<T : Any>(
     }
 }
 
-fun <T: Any> Terminal.menu(
+fun <T : Any> Terminal.menu(
     items: List<T>,
     default: T? = null,
     optionalItemName: String? = null,
     nameConvert: (String) -> String = { it }
 ): MenuCreator<T> {
     return MenuCreator(items, default, optionalItemName, nameConvert, this)
+}
+
+fun Terminal.yesNoMenu(default: Boolean? = null): Boolean {
+    return menu(
+        items = YesNo.values().toList(),
+        default = if (default == true) YesNo.Yes else YesNo.No
+    ).prompt()!!.toBoolean()
+}
+
+enum class YesNo {
+    Yes,
+    No;
+
+    fun toBoolean() = this == Yes
 }

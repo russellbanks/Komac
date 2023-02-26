@@ -3,7 +3,6 @@ package input
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
-import data.SharedManifestData
 
 object Prompts {
     const val required = "[Required]"
@@ -13,15 +12,10 @@ object Prompts {
 
     const val enterChoice = "Enter Choice"
 
-    fun Terminal.pullRequestPrompt(sharedManifestData: SharedManifestData): ManifestResultOption? {
+    fun Terminal.pullRequestPrompt(packageIdentifier: String, packageVersion: String): ManifestResultOption? {
         println(
             verticalLayout {
-                cell(
-                    colors.brightYellow(
-                        "What would you like to do with " +
-                            "${sharedManifestData.packageIdentifier} ${sharedManifestData.packageVersion}?"
-                    )
-                )
+                cell(colors.info("What would you like to do with $packageIdentifier $packageVersion?"))
                 ManifestResultOption.values().forEach {
                     cell(
                         colors.brightWhite(

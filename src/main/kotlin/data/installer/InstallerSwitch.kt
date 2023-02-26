@@ -6,7 +6,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
-import data.InstallerManifestData
+import data.AllManifestData
 import data.PreviousManifestData
 import input.InstallerSwitch
 import input.Prompts
@@ -15,21 +15,21 @@ import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
 
 object InstallerSwitch : KoinComponent {
-    private val installerManifestData: InstallerManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
-    suspend fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) {
+    suspend fun Terminal.installerSwitchPrompt(installerSwitch: InstallerSwitch) = with(allManifestData) {
         if (
-            installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE ||
+            installerType == InstallerManifest.Installer.InstallerType.EXE ||
             installerSwitch == InstallerSwitch.Custom
         ) {
-            val isRequired = installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE &&
+            val isRequired = installerType == InstallerManifest.Installer.InstallerType.EXE &&
                 installerSwitch != InstallerSwitch.Custom
-            switchInfo(installerManifestData.installerType, installerSwitch).also { (info, infoColor) ->
+            switchInfo(installerType, installerSwitch).also { (info, infoColor) ->
                 println(infoColor(info))
             }
             info(switchExample(installerSwitch))
-            installerManifestData.installerSwitches[installerSwitch] = prompt(
+            installerSwitches[installerSwitch] = prompt(
                 prompt = installerSwitch.toString(),
                 default = getPreviousValue(installerSwitch)?.also { muted("Previous $installerSwitch: $it") },
                 convert = { input ->
@@ -60,17 +60,17 @@ object InstallerSwitch : KoinComponent {
             when (installerSwitch) {
                 InstallerSwitch.Silent -> {
                     it.installerSwitches?.silent
-                        ?: it.installers.getOrNull(installerManifestData.installers.size)
+                        ?: it.installers.getOrNull(allManifestData.installers.size)
                             ?.installerSwitches?.silent
                 }
                 InstallerSwitch.SilentWithProgress -> {
                     it.installerSwitches?.silentWithProgress
-                        ?: it.installers.getOrNull(installerManifestData.installers.size)
+                        ?: it.installers.getOrNull(allManifestData.installers.size)
                             ?.installerSwitches?.silentWithProgress
                 }
                 InstallerSwitch.Custom -> {
                     it.installerSwitches?.custom
-                        ?: it.installers.getOrNull(installerManifestData.installers.size)
+                        ?: it.installers.getOrNull(allManifestData.installers.size)
                             ?.installerSwitches?.custom
                 }
             }
@@ -80,8 +80,8 @@ object InstallerSwitch : KoinComponent {
     private suspend fun switchInfo(
         installerType: InstallerManifest.Installer.InstallerType?,
         installerSwitch: InstallerSwitch
-    ): Pair<String, TextColors> {
-        val isRequired = installerManifestData.installerType == InstallerManifest.Installer.InstallerType.EXE &&
+    ): Pair<String, TextColors> = with(allManifestData) {
+        val isRequired = installerType == InstallerManifest.Installer.InstallerType.EXE &&
             installerSwitch != InstallerSwitch.Custom
         return buildString {
             append(

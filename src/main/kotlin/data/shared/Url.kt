@@ -7,8 +7,7 @@ import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Platform
-import data.InstallerManifestData
-import data.SharedManifestData
+import data.AllManifestData
 import detection.PageScraper
 import detection.files.Zip
 import detection.files.msi.Msi
@@ -26,7 +25,8 @@ import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils.downloadFile
 import network.HttpUtils.getRedirectedUrl
-import network.HttpUtils.isRedirect
+import network.findArchitecture
+import network.isRedirect
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.koin.core.component.inject
@@ -37,21 +37,21 @@ import java.net.ConnectException
 import kotlin.system.exitProcess
 
 object Url : KoinComponent {
+    private val allManifestData: AllManifestData by inject()
 
-    suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) {
-        val installerManifestData: InstallerManifestData by inject()
+    suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) = with(allManifestData) {
         if (parameterUrl != null) {
-            installerManifestData.installerUrl = parameterUrl
+            installerUrl = parameterUrl
         } else {
-            setInstallerUrlFromPrompt(installerManifestData)
+            setInstallerUrlFromPrompt(this)
         }
-        downloadInstaller(installerManifestData)
+        downloadInstaller()
         msixBundleDetection()
     }
 
-    private suspend fun Terminal.setInstallerUrlFromPrompt(installerManifestData: InstallerManifestData) {
+    private suspend fun Terminal.setInstallerUrlFromPrompt(allManifestData: AllManifestData) {
         println(colors.brightGreen(installerUrlInfo))
-        installerManifestData.installerUrl = prompt(
+        allManifestData.installerUrl = prompt(
             prompt = installerUrlConst,
             convert = { input ->
                 runBlocking { isUrlValid(url = Url(input), canBeBlank = false) }
@@ -61,13 +61,13 @@ object Url : KoinComponent {
         ) ?: exitProcess(ExitCode.CtrlC.code)
         println()
 
-        setRedirectedUrl(installerManifestData)
+        setRedirectedUrl(allManifestData)
     }
 
-    private suspend fun Terminal.setRedirectedUrl(installerManifestData: InstallerManifestData) {
-        val redirectedUrl = getRedirectedUrl(installerManifestData.installerUrl)
+    private suspend fun Terminal.setRedirectedUrl(allManifestData: AllManifestData) {
+        val redirectedUrl = getRedirectedUrl(allManifestData.installerUrl)
         if (
-            redirectedUrl != installerManifestData.installerUrl &&
+            redirectedUrl != allManifestData.installerUrl &&
             redirectedUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
         ) {
             println(
@@ -82,7 +82,7 @@ object Url : KoinComponent {
                 warning(urlChanged)
                 val error = isUrlValid(url = redirectedUrl, canBeBlank = false)
                 if (error == null) {
-                    installerManifestData.installerUrl = redirectedUrl
+                    allManifestData.installerUrl = redirectedUrl
                     success("URL changed to $redirectedUrl")
                 } else {
                     warning(error)
@@ -90,43 +90,35 @@ object Url : KoinComponent {
                 }
                 println()
             } else {
-                info("Original URL Retained - Proceeding with ${installerManifestData.installerUrl}")
+                info("Original URL Retained - Proceeding with ${allManifestData.installerUrl}")
             }
         }
     }
 
-    private suspend fun Terminal.downloadInstaller(installerManifestData: InstallerManifestData) {
-        val sharedManifestData: SharedManifestData by inject()
-        if (installerManifestData.installers.map { it.installerUrl }.contains(installerManifestData.installerUrl)) {
-            val storedInstaller = installerManifestData.installers.first {
-                it.installerUrl == installerManifestData.installerUrl
-            }
-            with(installerManifestData) {
-                installerSha256 = storedInstaller.installerSha256
-                productCode = storedInstaller.productCode
-            }
+    private suspend fun Terminal.downloadInstaller() = with(allManifestData) {
+        if (installers.map { it.installerUrl }.contains(installerUrl)) {
+            installers += installers.first { it.installerUrl == installerUrl }
+            skipAddInstaller = true
         } else {
-            if (installerManifestData.installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
-                sharedManifestData.gitHubDetection = GitHubDetection(installerManifestData.installerUrl)
+            if (installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
+                gitHubDetection = GitHubDetection(installerUrl)
             } else {
-                sharedManifestData.pageScraper = PageScraper(installerManifestData.installerUrl)
+                pageScraper = PageScraper(installerUrl)
             }
-            val (file, fileDeletionThread) = get<Http>().client.downloadFile(installerManifestData.installerUrl, this)
+            val (file, fileDeletionThread) = get<Http>().client.downloadFile(installerUrl, this@downloadInstaller)
             val fileAnalyser = FileAnalyser(file)
-            installerManifestData.installerType = fileAnalyser.getInstallerType()
-            installerManifestData.architecture = fileAnalyser.getArchitecture()
-            installerManifestData.scope = fileAnalyser.getScope()
-            installerManifestData.upgradeBehavior = fileAnalyser.getUpgradeBehaviour()
-            installerManifestData.installerSha256 = sharedManifestData.gitHubDetection?.sha256?.await() ?: file.hash()
+            installerType = fileAnalyser.getInstallerType()
+            architecture = installerUrl.findArchitecture() ?: fileAnalyser.getArchitecture()
+            scope = fileAnalyser.getScope()
+            upgradeBehavior = fileAnalyser.getUpgradeBehaviour()
+            installerSha256 = gitHubDetection?.sha256?.await() ?: file.hash()
             when (file.extension.lowercase()) {
                 InstallerManifest.InstallerType.MSIX.toString(),
-                InstallerManifest.InstallerType.APPX.toString() -> sharedManifestData.msix = Msix(file)
+                InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(file)
                 MsixBundle.msixBundleConst,
-                MsixBundle.appxBundleConst -> sharedManifestData.msixBundle = MsixBundle(file)
-                InstallerManifest.InstallerType.MSI.toString() -> {
-                    if (Platform.isWindows()) sharedManifestData.msi = Msi(file)
-                }
-                InstallerManifest.InstallerType.ZIP.toString() -> sharedManifestData.zip = Zip(
+                MsixBundle.appxBundleConst -> msixBundle = MsixBundle(file)
+                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(file)
+                InstallerManifest.InstallerType.ZIP.toString() -> zip = Zip(
                     zip = file,
                     terminal = this@downloadInstaller
                 )
@@ -136,18 +128,17 @@ object Url : KoinComponent {
         }
     }
 
-    private fun Terminal.msixBundleDetection() {
-        val msixBundle = get<SharedManifestData>().msixBundle
+    private fun Terminal.msixBundleDetection() = with(allManifestData) {
         if (msixBundle != null) {
             println(
                 verticalLayout {
                     cell(
                         (colors.brightGreen + colors.bold)(
-                            "${msixBundle.packages?.size} packages have been detected inside the MSIX Bundle:"
+                            "${msixBundle?.packages?.size} packages have been detected inside the MSIX Bundle:"
                         )
                     )
-                    msixBundle.packages?.forEachIndexed { index, individualPackage ->
-                        cell(brightGreen("Package ${index.inc()}/${msixBundle.packages?.size}"))
+                    msixBundle?.packages?.forEachIndexed { index, individualPackage ->
+                        cell(brightGreen("Package ${index.inc()}/${msixBundle?.packages?.size}"))
                         listOf(
                             "Architecture" to individualPackage.processorArchitecture,
                             "Version" to individualPackage.version,

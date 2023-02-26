@@ -15,11 +15,9 @@ import org.kohsuke.github.connector.GitHubConnector
 import org.kohsuke.github.connector.GitHubConnectorRequest
 import org.kohsuke.github.connector.GitHubConnectorResponse
 import org.kohsuke.github.connector.GitHubConnectorResponse.ByteArrayResponse
-import java.io.IOException
 import java.io.InputStream
 
 class KtorGitHubConnector(private val client: HttpClient) : GitHubConnector {
-    @Throws(IOException::class)
     override fun send(connectorRequest: GitHubConnectorRequest): GitHubConnectorResponse = runBlocking {
         val request = client.request(connectorRequest.url()) {
             method = HttpMethod.parse(connectorRequest.method())

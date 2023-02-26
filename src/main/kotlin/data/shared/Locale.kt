@@ -5,9 +5,8 @@ import com.github.ajalt.mordant.rendering.TextStyle
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.InstallerManifestData
+import data.AllManifestData
 import data.PreviousManifestData
-import data.SharedManifestData
 import input.ExitCode
 import input.LocaleType
 import input.Prompts
@@ -17,13 +16,12 @@ import java.util.Locale
 import kotlin.system.exitProcess
 
 object Locale : KoinComponent {
-    private val installerManifestData: InstallerManifestData by inject()
-    private val sharedManifestData: SharedManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
     object Installer : CommandPrompt<String> {
         override suspend fun prompt(terminal: Terminal): String = with(terminal) {
-            return sharedManifestData.msi?.productLanguage ?: let {
+            return allManifestData.msi?.productLanguage ?: let {
                 localeInfo(LocaleType.Installer).also { (info, infoColor) -> println(infoColor(info)) }
                 info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
                 prompt(
@@ -71,7 +69,7 @@ object Locale : KoinComponent {
 
     private suspend fun getPreviousValue(): String? {
         return previousManifestData.remoteInstallerData.await()?.let {
-            it.installerLocale ?: it.installers[installerManifestData.installers.size].installerLocale
+            it.installerLocale ?: it.installers[allManifestData.installers.size].installerLocale
         }
     }
 

@@ -3,7 +3,7 @@ package data.locale
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.SharedManifestData
+import data.AllManifestData
 import input.ExitCode
 import input.Prompts
 import io.ktor.http.Url
@@ -14,7 +14,7 @@ import kotlin.system.exitProcess
 
 object ReleaseNotesUrl : KoinComponent, CommandPrompt<Url> {
     override suspend fun prompt(terminal: Terminal): Url = with(terminal) {
-        return get<SharedManifestData>().gitHubDetection?.releaseNotesUrl ?: let {
+        return get<AllManifestData>().gitHubDetection?.releaseNotesUrl ?: let {
             println(colors.brightYellow("${Prompts.optional} Enter the package release notes url"))
             prompt(
                 prompt = "Release notes url",

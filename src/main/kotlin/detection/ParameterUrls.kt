@@ -3,7 +3,7 @@ package detection
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.Terminal
 import io.ktor.http.Url
-import network.HttpUtils
+import network.getExtension
 import org.koin.core.component.KoinComponent
 import schemas.manifest.InstallerManifest
 
@@ -71,8 +71,7 @@ object ParameterUrls : KoinComponent {
             }
             if (newInstaller == null) {
                 newInstaller = newInstallers.firstOrNull {
-                    HttpUtils.getURLExtension(it.installerUrl) ==
-                        HttpUtils.getURLExtension(previousInstaller.installerUrl)
+                    it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension()
                 }
             }
             if (newInstaller != null) {

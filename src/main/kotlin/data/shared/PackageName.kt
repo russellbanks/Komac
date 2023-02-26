@@ -4,22 +4,22 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
+import data.AllManifestData
 import data.PreviousManifestData
-import data.SharedManifestData
 import input.ExitCode
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.system.exitProcess
 
 object PackageName : KoinComponent, CommandPrompt<String> {
-    private val sharedManifestData: SharedManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
-        return sharedManifestData.msix?.displayName ?: let {
+        return allManifestData.msix?.displayName ?: let {
             println(colors.brightGreen(nameInfo))
             info(example)
-            sharedManifestData.msi?.productName?.let { info("Detected from MSI: $it") }
+            allManifestData.msi?.productName?.let { info("Detected from MSI: $it") }
             prompt(
                 prompt = const,
                 default = previousManifestData.remoteDefaultLocaleData.await()?.packageName

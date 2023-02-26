@@ -4,8 +4,8 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
+import data.AllManifestData
 import data.PreviousManifestData
-import data.SharedManifestData
 import input.ExitCode
 import input.Prompts
 import io.ktor.http.Url
@@ -18,10 +18,10 @@ import kotlin.system.exitProcess
 
 object Publisher : KoinComponent, CommandPrompt<String> {
     private val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
-    private val sharedManifestData: SharedManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
 
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
-        return sharedManifestData.msi?.manufacturer ?: sharedManifestData.msix?.publisherDisplayName ?: let {
+        return allManifestData.msi?.manufacturer ?: allManifestData.msix?.publisherDisplayName ?: let {
             println(colors.brightGreen(publisherInfo))
             info(example)
             prompt(
@@ -49,7 +49,7 @@ object Publisher : KoinComponent, CommandPrompt<String> {
 
     object Url : CommandPrompt<io.ktor.http.Url> {
         override suspend fun prompt(terminal: Terminal): io.ktor.http.Url = with(terminal) {
-            return sharedManifestData.gitHubDetection?.publisherUrl ?: let {
+            return allManifestData.gitHubDetection?.publisherUrl ?: let {
                 println(colors.brightYellow("${Prompts.optional} Enter the publisher home page"))
                 prompt(
                     prompt = "Publisher url",

@@ -7,7 +7,7 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.InstallerManifestData
+import data.AllManifestData
 import data.PreviousManifestData
 import input.ExitCode
 import input.Prompts
@@ -17,7 +17,7 @@ import schemas.manifest.InstallerManifest
 import kotlin.system.exitProcess
 
 object InstallerType : KoinComponent, CommandPrompt<InstallerManifest.Installer.InstallerType> {
-    private val installerManifestData: InstallerManifestData by inject()
+    private val allManifestData: AllManifestData by inject()
     private val previousManifestData: PreviousManifestData by inject()
     private val installerTypesEnum = InstallerManifest.InstallerType.values().map { it.toString() }
 
@@ -49,10 +49,10 @@ object InstallerType : KoinComponent, CommandPrompt<InstallerManifest.Installer.
         throw IllegalArgumentException("Invalid installer type: $this")
     }
 
-    private suspend fun getPreviousValue(): String? {
+    private suspend fun getPreviousValue(): String? = with(allManifestData) {
         return previousManifestData.remoteInstallerData.await()?.let {
             it.installerType?.toString()
-                ?: it.installers.getOrNull(installerManifestData.installers.size)?.installerType?.toString()
+                ?: it.installers.getOrNull(installers.size)?.installerType?.toString()
         }
     }
 

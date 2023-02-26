@@ -17,19 +17,19 @@ import schemas.manifest.VersionManifest
 
 @Single
 class PreviousManifestData : KoinComponent {
-    var sharedManifestData: SharedManifestData = get()
-    val scope = CoroutineScope(Dispatchers.IO)
+    private var allManifestData: AllManifestData = get()
+    private val scope = CoroutineScope(Dispatchers.IO)
     private val repository = scope.async { get<GitHubImpl>().getMicrosoftWinGetPkgs() }
     private val directoryPath: Deferred<MutableList<GHContent>?> = scope.async {
-        sharedManifestData.latestVersion?.let {
+        allManifestData.latestVersion?.let {
             repository.await()
-                ?.getDirectoryContent("${HttpUtils.getDirectoryPath(sharedManifestData.packageIdentifier)}/$it")
+                ?.getDirectoryContent("${HttpUtils.getDirectoryPath(allManifestData.packageIdentifier)}/$it")
         }
     }
     var remoteInstallerData: Deferred<InstallerManifest?> = scope.async {
         directoryPath.await()?.let { nonNullDirectoryPath ->
             repository.await()?.getFileContent(
-                nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.installer.yaml" }.path
+                nonNullDirectoryPath.first { it.name == "${allManifestData.packageIdentifier}.installer.yaml" }.path
             )?.read()?.use {
                 EncodeConfig.yamlDefault.decodeFromStream(InstallerManifest.serializer(), it)
             }
@@ -39,7 +39,7 @@ class PreviousManifestData : KoinComponent {
         directoryPath.await()?.let { nonNullDirectoryPath ->
             repository.await()?.getFileContent(
                 nonNullDirectoryPath.first {
-                    it.name == "${sharedManifestData.packageIdentifier}.locale.${remoteVersionData.await()?.defaultLocale}.yaml"
+                    it.name == "${allManifestData.packageIdentifier}.locale.${remoteVersionData.await()?.defaultLocale}.yaml"
                 }.path
             )?.read()?.use {
                 EncodeConfig.yamlDefault.decodeFromStream(DefaultLocaleManifest.serializer(), it)
@@ -49,7 +49,7 @@ class PreviousManifestData : KoinComponent {
     var remoteLocaleData: Deferred<List<LocaleManifest>?> = scope.async {
         directoryPath.await()
             ?.filter {
-                it.name.matches(Regex("${Regex.escape(sharedManifestData.packageIdentifier)}.locale\\..*\\.yaml"))
+                it.name.matches(Regex("${Regex.escape(allManifestData.packageIdentifier)}.locale\\..*\\.yaml"))
             }
             ?.filterNot { ghContent ->
                 remoteVersionData.await()?.defaultLocale?.let { ghContent.name.contains(it) } == true
@@ -65,7 +65,7 @@ class PreviousManifestData : KoinComponent {
     var remoteVersionData: Deferred<VersionManifest?> = scope.async {
         directoryPath.await()?.let { nonNullDirectoryPath ->
             repository.await()?.getFileContent(
-                nonNullDirectoryPath.first { it.name == "${sharedManifestData.packageIdentifier}.yaml" }.path
+                nonNullDirectoryPath.first { it.name == "${allManifestData.packageIdentifier}.yaml" }.path
             )?.read()?.use { EncodeConfig.yamlDefault.decodeFromStream(VersionManifest.serializer(), it) }
         }
     }
