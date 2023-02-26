@@ -182,7 +182,7 @@ class GitHubTests : FunSpec({
             getFormattedReleaseNotes(ghRelease) shouldBe "- Issue reported in #4321"
         }
 
-        test("multiple pull request or issue links in a string are converted to their pull request numbers") {
+        test("multiple pull request or issue links in a string are converted to their issue numbers") {
             val ghRelease: GHRelease = mockk {
                 every { body } returns buildString {
                     append("- New features in ")
@@ -192,6 +192,20 @@ class GitHubTests : FunSpec({
                 }
             }
             getFormattedReleaseNotes(ghRelease) shouldBe "- New features in #1234 and #4321"
+        }
+
+        test("issues with a dash in the user or repository are converted to their issue numbers") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns "- https://github.com/user-name/repository-extra/issues/1234"
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe "- #1234"
+        }
+
+        test("pull requests with a dash in the user or repository are converted to their issue numbers") {
+            val ghRelease: GHRelease = mockk {
+                every { body } returns "- https://github.com/user-name/repository-extra/pull/4321"
+            }
+            getFormattedReleaseNotes(ghRelease) shouldBe "- #4321"
         }
 
         test("pull requests without a number don't get converted") {
