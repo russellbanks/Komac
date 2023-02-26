@@ -50,7 +50,7 @@ class GitHubDetection(url: Url) : KoinComponent {
         asset?.createdAt?.toInstant()?.atOffset(ZoneOffset.UTC)?.toLocalDate()
     }.getOrNull()
     var releaseNotesUrl: Url? = release?.htmlUrl?.let { Url(it.toURI()) }
-    var releaseNotes: String? = release?.let { GitHubExtensions.getFormattedReleaseNotes(it) }
+    var releaseNotes: String? = release?.getFormattedReleaseNotes()
     var privacyUrl: Url? = runCatching {
         repository
             .getDirectoryContent("")
