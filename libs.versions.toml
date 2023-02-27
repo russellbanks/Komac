@@ -19,7 +19,7 @@ ksp = "1.8.10-1.0.9"
 ktor = "2.2.3"
 mockk = "1.13.4"
 mordant = "2.0.0-beta11.72-SNAPSHOT"
-shadow = "8.0.0"
+shadow = "8.1.0"
 skrapeit = "1.2.2"
 slf4j = "2.0.6"
 
