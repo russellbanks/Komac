@@ -7,6 +7,7 @@ import commands.CommandPrompt
 import data.AllManifestData
 import data.GitHubImpl
 import data.VersionUpdateState
+import data.shared.PackageVersion.getHighestVersion
 import input.ExitCode
 import input.Prompts
 import network.HttpUtils
@@ -54,7 +55,7 @@ object PackageIdentifier : KoinComponent, CommandPrompt<String> {
                 }
                 ?.map { it.name }
                 ?.also { allVersions = it }
-                ?.let { PackageVersion.getHighestVersion(it) }
+                ?.getHighestVersion()
                 ?.also { if (writeOutput) info("Found latest version: $it") }
                 .also { latestVersion = it }
         } catch (_: IOException) {
