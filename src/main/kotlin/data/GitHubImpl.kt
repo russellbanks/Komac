@@ -144,7 +144,7 @@ class GitHubImpl : KoinComponent {
             append("### Pull request has been created with ")
             append(System.getenv(Schemas.customToolEnv) ?: "${BuildConfig.appName} v${BuildConfig.appVersion}")
             append(" ")
-            append(if (Random.nextInt(25) == 0) ":${fruits[Random.nextInt(fruits.size)]}:" else ":rocket:")
+            append(if (Random.nextInt(30) == 0) ":${fruits[Random.nextInt(fruits.size)]}:" else ":rocket:")
         }
     }
 
@@ -152,7 +152,7 @@ class GitHubImpl : KoinComponent {
         "cherries", "grapes", "green_apple", "lemon", "melon", "pineapple", "strawberry", "tangerine", "watermelon"
     )
 
-    suspend fun commitAndPullRequest(files: List<Pair<String, String>>, terminal: Terminal) {
+    fun commitAndPullRequest(files: List<Pair<String, String>>, terminal: Terminal) {
         commitFiles(files.map { "$baseGitHubPath/${it.first}" to it.second }, terminal)
         createPullRequest(terminal)
     }

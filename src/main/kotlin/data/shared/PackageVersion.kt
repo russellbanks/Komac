@@ -12,6 +12,7 @@ import input.Prompts
 import network.HttpUtils
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.math.BigInteger
 import kotlin.random.Random
 import kotlin.system.exitProcess
 
@@ -38,7 +39,7 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
             packageExists(packageIdentifier, packageVersion) -> updateState = VersionUpdateState.UpdateVersion
             else -> {
                 val versionsToCompare = listOf(packageVersion, latestVersion)
-                val highestVersion = getHighestVersion(versionsToCompare.filterNotNull())
+                val highestVersion = versionsToCompare.filterNotNull().getHighestVersion()
                 updateState = when (packageVersion) {
                     highestVersion -> VersionUpdateState.NewVersion
                     else -> VersionUpdateState.AddVersion
@@ -65,43 +66,42 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
         }
     }
 
-    fun getHighestVersion(versions: List<String>): String {
-        val toNatural: (String) -> String = {
-            Regex("\\d+").replace(it) { matchResult ->
-                matchResult.value.padStart(20)
-            }
-        }
-        data class VersionPart(val value: Int, val supplement: String, val original: String)
+    data class VersionPart(val value: BigInteger, val supplement: String, val original: String)
 
-        fun parseVersionPart(part: String): VersionPart {
-            val value = part.takeWhile { it.isDigit() }.toIntOrNull() ?: 0
-            val supplement = part.dropWhile { it.isDigit() }
-            return VersionPart(value, supplement, part)
-        }
+    /**
+     * Parses a version part string into a VersionPart object.
+     */
+    private fun parseVersionPart(part: String): VersionPart {
+        val value = part.takeWhile { it.isDigit() }.toBigIntegerOrNull() ?: BigInteger.valueOf(0)
+        val supplement = part.dropWhile { it.isDigit() }
+        return VersionPart(value, supplement, part)
+    }
 
-        fun compareVersionParts(left: VersionPart, right: VersionPart): Int {
-            return when {
-                left.value != right.value -> left.value.compareTo(right.value)
-                left.supplement.isEmpty() && right.supplement.isEmpty() -> 0
-                left.supplement.isEmpty() -> 1
-                right.supplement.isEmpty() -> -1
-                else -> left.supplement.compareTo(right.supplement)
-            }
-        }
-
-        fun compareVersions(left: List<VersionPart>, right: List<VersionPart>): Int {
-            return left.zip(right).map { compareVersionParts(it.first, it.second) }.firstOrNull { it != 0 } ?: 0
-        }
-
-        return versions.asSequence()
-            .sortedWith(compareBy(toNatural))
-            .map { version ->
-                version.split(".").map { versionPart ->
-                    parseVersionPart(versionPart)
-                }
-            }.sortedWith { left, right ->
-                compareVersions(left, right)
-            }.last().joinToString(".") { it.original }
+    /**
+     * Compares two lists of VersionPart objects lexicographically based on their values and supplements.
+     *
+     * The comparison is performed element by element in lexicographic order. The first pair of elements that
+     * differ determines the result of the comparison. If all elements are equal, the shorter list is considered
+     * less than the longer one.
+     *
+     * @param other the other list to compare this list to.
+     * @return a negative integer, zero, or a positive integer as this list is less than, equal to, or greater than
+     * the specified list, respectively.
+     */
+    private fun List<VersionPart>.compareTo(other: List<VersionPart>): Int {
+        val size = size.coerceAtMost(other.size)
+        return take(size)
+            .zip(other.take(size))
+            .map { (leftPart, rightPart) -> compareValuesBy(leftPart, rightPart, { it.value }, { it.supplement }) }
+            .firstOrNull { it != 0 } ?: size.compareTo(other.size)
+    }
+    /**
+     * Returns the highest version string from a list of version strings.
+     */
+    fun List<String>.getHighestVersion(): String? {
+        return map { version -> version.split(".").map(::parseVersionPart) }
+            .maxWithOrNull { left, right -> left.compareTo(right) }
+            ?.joinToString(".") { it.original }
     }
 
     private fun generateRandomVersion(): String {

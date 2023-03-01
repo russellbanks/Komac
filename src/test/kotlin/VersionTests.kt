@@ -9,34 +9,41 @@ import io.kotest.matchers.shouldNotBe
 class VersionTests : FunSpec({
     context("highest version number tests") {
         test("greater integer") {
-            getHighestVersion(listOf("2", "1")) shouldBe "2"
+            listOf("2", "1").getHighestVersion() shouldBe "2"
         }
         test("decimal point recognition") {
-            getHighestVersion(listOf("1.0.1", "1.0", "1.0.0.1")) shouldBe "1.0.1"
+            listOf("1.0.1", "1.0", "1.0.0.1").getHighestVersion() shouldBe "1.0.1"
         }
         test("pre-release versions") {
-            getHighestVersion(listOf("1.0.0-alpha", "1.0.0-beta")) shouldBe "1.0.0-beta"
+            listOf("1.0.0-alpha", "1.0.0-beta").getHighestVersion() shouldBe "1.0.0-beta"
         }
         test("version number with 'v'") {
-            getHighestVersion(listOf("v1", "1")) shouldBe "1"
+            listOf("v1", "1").getHighestVersion() shouldBe "1"
         }
         test("version number length") {
-            getHighestVersion(listOf("13.0.0.8", "14", "14.0.1")) shouldBe "14.0.1"
+            listOf("13.0.0.8", "14", "14.0.1").getHighestVersion() shouldBe "14.0.1"
         }
         test("greater version with same pre-release word") {
-            getHighestVersion(listOf("0.0.1-alpha", "0.0.2-alpha")) shouldBe "0.0.2-alpha"
+            listOf("0.0.1-alpha", "0.0.2-alpha").getHighestVersion() shouldBe "0.0.2-alpha"
         }
         test("greater version with lesser pre-release word") {
-            getHighestVersion(listOf("0.0.1-beta", "0.0.2-alpha")) shouldBe "0.0.2-alpha"
+            listOf("0.0.1-beta", "0.0.2-alpha").getHighestVersion() shouldBe "0.0.2-alpha"
         }
         test("minor version greater than or equal to 10") {
-            getHighestVersion(listOf("1.9.0", "1.10.0")) shouldBe "1.10.0"
+            listOf("1.9.0", "1.10.0").getHighestVersion() shouldBe "1.10.0"
         }
         test("long lesser number") {
-            getHighestVersion(listOf("1.9.9.9.9.9.9", "2")) shouldBe "2"
+            listOf("1.9.9.9.9.9.9", "2").getHighestVersion() shouldBe "2"
         }
         test("leading zeroes") {
-            getHighestVersion(listOf("0000001", "2")) shouldBe "2"
+            listOf("0000001", "2").getHighestVersion() shouldBe "2"
+        }
+        test("empty list") {
+            listOf<String>().getHighestVersion() shouldBe null
+        }
+        test("largest version allowed") {
+            val maxVersion = "9".repeat(PackageVersion.maxLength)
+            listOf(maxVersion).getHighestVersion() shouldBe maxVersion
         }
         context("every combination of a list's order should return the same value") {
             fun permutations(list: List<String>): List<List<String>> {
@@ -50,7 +57,7 @@ class VersionTests : FunSpec({
             }
 
             withData(permutations(listOf("1.0.0", "2.0.0.1", "v1.0.0-alpha"))) {
-                getHighestVersion(it) shouldBe "2.0.0.1"
+                it.getHighestVersion() shouldBe "2.0.0.1"
             }
         }
     }
