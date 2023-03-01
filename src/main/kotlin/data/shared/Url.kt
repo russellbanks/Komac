@@ -24,8 +24,8 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils.downloadFile
-import network.HttpUtils.getRedirectedUrl
 import network.findArchitecture
+import network.getRedirectedUrl
 import network.isRedirect
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -65,7 +65,7 @@ object Url : KoinComponent {
     }
 
     private suspend fun Terminal.setRedirectedUrl(allManifestData: AllManifestData) {
-        val redirectedUrl = getRedirectedUrl(allManifestData.installerUrl)
+        val redirectedUrl = allManifestData.installerUrl.getRedirectedUrl(get<Http>().client)
         if (
             redirectedUrl != allManifestData.installerUrl &&
             redirectedUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)

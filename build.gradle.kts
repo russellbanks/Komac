@@ -125,7 +125,7 @@ tasks.jpackage {
 
     windows {
         icon = "$projectDir/assets/logo.ico"
-        winPerUserInstall = true
+        winPerUserInstall = System.getenv("PER_USER_INSTALL")?.toBooleanStrictOrNull() ?: true
         winDirChooser = true
         type = ImageType.EXE
         winConsole = true

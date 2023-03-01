@@ -1,5 +1,9 @@
 package network
 
+import io.ktor.client.HttpClient
+import io.ktor.client.request.head
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.fullPath
@@ -36,6 +40,27 @@ fun Url.findScope(): InstallerManifest.Installer.Scope? {
         fullPath.contains(other = "user", ignoreCase = true) -> InstallerManifest.Installer.Scope.User
         fullPath.contains(other = "machine", ignoreCase = true) -> InstallerManifest.Installer.Scope.Machine
         else -> null
+    }
+}
+
+suspend fun Url.getRedirectedUrl(client: HttpClient): Url {
+    client.config { followRedirects = false }.use { noRedirectClient ->
+        var redirectedInstallerUrl: Url = this
+        var response: HttpResponse? = noRedirectClient.head(this)
+
+        var status: HttpStatusCode? = response?.status
+        var location: String? = response?.headers?.get(HttpHeaders.Location)
+        while (
+            status?.isRedirect() == true &&
+            response?.headers?.contains(HttpHeaders.Location) == true &&
+            location != null
+        ) {
+            redirectedInstallerUrl = Url(location)
+            response = noRedirectClient.head(redirectedInstallerUrl)
+            status = response.status
+            location = response.headers[HttpHeaders.Location]
+        }
+        return redirectedInstallerUrl
     }
 }
 

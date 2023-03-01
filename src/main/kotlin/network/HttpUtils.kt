@@ -5,11 +5,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.AllManifestData
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.head
 import io.ktor.client.request.prepareGet
-import io.ktor.client.statement.HttpResponse
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.contentLength
 import io.ktor.http.lastModified
@@ -19,7 +15,6 @@ import io.ktor.utils.io.core.readBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import org.koin.core.component.inject
 import java.io.File
 import java.time.LocalDateTime
@@ -77,26 +72,5 @@ object HttpUtils : KoinComponent {
             append(packageIdentifier.first().lowercase())
             packageIdentifier.split(".").forEach { append("/$it") }
         }
-    }
-
-    suspend fun getRedirectedUrl(installerUrl: Url): Url {
-        val noRedirectClient = get<Http>().client.config { followRedirects = false }
-        var redirectedInstallerUrl: Url = installerUrl
-        var response: HttpResponse? = noRedirectClient.head(installerUrl)
-
-        var status: HttpStatusCode? = response?.status
-        var location: String? = response?.headers?.get(HttpHeaders.Location)
-        while (
-            status?.isRedirect() == true &&
-            response?.headers?.contains(HttpHeaders.Location) == true &&
-            location != null
-        ) {
-            redirectedInstallerUrl = Url(location)
-            response = noRedirectClient.head(redirectedInstallerUrl)
-            status = response.status
-            location = response.headers[HttpHeaders.Location]
-        }
-        noRedirectClient.close()
-        return redirectedInstallerUrl
     }
 }
