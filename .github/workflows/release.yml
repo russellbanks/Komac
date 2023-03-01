@@ -34,15 +34,25 @@ jobs:
 
       - name: Build binaries
         run: ./gradlew jpackage
+        env:
+          PER_USER_INSTALL: true
 
-      - name: Release nightly JAR
+      - name: Rename user scope exe on Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse -Filter "Komac*.exe" | ForEach-Object {
+            Rename-Item $_.FullName ($_.Name -replace "Komac", "KomacUserSetup")
+          }
+
+      - name: Release JAR
         if: matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
           files: build/libs/*-all.jar
 
-      - name: Release nightly binaries
+      - name: Release binaries
         uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
@@ -51,12 +61,35 @@ jobs:
             build/distributions/*.deb
             build/distributions/*.dmg
 
+      - name: Clean build directory
+        if: matrix.os == 'windows-latest'
+        run: ./gradlew clean
+
+      - name: Build machine scope exe on Windows
+        if: matrix.os == 'windows-latest'
+        run: ./gradlew jpackage
+        env:
+          PER_USER_INSTALL: false
+
+      - name: Rename machine scope exe on Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse -Filter "Komac*.exe" | ForEach-Object {
+            Rename-Item $_.FullName ($_.Name -replace "Komac", "KomacMachineSetup")
+          }
+
+      - name: Release machine scope exe
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          files: build/distributions/*.exe
+
   release-to-winget:
     needs: [ build ]
     runs-on: windows-latest
     steps:
       - name: Release to Winget
-        if: matrix.os == 'windows-latest'
         uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: RussellBanks.Komac
