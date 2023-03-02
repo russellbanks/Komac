@@ -6,6 +6,7 @@ import com.russellbanks.Komac.BuildConfig
 import network.Http
 import network.KtorGitHubConnector
 import org.kohsuke.github.GHDirection
+import org.kohsuke.github.GHIssue
 import org.kohsuke.github.GHIssueSearchBuilder
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
@@ -83,18 +84,20 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    private fun getExistingPullRequest(identifier: String, version: String) = github.searchIssues()
-        .q("repo:$Microsoft/$wingetpkgs")
-        .q("is:pr")
-        .q(identifier)
-        .q(version)
-        .q("in:path")
-        .q("created:>${LocalDate.now().minusWeeks(2)}")
-        .sort(GHIssueSearchBuilder.Sort.CREATED)
-        .order(GHDirection.DESC)
-        .list()
-        .withPageSize(1)
-        .firstOrNull()
+    private fun getExistingPullRequest(identifier: String, version: String): GHIssue? {
+        return github.searchIssues()
+            .q("repo:$Microsoft/$wingetpkgs")
+            .q("is:pr")
+            .q(identifier)
+            .q(version)
+            .q("in:path")
+            .q("created:>${LocalDate.now().minusWeeks(2)}")
+            .sort(GHIssueSearchBuilder.Sort.CREATED)
+            .order(GHDirection.DESC)
+            .list()
+            .withPageSize(1)
+            .firstOrNull()
+    }
 
     fun promptIfPullRequestExists(identifier: String, version: String, terminal: Terminal) = with(terminal) {
         val ghIssue = getExistingPullRequest(identifier, version) ?: return
