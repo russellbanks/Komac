@@ -10,7 +10,7 @@ object ManifestUtils {
             when {
                 line.startsWith("#") -> emit(colors.green(line))
                 line.firstOrNull()?.isLetter() == true -> {
-                    val part = line.split(":")
+                    val part = line.split(":", limit = 2)
                     emit("${colors.info(part.first())}${part.getOrNull(1)?.let { ":$it" } ?: ""}")
                 }
                 line.startsWith("-") -> emit(line)

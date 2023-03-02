@@ -121,7 +121,7 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                 loopThroughInstallers(parameterUrls = urls, isCIEnvironment = isCIEnvironment)
                 val files = createFiles()
                 files.forEach { manifest ->
-                    formattedManifestLinesFlow(manifest.second, colors).collect { echo(it) }
+                    formattedManifestLinesFlow(manifest.second, colors).collect(::echo)
                 }
                 if (submit) {
                     githubImpl.commitAndPullRequest(files, currentContext.terminal)
