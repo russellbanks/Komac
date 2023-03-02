@@ -5,6 +5,8 @@ import io.mockk.every
 import io.mockk.mockk
 import org.kohsuke.github.GHRelease
 import org.kohsuke.github.GHRepository
+import utils.Hashing.buildHash
+import java.security.MessageDigest
 
 class GitHubTests : FunSpec({
     context("formatted release notes tests") {
@@ -190,6 +192,12 @@ class GitHubTests : FunSpec({
         test("pull requests outside the repository are converted appropriately") {
             every { ghRelease.body } returns "- https://github.com/user/other-repository/pull/4321"
             ghRelease.getFormattedReleaseNotes() shouldBe "- user/other-repository#4321"
+        }
+
+        test("commit SHA-1's are removed") {
+            val sha1 = buildHash(MessageDigest.getInstance("SHA-1").apply { update("".toByteArray()) }.digest())
+            every { ghRelease.body } returns "- $sha1 New feature"
+            ghRelease.getFormattedReleaseNotes() shouldBe "- New feature"
         }
     }
 })

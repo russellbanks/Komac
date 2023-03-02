@@ -4,7 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
-import java.io.IOException
 import java.io.InputStream
 import java.security.MessageDigest
 
@@ -13,7 +12,6 @@ object Hashing {
     private const val hex255 = 0xff
     private const val hex256 = 0x100
 
-    @Throws(IOException::class, IllegalArgumentException::class, IllegalStateException::class)
     suspend fun File.hash(
         digest: MessageDigest = Algorithms.SHA256,
         hashProgressCallback: (Float) -> Unit = {}
