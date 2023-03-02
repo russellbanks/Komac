@@ -112,7 +112,7 @@ class NewManifest : CliktCommand(name = "new"), KoinComponent {
                     releaseNotesUrl = prompt(ReleaseNotesUrl)
                     val files = createFiles()
                     files.forEach { manifest ->
-                        ManifestUtils.formattedManifestLinesFlow(manifest.second, colors).collect { echo(it) }
+                        ManifestUtils.formattedManifestLinesFlow(manifest.second, colors).collect(::echo)
                     }
                     pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
                         when (manifestResultOption) {
