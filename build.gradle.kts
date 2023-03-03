@@ -62,7 +62,6 @@ dependencies {
     // Ktor - https://github.com/ktorio/ktor
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.java)
-    implementation(libs.ktor.serialization.kotlinx.json)
 
     // Mockk - https://github.com/mockk/mockk
     testImplementation(libs.mockk)
