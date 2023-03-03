@@ -28,7 +28,6 @@ import detection.ParameterUrls
 import detection.github.GitHubDetection
 import input.FileWriter
 import input.ManifestResultOption
-import input.Prompts
 import input.Prompts.pullRequestPrompt
 import io.ktor.client.call.body
 import io.ktor.client.request.prepareGet
@@ -150,7 +149,8 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
         parameterUrls: List<Url>? = null,
         isCIEnvironment: Boolean = false
     ) = with(allManifestData) {
-        val remoteInstallerManifest = previousManifestData.remoteInstallerData.await()!!
+        val remoteInstallerManifest = previousManifestData.remoteInstallerData.await()
+            ?: throw CliktError(colors.danger("Failed to retrieve previous installers"), statusCode = 1)
         if (parameterUrls != null) {
             loopParameterUrls(parameterUrls = parameterUrls, remoteInstallerManifest = remoteInstallerManifest)
         } else if (isCIEnvironment) {
@@ -159,14 +159,14 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
             remoteInstallerManifest.installers.forEachIndexed { index, installer ->
                 info("Installer Entry ${index.inc()}/${remoteInstallerManifest.installers.size}")
                 listOf(
-                    InstallerManifest.Installer.Architecture::class.simpleName!! to installer.architecture,
+                    InstallerManifest.Installer.Architecture::class.simpleName to installer.architecture,
                     InstallerType.const to (installer.installerType ?: remoteInstallerManifest.installerType),
-                    InstallerManifest.Scope::class.simpleName!! to (installer.scope ?: remoteInstallerManifest.scope),
+                    InstallerManifest.Scope::class.simpleName to (installer.scope ?: remoteInstallerManifest.scope),
                     Locale.installerLocaleConst to
                         (installer.installerLocale ?: remoteInstallerManifest.installerLocale)
                 ).forEach { (promptType, value) ->
                     value?.let {
-                        echo("${" ".repeat(Prompts.optionIndent)} $promptType: ${colors.info(it.toString())}")
+                        echo("  $promptType: ${colors.info(it.toString())}")
                     }
                 }
                 echo()

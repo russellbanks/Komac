@@ -19,10 +19,10 @@ class GitHubTests : FunSpec({
 
         test("format title and bullet point") {
             every { ghRelease.body } returns """
-                    ## Title
-                    
-                    - Bullet point 1
-                """.trimIndent()
+                ## Title
+                
+                - Bullet point 1
+            """.trimIndent()
             ghRelease.getFormattedReleaseNotes() shouldBe """
                 Title
                 - Bullet point 1
@@ -36,10 +36,10 @@ class GitHubTests : FunSpec({
 
         test("asterisk bullet points are converted to dashes") {
             every { ghRelease.body } returns """
-                    # Title
-                    * Bullet 1
-                    * Bullet 2
-                """.trimIndent()
+                # Title
+                * Bullet 1
+                * Bullet 2
+            """.trimIndent()
             ghRelease.getFormattedReleaseNotes() shouldBe """
                 Title
                 - Bullet 1
@@ -64,29 +64,29 @@ class GitHubTests : FunSpec({
 
         test("dropdowns are removed") {
             every { ghRelease.body } returns """
-                    <details>
-                        <summary>Dropdown title</summary>
-                    </details>
-                    - Bullet point
-                """.trimIndent()
+                <details>
+                    <summary>Dropdown title</summary>
+                </details>
+                - Bullet point
+            """.trimIndent()
             ghRelease.getFormattedReleaseNotes() shouldBe "- Bullet point"
         }
 
         test("titles without a bullet point within two lines aren't included") {
             every { ghRelease.body } returns """
-                    # Title
-                    
-                    
-                    - Bullet point
-                """.trimIndent()
+                # Title
+                
+                
+                - Bullet point
+            """.trimIndent()
             ghRelease.getFormattedReleaseNotes() shouldBe "- Bullet point"
         }
 
         test("headers have # removed") {
             every { ghRelease.body } returns """
-                    #### Header
-                    - Bullet point
-                """.trimIndent()
+                #### Header
+                - Bullet point
+            """.trimIndent()
             ghRelease.getFormattedReleaseNotes() shouldBe """
                 Header
                 - Bullet point

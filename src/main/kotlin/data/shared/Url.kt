@@ -1,8 +1,6 @@
 package data.shared
 
 import Errors
-import com.github.ajalt.mordant.rendering.TextColors.brightGreen
-import com.github.ajalt.mordant.rendering.TextColors.brightWhite
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -33,6 +31,7 @@ import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
 import utils.FileAnalyser
 import utils.Hashing.hash
+import utils.yesNoMenu
 import java.net.ConnectException
 import kotlin.system.exitProcess
 
@@ -40,59 +39,49 @@ object Url : KoinComponent {
     private val allManifestData: AllManifestData by inject()
 
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) = with(allManifestData) {
-        if (parameterUrl != null) {
-            installerUrl = parameterUrl
-        } else {
-            setInstallerUrlFromPrompt(this)
-        }
+        installerUrl = parameterUrl ?: promptForInstaller()
         downloadInstaller()
         msixBundleDetection()
     }
 
-    private suspend fun Terminal.setInstallerUrlFromPrompt(allManifestData: AllManifestData) {
+    private suspend fun Terminal.promptForInstaller(): Url {
         println(colors.brightGreen(installerUrlInfo))
-        allManifestData.installerUrl = prompt(
+        return prompt(
             prompt = installerUrlConst,
             convert = { input ->
                 runBlocking { isUrlValid(url = Url(input), canBeBlank = false) }
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(Url(input.trim()))
             }
-        ) ?: exitProcess(ExitCode.CtrlC.code)
-        println()
-
-        setRedirectedUrl(allManifestData)
+        )?.let {
+            println()
+            promptIfRedirectedUrl(it)
+        } ?: exitProcess(ExitCode.CtrlC.code)
     }
 
-    private suspend fun Terminal.setRedirectedUrl(allManifestData: AllManifestData) {
-        val redirectedUrl = allManifestData.installerUrl.getRedirectedUrl(get<Http>().client)
+    private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url): Url {
+        val redirectedUrl = installerUrl.getRedirectedUrl(get<Http>().client)
         if (
-            redirectedUrl != allManifestData.installerUrl &&
-            redirectedUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
+            redirectedUrl != installerUrl &&
+            !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
         ) {
-            println(
-                verticalLayout {
-                    cell(colors.brightYellow(redirectFound))
-                    cell(colors.cyan("Discovered URL: $redirectedUrl"))
-                    cell(colors.brightGreen(useDetectedUrl))
-                    cell(colors.brightWhite(useOriginalUrl))
-                }
-            )
-            if (prompt(prompt = Prompts.enterChoice, default = "Y")?.trim()?.lowercase() != "N".lowercase()) {
-                warning(urlChanged)
+            println(colors.brightYellow(redirectFound))
+            println(colors.cyan("Discovered URL: $redirectedUrl"))
+            if (yesNoMenu(default = true)) {
                 val error = isUrlValid(url = redirectedUrl, canBeBlank = false)
                 if (error == null) {
-                    allManifestData.installerUrl = redirectedUrl
                     success("URL changed to $redirectedUrl")
                 } else {
                     warning(error)
                     warning(detectedUrlValidationFailed)
+                    return installerUrl
                 }
                 println()
             } else {
-                info("Original URL Retained - Proceeding with ${allManifestData.installerUrl}")
+                info("Original URL Retained - Proceeding with $installerUrl")
             }
         }
+        return redirectedUrl
     }
 
     private suspend fun Terminal.downloadInstaller() = with(allManifestData) {
@@ -138,7 +127,7 @@ object Url : KoinComponent {
                         )
                     )
                     msixBundle?.packages?.forEachIndexed { index, individualPackage ->
-                        cell(brightGreen("Package ${index.inc()}/${msixBundle?.packages?.size}"))
+                        cell(colors.brightGreen("Package ${index.inc()}/${msixBundle?.packages?.size}"))
                         listOf(
                             "Architecture" to individualPackage.processorArchitecture,
                             "Version" to individualPackage.version,
@@ -152,7 +141,7 @@ object Url : KoinComponent {
                                     if (value.size > 1) newText = "${text}s"
                                     newValue = value.joinToString(", ")
                                 }
-                                cell(brightWhite("${" ".repeat(Prompts.optionIndent)} $newText: $newValue"))
+                                cell(colors.brightWhite("${" ".repeat(Prompts.optionIndent)} $newText: $newValue"))
                             }
                         }
                     }
@@ -197,14 +186,7 @@ object Url : KoinComponent {
     private const val redirectFound = "The URL appears to be redirected. " +
         "Would you like to use the destination URL instead?"
 
-    private const val useDetectedUrl = "   [Y] Use detected URL"
-
     private const val detectedUrlValidationFailed = "Validation has failed for the detected URL. Using original URL."
-
-    private const val useOriginalUrl = "   [N] Use original URL"
-
-    private const val urlChanged = "[Warning] URL Changed - " +
-        "The URL was changed during processing and will be re-validated"
 
     private const val installerUrlConst = "Installer Url"
 
