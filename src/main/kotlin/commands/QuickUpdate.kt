@@ -57,6 +57,7 @@ import token.TokenStore
 import utils.FileAnalyser
 import utils.FileUtils
 import utils.Hashing.hash
+import utils.updateVersionInString
 import java.io.File
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -230,13 +231,16 @@ class QuickUpdate : CliktCommand(name = "update"), KoinComponent {
                     scope = remoteInstallerManifest.scope?.toPerScopeInstallerType() ?: it.scope
                 )
             }
-        ).forEach {
-            installers += it.first.copy(
-                installerUrl = it.second.installerUrl,
-                installerSha256 = it.second.installerSha256.uppercase(),
-                signatureSha256 = it.second.signatureSha256?.uppercase(),
-                productCode = it.second.productCode,
-                releaseDate = it.second.releaseDate
+        ).forEach { (previousInstaller, newInstaller) ->
+            installers += previousInstaller.copy(
+                installerUrl = newInstaller.installerUrl,
+                installerSha256 = newInstaller.installerSha256.uppercase(),
+                signatureSha256 = newInstaller.signatureSha256?.uppercase(),
+                productCode = newInstaller.productCode,
+                releaseDate = newInstaller.releaseDate,
+                nestedInstallerFiles = previousInstaller.nestedInstallerFiles?.map {
+                    it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString(allVersions, packageVersion))
+                }
             )
         }
     }
