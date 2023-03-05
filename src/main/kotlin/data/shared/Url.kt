@@ -61,7 +61,7 @@ object Url : KoinComponent {
 
     private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url): Url {
         val redirectedUrl = installerUrl.getRedirectedUrl(get<Http>().client)
-        if (
+        return if (
             redirectedUrl != installerUrl &&
             !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
         ) {
@@ -80,8 +80,10 @@ object Url : KoinComponent {
             } else {
                 info("Original URL Retained - Proceeding with $installerUrl")
             }
+            redirectedUrl
+        } else {
+            installerUrl
         }
-        return redirectedUrl
     }
 
     private suspend fun Terminal.downloadInstaller() = with(allManifestData) {

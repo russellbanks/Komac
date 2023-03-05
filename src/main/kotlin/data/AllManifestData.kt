@@ -32,10 +32,10 @@ class AllManifestData {
 
     lateinit var packageIdentifier: String
     lateinit var packageVersion: String
+    var updateState: VersionUpdateState = VersionUpdateState.NewVersion
     var publisher: String? = null
     var packageName: String? = null
     var defaultLocale: String? = null
-    var updateState: VersionUpdateState? = null
     var latestVersion: String? = null
     var allVersions: List<String>? = null
     var msix: Msix? = null

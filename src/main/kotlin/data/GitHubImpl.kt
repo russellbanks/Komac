@@ -134,12 +134,12 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    private fun getCommitTitle() = buildString {
-        append(allManifestData.updateState)
-        append(": ")
-        append(allManifestData.packageIdentifier)
-        append(" version ")
-        append(allManifestData.packageVersion)
+    private fun getCommitTitle(
+        updateState: VersionUpdateState,
+        packageIdentifier: String,
+        packageVersion: String
+    ): String {
+        return "$updateState: $packageIdentifier version $packageVersion"
     }
 
     private fun getPullRequestBody(): String {
@@ -160,11 +160,11 @@ class GitHubImpl : KoinComponent {
         createPullRequest(terminal)
     }
 
-    private fun createPullRequest(terminal: Terminal) {
+    private fun createPullRequest(terminal: Terminal): Unit = with(allManifestData) {
         val ghRepository = getMicrosoftWinGetPkgs() ?: return
         try {
             ghRepository.createPullRequest(
-                /* title = */ getCommitTitle(),
+                /* title = */ getCommitTitle(updateState, packageIdentifier, packageVersion),
                 /* head = */ "$forkOwner:${pullRequestBranch?.ref}",
                 /* base = */ ghRepository.defaultBranch,
                 /* body = */ getPullRequestBody()
@@ -174,11 +174,11 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    private fun commitFiles(files: List<Pair<String, String?>>, terminal: Terminal) {
+    private fun commitFiles(files: List<Pair<String, String?>>, terminal: Terminal): Unit = with(allManifestData){
         val repository = getWingetPkgsFork(terminal) ?: return
         val branch = createBranchFromUpstreamDefaultBranch(repository, terminal) ?: return
         repository.createCommit()
-            ?.message(getCommitTitle())
+            ?.message(getCommitTitle(updateState, packageIdentifier, packageVersion))
             ?.parent(branch.getObject()?.sha)
             ?.tree(
                 repository
