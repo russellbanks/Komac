@@ -14,12 +14,14 @@ import org.koin.core.component.get
 import schemas.manifest.DefaultLocaleManifest
 import kotlin.system.exitProcess
 
-object Copyright : CommandPrompt<String> {
+object Copyright : CommandPrompt<String>, KoinComponent {
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+        val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
         println(colors.brightYellow(copyrightInfo))
         info(example)
         return prompt(
             prompt = DefaultLocaleManifest::copyright.name.replaceFirstChar { it.titlecase() },
+            default = remoteDefaultLocaleData.await()?.copyright?.also { muted("Previous copyright: $it") },
             convert = { input ->
                 getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
             }
