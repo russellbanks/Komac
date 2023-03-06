@@ -6,6 +6,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import schemas.Schemas
 import schemas.manifest.InstallerManifest
+import utils.updateVersionInString
 
 object InstallerManifestData : KoinComponent {
     private val schemas: Schemas by inject()
@@ -32,7 +33,9 @@ object InstallerManifestData : KoinComponent {
                 zip?.nestedInstallerFiles?.ifEmpty { null }
                     ?: previousInstaller?.nestedInstallerFiles
                     ?: previousManifest?.nestedInstallerFiles?.map { it.toPerInstallerNestedInstallerFiles() }
-                )?.map { it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString()) },
+                )?.map {
+                it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString(allVersions, packageVersion))
+            },
             installerUrl = installerUrl,
             installerSha256 = (gitHubDetection?.sha256?.await() ?: installerSha256).uppercase(),
             signatureSha256 = msix?.signatureSha256 ?: msixBundle?.signatureSha256,
@@ -86,17 +89,15 @@ object InstallerManifestData : KoinComponent {
         val publisher = publisher ?: remoteDefaultLocaleData?.publisher
         val displayVersion = msi?.productVersion ?: displayVersion
         return copy(
-            displayName = if (arpDisplayName != packageName) arpDisplayName?.updateVersionInString() else null,
+            displayName = if (arpDisplayName != packageName) {
+                arpDisplayName?.updateVersionInString(allVersions, packageVersion)
+            } else {
+                null
+            },
             publisher = if (arpPublisher != publisher) arpPublisher else null,
             displayVersion = if (displayVersion != packageVersion) displayVersion else null,
             upgradeCode = msi?.upgradeCode ?: upgradeCode
         )
-    }
-
-    private fun String.updateVersionInString(): String = with(allManifestData) {
-        return allVersions?.joinToString("|") { it }
-            ?.let { replaceFirst(Regex(it), packageVersion) }
-            ?: this@updateVersionInString
     }
 
     suspend fun createInstallerManifest(): String = with(allManifestData) {
@@ -114,8 +115,13 @@ object InstallerManifestData : KoinComponent {
                 ?: remoteInstallerData?.installerType,
             nestedInstallerType = installers.getDistinctOrNull { it.nestedInstallerType }
                 ?.toManifestNestedInstallerType() ?: remoteInstallerData?.nestedInstallerType,
-            nestedInstallerFiles = installers.getDistinctOrNull { it.nestedInstallerFiles }
-                ?.map { it.toManifestNestedInstallerFiles() } ?: remoteInstallerData?.nestedInstallerFiles,
+            nestedInstallerFiles = (
+                installers.getDistinctOrNull { it.nestedInstallerFiles }
+                    ?.map { it.toManifestNestedInstallerFiles() }
+                    ?: remoteInstallerData?.nestedInstallerFiles
+                )?.map {
+                it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString(allVersions, packageVersion))
+            },
             scope = installers.getDistinctOrNull { it.scope }?.toManifestScope() ?: remoteInstallerData?.scope,
             packageFamilyName = installers.getDistinctOrNull { it.packageFamilyName }
                 ?: remoteInstallerData?.packageFamilyName,

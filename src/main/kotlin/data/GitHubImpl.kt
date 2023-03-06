@@ -174,7 +174,7 @@ class GitHubImpl : KoinComponent {
         }
     }
 
-    private fun commitFiles(files: List<Pair<String, String?>>, terminal: Terminal): Unit = with(allManifestData){
+    private fun commitFiles(files: List<Pair<String, String?>>, terminal: Terminal): Unit = with(allManifestData) {
         val repository = getWingetPkgsFork(terminal) ?: return
         val branch = createBranchFromUpstreamDefaultBranch(repository, terminal) ?: return
         repository.createCommit()
@@ -187,7 +187,7 @@ class GitHubImpl : KoinComponent {
                     .apply {
                         files.forEach { (path, content) ->
                             if (content != null) {
-                                add(path, content.replace("\n", "\r\n").trimEnd(), false)
+                                add(path, content.replace("\n", "\r\n"), false)
                             }
                         }
                     }
