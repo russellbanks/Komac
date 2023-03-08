@@ -4,35 +4,28 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.AllManifestData
-import data.PreviousManifestData
-import input.ExitCode
+import extensions.YamlExtensions.convertToList
 import input.Prompts
-import input.YamlExtensions.convertToYamlList
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
-import kotlin.system.exitProcess
 
-object Commands : KoinComponent, CommandPrompt<List<String>> {
-    private val allManifestData: AllManifestData by inject()
-    private val previousManifestData: PreviousManifestData by inject()
-
-    override suspend fun prompt(terminal: Terminal): List<String> = with(terminal) {
+class Commands(
+    private val previousInstallerManifest: InstallerManifest?,
+    private val installersSize: Int
+) : CommandPrompt<List<String>> {
+    override fun prompt(terminal: Terminal): List<String>? = with(terminal) {
         println(colors.brightYellow("${Prompts.optional} $description (Max $maxItems)"))
         return prompt(
-            prompt = InstallerManifest::commands.name.replaceFirstChar { it.titlecase() },
-            default = getPreviousValue()?.also { muted("Previous commands: $it") },
-            convert = { input ->
-                getError(input)
-                    ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(input.trim().convertToYamlList(uniqueItems))
-            }
-        )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+            prompt = InstallerManifest::commands.name.replaceFirstChar(Char::titlecase),
+            default = getPreviousValue()?.also { muted("Previous commands: $it") }
+        ) { input ->
+            getError(input)
+                ?.let { ConversionResult.Invalid(it) }
+                ?: ConversionResult.Valid(input.trim().convertToList(uniqueItems))
+        }
     }
 
     override fun getError(input: String?): String? {
-        val convertedInput = input?.trim()?.convertToYamlList(uniqueItems)
+        val convertedInput = input?.trim()?.convertToList(uniqueItems)
         return when {
             convertedInput == null -> null
             convertedInput.count() > maxItems -> Errors.invalidLength(max = maxItems)
@@ -47,15 +40,15 @@ object Commands : KoinComponent, CommandPrompt<List<String>> {
         }
     }
 
-    private suspend fun getPreviousValue(): List<String>? = with(allManifestData) {
-        return previousManifestData.remoteInstallerData.await()?.let {
-            it.commands ?: it.installers.getOrNull(installers.size)?.commands
-        }
+    private fun getPreviousValue(): List<String>? {
+        return previousInstallerManifest?.let { it.commands ?: it.installers.getOrNull(installersSize)?.commands }
     }
 
-    private const val description = "List of commands or aliases to run the package"
-    private const val maxItems = 16
-    private const val minItemLength = 1
-    private const val maxItemLength = 40
-    private const val uniqueItems = true
+    companion object {
+        private const val description = "List of commands or aliases to run the package"
+        private const val maxItems = 16
+        private const val minItemLength = 1
+        private const val maxItemLength = 40
+        private const val uniqueItems = true
+    }
 }

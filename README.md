@@ -16,8 +16,6 @@
 
 Komac is an innovative manifest creator specifically designed for WinGet, offering an effortless and streamlined experience. Derived from the words "Kotlin" and "Manifest" and abbreviated as "KO MA C", Komac represents the perfect solution for anyone looking for an efficient and effective way to create manifests for WinGet.
 
-With development now in its final stages, get ready to experience the power and convenience of Komac! 🎉
-
 ![Komac-demo](https://user-images.githubusercontent.com/74878137/216784291-de2d5dc8-d6f9-4bde-a059-7a1382c3940b.gif)
 
 ## Why should I use Komac?

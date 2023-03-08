@@ -5,11 +5,11 @@ import utils.yesNoMenu
 import java.io.File
 
 object FileWriter {
-    fun writeFiles(files: List<Pair<String, String?>>, terminal: Terminal) = with(terminal) {
+    fun writeFiles(files: Map<String, String?>, terminal: Terminal) = with(terminal) {
         do {
             println()
             println(colors.brightYellow("Enter a directory to write the files to:"))
-            val directory = prompt("Directory")?.let { File(it) }
+            val directory = prompt("Directory")?.let(::File)
             if (directory?.isDirectory == true) {
                 writeFilesToDirectory(directory, files, terminal)
             } else {
@@ -18,7 +18,7 @@ object FileWriter {
         } while (directory?.isDirectory != true)
     }
 
-    private fun createDirectoryIfNecessary(directory: File?, files: List<Pair<String, String?>>, terminal: Terminal) {
+    private fun createDirectoryIfNecessary(directory: File?, files: Map<String, String?>, terminal: Terminal) {
         with(terminal) {
             warning("The directory entered does not exist. Would you like to create it?")
             if (yesNoMenu(default = true)) {
@@ -32,10 +32,10 @@ object FileWriter {
         }
     }
 
-    fun writeFilesToDirectory(directory: File, files: List<Pair<String, String?>>, terminal: Terminal) {
+    fun writeFilesToDirectory(directory: File, files: Map<String, String?>, terminal: Terminal) {
         files.forEach { file ->
-            file.second?.let { manifestText ->
-                writeFileToDirectory(directory, file.first, manifestText, terminal)
+            file.value?.let { manifestText ->
+                writeFileToDirectory(directory, file.key, manifestText, terminal)
             }
         }
     }

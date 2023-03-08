@@ -1,5 +1,6 @@
 package detection
 
+import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.URLBuilder
@@ -11,9 +12,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import network.Http
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 
 /**
  * Page Scraper class that finds Locale Manifest Urls from the root page of the provided Url.
@@ -22,7 +20,7 @@ import org.koin.core.component.get
  *
  * @param url of the website
  */
-class PageScraper(url: Url) : KoinComponent {
+class PageScraper(url: Url, client: HttpClient) {
     private val urlRoot = URLBuilder(url).apply {
         host = host.split(".").takeLast(2).joinToString(".")
         pathSegments = emptyList()
@@ -30,7 +28,7 @@ class PageScraper(url: Url) : KoinComponent {
     private val scope = CoroutineScope(Dispatchers.IO)
     private var linksMap: Deferred<HashMap<String, String>> = scope.async {
         runCatching {
-            htmlDocument(get<Http>().client.get(urlRoot).bodyAsText()) {
+            htmlDocument(client.get(urlRoot).bodyAsText()) {
                 a {
                     findAll {
                         eachLink as HashMap<String, String>

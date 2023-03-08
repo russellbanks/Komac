@@ -1,11 +1,13 @@
 package data.shared
 
 import Errors
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Platform
 import data.AllManifestData
+import data.GitHubImpl
 import detection.PageScraper
 import detection.files.Zip
 import detection.files.msi.Msi
@@ -14,53 +16,49 @@ import detection.files.msix.MsixBundle
 import detection.github.GitHubDetection
 import input.ExitCode
 import input.Prompts
+import io.ktor.client.HttpClient
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
-import network.Http
 import network.HttpUtils.downloadFile
-import network.findArchitecture
-import network.getRedirectedUrl
-import network.isRedirect
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
-import org.koin.core.component.inject
 import schemas.manifest.InstallerManifest
 import utils.FileAnalyser
 import utils.Hashing.hash
+import utils.findArchitecture
+import utils.getRedirectedUrl
+import utils.isRedirect
 import utils.yesNoMenu
 import java.net.ConnectException
-import kotlin.system.exitProcess
 
-object Url : KoinComponent {
-    private val allManifestData: AllManifestData by inject()
-
-    suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) = with(allManifestData) {
-        installerUrl = parameterUrl ?: promptForInstaller()
-        downloadInstaller()
-        msixBundleDetection()
+object Url {
+    suspend fun Terminal.installerDownloadPrompt(
+        allManifestData: AllManifestData,
+        client: HttpClient,
+        gitHubImpl: GitHubImpl,
+        parameterUrl: Url? = null
+    ) = with(allManifestData) {
+        installerUrl = parameterUrl ?: promptForInstaller(client)
+        downloadInstaller(allManifestData, client, gitHubImpl)
+        msixBundleDetection(allManifestData)
     }
 
-    private suspend fun Terminal.promptForInstaller(): Url {
+    private suspend fun Terminal.promptForInstaller(client: HttpClient): Url {
         println(colors.brightGreen(installerUrlInfo))
-        return prompt(
-            prompt = installerUrlConst,
-            convert = { input ->
-                runBlocking { isUrlValid(url = Url(input), canBeBlank = false) }
-                    ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(Url(input.trim()))
-            }
-        )?.let {
+        return prompt(installerUrlConst) { input ->
+            runBlocking { isUrlValid(url = Url(input), canBeBlank = false, client) }
+                ?.let { ConversionResult.Invalid(it) }
+                ?: ConversionResult.Valid(Url(input.trim()))
+        }?.let {
             println()
-            promptIfRedirectedUrl(it)
-        } ?: exitProcess(ExitCode.CtrlC.code)
+            promptIfRedirectedUrl(it, client)
+        } ?: throw ProgramResult(ExitCode.CtrlC.code)
     }
 
-    private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url): Url {
-        val redirectedUrl = installerUrl.getRedirectedUrl(get<Http>().client)
+    private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url, client: HttpClient): Url {
+        val redirectedUrl = installerUrl.getRedirectedUrl(client)
         return if (
             redirectedUrl != installerUrl &&
             !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
@@ -68,7 +66,7 @@ object Url : KoinComponent {
             println(colors.brightYellow(redirectFound))
             println(colors.cyan("Discovered URL: $redirectedUrl"))
             if (yesNoMenu(default = true)) {
-                val error = isUrlValid(url = redirectedUrl, canBeBlank = false)
+                val error = isUrlValid(url = redirectedUrl, canBeBlank = false, client)
                 if (error == null) {
                     success("URL changed to $redirectedUrl")
                 } else {
@@ -86,17 +84,21 @@ object Url : KoinComponent {
         }
     }
 
-    private suspend fun Terminal.downloadInstaller() = with(allManifestData) {
+    private suspend fun Terminal.downloadInstaller(
+        allManifestData: AllManifestData,
+        client: HttpClient,
+        gitHubImpl: GitHubImpl
+    ) = with(allManifestData) {
         if (installers.map { it.installerUrl }.contains(installerUrl)) {
             installers += installers.first { it.installerUrl == installerUrl }
             skipAddInstaller = true
         } else {
             if (installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
-                gitHubDetection = GitHubDetection(installerUrl)
+                gitHubDetection = GitHubDetection(installerUrl, gitHubImpl, client)
             } else {
-                pageScraper = PageScraper(installerUrl)
+                pageScraper = PageScraper(installerUrl, client)
             }
-            val (file, fileDeletionThread) = get<Http>().client.downloadFile(installerUrl, this@downloadInstaller)
+            val (file, fileDeletionThread) = client.downloadFile(installerUrl, allManifestData, this@downloadInstaller)
             val fileAnalyser = FileAnalyser(file)
             installerType = fileAnalyser.getInstallerType()
             architecture = installerUrl.findArchitecture() ?: fileAnalyser.getArchitecture()
@@ -119,7 +121,7 @@ object Url : KoinComponent {
         }
     }
 
-    private fun Terminal.msixBundleDetection() = with(allManifestData) {
+    private fun Terminal.msixBundleDetection(allManifestData: AllManifestData) = with(allManifestData) {
         if (msixBundle != null) {
             println(
                 verticalLayout {
@@ -155,19 +157,19 @@ object Url : KoinComponent {
         }
     }
 
-    suspend fun isUrlValid(url: Url?, canBeBlank: Boolean): String? {
+    suspend fun isUrlValid(url: Url?, canBeBlank: Boolean, client: HttpClient): String? {
         return when {
             url == null -> null
             url == Url(URLBuilder()) && canBeBlank -> null
             url == Url(URLBuilder()) -> Errors.blankInput(installerUrlConst)
             url.toString().length > maxLength -> Errors.invalidLength(max = maxLength)
             !url.toString().matches(regex) -> Errors.invalidRegex(regex)
-            else -> checkUrlResponse(url)
+            else -> client.checkUrlResponse(url)
         }
     }
 
-    private suspend fun checkUrlResponse(url: Url): String? {
-        return get<Http>().client.config { followRedirects = false }.use {
+    private suspend fun HttpClient.checkUrlResponse(url: Url): String? {
+        return config { followRedirects = false }.use {
             try {
                 val installerUrlResponse = it.head(url)
                 if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {

@@ -27,7 +27,7 @@ class Msix(msixFile: File) {
         ZipFile(msixFile).use { zip ->
             zip.getEntry(appxManifestXml)?.let { appxManifest ->
                 val document = zip.getInputStream(appxManifest)
-                    .use { htmlDocument(it) }
+                    .use(::htmlDocument)
                     .let { Doc(document = it.document, relaxed = true) }
                 val properties = document.findFirst("Properties")
                 val targetDeviceFamilyAttribute = document.findFirst("TargetDeviceFamily")
@@ -36,7 +36,7 @@ class Msix(msixFile: File) {
                     .attribute("Name".lowercase())
                     .ifBlank { null }
                     ?.replace(".", "")
-                    ?.let { InstallerManifest.Platform.valueOf(it) }
+                    ?.let(InstallerManifest.Platform::valueOf)
                 displayVersion = identity.attribute("Version".lowercase()).ifBlank { null }
                 displayName = properties.findFirst("DisplayName").text.ifBlank { null }
                 publisherDisplayName = properties.findFirst("PublisherDisplayName").text.ifBlank { null }

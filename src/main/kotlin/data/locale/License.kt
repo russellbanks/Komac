@@ -4,32 +4,21 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.AllManifestData
-import data.PreviousManifestData
-import input.ExitCode
 import input.Prompts
+import io.ktor.client.HttpClient
 import io.ktor.http.Url
 import kotlinx.coroutines.runBlocking
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 import schemas.manifest.DefaultLocaleManifest
-import kotlin.system.exitProcess
 
-object License : KoinComponent, CommandPrompt<String> {
-    private val gitHubDetection = get<AllManifestData>().gitHubDetection
-    private val remoteDefaultLocaleData = get<PreviousManifestData>().remoteDefaultLocaleData
-
-    override suspend fun prompt(terminal: Terminal): String = with(terminal) {
-        return gitHubDetection?.license ?: let {
-            println(colors.brightGreen(licenseInfo))
-            info(example)
-            prompt(
-                prompt = const,
-                default = remoteDefaultLocaleData.await()?.license?.also { muted("Previous license: $it") },
-                convert = { input ->
-                    getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
-                }
-            )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+class License(private val previousLicense: String?) : CommandPrompt<String> {
+    override fun prompt(terminal: Terminal): String? = with(terminal) {
+        println(colors.brightGreen(licenseInfo))
+        info(example)
+        return prompt(
+            prompt = const,
+            default = previousLicense?.also { muted("Previous license: $it") }
+        ) { input ->
+            getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
         }
     }
 
@@ -44,30 +33,33 @@ object License : KoinComponent, CommandPrompt<String> {
         }
     }
 
-    object Url : CommandPrompt<io.ktor.http.Url> {
-        override suspend fun prompt(terminal: Terminal): io.ktor.http.Url = with(terminal) {
-            return gitHubDetection?.licenseUrl ?: let {
-                println(colors.brightYellow("${Prompts.optional} Enter the license page url"))
-                prompt(
-                    prompt = "License url",
-                    default = remoteDefaultLocaleData.await()?.licenseUrl?.also { muted("Previous license url: $it") },
-                    convert = { input ->
-                        runBlocking { data.shared.Url.isUrlValid(url = Url(input.trim()), canBeBlank = true) }
-                            ?.let { ConversionResult.Invalid(it) }
-                            ?: ConversionResult.Valid(Url(input.trim()))
-                    }
-                )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+    class Url(
+        private val previousLicenseUrl: io.ktor.http.Url?,
+        private val client: HttpClient
+    ) : CommandPrompt<io.ktor.http.Url> {
+        override fun prompt(terminal: Terminal): io.ktor.http.Url? = with(terminal) {
+            println(colors.brightYellow("${Prompts.optional} Enter the license page url"))
+            return prompt(
+                prompt = "License url",
+                default = previousLicenseUrl?.also { muted("Previous license url: $it") }
+            ) { input ->
+                runBlocking { data.shared.Url.isUrlValid(url = Url(input.trim()), canBeBlank = true, client) }
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(Url(input.trim()))
             }
         }
 
         override fun getError(input: String?): String? = runBlocking {
-            data.shared.Url.isUrlValid(url = input?.trim()?.let { Url(it) }, canBeBlank = true)
+            data.shared.Url.isUrlValid(url = input?.trim()?.let(::Url), canBeBlank = true, client)
         }
     }
 
-    private val const = DefaultLocaleManifest::license.name.replaceFirstChar { it.titlecase() }
-    private const val licenseInfo = "${Prompts.required} Enter the package license"
-    private const val example = "Example: MIT, GPL-3.0, Freeware, Proprietary"
-    private const val minLength = 3
-    private const val maxLength = 512
+    private val const = DefaultLocaleManifest::license.name.replaceFirstChar(Char::titlecase)
+
+    companion object {
+        private const val licenseInfo = "${Prompts.required} Enter the package license"
+        private const val example = "Example: MIT, GPL-3.0, Freeware, Proprietary"
+        private const val minLength = 3
+        private const val maxLength = 512
+    }
 }

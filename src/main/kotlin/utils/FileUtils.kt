@@ -3,7 +3,6 @@ package utils
 import io.ktor.http.Url
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import network.getExtension
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

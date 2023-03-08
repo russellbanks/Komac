@@ -6,12 +6,11 @@ import com.sun.jna.WString
 import com.sun.jna.platform.win32.WinBase.FILETIME
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import org.koin.core.component.KoinComponent
 import schemas.manifest.InstallerManifest
 import java.io.File
 
 @Suppress("LoopWithTooManyJumpStatements")
-class Msi(private val msiFile: File) : KoinComponent {
+class Msi(private val msiFile: File) {
     var productCode: String? = null
     var upgradeCode: String? = null
     var productName: String? = null

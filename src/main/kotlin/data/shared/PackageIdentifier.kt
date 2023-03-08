@@ -4,63 +4,14 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.AllManifestData
-import data.GitHubImpl
-import data.VersionUpdateState
-import data.shared.PackageVersion.getHighestVersion
-import input.ExitCode
 import input.Prompts
-import network.HttpUtils
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
-import org.koin.core.component.inject
-import java.io.IOException
-import kotlin.system.exitProcess
 
-object PackageIdentifier : KoinComponent, CommandPrompt<String> {
-    private val allManifestData: AllManifestData by inject()
-
-    override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+object PackageIdentifier : CommandPrompt<String> {
+    override fun prompt(terminal: Terminal): String? = with(terminal) {
         println(colors.brightGreen(identifierInfo))
         info(example)
-        return prompt(
-            prompt = const,
-            convert = { input ->
-                getError(input)
-                    ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(input.trim())
-            }
-        )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
-    }
-
-    fun Terminal.getLatestVersion(
-        packageIdentifier: String,
-        writeOutput: Boolean = true
-    ): String? = with(allManifestData) {
-        return try {
-            get<GitHubImpl>().getMicrosoftWinGetPkgs()
-                ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
-                ?.filter { it.name.matches(PackageVersion.regex) }
-                ?.filter { it.isDirectory }
-                ?.filterNot { ghContent -> ghContent.name.all { it.isLetter() } }
-                ?.also {
-                    if (it.isEmpty()) {
-                        updateState = VersionUpdateState.NewPackage
-                        return null
-                    } else {
-                        if (writeOutput) {
-                            info("Found $packageIdentifier in the winget-pkgs repository")
-                        }
-                    }
-                }
-                ?.map { it.name }
-                ?.also { allVersions = it }
-                ?.getHighestVersion()
-                ?.also { if (writeOutput) info("Found latest version: $it") }
-                .also { latestVersion = it }
-        } catch (_: IOException) {
-            updateState = VersionUpdateState.NewPackage
-            null
+        return prompt(const) { input ->
+            getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
         }
     }
 

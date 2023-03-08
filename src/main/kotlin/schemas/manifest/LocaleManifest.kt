@@ -51,7 +51,7 @@ data class LocaleManifest(
         @SerialName("DocumentUrl") @Contextual val documentUrl: Url? = null
     )
 
-    override fun toString() = Schemas().buildManifestString(
+    override fun toString() = Schemas.buildManifestString(
         schema = Schema.Locale,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )

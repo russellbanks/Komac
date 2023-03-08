@@ -1,9 +1,8 @@
 package commands.token
 
 import com.github.ajalt.clikt.core.CliktCommand
-import org.koin.core.component.KoinComponent
 
-class Token : CliktCommand(printHelpOnEmptyArgs = true), KoinComponent {
+class Token : CliktCommand(printHelpOnEmptyArgs = true) {
     override fun aliases(): Map<String, List<String>> = mapOf(
         "up" to listOf("update"),
         "rm" to listOf("remove"),

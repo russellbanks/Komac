@@ -1,9 +1,9 @@
 package input
 
-enum class ManifestResultOption {
-    PullRequest,
-    WriteToFiles,
-    Quit;
+enum class Switch {
+    Silent,
+    SilentWithProgress,
+    Custom;
 
     override fun toString() = name.replace("([A-Z])".toRegex(), " $1").trim()
 }

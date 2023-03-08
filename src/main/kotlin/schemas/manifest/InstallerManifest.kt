@@ -1,6 +1,6 @@
 package schemas.manifest
 
-import input.InstallerSwitch
+import input.Switch
 import io.ktor.http.Url
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
@@ -454,9 +454,15 @@ data class InstallerManifest(
             @SerialName("Custom") var custom: String? = null
         ) {
             fun areAllNullOrBlank(): Boolean {
-                return listOf(silent, silentWithProgress, interactive, installLocation, log, upgrade, custom).all {
-                    it.isNullOrBlank()
-                }
+                return listOf(
+                    silent,
+                    silentWithProgress,
+                    interactive,
+                    installLocation,
+                    log,
+                    upgrade,
+                    custom
+                ).all(String?::isNullOrBlank)
             }
 
             fun toManifestInstallerSwitches() = InstallerManifest.InstallerSwitches(
@@ -469,11 +475,11 @@ data class InstallerManifest(
                 custom = custom
             )
 
-            operator fun set(installerSwitch: InstallerSwitch, value: String?) {
-                when (installerSwitch) {
-                    InstallerSwitch.Silent -> silent = value
-                    InstallerSwitch.SilentWithProgress -> silentWithProgress = value
-                    InstallerSwitch.Custom -> custom = value
+            operator fun set(aSwitch: Switch, value: String?) {
+                when (aSwitch) {
+                    Switch.Silent -> silent = value
+                    Switch.SilentWithProgress -> silentWithProgress = value
+                    Switch.Custom -> custom = value
                 }
             }
         }
@@ -632,7 +638,7 @@ data class InstallerManifest(
         }
     }
 
-    override fun toString() = Schemas().buildManifestString(
+    override fun toString() = Schemas.buildManifestString(
         schema = Schema.Installer,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )

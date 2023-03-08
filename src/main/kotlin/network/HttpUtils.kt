@@ -14,16 +14,15 @@ import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import utils.getExtension
+import utils.getFileName
 import java.io.File
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-object HttpUtils : KoinComponent {
-    private val allManifestData: AllManifestData by inject()
-    suspend fun HttpClient.downloadFile(url: Url, terminal: Terminal): Pair<File, Thread> = with(allManifestData) {
+object HttpUtils {
+    suspend fun HttpClient.downloadFile(url: Url, allManifestData: AllManifestData, terminal: Terminal): Pair<File, Thread> = with(allManifestData) {
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
         val file = withContext(Dispatchers.IO) {
             File.createTempFile(
@@ -57,20 +56,12 @@ object HttpUtils : KoinComponent {
 
     fun getDownloadProgressBar(url: Url, terminal: Terminal): ProgressAnimation {
         return terminal.progressAnimation {
-            url.getFileName()?.let { text(it) }
+            url.getFileName()?.let(::text)
             percentage()
             progressBar()
             completed()
             speed("B/s")
             timeRemaining()
-        }
-    }
-
-    fun getDirectoryPath(packageIdentifier: String): String {
-        return buildString {
-            append("manifests/")
-            append(packageIdentifier.first().lowercase())
-            packageIdentifier.split(".").forEach { append("/$it") }
         }
     }
 }

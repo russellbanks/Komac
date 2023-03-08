@@ -95,8 +95,8 @@ class Zip(zip: File, terminal: Terminal) {
                 info("Example: dart-sdk\\bin\\dart.exe")
                 val input = prompt(
                     InstallerManifest.Installer.NestedInstallerFiles::relativeFilePath.name
-                        .replaceFirstChar { it.titlecase() }
-                        .replace(Regex("([A-Z])"), " $1").trim()
+                        .replaceFirstChar(Char::titlecase)
+                        .replace("([A-Z])".toRegex(), " $1").trim()
                 )
                 val error = isRelativeFilePathValid(input)?.also { danger(it) }
                 var portableCommandAlias: String? = null
@@ -140,7 +140,7 @@ class Zip(zip: File, terminal: Terminal) {
             info(if (relativeFilePath != null) "Installer: $relativeFilePath" else "Example: dart")
             portableCommandAlias = prompt(
                 InstallerManifest.Installer.NestedInstallerFiles::portableCommandAlias.name
-                    .replaceFirstChar { it.titlecase() }
+                    .replaceFirstChar(Char::titlecase)
                     .replace(Regex("([A-Z])"), " $1").trim()
             )?.trim()
             val error = isPortableCommandAliasValid(portableCommandAlias)?.also { danger(it) }
@@ -163,8 +163,9 @@ class Zip(zip: File, terminal: Terminal) {
         return when {
             relativeFilePath.isNullOrBlank() -> Errors.blankInput(
                 InstallerManifest.Installer.NestedInstallerFiles::relativeFilePath.name
-                    .replaceFirstChar { it.titlecase() }
-                    .replace(Regex("([A-Z])"), " $1").trim()
+                    .replaceFirstChar(Char::titlecase)
+                    .replace("([A-Z])".toRegex(), " $1")
+                    .trim()
             )
             relativeFilePath.length > relativeFilePathMaxLength -> {
                 Errors.invalidLength(min = relativeFilePathMinLength, max = relativeFilePathMaxLength)
@@ -234,9 +235,7 @@ class Zip(zip: File, terminal: Terminal) {
                     /* suffix = */ InstallerManifest.Installer.NestedInstallerType.MSI.toString()
                 )
                 zipFile.getInputStream(smallestEntry).use { input ->
-                    tempFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
+                    tempFile.outputStream().use(input::copyTo)
                 }
                 if (Msi(tempFile).isWix.also { tempFile.delete() }) {
                     InstallerManifest.Installer.NestedInstallerType.WIX

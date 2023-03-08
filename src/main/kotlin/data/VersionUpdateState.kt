@@ -7,8 +7,8 @@ enum class VersionUpdateState {
     UpdateVersion;
 
     override fun toString() = name
-        .replace(Regex("([A-Z])"), " $1")
+        .replace("([A-Z])".toRegex(), " $1")
         .trim()
         .lowercase()
-        .replaceFirstChar { it.titlecase() }
+        .replaceFirstChar(Char::titlecase)
 }

@@ -45,11 +45,6 @@ dependencies {
     // Kaml - https://github.com/charleskorn/kaml
     implementation(libs.kaml)
 
-    // Koin - https://github.com/InsertKoinIO/koin
-    implementation(libs.koin.core)
-    implementation(libs.koin.annotations)
-    ksp(libs.koin.ksp.compiler)
-
     // Kotest - https://github.com/kotest/kotest
     testImplementation(libs.kotest.junit5)
     testImplementation(libs.kotest.assertions.core)
@@ -62,6 +57,7 @@ dependencies {
     // Ktor - https://github.com/ktorio/ktor
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.java)
+    testImplementation(libs.ktor.client.mock)
 
     // Mockk - https://github.com/mockk/mockk
     testImplementation(libs.mockk)

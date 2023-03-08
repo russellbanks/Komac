@@ -21,7 +21,7 @@ class MsixBundle(msixBundleFile: File) {
         ZipFile(msixBundleFile).use { zip ->
             zip.getEntry("$appxManifestFolder/$appxBundleManifestXml")?.let { appxManifest ->
                 packages = zip.getInputStream(appxManifest)
-                    .use { htmlDocument(it) }
+                    .use(::htmlDocument)
                     .let { Doc(document = it.document, relaxed = true) }
                     .also {
                         val identity = it.findFirst("Identity")
@@ -41,7 +41,7 @@ class MsixBundle(msixBundleFile: File) {
                                     targetDeviceFamilyElement.attribute("Name".lowercase())
                                         .ifBlank { null }
                                         ?.replace(".", "")
-                                        ?.let { InstallerManifest.Platform.valueOf(it) }
+                                        ?.let(InstallerManifest.Platform::valueOf)
                                 }
                                 .ifEmpty { null },
                             minVersion = targetDeviceFamily.attribute("MinVersion".lowercase()).ifBlank { null },
