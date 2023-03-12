@@ -4,69 +4,55 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import network.HttpUtils
 import org.kohsuke.github.GHContent
-import org.koin.core.annotation.Single
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
+import org.kohsuke.github.GHRepository
 import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.VersionManifest
+import utils.GitHubUtils
 
-@Single
-class PreviousManifestData : KoinComponent {
-    private var allManifestData: AllManifestData = get()
+class PreviousManifestData(packageIdentifier: String, latestVersion: String?, microsoftWinGetPkgs: GHRepository?) {
     private val scope = CoroutineScope(Dispatchers.IO)
-    private val repository = scope.async { get<GitHubImpl>().getMicrosoftWinGetPkgs() }
-    private val directoryPath: Deferred<MutableList<GHContent>?> = scope.async {
-        allManifestData.latestVersion?.let {
-            repository.await()
-                ?.getDirectoryContent("${HttpUtils.getDirectoryPath(allManifestData.packageIdentifier)}/$it")
-        }
+    private val directoryPath: MutableList<GHContent>? = latestVersion?.let {
+        microsoftWinGetPkgs?.getDirectoryContent("${GitHubUtils.getPackagePath(packageIdentifier)}/$it")
+    }
+    var previousVersionData: VersionManifest? = directoryPath?.let { nonNullDirectoryPath ->
+        microsoftWinGetPkgs
+            ?.getFileContent(nonNullDirectoryPath.first { it.name == "$packageIdentifier.yaml" }.path)
+            ?.read()
+            ?.use { EncodeConfig.yamlDefault.decodeFromStream(VersionManifest.serializer(), it) }
     }
     var remoteInstallerData: Deferred<InstallerManifest?> = scope.async {
-        directoryPath.await()?.let { nonNullDirectoryPath ->
-            repository.await()?.getFileContent(
-                nonNullDirectoryPath.first { it.name == "${allManifestData.packageIdentifier}.installer.yaml" }.path
+        directoryPath?.let { nonNullDirectoryPath ->
+            microsoftWinGetPkgs?.getFileContent(
+                nonNullDirectoryPath.first { it.name == GitHubUtils.getInstallerManifestName(packageIdentifier) }.path
             )?.read()?.use {
                 EncodeConfig.yamlDefault.decodeFromStream(InstallerManifest.serializer(), it)
             }
         }
     }
     var remoteDefaultLocaleData: Deferred<DefaultLocaleManifest?> = scope.async {
-        directoryPath.await()?.let { nonNullDirectoryPath ->
-            repository.await()?.getFileContent(
+        directoryPath?.let { nonNullDirectoryPath ->
+            microsoftWinGetPkgs?.getFileContent(
                 nonNullDirectoryPath.first {
-                    it.name == "${allManifestData.packageIdentifier}.locale.${remoteVersionData.await()?.defaultLocale}.yaml"
+                    it.name == GitHubUtils.getDefaultLocaleManifestName(
+                        identifier = packageIdentifier,
+                        previousDefaultLocale = previousVersionData?.defaultLocale
+                    )
                 }.path
-            )?.read()?.use {
-                EncodeConfig.yamlDefault.decodeFromStream(DefaultLocaleManifest.serializer(), it)
-            }
+            )?.read()?.use { EncodeConfig.yamlDefault.decodeFromStream(DefaultLocaleManifest.serializer(), it) }
         }
     }
     var remoteLocaleData: Deferred<List<LocaleManifest>?> = scope.async {
-        directoryPath.await()
-            ?.filter {
-                it.name.matches(Regex("${Regex.escape(allManifestData.packageIdentifier)}.locale\\..*\\.yaml"))
-            }
-            ?.filterNot { ghContent ->
-                remoteVersionData.await()?.defaultLocale?.let { ghContent.name.contains(it) } == true
-            }
+        directoryPath
+            ?.filter { it.name matches "${Regex.escape(packageIdentifier)}.locale\\..*\\.yaml".toRegex() }
+            ?.filterNot { ghContent -> previousVersionData?.defaultLocale?.let(ghContent.name::contains) == true }
             ?.mapNotNull { ghContent ->
-                repository.await()?.getFileContent(ghContent.path)
+                microsoftWinGetPkgs?.getFileContent(ghContent.path)
                     ?.read()
-                    ?.use {
-                        EncodeConfig.yamlDefault.decodeFromStream(LocaleManifest.serializer(), it)
-                    }
+                    ?.use { EncodeConfig.yamlDefault.decodeFromStream(LocaleManifest.serializer(), it) }
             }
-    }
-    var remoteVersionData: Deferred<VersionManifest?> = scope.async {
-        directoryPath.await()?.let { nonNullDirectoryPath ->
-            repository.await()?.getFileContent(
-                nonNullDirectoryPath.first { it.name == "${allManifestData.packageIdentifier}.yaml" }.path
-            )?.read()?.use { EncodeConfig.yamlDefault.decodeFromStream(VersionManifest.serializer(), it) }
-        }
     }
 }

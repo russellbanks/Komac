@@ -4,56 +4,17 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.AllManifestData
-import data.GitHubImpl
-import data.VersionUpdateState
-import input.ExitCode
 import input.Prompts
-import network.HttpUtils
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import java.math.BigInteger
 import kotlin.random.Random
-import kotlin.system.exitProcess
 
-object PackageVersion : KoinComponent, CommandPrompt<String> {
-    private val githubImpl: GitHubImpl by inject()
-    val allManifestData: AllManifestData by inject()
-
-    override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+object PackageVersion : CommandPrompt<String> {
+    override fun prompt(terminal: Terminal): String? = with(terminal) {
         println(colors.brightGreen(versionInfo))
-        info(example)
-        prompt(
-            prompt = const,
-            convert = { input ->
-                getError(input)
-                    ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(input.trim())
-            }
-        )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
-    }
-
-    fun setUpgradeState(allManifestData: AllManifestData) = with(allManifestData) {
-        when {
-            updateState == VersionUpdateState.NewPackage -> Unit
-            packageExists(packageIdentifier, packageVersion) -> updateState = VersionUpdateState.UpdateVersion
-            else -> {
-                val versionsToCompare = listOf(packageVersion, latestVersion)
-                val highestVersion = versionsToCompare.filterNotNull().getHighestVersion()
-                updateState = when (packageVersion) {
-                    highestVersion -> VersionUpdateState.NewVersion
-                    else -> VersionUpdateState.AddVersion
-                }
-            }
+        info("Example: ${generateRandomVersion()}")
+        prompt(const) { input ->
+            getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
         }
-    }
-
-    private fun packageExists(packageIdentifier: String, packageVersion: String): Boolean {
-        return githubImpl.getMicrosoftWinGetPkgs()
-            ?.getDirectoryContent(HttpUtils.getDirectoryPath(packageIdentifier))
-            ?.map { it.name }
-            ?.contains(packageVersion)
-            ?: false
     }
 
     override fun getError(input: String?): String? {
@@ -72,8 +33,8 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
      * Parses a version part string into a VersionPart object.
      */
     private fun parseVersionPart(part: String): VersionPart {
-        val value = part.takeWhile { it.isDigit() }.toBigIntegerOrNull() ?: BigInteger.valueOf(0)
-        val supplement = part.dropWhile { it.isDigit() }
+        val value = part.takeWhile(Char::isDigit).toBigIntegerOrNull() ?: BigInteger.valueOf(0)
+        val supplement = part.dropWhile(Char::isDigit)
         return VersionPart(value, supplement, part)
     }
 
@@ -84,23 +45,25 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
      * differ determines the result of the comparison. If all elements are equal, the shorter list is considered
      * less than the longer one.
      *
-     * @param other the other list to compare this list to.
-     * @return a negative integer, zero, or a positive integer as this list is less than, equal to, or greater than
-     * the specified list, respectively.
+     * @param list1 the first list to compare.
+     * @param list2 the second list to compare.
+     * @return a negative integer, zero, or a positive integer as list1 is less than, equal to, or greater than
+     * list2, respectively.
      */
-    private fun List<VersionPart>.compareTo(other: List<VersionPart>): Int {
-        val size = size.coerceAtMost(other.size)
-        return take(size)
-            .zip(other.take(size))
+    private fun compareVersionParts(list1: List<VersionPart>, list2: List<VersionPart>): Int {
+        val size = list1.size.coerceAtMost(list2.size)
+        return list1.take(size)
+            .zip(list2.take(size))
             .map { (leftPart, rightPart) -> compareValuesBy(leftPart, rightPart, { it.value }, { it.supplement }) }
-            .firstOrNull { it != 0 } ?: size.compareTo(other.size)
+            .firstOrNull { it != 0 } ?: list1.size.compareTo(list2.size)
     }
+
     /**
      * Returns the highest version string from a list of version strings.
      */
     fun List<String>.getHighestVersion(): String? {
         return map { version -> version.split(".").map(::parseVersionPart) }
-            .maxWithOrNull { left, right -> left.compareTo(right) }
+            .maxWithOrNull(::compareVersionParts)
             ?.joinToString(".") { it.original }
     }
 
@@ -113,8 +76,7 @@ object PackageVersion : KoinComponent, CommandPrompt<String> {
 
     private const val const = "Package Version"
     private const val versionInfo = "${Prompts.required} Enter the version."
-    private val example = "Example: ${generateRandomVersion()}"
     private const val pattern = "^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"
-    val regex = Regex(pattern)
     const val maxLength = 128
+    val regex = Regex(pattern)
 }

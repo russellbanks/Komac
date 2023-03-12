@@ -22,7 +22,7 @@ object Prompts {
                             buildString {
                                 append(" ".repeat(optionIndent))
                                 append("[${it.toString().first().titlecase()}] ")
-                                append(it.toString().replaceFirstChar { it.titlecase() })
+                                append(it.toString().replaceFirstChar(Char::titlecase))
                             }
                         )
                     )

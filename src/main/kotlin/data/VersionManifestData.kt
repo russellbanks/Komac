@@ -1,23 +1,21 @@
 package data
 
 import data.shared.Locale
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
-import org.koin.core.component.inject
 import schemas.Schemas
 import schemas.manifest.VersionManifest
 
-object VersionManifestData : KoinComponent {
-    private val allManifestData: AllManifestData by inject()
-    private val previousVersionData = get<PreviousManifestData>().remoteVersionData
-
-    suspend fun createVersionManifest(): String = with(allManifestData) {
+object VersionManifestData {
+    fun createVersionManifest(
+        allManifestData: AllManifestData,
+        manifestOverride: String? = null,
+        previousVersionData: VersionManifest?
+    ): String = with(allManifestData) {
         return VersionManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            defaultLocale = defaultLocale ?: previousVersionData.await()?.defaultLocale ?: Locale.defaultLocale,
+            defaultLocale = defaultLocale ?: previousVersionData?.defaultLocale ?: Locale.defaultLocale,
             manifestType = Schemas.versionManifestType,
-            manifestVersion = get<Schemas>().manifestOverride ?: Schemas.manifestVersion
+            manifestVersion = manifestOverride ?: Schemas.manifestVersion
         ).toString()
     }
 }

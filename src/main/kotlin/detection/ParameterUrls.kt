@@ -2,22 +2,24 @@ package detection
 
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.Terminal
+import io.ktor.client.HttpClient
 import io.ktor.http.Url
-import network.getExtension
-import org.koin.core.component.KoinComponent
 import schemas.manifest.InstallerManifest
+import utils.getExtension
 
-object ParameterUrls : KoinComponent {
+object ParameterUrls {
     fun assertUniqueUrlsCount(parameterUrls: List<Url>, previousUrls: List<Url>, terminal: Terminal) {
-        if (parameterUrls.distinct().size != previousUrls.distinct().size) {
+        val parameterUrlsSet = parameterUrls.toHashSet()
+        val previousUrlsSet = previousUrls.toHashSet()
+        if (parameterUrlsSet.size != previousUrlsSet.size) {
             throw CliktError(
                 terminal.colors.danger(
                     buildString {
                         append("The number of unique installer urls ")
                         append(
                             when {
-                                parameterUrls.distinct().size > previousUrls.distinct().size -> "is greater than"
-                                parameterUrls.distinct().size < previousUrls.distinct().size -> "is less than"
+                                parameterUrlsSet.size > previousUrlsSet.size -> "is greater than"
+                                parameterUrlsSet.size < previousUrlsSet.size -> "is less than"
                                 else -> "does not match"
                             }
                         )
@@ -28,9 +30,9 @@ object ParameterUrls : KoinComponent {
         }
     }
 
-    suspend fun assertUrlsValid(parameterUrls: List<Url>, terminal: Terminal) {
+    suspend fun assertUrlsValid(parameterUrls: List<Url>, terminal: Terminal, client: HttpClient) {
         parameterUrls.forEach { url ->
-            data.shared.Url.isUrlValid(url, false)
+            data.shared.Url.isUrlValid(url, false, client)
                 ?.let { throw CliktError(terminal.colors.danger("$it on $url")) }
         }
     }
@@ -38,46 +40,22 @@ object ParameterUrls : KoinComponent {
     fun matchInstallers(
         newInstallers: List<InstallerManifest.Installer>,
         previousInstallers: List<InstallerManifest.Installer>
-    ): List<Pair<InstallerManifest.Installer, InstallerManifest.Installer>> {
-        val result = mutableListOf<Pair<InstallerManifest.Installer, InstallerManifest.Installer>>()
-        for (previousInstaller in previousInstallers) {
-            var newInstaller: InstallerManifest.Installer? = newInstallers.firstOrNull {
+    ): Map<InstallerManifest.Installer, InstallerManifest.Installer> {
+        return previousInstallers.associateWith { previousInstaller ->
+            newInstallers.firstOrNull {
                 it.architecture == previousInstaller.architecture &&
                     it.installerType == previousInstaller.installerType &&
-                    it.scope == previousInstaller.scope
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture &&
-                        it.installerType == previousInstaller.installerType &&
-                        it.scope == null
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture &&
-                        it.installerType == previousInstaller.installerType
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
+                    (it.scope == previousInstaller.scope || it.scope == null)
+            } ?: newInstallers.firstOrNull {
+                it.architecture == previousInstaller.architecture &&
                     it.installerType == previousInstaller.installerType
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension()
-                }
-            }
-            if (newInstaller != null) {
-                result.add(Pair(previousInstaller, newInstaller))
-            }
+            } ?: newInstallers.firstOrNull {
+                it.installerType == previousInstaller.installerType
+            } ?: newInstallers.firstOrNull {
+                it.architecture == previousInstaller.architecture
+            } ?: newInstallers.firstOrNull {
+                it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension()
+            } ?: previousInstaller // If no match was found, use the previous installer itself
         }
-        return result
     }
 }

@@ -6,52 +6,51 @@ import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
 import data.AllManifestData
-import data.PreviousManifestData
-import input.ExitCode
 import input.LocaleType
 import input.Prompts
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import schemas.manifest.InstallerManifest
 import java.util.Locale
-import kotlin.system.exitProcess
 
-object Locale : KoinComponent {
-    private val allManifestData: AllManifestData by inject()
-    private val previousManifestData: PreviousManifestData by inject()
-
-    object Installer : CommandPrompt<String> {
-        override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+object Locale {
+    class Installer(
+        private val allManifestData: AllManifestData,
+        private val previousInstallerManifest: InstallerManifest?
+    ) : CommandPrompt<String> {
+        override fun prompt(terminal: Terminal): String? = with(terminal) {
             return allManifestData.msi?.productLanguage ?: let {
                 localeInfo(LocaleType.Installer).also { (info, infoColor) -> println(infoColor(info)) }
                 info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
                 prompt(
                     prompt = "Installer locale",
-                    default = getPreviousValue()?.also { muted("Previous value: $it") },
-                    convert = { input ->
-                        getError(input.trim())
-                            ?.let { ConversionResult.Invalid(it) }
-                            ?: ConversionResult.Valid(input.trim())
-                    }
-                )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+                    default = getPreviousValue()?.also { muted("Previous value: $it") }
+                ) { input ->
+                    getError(input.trim())?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
+                }
             }
         }
 
         override fun getError(input: String?): String? = getError(input, LocaleType.Installer)
+
+        private fun getPreviousValue(): String? {
+            return previousInstallerManifest?.let {
+                it.installerLocale ?: it.installers[allManifestData.installers.size].installerLocale
+            }
+        }
     }
 
-    object Package : CommandPrompt<String> {
-        override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+    class Package(private val previousPackageLocale: String?) : CommandPrompt<String> {
+        override fun prompt(terminal: Terminal): String? = with(terminal) {
             localeInfo(LocaleType.Package).also { (info, infoColor) -> println(infoColor(info)) }
             info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
             prompt(
                 prompt = "Package locale",
-                default = defaultLocale,
+                default = previousPackageLocale ?: defaultLocale,
                 convert = { input ->
                     getError(input.trim())
                         ?.let { ConversionResult.Invalid(it) }
                         ?: ConversionResult.Valid(input.trim())
                 }
-            )?.also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+            )
         }
 
         override fun getError(input: String?) = getError(input, LocaleType.Package)
@@ -64,12 +63,6 @@ object Locale : KoinComponent {
             !input.matches(regex) -> Errors.invalidRegex(regex)
             input.length > maxLength -> Errors.invalidLength(max = maxLength)
             else -> null
-        }
-    }
-
-    private suspend fun getPreviousValue(): String? {
-        return previousManifestData.remoteInstallerData.await()?.let {
-            it.installerLocale ?: it.installers[allManifestData.installers.size].installerLocale
         }
     }
 

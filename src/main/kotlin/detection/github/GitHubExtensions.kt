@@ -48,7 +48,7 @@ fun GHRelease.getFormattedReleaseNotes(): String? {
                         lines.getOrNull(index + 1)?.startsWith("- ") == true ||
                         lines.getOrNull(index + 2)?.startsWith("- ") == true
                     ) {
-                        line.dropWhile { it == '#' }.trim().takeUnless { it.isBlank() }?.let { appendLine(it) }
+                        line.dropWhile { it == '#' }.trim().takeUnless(String::isBlank)?.let(::appendLine)
                     }
                 }
                 line.startsWith("- ") -> {

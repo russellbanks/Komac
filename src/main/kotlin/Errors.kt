@@ -1,4 +1,6 @@
-import data.locale.DescriptionType
+
+import com.github.ajalt.clikt.core.CliktError
+import data.GitHubImpl
 import input.LocaleType
 import io.ktor.client.statement.HttpResponse
 
@@ -47,8 +49,6 @@ object Errors {
         }
     }
 
-    fun blankInput(descriptionType: DescriptionType? = null) = blankInput(descriptionType?.promptName)
-
     fun blankInput(localeType: LocaleType? = null) = blankInput(localeType.toString())
 
     fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
@@ -59,6 +59,16 @@ object Errors {
             append(" - Value must exist in the enum - ")
             append(enum.joinToString(", "))
         }
+    }
+
+    fun doesNotExistError(packageIdentifier: String, packageVersion: String, isUpdate: Boolean = false): CliktError {
+        return CliktError(
+            message = buildString {
+                appendLine("$packageIdentifier $packageVersion does not exist in ${GitHubImpl.wingetPkgsFullName}")
+                if (isUpdate) appendLine("Please use the 'new' command to create a new manifest.")
+            },
+            statusCode = 1
+        )
     }
 
     const val connectionTimeout = "$error Connection timed out"

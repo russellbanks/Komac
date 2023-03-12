@@ -4,13 +4,11 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.java.Java
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.UserAgent
-import org.koin.core.annotation.Single
 
 /**
  * Stores the [HttpClient] instance and its configuration.
  */
-@Single
-class Http {
+object Http {
     /**
      * The [HttpClient] instance.
      *
@@ -29,8 +27,6 @@ class Http {
         }
     }
 
-    companion object {
-        private const val timeoutMillis = 1500L
-        private const val userAgent = "Microsoft-Delivery-Optimization/10.1"
-    }
+    private const val timeoutMillis = 1500L
+    private const val userAgent = "Microsoft-Delivery-Optimization/10.1"
 }

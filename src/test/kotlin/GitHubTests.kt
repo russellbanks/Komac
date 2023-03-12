@@ -1,3 +1,4 @@
+
 import detection.github.getFormattedReleaseNotes
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe

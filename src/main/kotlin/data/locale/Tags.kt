@@ -4,40 +4,32 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.AllManifestData
-import data.PreviousManifestData
-import input.ExitCode
+import detection.github.GitHubDetection
+import extensions.YamlExtensions.convertToList
 import input.Prompts
-import input.YamlExtensions.convertToYamlList
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import schemas.manifest.DefaultLocaleManifest
-import kotlin.system.exitProcess
 
-object Tags : KoinComponent, CommandPrompt<List<String>> {
-    private val previousManifestData: PreviousManifestData by inject()
-    private val allManifestData: AllManifestData by inject()
-
-    override suspend fun prompt(terminal: Terminal): List<String> = with(terminal) {
-        return allManifestData.gitHubDetection?.topics ?: let {
+class Tags(
+    private val gitHubDetection: GitHubDetection?,
+    private val previousTags: List<String>?
+) : CommandPrompt<List<String>> {
+    override fun prompt(terminal: Terminal): List<String>? = with(terminal) {
+        return gitHubDetection?.topics ?: let {
             println(colors.brightYellow(tagsInfo))
             info(example)
             prompt(
-                prompt = DefaultLocaleManifest::tags.name.replaceFirstChar { it.titlecase() },
-                default = previousManifestData.remoteDefaultLocaleData.await()?.tags?.also {
-                    muted("Previous tags: $it")
-                },
-                convert = { input ->
-                    getError(input)
-                        ?.let { ConversionResult.Invalid(it) }
-                        ?: ConversionResult.Valid(input.trim().convertToYamlList(uniqueItems))
-                }
-            ) ?: exitProcess(ExitCode.CtrlC.code)
+                prompt = DefaultLocaleManifest::tags.name.replaceFirstChar(Char::titlecase),
+                default = previousTags?.also { muted("Previous tags: $it") }
+            ) { input ->
+                getError(input)
+                    ?.let { ConversionResult.Invalid(it) }
+                    ?: ConversionResult.Valid(input.trim().convertToList(uniqueItems))
+            }
         }
     }
 
     override fun getError(input: String?): String? {
-        val convertedInput = input?.trim()?.convertToYamlList(uniqueItems)
+        val convertedInput = input?.trim()?.convertToList(uniqueItems)
         return when {
             convertedInput == null -> null
             convertedInput.count() > maxCount -> Errors.invalidLength(max = maxCount)
@@ -58,9 +50,11 @@ object Tags : KoinComponent, CommandPrompt<List<String>> {
         append("(Max $maxCount)")
     }
 
-    private const val example = "Example: zip, c++, photos, OBS"
-    private const val maxCount = 16
-    private const val maxLength = 40
-    private const val minLength = 1
-    private const val uniqueItems = true
+    companion object {
+        private const val example = "Example: zip, c++, photos, OBS"
+        private const val maxCount = 16
+        private const val maxLength = 40
+        private const val minLength = 1
+        private const val uniqueItems = true
+    }
 }

@@ -4,27 +4,18 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import data.PreviousManifestData
-import input.ExitCode
 import input.Prompts
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import schemas.manifest.DefaultLocaleManifest
-import kotlin.system.exitProcess
 
-object Author : KoinComponent, CommandPrompt<String> {
-    private val previousManifestData: PreviousManifestData by inject()
-
-    override suspend fun prompt(terminal: Terminal): String = with(terminal) {
+class Author(private val previousAuthor: String?) : CommandPrompt<String> {
+    override fun prompt(terminal: Terminal): String? = with(terminal) {
         println(colors.brightYellow(authorInfo))
         return prompt(
-            prompt = DefaultLocaleManifest::author.name.replaceFirstChar { it.titlecase() },
-            default = previousManifestData.remoteDefaultLocaleData.await()?.author
-                ?.also { muted("Previous author: $it") },
-            convert = { input ->
-                getError(input.trim())?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
-            }
-        ).also { println() } ?: exitProcess(ExitCode.CtrlC.code)
+            prompt = DefaultLocaleManifest::author.name.replaceFirstChar(Char::titlecase),
+            default = previousAuthor?.also { muted("Previous author: $it") }
+        ) { input ->
+            getError(input.trim())?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
+        }
     }
 
     override fun getError(input: String?): String? {
@@ -37,7 +28,9 @@ object Author : KoinComponent, CommandPrompt<String> {
         }
     }
 
-    private const val authorInfo = "${Prompts.optional} Enter the package author"
-    private const val minLength = 2
-    private const val maxLength = 256
+    companion object {
+        private const val authorInfo = "${Prompts.optional} Enter the package author"
+        private const val minLength = 2
+        private const val maxLength = 256
+    }
 }

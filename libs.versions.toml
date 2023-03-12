@@ -9,8 +9,6 @@ jna = "5.13.0"
 jpackage = "1.5.1"
 jsoup = "1.15.4"
 kaml = "0.52.0"
-koin = "3.3.3"
-koin-ksp = "1.1.1"
 kotest = "5.5.5"
 kotest-extensions-ktor = "1.0.3"
 kotlin = "1.8.10"
@@ -42,11 +40,6 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
 
-ktor-client-contentnegotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
-koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
-koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin-ksp" }
-koin-ksp-compiler = { module = "io.insert-koin:koin-ksp-compiler", version.ref = "koin-ksp" }
-
 kotest-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }
@@ -56,6 +49,7 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 

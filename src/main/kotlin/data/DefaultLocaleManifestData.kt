@@ -3,26 +3,24 @@ package data
 import data.shared.Locale
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import schemas.Schemas
 import schemas.manifest.DefaultLocaleManifest
 
-object DefaultLocaleManifestData : KoinComponent {
-    private val allManifestData: AllManifestData by inject()
-    private val previousManifestData: PreviousManifestData by inject()
-    private val schemas: Schemas by inject()
-    private val parameterLocaleMetadata = allManifestData.additionalMetadata?.locales?.find {
-        it.name.equals(other = allManifestData.defaultLocale, ignoreCase = true)
-    }
-
-    suspend fun createDefaultLocaleManifest(): String = with(allManifestData) {
-        val previousDefaultLocaleData = previousManifestData.remoteDefaultLocaleData.await()
-        return getDefaultLocaleManifestBase().copy(
+object DefaultLocaleManifestData {
+    suspend fun createDefaultLocaleManifest(
+        allManifestData: AllManifestData,
+        previousManifestData: PreviousManifestData?,
+        manifestOverride: String? = null
+    ): String = with(allManifestData) {
+        val parameterLocaleMetadata = allManifestData.additionalMetadata?.locales?.find {
+            it.name.equals(other = allManifestData.defaultLocale, ignoreCase = true)
+        }
+        val previousDefaultLocaleData = previousManifestData?.remoteDefaultLocaleData?.await()
+        return getDefaultLocaleManifestBase(allManifestData, previousManifestData).copy(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             packageLocale = defaultLocale
-                ?: previousManifestData.remoteVersionData.await()?.defaultLocale
+                ?: previousManifestData?.previousVersionData?.defaultLocale
                 ?: Locale.defaultLocale,
             publisher = publisher ?: previousDefaultLocaleData?.publisher ?: "",
             publisherUrl = (
@@ -70,15 +68,18 @@ object DefaultLocaleManifestData : KoinComponent {
                 previousDefaultLocaleData.documentations
             },
             manifestType = Schemas.defaultLocaleManifestType,
-            manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
+            manifestVersion = manifestOverride ?: Schemas.manifestVersion
         ).toString()
     }
 
     private inline fun Url.ifBlank(defaultValue: () -> Url?): Url? =
         if (this == Url(URLBuilder())) defaultValue() else this
 
-    private suspend fun getDefaultLocaleManifestBase(): DefaultLocaleManifest = with(allManifestData) {
-        return previousManifestData.remoteDefaultLocaleData.await() ?: DefaultLocaleManifest(
+    private suspend fun getDefaultLocaleManifestBase(
+        allManifestData: AllManifestData,
+        previousManifestData: PreviousManifestData?
+    ): DefaultLocaleManifest = with(allManifestData) {
+        return previousManifestData?.remoteDefaultLocaleData?.await() ?: DefaultLocaleManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             packageLocale = Locale.defaultLocale,
@@ -87,7 +88,7 @@ object DefaultLocaleManifestData : KoinComponent {
             license = license as String,
             shortDescription = shortDescription as String,
             manifestType = Schemas.defaultLocaleManifestType,
-            manifestVersion = schemas.manifestOverride ?: Schemas.manifestVersion
+            manifestVersion = Schemas.manifestVersion
         )
     }
 }

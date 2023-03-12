@@ -7,12 +7,10 @@ import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
 import detection.github.GitHubDetection
 import io.ktor.http.Url
-import org.koin.core.annotation.Single
 import schemas.AdditionalMetadata
 import schemas.manifest.InstallerManifest
 import java.time.LocalDate
 
-@Single
 class AllManifestData {
     lateinit var installerUrl: Url
     lateinit var installerSha256: String

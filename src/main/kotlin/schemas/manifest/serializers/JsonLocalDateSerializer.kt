@@ -8,7 +8,7 @@ import kotlinx.serialization.encoding.Encoder
 import java.time.LocalDate
 
 object JsonLocalDateSerializer : KSerializer<LocalDate> {
-    override val descriptor = PrimitiveSerialDescriptor(LocalDate::class.simpleName!!, PrimitiveKind.STRING)
+    override val descriptor = PrimitiveSerialDescriptor(LocalDate::class.simpleName as String, PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: LocalDate) {
         encoder.encodeString(value.toString())

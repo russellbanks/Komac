@@ -2,34 +2,31 @@ package commands.token
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
-import commands.CommandUtils.prompt
+import commands.prompt
+import commands.success
 import kotlinx.coroutines.runBlocking
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import token.Token
 import token.TokenStore
 import utils.yesNoMenu
 
-class Update : CliktCommand(), KoinComponent {
-    private val tokenStore: TokenStore by inject()
+class Update : CliktCommand() {
+    private val tokenStore = TokenStore()
     private val tokenParameter: String? by option("-t", "--token")
 
     override fun run(): Unit = runBlocking {
-        with(currentContext.terminal) {
-            if (tokenStore.token == null) {
+        if (tokenStore.token == null) {
+            prompt(Token, tokenParameter).also { tokenStore.putToken(it) }
+            success("Token set successfully")
+        } else {
+            val confirmed = when (tokenParameter) {
+                null -> currentContext.terminal.yesNoMenu(default = true)
+                else -> true
+            }
+            if (confirmed) {
                 prompt(Token, tokenParameter).also { tokenStore.putToken(it) }
-                success("Token set successfully")
+                success("Token changed successfully")
             } else {
-                val confirmed = when (tokenParameter) {
-                    null -> yesNoMenu(default = true)
-                    else -> true
-                }
-                if (confirmed) {
-                    prompt(Token, tokenParameter).also { tokenStore.putToken(it) }
-                    success("Token changed successfully")
-                } else {
-                    return@runBlocking
-                }
+                return@runBlocking
             }
         }
     }

@@ -1,15 +1,13 @@
 package token
 
 import com.github.ajalt.mordant.terminal.Terminal
-import commands.CommandUtils.prompt
+import commands.prompt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import org.koin.core.annotation.Single
 
-@Single
 class TokenStore {
     private val credentialStore = StorageProvider.getTokenStorage()
     private var storedToken = credentialStore?.get(credentialKey)
