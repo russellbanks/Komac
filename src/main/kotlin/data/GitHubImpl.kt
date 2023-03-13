@@ -148,7 +148,7 @@ class GitHubImpl(token: String, client: HttpClient) {
         terminal: Terminal
     ): GHPullRequest? {
         commitFiles(
-            files = files.map { "${GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion)}/${it.key}" to it.value }.toMap(),
+            files = files.mapKeys { "${GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion)}/${it.key}" },
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             updateState = updateState,

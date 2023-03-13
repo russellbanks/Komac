@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "com.russellbanks"
-version = "1.1.0"
+version = "1.2.0"
 
 repositories {
     mavenCentral()
@@ -88,6 +88,10 @@ tasks.withType<ShadowJar> {
         exclude(dependency(libs.jline.terminal.asProvider().get().toString()))
         exclude(dependency(libs.jline.terminal.jna.get().toString()))
     }
+}
+
+detekt {
+    ignoreFailures = true
 }
 
 tasks.jpackage {

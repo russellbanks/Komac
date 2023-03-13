@@ -1,5 +1,5 @@
 build:
-  maxIssues: 125
+  maxIssues: 20
   excludeCorrectable: false
   weights:
     # complexity: 2
@@ -386,7 +386,7 @@ performance:
   ArrayPrimitive:
     active: true
   CouldBeSequence:
-    active: false
+    active: true
     threshold: 3
   ForEachOnRange:
     active: true
@@ -395,7 +395,7 @@ performance:
     active: true
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**']
   UnnecessaryPartOfBinaryExpression:
-    active: false
+    active: true
   UnnecessaryTemporaryInstantiation:
     active: true
 
@@ -408,9 +408,9 @@ potential-bugs:
   CastToNullableType:
     active: false
   Deprecation:
-    active: false
+    active: true
   DontDowncastCollectionTypes:
-    active: false
+    active: true
   DoubleMutabilityForCollection:
     active: true
     mutableTypes:

@@ -46,7 +46,6 @@ class FileExtensions(
         }
     }
 
-
     companion object {
         private const val const = "File Extensions"
         private const val description = "List of file extensions the package could support"
