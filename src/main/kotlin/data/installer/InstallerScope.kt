@@ -15,7 +15,7 @@ class InstallerScope(
             if (scope == null && installerType != InstallerManifest.Installer.InstallerType.PORTABLE) {
                 val previousValue = getPreviousValue()
                 println(colors.brightYellow(installerScopeInfo))
-                previousValue?.let { println(colors.muted("Previous value: $previousValue")) }
+                previousValue?.let { println(colors.muted("Previous value: $it")) }
                 scope = menu(
                     items = InstallerManifest.Installer.Scope.values().toList(),
                     default = previousValue,

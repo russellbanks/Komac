@@ -66,7 +66,7 @@ class MenuCreator<T : Any>(
         val newIndex = when (direction) {
             Key.Up -> selectedIndex - 1
             Key.Down -> selectedIndex + 1
-            else -> selectedIndex
+            Key.Enter -> selectedIndex
         }
 
         if (newIndex in listItems.indices) {
@@ -87,16 +87,12 @@ fun <T : Any> Terminal.menu(
     default: T? = null,
     optionalItemName: String? = null,
     nameConvert: (String) -> String = { it }
-): MenuCreator<T> {
-    return MenuCreator(items, default, optionalItemName, nameConvert, this)
-}
+): MenuCreator<T> = MenuCreator(items, default, optionalItemName, nameConvert, this)
 
-fun Terminal.yesNoMenu(default: Boolean? = null): Boolean {
-    return menu(
-        items = YesNo.values().toList(),
-        default = if (default == true) YesNo.Yes else YesNo.No
-    ).prompt()!!.toBoolean()
-}
+fun Terminal.yesNoMenu(default: Boolean? = null) = menu(
+    items = YesNo.values().toList(),
+    default = if (default == true) YesNo.Yes else YesNo.No
+).prompt()?.toBoolean() ?: throw ProgramResult(ExitCode.CtrlC.code)
 
 enum class YesNo {
     Yes,

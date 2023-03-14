@@ -12,6 +12,12 @@ import schemas.manifest.InstallerManifest
 import java.util.Locale
 
 object Locale {
+    const val installerLocaleConst = "Installer Locale"
+    private const val maxLength = 20
+    private const val pattern = "^([a-zA-Z]{2,3}|[iI]-[a-zA-Z]+|[xX]-[a-zA-Z]{1,8})(-[a-zA-Z]{1,8})*$"
+    private val regex = Regex(pattern)
+    const val defaultLocale = "en-US"
+
     class Installer(
         private val allManifestData: AllManifestData,
         private val previousInstallerManifest: InstallerManifest?
@@ -21,7 +27,7 @@ object Locale {
                 localeInfo(LocaleType.Installer).also { (info, infoColor) -> println(infoColor(info)) }
                 info("Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}")
                 prompt(
-                    prompt = "Installer locale",
+                    prompt = installerLocaleConst,
                     default = getPreviousValue()?.also { muted("Previous value: $it") }
                 ) { input ->
                     getError(input.trim())?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
@@ -59,7 +65,7 @@ object Locale {
     fun getError(input: String?, localeType: LocaleType): String? {
         return when {
             input == null -> null
-            input.isBlank() -> if (localeType == LocaleType.Package) Errors.blankInput(localeType) else null
+            input.isBlank() -> if (localeType == LocaleType.Package) Errors.blankInput(localeType.toString()) else null
             !input.matches(regex) -> Errors.invalidRegex(regex)
             input.length > maxLength -> Errors.invalidLength(max = maxLength)
             else -> null
@@ -72,10 +78,4 @@ object Locale {
             append(" Enter the $localeType locale")
         } to if (localeType == LocaleType.Package) colors.brightGreen else colors.brightYellow
     }
-
-    const val installerLocaleConst = "Installer Locale"
-    private const val maxLength = 20
-    private const val pattern = "^([a-zA-Z]{2,3}|[iI]-[a-zA-Z]+|[xX]-[a-zA-Z]{1,8})(-[a-zA-Z]{1,8})*$"
-    private val regex = Regex(pattern)
-    const val defaultLocale = "en-US"
 }

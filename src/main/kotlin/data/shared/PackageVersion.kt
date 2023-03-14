@@ -9,6 +9,12 @@ import java.math.BigInteger
 import kotlin.random.Random
 
 object PackageVersion : CommandPrompt<String> {
+    private const val const = "Package Version"
+    private const val versionInfo = "${Prompts.required} Enter the version."
+    private const val pattern = "^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"
+    const val maxLength = 128
+    val regex = Regex(pattern)
+
     override fun prompt(terminal: Terminal): String? = with(terminal) {
         println(colors.brightGreen(versionInfo))
         info("Example: ${generateRandomVersion()}")
@@ -55,7 +61,8 @@ object PackageVersion : CommandPrompt<String> {
         return list1.take(size)
             .zip(list2.take(size))
             .map { (leftPart, rightPart) -> compareValuesBy(leftPart, rightPart, { it.value }, { it.supplement }) }
-            .firstOrNull { it != 0 } ?: list1.size.compareTo(list2.size)
+            .firstOrNull { it != 0 }
+            ?: list1.size.compareTo(list2.size)
     }
 
     /**
@@ -73,10 +80,4 @@ object PackageVersion : CommandPrompt<String> {
         val patch = Random.nextInt(0, 10)
         return "$major.$minor.$patch"
     }
-
-    private const val const = "Package Version"
-    private const val versionInfo = "${Prompts.required} Enter the version."
-    private const val pattern = "^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"
-    const val maxLength = 128
-    val regex = Regex(pattern)
 }

@@ -26,9 +26,7 @@ class Msix(msixFile: File) {
         }
         ZipFile(msixFile).use { zip ->
             zip.getEntry(appxManifestXml)?.let { appxManifest ->
-                val document = zip.getInputStream(appxManifest)
-                    .use(::htmlDocument)
-                    .let { Doc(document = it.document, relaxed = true) }
+                val document = Doc(zip.getInputStream(appxManifest).use(::htmlDocument).document, relaxed = true)
                 val properties = document.findFirst("Properties")
                 val targetDeviceFamilyAttribute = document.findFirst("TargetDeviceFamily")
                 val identity = document.findFirst("Identity")

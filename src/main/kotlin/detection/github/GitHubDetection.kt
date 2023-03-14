@@ -1,6 +1,7 @@
 package detection.github
 
 import data.GitHubImpl
+import extensions.getFormattedReleaseNotes
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText

@@ -1,17 +1,18 @@
 
 import com.github.ajalt.clikt.core.CliktError
 import data.GitHubImpl
-import input.LocaleType
 import io.ktor.client.statement.HttpResponse
 
 object Errors {
     const val error = "[Error]"
+    const val connectionTimeout = "$error Connection timed out"
+    const val connectionFailure = "$error Failed to connect"
 
     fun invalidLength(min: Number? = null, max: Number? = null, items: Iterable<String>? = null): String {
         return buildString {
             append("$error Invalid Length")
             if (min != null || max != null) {
-                append(" -${items?.let { "Item" } ?: ""} ${items?.let { "Length" } ?: "length"} must be ")
+                append(" -${items?.let { "Item" }.orEmpty()} ${items?.let { "Length" } ?: "length"} must be ")
             }
             when {
                 min != null && max != null -> append("between $min and $max")
@@ -49,8 +50,6 @@ object Errors {
         }
     }
 
-    fun blankInput(localeType: LocaleType? = null) = blankInput(localeType.toString())
-
     fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
 
     fun invalidEnum(enum: List<String>): String {
@@ -70,7 +69,4 @@ object Errors {
             statusCode = 1
         )
     }
-
-    const val connectionTimeout = "$error Connection timed out"
-    const val connectionFailure = "$error Failed to connect"
 }

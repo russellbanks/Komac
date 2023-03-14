@@ -4,27 +4,27 @@ import Errors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
-import detection.github.GitHubDetection
 import extensions.YamlExtensions.convertToList
 import input.Prompts
 import schemas.manifest.DefaultLocaleManifest
 
-class Tags(
-    private val gitHubDetection: GitHubDetection?,
-    private val previousTags: List<String>?
-) : CommandPrompt<List<String>> {
+class Tags(private val previousTags: List<String>?) : CommandPrompt<List<String>> {
+    private val tagsInfo = buildString {
+        append(Prompts.optional)
+        append(" Enter any tags that would be useful to discover this tool. ")
+        append("(Max $maxCount)")
+    }
+
     override fun prompt(terminal: Terminal): List<String>? = with(terminal) {
-        return gitHubDetection?.topics ?: let {
-            println(colors.brightYellow(tagsInfo))
-            info(example)
-            prompt(
-                prompt = DefaultLocaleManifest::tags.name.replaceFirstChar(Char::titlecase),
-                default = previousTags?.also { muted("Previous tags: $it") }
-            ) { input ->
-                getError(input)
-                    ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(input.trim().convertToList(uniqueItems))
-            }
+        println(colors.brightYellow(tagsInfo))
+        info(example)
+        return prompt(
+            prompt = DefaultLocaleManifest::tags.name.replaceFirstChar(Char::titlecase),
+            default = previousTags?.also { tags -> muted("Previous tags: $tags") }
+        ) { input ->
+            getError(input)
+                ?.let { ConversionResult.Invalid(it) }
+                ?: ConversionResult.Valid(input.trim().convertToList(uniqueItems))
         }
     }
 
@@ -42,12 +42,6 @@ class Tags(
             }
             else -> null
         }
-    }
-
-    private val tagsInfo = buildString {
-        append(Prompts.optional)
-        append(" Enter any tags that would be useful to discover this tool. ")
-        append("(Max $maxCount)")
     }
 
     companion object {

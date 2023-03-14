@@ -71,12 +71,9 @@ class NewManifest : CliktCommand(name = "new") {
             packageIdentifier = prompt(PackageIdentifier)
             if (!tokenStore.isTokenValid.await()) tokenStore.invalidTokenPrompt(currentContext.terminal)
             allVersions = GitHubUtils.getAllVersions(gitHubImpl.getMicrosoftWinGetPkgs(), packageIdentifier)
-            latestVersion = allVersions?.getHighestVersion()?.also {
-                if (System.getenv("CI")?.toBooleanStrictOrNull() != true) {
-                    info("Found $packageIdentifier in the winget-pkgs repository")
-                    info("Found latest version: $it")
-                }
-            }
+            info("Found $packageIdentifier in the winget-pkgs repository")
+            val latestVersion = allVersions?.getHighestVersion()
+            latestVersion?.let { info("Found latest version: $it") }
             launch {
                 if (updateState != VersionUpdateState.NewPackage) {
                     previousManifestData = PreviousManifestData(packageIdentifier, latestVersion, gitHubImpl.getMicrosoftWinGetPkgs())
@@ -110,7 +107,7 @@ class NewManifest : CliktCommand(name = "new") {
             installModes = prompt(InstallModes(previousInstallerManifest?.await(), installers.size))
             defaultLocale = prompt(Locale.Package(previousDefaultLocaleManifest?.await()?.packageLocale))
             publisher = prompt(Publisher(msi, msix, previousDefaultLocaleManifest?.await()?.publisher))
-            packageName = prompt(PackageName(msi, msix, previousDefaultLocaleManifest?.await()?.packageName))
+            packageName = msix?.displayName ?: prompt(PackageName(msi, previousDefaultLocaleManifest?.await()?.packageName))
             moniker = prompt(Moniker(previousDefaultLocaleManifest?.await()?.moniker))
             publisherUrl = gitHubDetection?.publisherUrl
                 ?: prompt(Publisher.Url(previousDefaultLocaleManifest?.await()?.publisherUrl, client))
@@ -121,7 +118,7 @@ class NewManifest : CliktCommand(name = "new") {
                 ?: prompt(License.Url(previousDefaultLocaleManifest?.await()?.licenseUrl, client))
             copyright = prompt(Copyright(previousDefaultLocaleManifest?.await()?.copyright))
             copyrightUrl = prompt(Copyright.Url(previousDefaultLocaleManifest?.await()?.copyrightUrl, client))
-            tags = prompt(Tags(gitHubDetection, previousDefaultLocaleManifest?.await()?.tags))
+            tags = gitHubDetection?.topics ?: prompt(Tags(previousDefaultLocaleManifest?.await()?.tags))
             shortDescription = prompt(Description.Short(allManifestData, previousDefaultLocaleManifest?.await()?.shortDescription))
             description = prompt(Description.Long(previousDefaultLocaleManifest?.await()?.description))
             releaseNotesUrl = gitHubDetection?.releaseNotesUrl ?: prompt(ReleaseNotesUrl(client))
@@ -129,20 +126,18 @@ class NewManifest : CliktCommand(name = "new") {
             files.values.forEach { manifest ->
                 ManifestUtils.formattedManifestLinesSequence(manifest, colors).forEach(::echo)
             }
-            currentContext.terminal.pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
-                when (manifestResultOption) {
-                    ManifestResultOption.PullRequest -> {
-                        gitHubImpl.commitAndPullRequest(
-                            files = files,
-                            packageIdentifier = packageIdentifier,
-                            packageVersion = packageVersion,
-                            updateState = updateState,
-                            terminal = currentContext.terminal
-                        )
-                    }
-                    ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
-                    else -> return@also
+            when (currentContext.terminal.pullRequestPrompt(packageIdentifier, packageVersion)) {
+                ManifestResultOption.PullRequest -> {
+                    gitHubImpl.commitAndPullRequest(
+                        files = files,
+                        packageIdentifier = packageIdentifier,
+                        packageVersion = packageVersion,
+                        updateState = updateState,
+                        terminal = currentContext.terminal
+                    )
                 }
+                ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
+                else -> return@runBlocking
             }
         }
     }

@@ -18,10 +18,7 @@ class Update : CliktCommand() {
             prompt(Token, tokenParameter).also { tokenStore.putToken(it) }
             success("Token set successfully")
         } else {
-            val confirmed = when (tokenParameter) {
-                null -> currentContext.terminal.yesNoMenu(default = true)
-                else -> true
-            }
+            val confirmed = if (tokenParameter == null) currentContext.terminal.yesNoMenu(default = true) else true
             if (confirmed) {
                 prompt(Token, tokenParameter).also { tokenStore.putToken(it) }
                 success("Token changed successfully")

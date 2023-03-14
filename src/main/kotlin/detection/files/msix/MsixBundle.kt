@@ -20,9 +20,7 @@ class MsixBundle(msixBundleFile: File) {
         require(msixBundleFile.extension.lowercase() == msixBundleConst) { "File must be an $msixBundleConst" }
         ZipFile(msixBundleFile).use { zip ->
             zip.getEntry("$appxManifestFolder/$appxBundleManifestXml")?.let { appxManifest ->
-                packages = zip.getInputStream(appxManifest)
-                    .use(::htmlDocument)
-                    .let { Doc(document = it.document, relaxed = true) }
+                packages = Doc(document = zip.getInputStream(appxManifest).use(::htmlDocument).document, relaxed = true)
                     .also {
                         val identity = it.findFirst("Identity")
                         packageFamilyName = MsixUtils.getPackageFamilyName(
@@ -62,7 +60,7 @@ class MsixBundle(msixBundleFile: File) {
     }
 
     data class IndividualPackage(
-        var version: String? = null,
+        val version: String? = null,
         var targetDeviceFamily: List<InstallerManifest.Platform>? = null,
         var minVersion: String? = null,
         var processorArchitecture: InstallerManifest.Installer.Architecture? = null,

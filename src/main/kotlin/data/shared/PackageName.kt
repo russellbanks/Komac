@@ -5,24 +5,20 @@ import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.CommandPrompt
 import detection.files.msi.Msi
-import detection.files.msix.Msix
 
 class PackageName(
     private val msi: Msi?,
-    private val msix: Msix?,
     private val previousPackageName: String?
 ) : CommandPrompt<String> {
     override fun prompt(terminal: Terminal): String? = with(terminal) {
-        return msix?.displayName ?: let {
-            println(colors.brightGreen(nameInfo))
-            info(example)
-            msi?.productName?.let { info("Detected from MSI: $it") }
-            prompt(
-                prompt = const,
-                default = previousPackageName?.also { muted("Previous package name: $it") }
-            ) { input ->
-                getError(input.trim())?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
-            }
+        println(colors.brightGreen(nameInfo))
+        info(example)
+        msi?.productName?.let { info("Detected from MSI: $it") }
+        return prompt(
+            prompt = const,
+            default = previousPackageName?.also { muted("Previous package name: $it") }
+        ) { input ->
+            getError(input.trim())?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
         }
     }
 

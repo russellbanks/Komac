@@ -96,7 +96,8 @@ class Zip(zip: File, terminal: Terminal) {
                 val input = prompt(
                     InstallerManifest.Installer.NestedInstallerFiles::relativeFilePath.name
                         .replaceFirstChar(Char::titlecase)
-                        .replace("([A-Z])".toRegex(), " $1").trim()
+                        .replace("([A-Z])".toRegex(), " $1")
+                        .trim()
                 )
                 val error = isRelativeFilePathValid(input)?.also { danger(it) }
                 var portableCommandAlias: String? = null
@@ -141,7 +142,8 @@ class Zip(zip: File, terminal: Terminal) {
             portableCommandAlias = prompt(
                 InstallerManifest.Installer.NestedInstallerFiles::portableCommandAlias.name
                     .replaceFirstChar(Char::titlecase)
-                    .replace(Regex("([A-Z])"), " $1").trim()
+                    .replace("([A-Z])".toRegex(), " $1")
+                    .trim()
             )?.trim()
             val error = isPortableCommandAliasValid(portableCommandAlias)?.also { danger(it) }
             println()
@@ -231,8 +233,8 @@ class Zip(zip: File, terminal: Terminal) {
             }
             InstallerManifest.Installer.NestedInstallerType.MSI.toString() -> {
                 val tempFile = File.createTempFile(
-                    /* prefix = */ smallestEntry.name,
-                    /* suffix = */ InstallerManifest.Installer.NestedInstallerType.MSI.toString()
+                    smallestEntry.name,
+                    InstallerManifest.Installer.NestedInstallerType.MSI.toString()
                 )
                 zipFile.getInputStream(smallestEntry).use { input ->
                     tempFile.outputStream().use(input::copyTo)
@@ -268,7 +270,8 @@ class Zip(zip: File, terminal: Terminal) {
             }
             else -> {
                 val nestedInstallerTypes = InstallerManifest.Installer.NestedInstallerType
-                    .values().map { it.toString() }
+                    .values()
+                    .map { it.toString() }
                 prompt(
                     prompt = Prompts.enterChoice,
                     convert = { string ->

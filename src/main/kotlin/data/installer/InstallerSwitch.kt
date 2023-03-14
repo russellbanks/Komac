@@ -26,6 +26,7 @@ class InstallerSwitch(
                 println(infoColor(info))
             }
             terminal.info(switchExample(installerSwitch))
+            installerSwitches
             installerSwitches[installerSwitch] = terminal.prompt(
                 prompt = installerSwitch.toString(),
                 default = getPreviousValue(installerSwitch)?.also { terminal.muted("Previous $installerSwitch: $it") },
@@ -58,17 +59,20 @@ class InstallerSwitch(
                 Switch.Silent -> {
                     it.installerSwitches?.silent
                         ?: it.installers.getOrNull(allManifestData.installers.size)
-                            ?.installerSwitches?.silent
+                            ?.installerSwitches
+                            ?.silent
                 }
                 Switch.SilentWithProgress -> {
                     it.installerSwitches?.silentWithProgress
                         ?: it.installers.getOrNull(allManifestData.installers.size)
-                            ?.installerSwitches?.silentWithProgress
+                            ?.installerSwitches
+                            ?.silentWithProgress
                 }
                 Switch.Custom -> {
                     it.installerSwitches?.custom
                         ?: it.installers.getOrNull(allManifestData.installers.size)
-                            ?.installerSwitches?.custom
+                            ?.installerSwitches
+                            ?.custom
                 }
             }
         }
@@ -82,10 +86,10 @@ class InstallerSwitch(
             aSwitch != Switch.Custom
         return buildString {
             append(
-                when {
-                    installerType == InstallerManifest.Installer.InstallerType.EXE &&
-                        aSwitch != Switch.Custom -> Prompts.required
-                    else -> Prompts.optional
+                if (installerType == InstallerManifest.Installer.InstallerType.EXE && aSwitch != Switch.Custom) {
+                    Prompts.required
+                } else {
+                    Prompts.optional
                 }
             )
             append(" Enter the ${aSwitch.toString().lowercase()} install switch")

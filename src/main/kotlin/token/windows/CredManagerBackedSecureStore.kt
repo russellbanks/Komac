@@ -62,13 +62,10 @@ abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
             synchronized(instance) { read = instance.CredRead(key, CredAdvapi32.CRED_TYPE_GENERIC, 0, pcredential) }
             cred = if (read) {
                 val credential = CredAdvapi32.CREDENTIAL(pcredential.credential!!)
-                val secretBytes: ByteArray = credential.CredentialBlob!!.getByteArray(
-                    /* offset = */ 0,
-                    /* arraySize = */ credential.CredentialBlobSize
-                )
-                val secret = secretBytes.toString(Charsets.UTF_8)
+                val secretBytes: ByteArray? = credential.CredentialBlob?.getByteArray(0, credential.CredentialBlobSize)
+                val secret = secretBytes?.toString(Charsets.UTF_8)
                 val username = credential.UserName
-                create(username!!, secret)
+                create(username!!, secret!!)
             } else {
                 null
             }
@@ -165,9 +162,7 @@ abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
 
                     @Throws(LastErrorException::class)
                     override fun CredDelete(targetName: String?, type: Int, flags: Int) = false
-
-                    @Throws(LastErrorException::class)
-                    override fun CredFree(credential: Pointer?) { /* */ }
+                    override fun CredFree(credential: Pointer?) = Unit
                 }
             }
     }

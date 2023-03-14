@@ -95,12 +95,9 @@ class QuickUpdate : CliktCommand(name = "update") {
             packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
             if (!tokenStore.isTokenValid.await()) tokenStore.invalidTokenPrompt(currentContext.terminal)
             allVersions = GitHubUtils.getAllVersions(gitHubImpl.getMicrosoftWinGetPkgs(), packageIdentifier)
-            latestVersion = allVersions?.getHighestVersion()?.also {
-                if (!isCIEnvironment) {
-                    info("Found $packageIdentifier in the winget-pkgs repository")
-                    info("Found latest version: $it")
-                }
-            }
+            val latestVersion = allVersions?.getHighestVersion()
+            info("Found $packageIdentifier in the winget-pkgs repository")
+            latestVersion?.let { info("Found latest version: $it") }
             previousManifestData = PreviousManifestData(packageIdentifier, latestVersion, gitHubImpl.getMicrosoftWinGetPkgs())
             if (updateState == VersionUpdateState.NewPackage) {
                 throw doesNotExistError(packageIdentifier, packageVersion, true)
@@ -114,9 +111,7 @@ class QuickUpdate : CliktCommand(name = "update") {
             updateState = getUpdateState(updateState, packageIdentifier, packageVersion, latestVersion, gitHubImpl)
             currentContext.terminal.loopThroughInstallers(parameterUrls = urls, isCIEnvironment = isCIEnvironment)
             val files = createFiles(packageIdentifier, packageVersion, defaultLocale)
-            files.values.forEach { manifest ->
-                formattedManifestLinesSequence(manifest, currentContext.terminal.colors).forEach(::echo)
-            }
+            files.values.forEach { manifest -> formattedManifestLinesSequence(manifest, colors).forEach(::echo) }
             if (submit) {
                 gitHubImpl.commitAndPullRequest(
                     files = files,

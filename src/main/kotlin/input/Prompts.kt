@@ -1,5 +1,6 @@
 package input
 
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -12,7 +13,7 @@ object Prompts {
 
     const val enterChoice = "Enter Choice"
 
-    fun Terminal.pullRequestPrompt(packageIdentifier: String, packageVersion: String): ManifestResultOption? {
+    fun Terminal.pullRequestPrompt(packageIdentifier: String, packageVersion: String): ManifestResultOption {
         println(
             verticalLayout {
                 cell(colors.info("What would you like to do with $packageIdentifier $packageVersion?"))
@@ -31,16 +32,15 @@ object Prompts {
         )
         return prompt(
             prompt = enterChoice,
-            default = ManifestResultOption.Quit,
-            convert = {
-                ConversionResult.Valid(
-                    when (it.firstOrNull()?.lowercase()) {
-                        ManifestResultOption.PullRequest.name.first().lowercase() -> ManifestResultOption.PullRequest
-                        ManifestResultOption.WriteToFiles.name.first().lowercase() -> ManifestResultOption.WriteToFiles
-                        else -> ManifestResultOption.Quit
-                    }
-                )
-            }
-        )
+            default = ManifestResultOption.Quit
+        ) {
+            ConversionResult.Valid(
+                when (it.firstOrNull()?.lowercase()) {
+                    ManifestResultOption.PullRequest.name.first().lowercase() -> ManifestResultOption.PullRequest
+                    ManifestResultOption.WriteToFiles.name.first().lowercase() -> ManifestResultOption.WriteToFiles
+                    else -> ManifestResultOption.Quit
+                }
+            )
+        } ?: throw ProgramResult(ExitCode.CtrlC.code)
     }
 }

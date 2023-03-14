@@ -10,7 +10,6 @@ import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.AllManifestData
 import data.GitHubImpl
-import data.VersionUpdateState
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
 import data.shared.PackageVersion.getHighestVersion
@@ -33,20 +32,13 @@ class RemoveVersion : CliktCommand(name = "remove") {
     override fun run(): Unit = runBlocking {
         with(allManifestData) {
             if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
-            warning(message = "Packages should only be removed when necessary.")
+            warning("Packages should only be removed when necessary.")
             echo()
             packageIdentifier = prompt(PackageIdentifier, parameter = identifierParam)
             if (!tokenStore.isTokenValid.await()) tokenStore.invalidTokenPrompt(currentContext.terminal)
             allVersions = GitHubUtils.getAllVersions(gitHubImpl.getMicrosoftWinGetPkgs(), packageIdentifier)
-            latestVersion = allVersions?.getHighestVersion()?.also {
-                if (System.getenv("CI")?.toBooleanStrictOrNull() != true) {
-                    info("Found $packageIdentifier in the winget-pkgs repository")
-                    info("Found latest version: $it")
-                }
-            }
-            if (updateState == VersionUpdateState.NewPackage) {
-                throw doesNotExistError(packageIdentifier, packageVersion)
-            }
+            info("Found $packageIdentifier in the winget-pkgs repository")
+            allVersions?.getHighestVersion()?.let { latestVersion -> info("Found latest version: $latestVersion") }
             packageVersion = prompt(PackageVersion)
             gitHubImpl.promptIfPullRequestExists(
                 identifier = packageIdentifier,
@@ -79,7 +71,7 @@ class RemoveVersion : CliktCommand(name = "remove") {
             }
             progress.start()
             directoryContent.forEachIndexed { index, ghContent ->
-                ghContent.delete(/* commitMessage = */ "Remove: ${ghContent.name}", /* branch = */ ref.ref)
+                ghContent.delete("Remove: ${ghContent.name}", ref.ref)
                 progress.update(index.inc().toLong(), directoryContent.size.toLong())
             }
             progress.clear()

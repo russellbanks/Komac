@@ -21,14 +21,13 @@ object Token : CommandPrompt<String> {
     }
 
     override fun getError(input: String?): String? {
-        return when (input) {
-            null -> null
-            else -> {
-                try {
-                    if (isTokenValid(input)) null else "Invalid token. Please try again"
-                } catch (_: IOException) {
-                    "Invalid token. Please try again"
-                }
+        return if (input == null) {
+            null
+        } else {
+            try {
+                if (isTokenValid(input)) null else "Invalid token. Please try again"
+            } catch (_: IOException) {
+                "Invalid token. Please try again"
             }
         }
     }

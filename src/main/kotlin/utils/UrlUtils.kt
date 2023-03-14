@@ -16,7 +16,8 @@ import schemas.manifest.InstallerManifest
  */
 fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
     val archInUrl = Regex("(x86_64|i?[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?|amd64?)", RegexOption.IGNORE_CASE)
-        .find(fullPath)?.groupValues?.last()
+        .find(fullPath)
+        ?.run { groupValues.last() }
     return when (archInUrl?.lowercase()) {
         "aarch" -> InstallerManifest.Installer.Architecture.ARM
         "aarch64" -> InstallerManifest.Installer.Architecture.ARM64
@@ -24,7 +25,7 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
         "i386", "386", "i486", "486", "i586", "586", "i686", "686" -> InstallerManifest.Installer.Architecture.X86
         else -> {
             try {
-                InstallerManifest.Installer.Architecture.valueOf(archInUrl?.uppercase() ?: "")
+                InstallerManifest.Installer.Architecture.valueOf(archInUrl?.uppercase().orEmpty())
             } catch (_: IllegalArgumentException) {
                 null
             }
@@ -39,9 +40,11 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
  * If no extension is found, the default value "winget-tmp" is returned.
  * @return The extension of this Url, or "winget-tmp" if no extension is found.
  */
-fun Url.getExtension(): String {
-    return fullPath.substringAfterLast(".").split("[^A-Za-z0-9]".toRegex()).firstOrNull() ?: "winget-tmp"
-}
+fun Url.getExtension() = fullPath
+    .substringAfterLast(".")
+    .split("[^A-Za-z0-9]".toRegex())
+    .firstOrNull()
+    ?: "winget-tmp"
 
 /**
  * Returns the filename of this URL, including the extension, if it has one.

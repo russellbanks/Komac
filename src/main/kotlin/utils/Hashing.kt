@@ -21,7 +21,7 @@ object Hashing {
                 val buffer = ByteArray(size = 32_768)
                 var bytesCount: Int
 
-                val totalRuns = ((length() / buffer.size) + 1).toFloat()
+                val totalRuns = (length() / buffer.size + 1).toFloat()
                 var count = 0
                 while (withContext(Dispatchers.IO) { it.read(buffer) }.also { bytesCount = it } != -1) {
                     digest.update(buffer, 0, bytesCount)

@@ -3,6 +3,16 @@ package schemas
 import com.russellbanks.Komac.BuildConfig
 
 object Schemas {
+    const val manifestVersion = "1.4.0"
+    const val installerSchema = "https://aka.ms/winget-manifest.installer.$manifestVersion.schema.json"
+    const val defaultLocaleSchema = "https://aka.ms/winget-manifest.defaultLocale.$manifestVersion.schema.json"
+    const val localeSchema = "https://aka.ms/winget-manifest.locale.$manifestVersion.schema.json"
+    const val versionSchema = "https://aka.ms/winget-manifest.version.$manifestVersion.schema.json"
+    const val installerManifestType = "installer"
+    const val defaultLocaleManifestType = "defaultLocale"
+    const val versionManifestType = "version"
+    const val customToolEnv = "KMC_CRTD_WITH"
+
     fun buildManifestString(schema: Schema, rawString: String): String {
         return buildString {
             append("# Created with ")
@@ -27,14 +37,4 @@ object Schemas {
             return "# yaml-language-server: \$schema=$schemaUrl"
         }
     }
-
-    const val manifestVersion = "1.4.0"
-    const val installerSchema = "https://aka.ms/winget-manifest.installer.$manifestVersion.schema.json"
-    const val defaultLocaleSchema = "https://aka.ms/winget-manifest.defaultLocale.$manifestVersion.schema.json"
-    const val localeSchema = "https://aka.ms/winget-manifest.locale.$manifestVersion.schema.json"
-    const val versionSchema = "https://aka.ms/winget-manifest.version.$manifestVersion.schema.json"
-    const val installerManifestType = "installer"
-    const val defaultLocaleManifestType = "defaultLocale"
-    const val versionManifestType = "version"
-    const val customToolEnv = "KMC_CRTD_WITH"
 }

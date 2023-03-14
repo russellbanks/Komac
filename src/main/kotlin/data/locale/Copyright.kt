@@ -43,9 +43,9 @@ class Copyright(private val previousCopyright: String?) : CommandPrompt<String> 
                 prompt = "Copyright url",
                 default = previousCopyrightUrl?.also { muted("Previous copyright url: $it") },
                 convert = { input ->
-                    runBlocking { data.shared.Url.isUrlValid(url = input.trim().let(::Url), canBeBlank = true, client) }
+                    runBlocking { data.shared.Url.isUrlValid(url = Url(input.trim()), canBeBlank = true, client) }
                         ?.let { ConversionResult.Invalid(it) }
-                        ?: ConversionResult.Valid(input.trim().let(::Url))
+                        ?: ConversionResult.Valid(Url(input.trim()))
                 }
             )
         }

@@ -1,4 +1,5 @@
 
+import data.VersionUpdateState
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -79,6 +80,43 @@ class GitHubUtilsTests : FunSpec({
                 identifier = "Package.Identifier",
                 version = "1.2.3"
             ) shouldBe "manifests/p/Package/Identifier/1.2.3"
+        }
+    }
+
+    context("get commit title") {
+        val identifier = "Package.Identifier"
+        val version = "1.2.3"
+
+        test("commit title for new version") {
+            GitHubUtils.getCommitTitle(
+                identifier,
+                version,
+                VersionUpdateState.NewVersion
+            ) shouldBe "New version: Package.Identifier version 1.2.3"
+        }
+
+        test("commit title for update version") {
+            GitHubUtils.getCommitTitle(
+                identifier,
+                version,
+                VersionUpdateState.UpdateVersion
+            ) shouldBe "Update version: Package.Identifier version 1.2.3"
+        }
+
+        test("commit title for new package") {
+            GitHubUtils.getCommitTitle(
+                identifier,
+                version,
+                VersionUpdateState.NewPackage
+            ) shouldBe "New package: Package.Identifier version 1.2.3"
+        }
+
+        test("commit title for add version") {
+            GitHubUtils.getCommitTitle(
+                identifier,
+                version,
+                VersionUpdateState.AddVersion
+            ) shouldBe "Add version: Package.Identifier version 1.2.3"
         }
     }
 })

@@ -1,4 +1,4 @@
-package detection.github
+package extensions
 
 import org.kohsuke.github.GHRelease
 
@@ -18,13 +18,13 @@ import org.kohsuke.github.GHRelease
  */
 fun GHRelease.getFormattedReleaseNotes(): String? {
     val lines = body
-        ?.replace("<details>.*?</details>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+        ?.replace("<details>.*</details>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
         ?.lines()
         ?.map { line ->
             line.trim()
                 .let { if (it.startsWith("* ")) it.replaceFirst("* ", "- ") else it }
-                .replace("""~+([^~]+)~+""".toRegex(), "$1")
-                .replace("""\*+([^*]+)\*+""".toRegex(), "$1")
+                .replace("~+([^~]+)~+".toRegex(), "$1")
+                .replace("\\*+([^*]+)\\*+".toRegex(), "$1")
                 .replace("`", "")
                 .replace("\\[?!\\[(.*?)]\\((.*?)\\)(?:]\\((.*?)\\))?".toRegex(), "")
                 .replace("\\[([^]]+)]\\([^)]+\\)".toRegex(), "$1")
@@ -32,24 +32,15 @@ fun GHRelease.getFormattedReleaseNotes(): String? {
                 .replace("https?://github.com/([\\w-]+)/([\\w-]+)/(pull|issues)/(\\d+)".toRegex()) {
                     val urlRepository = "${it.groupValues[1]}/${it.groupValues[2]}"
                     val issueNumber = it.groupValues[4]
-                    if (urlRepository == owner.fullName) {
-                        "#$issueNumber"
-                    } else {
-                        "$urlRepository#$issueNumber"
-                    }
+                    if (urlRepository == owner.fullName) "#$issueNumber" else "$urlRepository#$issueNumber"
                 }
                 .trim()
         }
     return buildString {
         lines?.forEachIndexed { index, line ->
             when {
-                line.startsWith("#") -> {
-                    if (
-                        lines.getOrNull(index + 1)?.startsWith("- ") == true ||
-                        lines.getOrNull(index + 2)?.startsWith("- ") == true
-                    ) {
-                        line.dropWhile { it == '#' }.trim().takeUnless(String::isBlank)?.let(::appendLine)
-                    }
+                line.startsWith("#") && (1..2).any { lines.getOrNull(index + it)?.startsWith("- ") == true } -> {
+                    appendLine(line.dropWhile { it == '#' }.trimEnd())
                 }
                 line.startsWith("- ") -> {
                     appendLine(
@@ -58,5 +49,5 @@ fun GHRelease.getFormattedReleaseNotes(): String? {
                 }
             }
         }
-    }.trim().ifBlank { null }
+    }.trim().takeUnless(String::isBlank)
 }

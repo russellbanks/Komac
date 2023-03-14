@@ -68,16 +68,15 @@ object InstallerManifestData {
                     .takeUnless { it.areAllNull() }
             ).ifEmpty { null },
         )
-        when (msixBundle) {
-            null -> installers += installer
-            else -> {
-                msixBundle?.packages?.forEach { individualPackage ->
-                    individualPackage.processorArchitecture?.let { architecture ->
-                        installers += installer.copy(
-                            architecture = architecture,
-                            platform = individualPackage.targetDeviceFamily?.map { it.toPerInstallerPlatform() },
-                        )
-                    }
+        if (msixBundle == null) {
+            installers += installer
+        } else {
+            msixBundle?.packages?.forEach { individualPackage ->
+                individualPackage.processorArchitecture?.let { architecture ->
+                    installers += installer.copy(
+                        architecture = architecture,
+                        platform = individualPackage.targetDeviceFamily?.map { it.toPerInstallerPlatform() },
+                    )
                 }
             }
         }
@@ -123,7 +122,8 @@ object InstallerManifestData {
             installerType = installers.getDistinctOrNull { it.installerType }?.toManifestInstallerType()
                 ?: previousInstallerManifest?.installerType,
             nestedInstallerType = installers.getDistinctOrNull { it.nestedInstallerType }
-                ?.toManifestNestedInstallerType() ?: previousInstallerManifest?.nestedInstallerType,
+                ?.toManifestNestedInstallerType()
+                ?: previousInstallerManifest?.nestedInstallerType,
             nestedInstallerFiles = (
                 installers.getDistinctOrNull { it.nestedInstallerFiles }
                     ?.map { it.toManifestNestedInstallerFiles() }
@@ -150,8 +150,15 @@ object InstallerManifestData {
                 1 -> installers.first().appsAndFeaturesEntries?.map { it.toManifestARPEntry() }
                 else -> null
             },
-            installers = installers.removeNonDistinctKeys(allManifestData)
-                .sortedWith(compareBy({ it.installerLocale }, { it.architecture }, { it.installerType }, { it.scope })),
+            installers = installers.removeNonDistinctKeys(installers)
+                .sortedWith(
+                    compareBy(
+                        InstallerManifest.Installer::installerLocale,
+                        InstallerManifest.Installer::architecture,
+                        InstallerManifest.Installer::installerType,
+                        InstallerManifest.Installer::scope
+                    )
+                ),
             manifestType = Schemas.installerManifestType,
             manifestVersion = manifestOverride ?: Schemas.manifestVersion
         ).toString()
@@ -169,8 +176,8 @@ object InstallerManifestData {
         )
     }
 
-    private fun List<InstallerManifest.Installer>.removeNonDistinctKeys(allManifestData: AllManifestData):
-        List<InstallerManifest.Installer> = with(allManifestData) {
+    private fun List<InstallerManifest.Installer>.removeNonDistinctKeys(installers: List<InstallerManifest.Installer>):
+        List<InstallerManifest.Installer> {
         return map { installer ->
             installer.copy(
                 installerLocale = installers.takeIfNotDistinct(installer.installerLocale) { it.installerLocale },

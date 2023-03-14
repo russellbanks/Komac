@@ -67,7 +67,7 @@ class Description {
 
         companion object {
             private const val minLength = 3
-            private const val maxLength = 10000
+            private const val maxLength = 10_000
         }
     }
 }

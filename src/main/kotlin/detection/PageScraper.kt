@@ -26,12 +26,12 @@ class PageScraper(url: Url, client: HttpClient) {
         pathSegments = emptyList()
     }.build()
     private val scope = CoroutineScope(Dispatchers.IO)
-    private var linksMap: Deferred<HashMap<String, String>> = scope.async {
+    private val linksMap: Deferred<Map<String, String>> = scope.async {
         runCatching {
             htmlDocument(client.get(urlRoot).bodyAsText()) {
                 a {
                     findAll {
-                        eachLink as HashMap<String, String>
+                        eachLink
                     }
                 }
             }
