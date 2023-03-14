@@ -124,7 +124,13 @@ class QuickUpdate : CliktCommand(name = "update") {
                     packageVersion = packageVersion,
                     updateState = updateState,
                     terminal = currentContext.terminal
-                )
+                ).let {
+                    if (it != null) {
+                        success("Pull request created: ${it.htmlUrl}")
+                    } else {
+                        throw CliktError("Failed to create pull request", statusCode = 1)
+                    }
+                }
             } else if (!isCIEnvironment) {
                 currentContext.terminal.pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
                     when (manifestResultOption) {
