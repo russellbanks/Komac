@@ -3,7 +3,6 @@ package network
 import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
-import data.AllManifestData
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.prepareGet
@@ -13,50 +12,40 @@ import io.ktor.http.lastModified
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import utils.getExtension
+import utils.FileUtils
 import utils.getFileName
 import java.io.File
-import java.time.LocalDateTime
+import java.time.LocalDate
 import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 object HttpUtils {
-    suspend fun HttpClient.downloadFile(url: Url, allManifestData: AllManifestData, terminal: Terminal): Pair<File, Thread> = with(allManifestData) {
-        val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
-        val file = withContext(Dispatchers.IO) {
-            File.createTempFile(
-                "$packageIdentifier v$packageVersion - $formattedDate",
-                ".${url.getExtension()}"
-            )
-        }
+    suspend fun HttpClient.downloadFile(
+        url: Url,
+        packageIdentifier: String,
+        packageVersion: String,
+        progress: ProgressAnimation? = null
+    ): DownloadedFile {
+        val file = FileUtils.createTempFile(identifier = packageIdentifier, version = packageVersion, url = url)
         val fileDeletionThread = Thread { file.delete() }
-        Runtime.getRuntime().addShutdownHook(fileDeletionThread)
-        with(terminal) {
-            getDownloadProgressBar(url, this).run {
-                start()
-                prepareGet(url).execute { httpResponse ->
-                    httpResponse.lastModified()?.let {
-                        releaseDate = it.toInstant().atOffset(ZoneOffset.UTC).toLocalDate()
-                    }
-                    val channel: ByteReadChannel = httpResponse.body()
-                    while (!channel.isClosedForRead) {
-                        val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-                        while (packet.isNotEmpty) {
-                            file.appendBytes(packet.readBytes())
-                            update(file.length(), httpResponse.contentLength())
-                        }
-                    }
+        var lastModified: LocalDate? = null
+        prepareGet(url).execute { httpResponse ->
+            lastModified = httpResponse.lastModified()?.toInstant()?.atZone(ZoneOffset.UTC)?.toLocalDate()
+            val channel: ByteReadChannel = httpResponse.body()
+            while (!channel.isClosedForRead) {
+                val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                while (packet.isNotEmpty) {
+                    file.appendBytes(packet.readBytes())
+                    progress?.update(file.length(), httpResponse.contentLength())
                 }
-                clear()
             }
         }
-        return file to fileDeletionThread
+        return DownloadedFile(file, lastModified, fileDeletionThread)
     }
 
-    fun getDownloadProgressBar(url: Url, terminal: Terminal): ProgressAnimation {
-        return terminal.progressAnimation {
+    data class DownloadedFile(val file: File, val lastModified: LocalDate?, val fileDeletionThread: Thread)
+
+    fun Terminal.getDownloadProgressBar(url: Url): ProgressAnimation {
+        return progressAnimation {
             url.getFileName()?.let(::text)
             percentage()
             progressBar()

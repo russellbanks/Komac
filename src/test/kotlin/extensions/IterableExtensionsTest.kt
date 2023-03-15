@@ -3,6 +3,7 @@ package extensions
 import extensions.IterableExtensions.takeIfNotDistinct
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import schemas.manifest.InstallerManifest
 
@@ -10,7 +11,7 @@ class IterableExtensionsTest : FunSpec({
     context("takeIfNotDistinct") {
         val baseInstaller = InstallerManifest.Installer(
             architecture = InstallerManifest.Installer.Architecture.NEUTRAL,
-            installerUrl = Url(""),
+            installerUrl = Url(URLBuilder()),
             installerSha256 = ""
         )
         val userScopeInstaller = baseInstaller.copy(scope = InstallerManifest.Installer.Scope.User)

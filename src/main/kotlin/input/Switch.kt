@@ -5,5 +5,8 @@ enum class Switch {
     SilentWithProgress,
     Custom;
 
-    override fun toString() = name.replace("([A-Z])".toRegex(), " $1").trim()
+    override fun toString() = name
+        .replace("(?<=.)(?=\\p{Lu})".toRegex(), " ")
+        .lowercase()
+        .replaceFirstChar(Char::titlecaseChar)
 }

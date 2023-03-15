@@ -15,7 +15,7 @@ object ManifestUtils {
      *   and the first part is formatted using the [TerminalColors.info] function and the second part (if any) is left
      *   unformatted.
      * - Otherwise, the line is left unchanged.
-     * Each formatted line is returned as a string in a sequence using the [yield] function.
+     * Each formatted line is returned as a string in a sequence using the yield function.
      *
      * @param rawString the raw manifest string to be formatted.
      * @param colors the [TerminalColors] instance to use for formatting the manifest.

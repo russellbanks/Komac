@@ -1,5 +1,6 @@
 
 import com.github.ajalt.clikt.core.CliktError
+import com.github.ajalt.mordant.terminal.TerminalColors
 import data.GitHubImpl
 import io.ktor.client.statement.HttpResponse
 
@@ -56,16 +57,25 @@ object Errors {
         return buildString {
             append(error)
             append(" - Value must exist in the enum - ")
-            append(enum.joinToString(", "))
+            append(enum.joinToString())
         }
     }
 
-    fun doesNotExistError(packageIdentifier: String, packageVersion: String, isUpdate: Boolean = false): CliktError {
+    fun doesNotExistError(
+        packageIdentifier: String,
+        packageVersion: String? = null,
+        isUpdate: Boolean = false,
+        colors: TerminalColors
+    ): CliktError {
         return CliktError(
-            message = buildString {
-                appendLine("$packageIdentifier $packageVersion does not exist in ${GitHubImpl.wingetPkgsFullName}")
-                if (isUpdate) appendLine("Please use the 'new' command to create a new manifest.")
-            },
+            message = colors.warning(
+                buildString {
+                    append("$packageIdentifier ")
+                    if (packageVersion != null) append("$packageVersion ")
+                    appendLine("does not exist in ${GitHubImpl.wingetPkgsFullName}")
+                    if (isUpdate) appendLine("Please use the 'new' command to create a new manifest.")
+                }
+            ),
             statusCode = 1
         )
     }

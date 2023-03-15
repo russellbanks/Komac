@@ -15,7 +15,7 @@ object DefaultLocaleManifestData {
         val parameterLocaleMetadata = allManifestData.additionalMetadata?.locales?.find {
             it.name.equals(other = allManifestData.defaultLocale, ignoreCase = true)
         }
-        val previousDefaultLocaleData = previousManifestData?.remoteDefaultLocaleData?.await()
+        val previousDefaultLocaleData = previousManifestData?.remoteDefaultLocaleData
         return getDefaultLocaleManifestBase(allManifestData, previousManifestData).copy(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
@@ -72,11 +72,11 @@ object DefaultLocaleManifestData {
     private inline fun Url.ifBlank(defaultValue: () -> Url?): Url? =
         if (this == Url(URLBuilder())) defaultValue() else this
 
-    private suspend fun getDefaultLocaleManifestBase(
+    private fun getDefaultLocaleManifestBase(
         allManifestData: AllManifestData,
         previousManifestData: PreviousManifestData?
     ): DefaultLocaleManifest = with(allManifestData) {
-        return previousManifestData?.remoteDefaultLocaleData?.await() ?: DefaultLocaleManifest(
+        return previousManifestData?.remoteDefaultLocaleData ?: DefaultLocaleManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             packageLocale = Locale.defaultLocale,

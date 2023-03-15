@@ -1,4 +1,4 @@
-
+package utils
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -10,12 +10,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import schemas.manifest.InstallerManifest
 import schemas.manifest.InstallerManifest.Installer.Architecture
-import utils.findArchitecture
-import utils.findScope
-import utils.getExtension
-import utils.getFileNameWithoutExtension
-import utils.getRedirectedUrl
-import utils.isRedirect
 
 class UrlUtilTests : FunSpec({
     context("get architecture from url") {
@@ -107,6 +101,13 @@ class UrlUtilTests : FunSpec({
         test("get same url when url has url does not redirect") {
             val mockEngine = MockEngine { _ ->
                 respondOk("")
+            }
+            HttpClient(mockEngine).use { originalUrl.getRedirectedUrl(it) shouldBe originalUrl }
+        }
+
+        test("url that keeps redirecting") {
+            val mockEngine = MockEngine { _ ->
+                respondRedirect(originalUrl.toString())
             }
             HttpClient(mockEngine).use { originalUrl.getRedirectedUrl(it) shouldBe originalUrl }
         }

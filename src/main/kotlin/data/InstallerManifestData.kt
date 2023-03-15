@@ -1,19 +1,21 @@
 package data
 
+import detection.files.msi.Msi
 import extensions.IterableExtensions.getDistinctOrNull
 import extensions.IterableExtensions.takeIfNotDistinct
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import schemas.Schemas
+import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import utils.ManifestUtils.updateVersionInString
 
 object InstallerManifestData {
     suspend fun addInstaller(
         allManifestData: AllManifestData,
-        previousManifestData: PreviousManifestData?
+        previousManifest: InstallerManifest?,
+        previousDefaultLocaleData: DefaultLocaleManifest?
     ) = with(allManifestData) {
-        val previousManifest = previousManifestData?.remoteInstallerData?.await()
         val previousInstaller = previousManifest?.installers?.getOrNull(installers.size)
         val installer = getInstallerBase(previousInstaller).copy(
             installerLocale = msi?.productLanguage
@@ -21,7 +23,7 @@ object InstallerManifestData {
                 ?: previousInstaller?.installerLocale,
             platform = msix?.targetDeviceFamily?.let { listOf(it.toPerInstallerPlatform()) }
                 ?: previousInstaller?.platform
-                ?: previousManifest?.platform?.map { it.toPerInstallerPlatform() },
+                ?: previousManifest?.platform?.map(InstallerManifest.Platform::toPerInstallerPlatform),
             minimumOSVersion = msix?.minVersion,
             architecture = previousInstaller?.architecture ?: architecture,
             installerType = installerType ?: previousInstaller?.installerType,
@@ -56,15 +58,16 @@ object InstallerManifestData {
             releaseDate = gitHubDetection?.releaseDate ?: additionalMetadata?.releaseDate ?: releaseDate,
             appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
-                    appsAndFeaturesEntry.fillARPEntry(allManifestData, previousManifestData)
+                    appsAndFeaturesEntry.fillARPEntry(
+                        packageName, packageVersion, allVersions, msi, previousDefaultLocaleData
+                    )
                 } ?: previousManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                 appsAndFeaturesEntry.toInstallerAppsAndFeaturesEntry().fillARPEntry(
-                    allManifestData = allManifestData,
-                    previousManifestData = previousManifestData
+                    packageName, packageVersion, allVersions, msi, previousDefaultLocaleData
                 )
             } ?: listOfNotNull(
                 InstallerManifest.Installer.AppsAndFeaturesEntry()
-                    .fillARPEntry(allManifestData, previousManifestData)
+                    .fillARPEntry(packageName, packageVersion, allVersions, msi, previousDefaultLocaleData)
                     .takeUnless { it.areAllNull() }
             ).ifEmpty { null },
         )
@@ -83,18 +86,20 @@ object InstallerManifestData {
         resetValues(allManifestData)
     }
 
-    private suspend fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry(
-        allManifestData: AllManifestData,
-        previousManifestData: PreviousManifestData?
-    ): InstallerManifest.Installer.AppsAndFeaturesEntry = with(allManifestData) {
-        val remoteDefaultLocaleData = previousManifestData?.remoteDefaultLocaleData?.await()
+    private fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry(
+        packageName: String?,
+        packageVersion: String,
+        allVersions: List<String>?,
+        msi: Msi?,
+        previousDefaultLocaleData: DefaultLocaleManifest?
+    ): InstallerManifest.Installer.AppsAndFeaturesEntry {
         val arpDisplayName = msi?.productName ?: displayName
-        val packageName = packageName ?: remoteDefaultLocaleData?.packageName
+        val name = packageName ?: previousDefaultLocaleData?.packageName
         val arpPublisher = msi?.manufacturer ?: publisher
-        val publisher = publisher ?: remoteDefaultLocaleData?.publisher
+        val publisher = publisher ?: previousDefaultLocaleData?.publisher
         val displayVersion = msi?.productVersion ?: displayVersion
         return copy(
-            displayName = if (arpDisplayName != packageName) {
+            displayName = if (arpDisplayName != name) {
                 arpDisplayName?.updateVersionInString(allVersions, packageVersion)
             } else {
                 null
@@ -215,7 +220,6 @@ object InstallerManifestData {
         releaseDate = null
         msi?.resetExceptShared()
         msix?.resetExceptShared()
-        msixBundle?.resetExceptShared()
         zip = null
         gitHubDetection?.releaseDate = null
     }

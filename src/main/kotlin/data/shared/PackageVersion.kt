@@ -1,47 +1,32 @@
 package data.shared
 
-import Errors
-import com.github.ajalt.mordant.terminal.ConversionResult
-import com.github.ajalt.mordant.terminal.Terminal
-import commands.CommandPrompt
-import input.Prompts
+import commands.interfaces.TextPrompt
+import commands.interfaces.ValidationRules
 import java.math.BigInteger
-import kotlin.random.Random
 
-object PackageVersion : CommandPrompt<String> {
-    private const val const = "Package Version"
-    private const val versionInfo = "${Prompts.required} Enter the version."
+object PackageVersion : TextPrompt {
     private const val pattern = "^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"
     const val maxLength = 128
     val regex = Regex(pattern)
 
-    override fun prompt(terminal: Terminal): String? = with(terminal) {
-        println(colors.brightGreen(versionInfo))
-        info("Example: ${generateRandomVersion()}")
-        prompt(const) { input ->
-            getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
-        }
-    }
+    override val name: String = "Package Version"
 
-    override fun getError(input: String?): String? {
-        return when {
-            input == null -> null
-            input.isBlank() -> Errors.blankInput(const)
-            input.length > maxLength -> Errors.invalidLength(max = maxLength)
-            !input.matches(regex) -> Errors.invalidRegex(regex)
-            else -> null
-        }
-    }
+    override val validationRules: ValidationRules = ValidationRules(
+        maxLength = 128,
+        minLength = 1,
+        pattern = Regex(pattern),
+        isRequired = true
+    )
 
-    data class VersionPart(val value: BigInteger, val supplement: String, val original: String)
+    override val extraText: String = "Example: ${generateRandomVersion()}"
 
     /**
      * Parses a version part string into a VersionPart object.
      */
     private fun parseVersionPart(part: String): VersionPart {
-        val value = part.takeWhile(Char::isDigit).toBigIntegerOrNull() ?: BigInteger.valueOf(0)
+        val value = part.takeWhile(Char::isDigit).toBigIntegerOrNull() ?: BigInteger.ZERO
         val supplement = part.dropWhile(Char::isDigit)
-        return VersionPart(value, supplement, part)
+        return value to supplement
     }
 
     /**
@@ -59,8 +44,7 @@ object PackageVersion : CommandPrompt<String> {
     private fun compareVersionParts(list1: List<VersionPart>, list2: List<VersionPart>): Int {
         val size = list1.size.coerceAtMost(list2.size)
         return list1.take(size)
-            .zip(list2.take(size))
-            .map { (leftPart, rightPart) -> compareValuesBy(leftPart, rightPart, { it.value }, { it.supplement }) }
+            .zip(list2.take(size)) { left, right -> compareValuesBy(left, right, VersionPart::first, VersionPart::second) }
             .firstOrNull { it != 0 }
             ?: list1.size.compareTo(list2.size)
     }
@@ -71,13 +55,20 @@ object PackageVersion : CommandPrompt<String> {
     fun List<String>.getHighestVersion(): String? {
         return map { version -> version.split(".").map(::parseVersionPart) }
             .maxWithOrNull(::compareVersionParts)
-            ?.joinToString(".") { it.original }
+            ?.joinToString(".") { (value, supplement) -> "$value$supplement" }
     }
 
+    /**
+     * Generates a random version string in the format "major.minor.patch".
+     *
+     * @return a randomly generated version string.
+     */
     private fun generateRandomVersion(): String {
-        val major = Random.nextInt(1, 10)
-        val minor = Random.nextInt(0, 100)
-        val patch = Random.nextInt(0, 10)
+        val major = (1..10).random()
+        val minor = (0..99).random()
+        val patch = (0..9).random()
         return "$major.$minor.$patch"
     }
 }
+
+typealias VersionPart = Pair<BigInteger, String>

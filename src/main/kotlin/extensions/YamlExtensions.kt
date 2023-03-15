@@ -1,10 +1,11 @@
 package extensions
 
 object YamlExtensions {
-    fun String.convertToList(uniqueItems: Boolean = true): List<String> {
-        return split("\\W+".toRegex())
+    fun convertToList(string: String): List<String> {
+        return string.trim()
+            .split("\\W+".toRegex())
             .filterNot(String::isBlank)
-            .let { if (uniqueItems) it.distinct() else it }
+            .toSet()
             .sorted()
     }
 }

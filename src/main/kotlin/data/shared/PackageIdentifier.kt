@@ -1,36 +1,21 @@
 package data.shared
 
-import Errors
-import com.github.ajalt.mordant.terminal.ConversionResult
-import com.github.ajalt.mordant.terminal.Terminal
-import commands.CommandPrompt
-import input.Prompts
+import commands.interfaces.TextPrompt
+import commands.interfaces.ValidationRules
 
-object PackageIdentifier : CommandPrompt<String> {
-    private const val const = "Package Identifier"
-    private const val example = "Example: Microsoft.Excel"
-    private const val identifierInfo = "${Prompts.required} Enter the $const, " +
-        "in the following format <Publisher shortname.Application shortname>"
+object PackageIdentifier : TextPrompt {
+    override val name: String = "Package Identifier"
+
     const val maxLength = 128
+
     const val minLength = 4
-    private const val pattern = "^[^.\\s\\\\/:*?\"<>|\\x01-\\x1f]{1,32}(\\.[^.\\s\\\\/:*?\"<>|\\x01-\\x1f]{1,32}){1,7}$"
-    private val regex = Regex(pattern)
 
-    override fun prompt(terminal: Terminal): String? = with(terminal) {
-        println(colors.brightGreen(identifierInfo))
-        info(example)
-        return prompt(const) { input ->
-            getError(input)?.let { ConversionResult.Invalid(it) } ?: ConversionResult.Valid(input.trim())
-        }
-    }
+    override val validationRules: ValidationRules = ValidationRules(
+        maxLength = maxLength,
+        minLength = minLength,
+        pattern = Regex("^[^.\\s\\\\/:*?\"<>|\\x01-\\x1f]{1,32}(\\.[^.\\s\\\\/:*?\"<>|\\x01-\\x1f]{1,32}){1,7}$"),
+        isRequired = true
+    )
 
-    override fun getError(input: String?): String? {
-        return when {
-            input == null -> null
-            input.isBlank() -> Errors.blankInput(const)
-            input.length > maxLength -> Errors.invalidLength(min = minLength, max = maxLength)
-            !input.matches(regex) -> Errors.invalidRegex(regex)
-            else -> null
-        }
-    }
+    override val extraText: String = "Example: Microsoft.Excel"
 }

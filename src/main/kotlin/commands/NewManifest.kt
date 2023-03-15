@@ -10,7 +10,6 @@ import data.GitHubImpl
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.VersionManifestData
-import data.VersionUpdateState
 import data.installer.Commands
 import data.installer.FileExtensions
 import data.installer.InstallModes
@@ -46,12 +45,14 @@ import kotlinx.coroutines.runBlocking
 import network.Http
 import schemas.Schema
 import schemas.Schemas
+import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.EncodeConfig
+import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import token.Token
 import token.TokenStore
 import utils.GitHubUtils
-import utils.ManifestUtils
+import utils.ManifestUtils.formattedManifestLinesSequence
 
 class NewManifest : CliktCommand(name = "new") {
     private val tokenStore = TokenStore()
@@ -62,8 +63,10 @@ class NewManifest : CliktCommand(name = "new") {
     private val manifestOverride: String? by option().validate {
         require("^\\d+\\.\\d+\\.\\d+$".toRegex() matches it) { "Manifest version must be in the format X.X.X" }
     }
-    private val previousInstallerManifest = previousManifestData?.remoteInstallerData
-    private val previousDefaultLocaleManifest = previousManifestData?.remoteDefaultLocaleData
+    private val previousInstallerManifest: InstallerManifest?
+        get() = previousManifestData?.remoteInstallerData
+    private val defaultLocaleManifest: DefaultLocaleManifest?
+        get() = previousManifestData?.remoteDefaultLocaleData
 
     override fun run(): Unit = runBlocking {
         with(allManifestData) {
@@ -71,11 +74,13 @@ class NewManifest : CliktCommand(name = "new") {
             packageIdentifier = prompt(PackageIdentifier)
             if (!tokenStore.isTokenValid.await()) tokenStore.invalidTokenPrompt(currentContext.terminal)
             allVersions = GitHubUtils.getAllVersions(gitHubImpl.getMicrosoftWinGetPkgs(), packageIdentifier)
-            info("Found $packageIdentifier in the winget-pkgs repository")
             val latestVersion = allVersions?.getHighestVersion()
-            latestVersion?.let { info("Found latest version: $it") }
+            if (latestVersion != null) {
+                info("Found $packageIdentifier in the winget-pkgs repository")
+                info("Found latest version: $latestVersion")
+            }
             launch {
-                if (updateState != VersionUpdateState.NewPackage) {
+                if (latestVersion != null) {
                     previousManifestData = PreviousManifestData(packageIdentifier, latestVersion, gitHubImpl.getMicrosoftWinGetPkgs())
                 }
             }
@@ -85,55 +90,56 @@ class NewManifest : CliktCommand(name = "new") {
                 version = packageVersion,
                 terminal = currentContext.terminal
             )
-            updateState = getUpdateState(updateState, packageIdentifier, packageVersion, latestVersion, gitHubImpl)
+            updateState = getUpdateState(packageIdentifier, packageVersion, latestVersion, gitHubImpl)
             do {
                 currentContext.terminal.installerDownloadPrompt(allManifestData, client, gitHubImpl)
-                installerType = installerType ?: prompt(InstallerType(previousInstallerManifest?.await(), installers.size))
-                Switch.values().forEach { InstallerSwitch(allManifestData, previousInstallerManifest?.await()).installerSwitchPrompt(it, currentContext.terminal) }
-                installerLocale = prompt(Locale.Installer(allManifestData, previousManifestData?.remoteInstallerData?.await()))
-                InstallerScope(allManifestData, previousInstallerManifest?.await()).installerScopePrompt(currentContext.terminal)
-                upgradeBehavior = prompt(UpgradeBehaviour(allManifestData, previousInstallerManifest?.await()))
+                installerType = installerType ?: prompt(InstallerType(previousInstallerManifest, installers.size))
+                Switch.values().forEach { InstallerSwitch(allManifestData, previousInstallerManifest).installerSwitchPrompt(it, currentContext.terminal) }
+                installerLocale = msi?.productLanguage ?: prompt(Locale.Installer(previousInstallerManifest, installers.size))
+                InstallerScope(allManifestData, previousInstallerManifest).installerScopePrompt(currentContext.terminal)
+                upgradeBehavior = prompt(UpgradeBehaviour(allManifestData, previousInstallerManifest))
                 if (!skipAddInstaller) {
-                    InstallerManifestData.addInstaller(allManifestData, previousManifestData)
+                    InstallerManifestData.addInstaller(allManifestData, previousInstallerManifest, defaultLocaleManifest)
                 } else {
                     skipAddInstaller = false
                 }
-                val loop = confirm(colors.info(additionalInstallerInfo)) ?: throw ProgramResult(ExitCode.CtrlC.code)
+                val loop = confirm(colors.info(additionalInstallerInfo)) ?: throw ProgramResult(ExitCode.CtrlC)
             } while (loop)
-            fileExtensions = prompt(FileExtensions(previousInstallerManifest?.await(), installers.size))
-            protocols = prompt(Protocols(previousInstallerManifest?.await(), installers.size))
-            commands = prompt(Commands(previousInstallerManifest?.await(), installers.size))
-            installerSuccessCodes = prompt(InstallerSuccessCodes(previousInstallerManifest?.await(), installers.size))
-            installModes = prompt(InstallModes(previousInstallerManifest?.await(), installers.size))
-            defaultLocale = prompt(Locale.Package(previousDefaultLocaleManifest?.await()?.packageLocale))
-            publisher = prompt(Publisher(msi, msix, previousDefaultLocaleManifest?.await()?.publisher))
-            packageName = msix?.displayName ?: prompt(PackageName(msi, previousDefaultLocaleManifest?.await()?.packageName))
-            moniker = prompt(Moniker(previousDefaultLocaleManifest?.await()?.moniker))
+            fileExtensions = prompt(FileExtensions(previousInstallerManifest, installers.size))
+            protocols = prompt(Protocols(previousInstallerManifest, installers.size))
+            commands = prompt(Commands(previousInstallerManifest, installers.size))
+            installerSuccessCodes = prompt(InstallerSuccessCodes(previousInstallerManifest, installers.size))
+            installModes = prompt(InstallModes(previousInstallerManifest, installers.size))
+            defaultLocale = prompt(Locale.Package(defaultLocaleManifest?.packageLocale))
+            publisher = msi?.manufacturer ?: msix?.publisherDisplayName ?: prompt(Publisher(defaultLocaleManifest?.publisher))
+            packageName = msix?.displayName ?: prompt(PackageName(msi, defaultLocaleManifest?.packageName))
+            moniker = prompt(Moniker(defaultLocaleManifest?.moniker))
             publisherUrl = gitHubDetection?.publisherUrl
-                ?: prompt(Publisher.Url(previousDefaultLocaleManifest?.await()?.publisherUrl, client))
-            author = prompt(Author(previousDefaultLocaleManifest?.await()?.author))
-            packageUrl = prompt(PackageUrl(gitHubDetection, previousDefaultLocaleManifest?.await()?.packageUrl, client))
-            license = gitHubDetection?.license ?: prompt(License(previousDefaultLocaleManifest?.await()?.license))
-            licenseUrl = gitHubDetection?.licenseUrl
-                ?: prompt(License.Url(previousDefaultLocaleManifest?.await()?.licenseUrl, client))
-            copyright = prompt(Copyright(previousDefaultLocaleManifest?.await()?.copyright))
-            copyrightUrl = prompt(Copyright.Url(previousDefaultLocaleManifest?.await()?.copyrightUrl, client))
-            tags = gitHubDetection?.topics ?: prompt(Tags(previousDefaultLocaleManifest?.await()?.tags))
-            shortDescription = prompt(Description.Short(allManifestData, previousDefaultLocaleManifest?.await()?.shortDescription))
-            description = prompt(Description.Long(previousDefaultLocaleManifest?.await()?.description))
+                ?: prompt(Publisher.Url(defaultLocaleManifest?.publisherUrl, client))
+            author = prompt(Author(defaultLocaleManifest?.author))
+            packageUrl = gitHubDetection?.packageUrl ?: prompt(PackageUrl(defaultLocaleManifest?.packageUrl, client))
+            license = gitHubDetection?.license ?: prompt(License(defaultLocaleManifest?.license))
+            licenseUrl = gitHubDetection?.licenseUrl ?: prompt(License.Url(defaultLocaleManifest?.licenseUrl, client))
+            copyright = prompt(Copyright(defaultLocaleManifest?.copyright))
+            copyrightUrl = prompt(Copyright.Url(defaultLocaleManifest?.copyrightUrl, client))
+            tags = gitHubDetection?.topics ?: prompt(Tags(defaultLocaleManifest?.tags))
+            shortDescription = if (gitHubDetection?.shortDescription != null && defaultLocaleManifest?.shortDescription != null) {
+                gitHubDetection?.shortDescription
+            } else {
+                prompt(Description.Short(msix))
+            }
+            description = prompt(Description.Long(defaultLocaleManifest?.description))
             releaseNotesUrl = gitHubDetection?.releaseNotesUrl ?: prompt(ReleaseNotesUrl(client))
             val files = createFiles()
-            files.values.forEach { manifest ->
-                ManifestUtils.formattedManifestLinesSequence(manifest, colors).forEach(::echo)
-            }
+            files.values.forEach { manifest -> formattedManifestLinesSequence(manifest, colors).forEach(::echo) }
             when (currentContext.terminal.pullRequestPrompt(packageIdentifier, packageVersion)) {
                 ManifestResultOption.PullRequest -> {
                     gitHubImpl.commitAndPullRequest(
+                        wingetPkgsFork = gitHubImpl.getWingetPkgsFork(currentContext.terminal),
                         files = files,
                         packageIdentifier = packageIdentifier,
                         packageVersion = packageVersion,
-                        updateState = updateState,
-                        terminal = currentContext.terminal
+                        updateState = updateState
                     )
                 }
                 ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
@@ -146,13 +152,13 @@ class NewManifest : CliktCommand(name = "new") {
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier) to InstallerManifestData.createInstallerManifest(
                 allManifestData = allManifestData,
-                previousInstallerManifest = previousInstallerManifest?.await(),
+                previousInstallerManifest = previousInstallerManifest,
                 manifestOverride = manifestOverride
             ),
             GitHubUtils.getDefaultLocaleManifestName(
                 identifier = packageIdentifier,
                 defaultLocale = packageVersion,
-                previousDefaultLocale = previousDefaultLocaleManifest?.await()?.packageLocale
+                previousDefaultLocale = defaultLocaleManifest?.packageLocale
             ) to DefaultLocaleManifestData.createDefaultLocaleManifest(
                 allManifestData = allManifestData,
                 previousManifestData = previousManifestData,
@@ -163,17 +169,21 @@ class NewManifest : CliktCommand(name = "new") {
                 manifestOverride = manifestOverride,
                 previousVersionData = previousManifestData?.previousVersionData
             )
-        ) + previousManifestData?.remoteLocaleData?.await()?.map { localeManifest ->
-            GitHubUtils.getLocaleManifestName(packageIdentifier, localeManifest.packageLocale) to localeManifest.copy(
-                packageIdentifier = packageIdentifier,
-                packageVersion = packageVersion,
-                manifestVersion = manifestOverride ?: Schemas.manifestVersion
-            ).let {
-                Schemas.buildManifestString(
-                    Schema.Locale,
-                    EncodeConfig.yamlDefault.encodeToString(LocaleManifest.serializer(), it)
+        ) + previousManifestData?.remoteLocaleData?.map { localeManifest ->
+            GitHubUtils.getLocaleManifestName(
+                packageIdentifier,
+                localeManifest.packageLocale
+            ) to Schemas.buildManifestString(
+                Schema.Locale,
+                EncodeConfig.yamlDefault.encodeToString(
+                    LocaleManifest.serializer(),
+                    localeManifest.copy(
+                        packageIdentifier = packageIdentifier,
+                        packageVersion = packageVersion,
+                        manifestVersion = manifestOverride ?: Schemas.manifestVersion
+                    )
                 )
-            }
+            )
         }.orEmpty()
     }
 

@@ -1,9 +1,11 @@
 package detection.files.msix
 
+import com.appmattus.crypto.Algorithm
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
 import schemas.manifest.InstallerManifest
 import utils.Hashing
+import utils.MsixUtils
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -20,9 +22,9 @@ class Msix(msixFile: File) {
 
     init {
         val validExtensions = listOf(InstallerManifest.InstallerType.APPX, InstallerManifest.InstallerType.MSIX)
-            .map { it.toString() }
+            .map(InstallerManifest.InstallerType::toString)
         require(msixFile.extension.lowercase() in validExtensions) {
-            "File extension must be one of the following: ${validExtensions.joinToString(", ")}"
+            "File extension must be one of the following: ${validExtensions.joinToString()}"
         }
         ZipFile(msixFile).use { zip ->
             zip.getEntry(appxManifestXml)?.let { appxManifest ->
@@ -50,7 +52,7 @@ class Msix(msixFile: File) {
                 )
             }
             zip.getEntry(appxSignatureP7x)?.let { appxSignature ->
-                val digest = Hashing.Algorithms.SHA256
+                val digest = Algorithm.SHA_256.createDigest()
                 zip.getInputStream(appxSignature).use { Hashing.updateDigest(it, digest) }
                 signatureSha256 = Hashing.buildHash(digest.digest())
             }

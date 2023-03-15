@@ -1,10 +1,10 @@
-package detection.files.msix
+package utils
 
-import utils.Hashing
+import com.appmattus.crypto.Algorithm
 
 object MsixUtils {
     private const val firstEightBytes = 8
-    private const val hex255 = 0xff
+    private const val hex255 = 0xFF
     private const val binaryRadix = 2
     private const val bitGroupsSize = 5
     private const val padLength = 8
@@ -27,7 +27,7 @@ object MsixUtils {
      * @return the package family name generated using the algorithm.
      */
     fun getPackageFamilyName(identityName: String, identityPublisher: String): String {
-        val hashPart = Hashing.Algorithms.SHA256
+        val hashPart = Algorithm.SHA_256.createDigest()
             .digest(identityPublisher.toByteArray(Charsets.UTF_16LE))
             .take(firstEightBytes)
             .map { it.toInt() and hex255 }

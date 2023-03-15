@@ -53,8 +53,12 @@ class Zip(zip: File, terminal: Terminal) {
                             zipFile = zipFile
                         )
                         if (nestedInstallerType == InstallerManifest.Installer.NestedInstallerType.PORTABLE) {
-                            nestedInstallerFiles = nestedInstallerFiles?.map {
-                                it.copy(portableCommandAlias = portableCommandAliasPrompt(it.relativeFilePath))
+                            nestedInstallerFiles = nestedInstallerFiles?.map { nestedInstallerFIle ->
+                                nestedInstallerFIle.copy(
+                                    portableCommandAlias = portableCommandAliasPrompt(
+                                        relativeFilePath = nestedInstallerFIle.relativeFilePath
+                                    )
+                                )
                             }
                         }
                     }
@@ -252,9 +256,9 @@ class Zip(zip: File, terminal: Terminal) {
                     InstallerManifest.Installer.NestedInstallerType.INNO,
                     InstallerManifest.Installer.NestedInstallerType.NULLSOFT,
                     InstallerManifest.Installer.NestedInstallerType.PORTABLE
-                ).map { it.toString() }
+                ).map(InstallerManifest.Installer.NestedInstallerType::toString)
                 println(colors.brightGreen("${Prompts.required} Enter the nested installer type"))
-                info("Options: ${exeNestedTypes.joinToString(", ")}")
+                info("Options: ${exeNestedTypes.joinToString()}")
                 prompt(
                     prompt = Prompts.enterChoice,
                     convert = { string ->

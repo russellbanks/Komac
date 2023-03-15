@@ -30,10 +30,7 @@ object Prompts {
                 }
             }
         )
-        return prompt(
-            prompt = enterChoice,
-            default = ManifestResultOption.Quit
-        ) {
+        return prompt(prompt = enterChoice, default = ManifestResultOption.Quit) {
             ConversionResult.Valid(
                 when (it.firstOrNull()?.lowercase()) {
                     ManifestResultOption.PullRequest.name.first().lowercase() -> ManifestResultOption.PullRequest
@@ -41,6 +38,6 @@ object Prompts {
                     else -> ManifestResultOption.Quit
                 }
             )
-        } ?: throw ProgramResult(ExitCode.CtrlC.code)
+        } ?: throw ProgramResult(ExitCode.CtrlC)
     }
 }

@@ -10,7 +10,7 @@ object FileWriter {
         do {
             println()
             println(colors.brightYellow("Enter a directory to write the files to:"))
-            val directory = prompt("Directory")?.let(::File) ?: throw ProgramResult(ExitCode.CtrlC.code)
+            val directory = prompt("Directory")?.let(::File) ?: throw ProgramResult(ExitCode.CtrlC)
             if (directory.isDirectory) {
                 writeFilesToDirectory(directory, files, terminal)
             } else {

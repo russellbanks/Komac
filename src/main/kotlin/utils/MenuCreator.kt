@@ -10,14 +10,14 @@ import input.ExitCode
 import org.jline.terminal.TerminalBuilder
 
 @Suppress("UNCHECKED_CAST")
-class MenuCreator<T : Any>(
+class MenuCreator<T>(
     items: List<T>,
-    default: Any? = null,
+    default: T? = null,
     private val optionalItemName: String? = null,
     private val nameConvert: (String) -> String = { it },
     private val terminal: Terminal
 ) {
-    private val listItems: List<Any> = optionalItemName?.let { items + it } ?: items
+    private val listItems: List<T> = optionalItemName?.let { items + it as T } ?: items
     private var selectedIndex = listItems.indexOf(default ?: optionalItemName).takeIf { it != -1 } ?: 0
     private val selectedItem
         get() = listItems[selectedIndex]
@@ -34,12 +34,12 @@ class MenuCreator<T : Any>(
         }
 
     fun prompt(): T? = with(terminal) {
-        val animation = animation<Any> { menuWidget }
+        val animation = animation<T> { menuWidget }
         cursor.hide(showOnExit = true)
         animation.update(selectedItem)
         val terminal = TerminalBuilder.terminal().apply {
             enterRawMode()
-            handle(org.jline.terminal.Terminal.Signal.INT) { throw ProgramResult(ExitCode.CtrlC.code) }
+            handle(org.jline.terminal.Terminal.Signal.INT) { throw ProgramResult(ExitCode.CtrlC) }
         }
         val reader = terminal.reader()
         while (true) {
@@ -54,7 +54,7 @@ class MenuCreator<T : Any>(
             }
         }
         try {
-            return if (selectedItem == optionalItemName) null else selectedItem as T
+            return if (selectedItem == optionalItemName) null else selectedItem
         } finally {
             reader.close()
             terminal.close()
@@ -62,7 +62,7 @@ class MenuCreator<T : Any>(
         }
     }
 
-    private fun move(animation: Animation<Any>, direction: Key) {
+    private fun move(animation: Animation<T>, direction: Key) {
         val newIndex = when (direction) {
             Key.Up -> selectedIndex - 1
             Key.Down -> selectedIndex + 1
@@ -82,7 +82,7 @@ class MenuCreator<T : Any>(
     }
 }
 
-fun <T : Any> Terminal.menu(
+fun <T> Terminal.menu(
     items: List<T>,
     default: T? = null,
     optionalItemName: String? = null,
@@ -92,7 +92,7 @@ fun <T : Any> Terminal.menu(
 fun Terminal.yesNoMenu(default: Boolean? = null) = menu(
     items = YesNo.values().toList(),
     default = if (default == true) YesNo.Yes else YesNo.No
-).prompt()?.toBoolean() ?: throw ProgramResult(ExitCode.CtrlC.code)
+).prompt()?.toBoolean() ?: throw ProgramResult(ExitCode.CtrlC)
 
 enum class YesNo {
     Yes,
