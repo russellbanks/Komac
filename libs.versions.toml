@@ -19,7 +19,7 @@ mockk = "1.13.4"
 mordant = "2.0.0-beta11.72-SNAPSHOT"
 shadow = "8.1.0"
 skrapeit = "1.2.2"
-slf4j = "2.0.6"
+slf4j = "2.0.7"
 
 [libraries]
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
