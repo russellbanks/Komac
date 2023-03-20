@@ -1,5 +1,5 @@
 package input
 
-enum class ExitCode(val code: Int) {
-    CtrlC(130)
+object ExitCode {
+    const val CtrlC = 130
 }

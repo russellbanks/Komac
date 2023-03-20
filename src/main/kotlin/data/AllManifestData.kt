@@ -21,7 +21,7 @@ class AllManifestData {
     var scope: InstallerManifest.Installer.Scope? = null
     var upgradeBehavior: InstallerManifest.Installer.UpgradeBehavior? = null
     var releaseDate: LocalDate? = null
-    var installers = listOf<InstallerManifest.Installer>()
+    var installers = emptyList<InstallerManifest.Installer>()
     var fileExtensions: List<String>? = null
     var protocols: List<String>? = null
     var commands: List<String>? = null
@@ -34,7 +34,6 @@ class AllManifestData {
     var publisher: String? = null
     var packageName: String? = null
     var defaultLocale: String? = null
-    var latestVersion: String? = null
     var allVersions: List<String>? = null
     var msix: Msix? = null
     var msixBundle: MsixBundle? = null

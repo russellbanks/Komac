@@ -10,7 +10,7 @@ object IterableExtensions {
      * @return the default value if the elements are not distinct, `null` otherwise
      */
     inline fun <T, R> Iterable<T>.takeIfNotDistinct(default: R, selector: (T) -> R): R? {
-        return if (mapNotNull(selector).toHashSet().size == 1) null else default
+        return if (distinctBy(selector).size == 1) null else default
     }
 
     /**
@@ -23,10 +23,6 @@ object IterableExtensions {
      * after applying the [selector].
      */
     inline fun <T, R> Iterable<T>.getDistinctOrNull(selector: (T) -> R?): R? {
-        val distinctList = mapNotNull(selector).toHashSet()
-        return when (distinctList.size) {
-            1 -> distinctList.first()
-            else -> null
-        }
+        return mapNotNull(selector).toSet().singleOrNull()
     }
 }

@@ -1,9 +1,9 @@
 package data
 
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
-import com.russellbanks.Komac.BuildConfig
 import io.ktor.client.HttpClient
 import network.KtorGitHubConnector
 import org.kohsuke.github.GHContent
@@ -15,24 +15,16 @@ import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
-import schemas.Schemas
 import utils.GitHubUtils
 import java.io.IOException
 import java.time.LocalDate
-import kotlin.random.Random
 
 class GitHubImpl(token: String, client: HttpClient) {
     val github: GitHub = GitHubBuilder().withConnector(KtorGitHubConnector(client)).withOAuthToken(token).build()
     private var pullRequestBranch: GHRef? = null
-
-    private fun getBranchName(packageIdentifier: String, packageVersion: String): String {
-        val randomPart = List(uniqueBranchIdentifierLength) { (('A'..'Z') + ('0'..'9')).random() }.joinToString("")
-        return "$packageIdentifier-$packageVersion-$randomPart"
-    }
-
     val forkOwner: String = System.getenv(customForkOwnerEnv) ?: github.myself.login
 
-    fun getWingetPkgsFork(terminal: Terminal): GHRepository? = with(terminal) {
+    fun getWingetPkgsFork(terminal: Terminal): GHRepository = with(terminal) {
         return try {
             github.getRepository("$forkOwner/$wingetpkgs").also {
                 success("Found forked $wingetpkgs repository: ${it.fullName}")
@@ -44,8 +36,10 @@ class GitHubImpl(token: String, client: HttpClient) {
                     success("Forked $wingetpkgs repository: ${it.fullName}")
                 }
             } catch (ioException: IOException) {
-                danger(ioException.message ?: "Failed to fork $wingetpkgs. Please try again or fork it manually.")
-                null
+                throw CliktError(
+                    message = colors.danger("Failed to fork $wingetpkgs. Please try again or fork it manually"),
+                    cause = ioException
+                )
             }
         }
     }
@@ -70,7 +64,7 @@ class GitHubImpl(token: String, client: HttpClient) {
         val existingPullRequest = getExistingPullRequest(
             identifier = identifier,
             version = version,
-            createdSince = if (isCI) null else LocalDate.now().minusWeeks(2)
+            createdSince = if (isCI) null else LocalDate.now().minusWeeks(WEEKS_SINCE_CREATED)
         ) ?: return
         warning("A pull request for $identifier $version was created on ${existingPullRequest.createdAt}")
         info(existingPullRequest.htmlUrl)
@@ -80,79 +74,58 @@ class GitHubImpl(token: String, client: HttpClient) {
         println()
     }
 
-    fun packageExists(identifier: String): Boolean? {
-        return getMicrosoftWinGetPkgs()?.getDirectoryContent(GitHubUtils.getPackagePath(identifier))?.isNotEmpty()
-    }
-
     fun versionExists(identifier: String, version: String): Boolean {
         return getMicrosoftWinGetPkgs()
-            ?.getDirectoryContent(GitHubUtils.getPackagePath(identifier))
+            .getDirectoryContent(GitHubUtils.getPackagePath(identifier))
             ?.map(GHContent::getName)
-            ?.contains(version)
-            ?: false
+            ?.contains(version) == true
     }
 
-    fun getMicrosoftWinGetPkgs(): GHRepository? {
+    fun getMicrosoftWinGetPkgs(): GHRepository {
+        var count = 0
+        val maxTries = 3
+        while (true) {
+            try {
+                return github.getRepository("$Microsoft/$wingetpkgs")
+            } catch (ioException: IOException) {
+                if (++count == maxTries) {
+                    throw CliktError(message = "Failed to get $wingetPkgsFullName", cause = ioException)
+                }
+            }
+        }
+    }
+
+    fun createBranchFromUpstreamDefaultBranch(
+        wingetPkgsFork: GHRepository,
+        packageIdentifier: String,
+        packageVersion: String
+    ): GHRef? {
+        require(wingetPkgsFork.isFork)
         return try {
-            github.getRepository("$Microsoft/$wingetpkgs")
+            wingetPkgsFork.source?.let { upstreamRepository ->
+                wingetPkgsFork.createRef(
+                    "refs/heads/${GitHubUtils.getBranchName(packageIdentifier, packageVersion)}",
+                    upstreamRepository.getBranch(upstreamRepository.defaultBranch).shA1
+                ).also { pullRequestBranch = it }
+            }
         } catch (_: IOException) {
             null
         }
     }
 
-    fun createBranchFromUpstreamDefaultBranch(
-        repository: GHRepository,
-        packageIdentifier: String,
-        packageVersion: String,
-        terminal: Terminal
-    ): GHRef? {
-        return try {
-            getMicrosoftWinGetPkgs()?.let { upstreamRepository ->
-                repository.createRef(
-                    /* name = */ "refs/heads/${getBranchName(packageIdentifier, packageVersion)}",
-                    /* sha = */ upstreamRepository.getBranch(upstreamRepository.defaultBranch).shA1
-                ).also { pullRequestBranch = it }
-            }
-        } catch (ioException: IOException) {
-            terminal.danger(ioException.message ?: "Failed to create branch.")
-            null
-        }
-    }
-
-    private fun getCommitTitle(
-        packageIdentifier: String,
-        packageVersion: String,
-        updateState: VersionUpdateState
-    ): String {
-        return "$updateState: $packageIdentifier version $packageVersion"
-    }
-
-    private fun getPullRequestBody(): String {
-        return buildString {
-            append("### Pull request has been created with ")
-            append(System.getenv(Schemas.customToolEnv) ?: "${BuildConfig.appName} v${BuildConfig.appVersion}")
-            append(" ")
-            append(if (Random.nextInt(30) == 0) ":${fruits[Random.nextInt(fruits.size)]}:" else ":rocket:")
-        }
-    }
-
-    private val fruits = listOf(
-        "cherries", "grapes", "green_apple", "lemon", "melon", "pineapple", "strawberry", "tangerine", "watermelon"
-    )
-
     fun commitAndPullRequest(
+        wingetPkgsFork: GHRepository,
         files: Map<String, String>,
         packageIdentifier: String,
         packageVersion: String,
-        updateState: VersionUpdateState,
-        terminal: Terminal
+        updateState: VersionUpdateState
     ): GHPullRequest? {
         commitFiles(
+            wingetPkgsFork = wingetPkgsFork,
             files = files.mapKeys { "${GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion)}/${it.key}" },
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            updateState = updateState,
-            terminal = terminal
+            updateState = updateState
         )
         return createPullRequest(packageIdentifier, packageVersion, updateState)
     }
@@ -162,13 +135,13 @@ class GitHubImpl(token: String, client: HttpClient) {
         packageVersion: String,
         updateState: VersionUpdateState,
     ): GHPullRequest? {
-        val ghRepository = getMicrosoftWinGetPkgs() ?: return null
+        val ghRepository = getMicrosoftWinGetPkgs()
         return try {
             ghRepository.createPullRequest(
-                /* title = */ getCommitTitle(packageIdentifier, packageVersion, updateState),
+                /* title = */ GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState),
                 /* head = */ "$forkOwner:${pullRequestBranch?.ref}",
                 /* base = */ ghRepository.defaultBranch,
-                /* body = */ getPullRequestBody()
+                /* body = */ GitHubUtils.getPullRequestBody()
             )
         } catch (_: IOException) {
             null
@@ -176,21 +149,20 @@ class GitHubImpl(token: String, client: HttpClient) {
     }
 
     private fun commitFiles(
+        wingetPkgsFork: GHRepository,
         files: Map<String, String?>,
         packageIdentifier: String,
         packageVersion: String,
-        updateState: VersionUpdateState,
-        terminal: Terminal
+        updateState: VersionUpdateState
     ) {
-        val repository = getWingetPkgsFork(terminal) ?: return
-        val branch = createBranchFromUpstreamDefaultBranch(repository, packageIdentifier, packageVersion, terminal) ?: return
-        repository.createCommit()
-            ?.message(getCommitTitle(packageIdentifier, packageVersion, updateState))
+        val branch = createBranchFromUpstreamDefaultBranch(wingetPkgsFork, packageIdentifier, packageVersion) ?: return
+        wingetPkgsFork.createCommit()
+            ?.message(GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState))
             ?.parent(branch.getObject()?.sha)
             ?.tree(
-                repository
+                wingetPkgsFork
                     .createTree()
-                    .baseTree(repository.getBranch(branch.ref).shA1)
+                    .baseTree(wingetPkgsFork.getBranch(branch.ref).shA1)
                     .apply {
                         files.forEach { (path, content) ->
                             if (content != null) {
@@ -204,9 +176,9 @@ class GitHubImpl(token: String, client: HttpClient) {
             ?.let {
                 if (System.getenv("GIT_COMMITTER_NAME") != null && System.getenv("GIT_COMMITTER_EMAIL") != null) {
                     it.author(
-                        /* name = */ System.getenv("GIT_COMMITTER_NAME"),
-                        /* email = */ System.getenv("GIT_COMMITTER_EMAIL"),
-                        /* date = */ null
+                        System.getenv("GIT_COMMITTER_NAME"),
+                        System.getenv("GIT_COMMITTER_EMAIL"),
+                        null
                     )
                 } else {
                     it
@@ -220,7 +192,7 @@ class GitHubImpl(token: String, client: HttpClient) {
         const val Microsoft = "Microsoft"
         const val wingetpkgs = "winget-pkgs"
         const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
+        private const val WEEKS_SINCE_CREATED = 2L
         private const val customForkOwnerEnv = "KMC_FRK_OWNER"
-        private const val uniqueBranchIdentifierLength = 14
     }
 }

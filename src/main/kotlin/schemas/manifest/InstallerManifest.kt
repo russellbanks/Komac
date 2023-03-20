@@ -51,7 +51,7 @@ data class InstallerManifest(
     @SerialName("AppsAndFeaturesEntries") val appsAndFeaturesEntries: List<AppsAndFeaturesEntry>? = null,
     @SerialName("ElevationRequirement") val elevationRequirement: ElevationRequirement? = null,
     @SerialName("InstallationMetadata") val installationMetadata: InstallationMetadata? = null,
-    @SerialName("Installers") val installers: List<Installer> = listOf(),
+    @SerialName("Installers") val installers: List<Installer> = emptyList(),
     @SerialName("ManifestType") val manifestType: String,
     @SerialName("ManifestVersion") val manifestVersion: String
 ) {

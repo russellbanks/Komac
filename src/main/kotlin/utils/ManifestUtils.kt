@@ -15,7 +15,7 @@ object ManifestUtils {
      *   and the first part is formatted using the [TerminalColors.info] function and the second part (if any) is left
      *   unformatted.
      * - Otherwise, the line is left unchanged.
-     * Each formatted line is returned as a string in a sequence using the [yield] function.
+     * Each formatted line is returned as a string in a sequence using the yield function.
      *
      * @param rawString the raw manifest string to be formatted.
      * @param colors the [TerminalColors] instance to use for formatting the manifest.
@@ -23,14 +23,16 @@ object ManifestUtils {
      */
     fun formattedManifestLinesSequence(rawString: String, colors: TerminalColors): Sequence<String> = sequence {
         rawString.lines().forEach { line ->
-            when {
-                line.startsWith("#") -> colors.green(line)
-                line.firstOrNull()?.isLetter() == true -> {
-                    val part = line.split(":", limit = 2)
-                    "${colors.info(part.first())}${part.getOrNull(1)?.let { ":$it" } ?: ""}"
+            yield(
+                when {
+                    line.startsWith("#") -> colors.green(line)
+                    line.firstOrNull()?.isLetter() == true -> {
+                        val part = line.split(":", limit = 2)
+                        "${colors.info(part.first())}${part.getOrNull(1)?.let { ":$it" }.orEmpty()}"
+                    }
+                    else -> line
                 }
-                else -> line
-            }.let { yield(it) }
+            )
         }
     }
 
@@ -42,9 +44,8 @@ object ManifestUtils {
      * @param newVersion The new [String] version to replace the old version with.
      * @return The updated [String] with the [newVersion] in place of the old version.
      */
-    fun String.updateVersionInString(previousVersions: List<String>?, newVersion: String): String {
-        return previousVersions?.joinToString("|") { it }
-            ?.let { replaceFirst(it.toRegex(), newVersion) }
-            ?: this
-    }
+    fun String.updateVersionInString(previousVersions: List<String>?, newVersion: String) = previousVersions
+        ?.joinToString("|") { it }
+        ?.let { replaceFirst(it.toRegex(), newVersion) }
+        ?: this
 }

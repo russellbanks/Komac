@@ -15,14 +15,14 @@ object DefaultLocaleManifestData {
         val parameterLocaleMetadata = allManifestData.additionalMetadata?.locales?.find {
             it.name.equals(other = allManifestData.defaultLocale, ignoreCase = true)
         }
-        val previousDefaultLocaleData = previousManifestData?.remoteDefaultLocaleData?.await()
+        val previousDefaultLocaleData = previousManifestData?.remoteDefaultLocaleData
         return getDefaultLocaleManifestBase(allManifestData, previousManifestData).copy(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             packageLocale = defaultLocale
                 ?: previousManifestData?.previousVersionData?.defaultLocale
                 ?: Locale.defaultLocale,
-            publisher = publisher ?: previousDefaultLocaleData?.publisher ?: "",
+            publisher = publisher ?: previousDefaultLocaleData?.publisher.orEmpty(),
             publisherUrl = (
                 publisherUrl
                     ?: previousDefaultLocaleData?.publisherUrl
@@ -35,20 +35,17 @@ object DefaultLocaleManifestData {
                 ?: gitHubDetection?.privacyUrl
                 ?: pageScraper?.privacyUrl?.await(),
             author = author?.ifBlank { null } ?: previousDefaultLocaleData?.author,
-            packageName = packageName ?: previousDefaultLocaleData?.packageName ?: "",
+            packageName = packageName ?: previousDefaultLocaleData?.packageName.orEmpty(),
             packageUrl = packageUrl ?: previousDefaultLocaleData?.packageUrl ?: gitHubDetection?.packageUrl,
-            license = license ?: gitHubDetection?.license ?: previousDefaultLocaleData?.license ?: "",
+            license = license ?: gitHubDetection?.license ?: previousDefaultLocaleData?.license.orEmpty(),
             licenseUrl = licenseUrl?.ifBlank { null }
                 ?: previousDefaultLocaleData?.licenseUrl
                 ?: gitHubDetection?.licenseUrl,
             copyright = copyright?.ifBlank { null } ?: previousDefaultLocaleData?.copyright,
             copyrightUrl = copyrightUrl?.ifBlank { null } ?: previousDefaultLocaleData?.copyrightUrl,
-            shortDescription = when {
-                shortDescription != null -> shortDescription!!
-                else -> {
-                    previousDefaultLocaleData?.shortDescription ?: gitHubDetection?.shortDescription ?: ""
-                }
-            },
+            shortDescription = shortDescription
+                ?: previousDefaultLocaleData?.shortDescription
+                ?: gitHubDetection?.shortDescription.orEmpty(),
             description = (description?.ifBlank { null } ?: previousDefaultLocaleData?.description)
                 ?.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n")
                 ?.trim(),
@@ -75,11 +72,11 @@ object DefaultLocaleManifestData {
     private inline fun Url.ifBlank(defaultValue: () -> Url?): Url? =
         if (this == Url(URLBuilder())) defaultValue() else this
 
-    private suspend fun getDefaultLocaleManifestBase(
+    private fun getDefaultLocaleManifestBase(
         allManifestData: AllManifestData,
         previousManifestData: PreviousManifestData?
     ): DefaultLocaleManifest = with(allManifestData) {
-        return previousManifestData?.remoteDefaultLocaleData?.await() ?: DefaultLocaleManifest(
+        return previousManifestData?.remoteDefaultLocaleData ?: DefaultLocaleManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             packageLocale = Locale.defaultLocale,

@@ -1,10 +1,12 @@
 package detection.files.msix
 
+import com.appmattus.crypto.Algorithm
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
 import it.skrape.selects.attribute
 import schemas.manifest.InstallerManifest
 import utils.Hashing
+import utils.MsixUtils
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -20,9 +22,7 @@ class MsixBundle(msixBundleFile: File) {
         require(msixBundleFile.extension.lowercase() == msixBundleConst) { "File must be an $msixBundleConst" }
         ZipFile(msixBundleFile).use { zip ->
             zip.getEntry("$appxManifestFolder/$appxBundleManifestXml")?.let { appxManifest ->
-                packages = zip.getInputStream(appxManifest)
-                    .use(::htmlDocument)
-                    .let { Doc(document = it.document, relaxed = true) }
+                packages = Doc(document = zip.getInputStream(appxManifest).use(::htmlDocument).document, relaxed = true)
                     .also {
                         val identity = it.findFirst("Identity")
                         packageFamilyName = MsixUtils.getPackageFamilyName(
@@ -54,7 +54,7 @@ class MsixBundle(msixBundleFile: File) {
                     .ifEmpty { null }
             }
             zip.getEntry(appxSignatureP7x)?.let { appxSignature ->
-                val digest = Hashing.Algorithms.SHA256
+                val digest = Algorithm.SHA_256.createDigest()
                 zip.getInputStream(appxSignature).use { Hashing.updateDigest(it, digest) }
                 signatureSha256 = Hashing.buildHash(digest.digest())
             }
@@ -62,20 +62,11 @@ class MsixBundle(msixBundleFile: File) {
     }
 
     data class IndividualPackage(
-        var version: String? = null,
-        var targetDeviceFamily: List<InstallerManifest.Platform>? = null,
-        var minVersion: String? = null,
-        var processorArchitecture: InstallerManifest.Installer.Architecture? = null,
+        val version: String? = null,
+        val targetDeviceFamily: List<InstallerManifest.Platform>? = null,
+        val minVersion: String? = null,
+        val processorArchitecture: InstallerManifest.Installer.Architecture? = null,
     )
-
-    fun resetExceptShared() {
-        signatureSha256 = null
-        packages?.forEach {
-            it.processorArchitecture = null
-            it.minVersion = null
-            it.targetDeviceFamily = null
-        }
-    }
 
     companion object {
         const val appxManifestFolder = "AppxMetadata"

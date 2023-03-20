@@ -1,17 +1,19 @@
 
 import com.github.ajalt.clikt.core.CliktError
+import com.github.ajalt.mordant.terminal.TerminalColors
 import data.GitHubImpl
-import input.LocaleType
 import io.ktor.client.statement.HttpResponse
 
 object Errors {
     const val error = "[Error]"
+    const val connectionTimeout = "$error Connection timed out"
+    const val connectionFailure = "$error Failed to connect"
 
     fun invalidLength(min: Number? = null, max: Number? = null, items: Iterable<String>? = null): String {
         return buildString {
             append("$error Invalid Length")
             if (min != null || max != null) {
-                append(" -${items?.let { "Item" } ?: ""} ${items?.let { "Length" } ?: "length"} must be ")
+                append(" -${items?.let { "Item" }.orEmpty()} ${items?.let { "Length" } ?: "length"} must be ")
             }
             when {
                 min != null && max != null -> append("between $min and $max")
@@ -49,28 +51,32 @@ object Errors {
         }
     }
 
-    fun blankInput(localeType: LocaleType? = null) = blankInput(localeType.toString())
-
     fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
 
     fun invalidEnum(enum: List<String>): String {
         return buildString {
             append(error)
             append(" - Value must exist in the enum - ")
-            append(enum.joinToString(", "))
+            append(enum.joinToString())
         }
     }
 
-    fun doesNotExistError(packageIdentifier: String, packageVersion: String, isUpdate: Boolean = false): CliktError {
+    fun doesNotExistError(
+        packageIdentifier: String,
+        packageVersion: String? = null,
+        isUpdate: Boolean = false,
+        colors: TerminalColors
+    ): CliktError {
         return CliktError(
-            message = buildString {
-                appendLine("$packageIdentifier $packageVersion does not exist in ${GitHubImpl.wingetPkgsFullName}")
-                if (isUpdate) appendLine("Please use the 'new' command to create a new manifest.")
-            },
+            message = colors.warning(
+                buildString {
+                    append("$packageIdentifier ")
+                    if (packageVersion != null) append("$packageVersion ")
+                    appendLine("does not exist in ${GitHubImpl.wingetPkgsFullName}")
+                    if (isUpdate) appendLine("Please use the 'new' command to create a new manifest.")
+                }
+            ),
             statusCode = 1
         )
     }
-
-    const val connectionTimeout = "$error Connection timed out"
-    const val connectionFailure = "$error Failed to connect"
 }

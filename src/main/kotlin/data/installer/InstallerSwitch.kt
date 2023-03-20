@@ -53,22 +53,25 @@ class InstallerSwitch(
     }
 
     private fun getPreviousValue(aSwitch: Switch): String? {
-        return previousInstallerData?.let {
+        return previousInstallerData?.run {
             when (aSwitch) {
                 Switch.Silent -> {
-                    it.installerSwitches?.silent
-                        ?: it.installers.getOrNull(allManifestData.installers.size)
-                            ?.installerSwitches?.silent
+                    installerSwitches?.silent
+                        ?: installers.getOrNull(allManifestData.installers.size)
+                            ?.installerSwitches
+                            ?.silent
                 }
                 Switch.SilentWithProgress -> {
-                    it.installerSwitches?.silentWithProgress
-                        ?: it.installers.getOrNull(allManifestData.installers.size)
-                            ?.installerSwitches?.silentWithProgress
+                    installerSwitches?.silentWithProgress
+                        ?: installers.getOrNull(allManifestData.installers.size)
+                            ?.installerSwitches
+                            ?.silentWithProgress
                 }
                 Switch.Custom -> {
-                    it.installerSwitches?.custom
-                        ?: it.installers.getOrNull(allManifestData.installers.size)
-                            ?.installerSwitches?.custom
+                    installerSwitches?.custom
+                        ?: installers.getOrNull(allManifestData.installers.size)
+                            ?.installerSwitches
+                            ?.custom
                 }
             }
         }
@@ -82,10 +85,10 @@ class InstallerSwitch(
             aSwitch != Switch.Custom
         return buildString {
             append(
-                when {
-                    installerType == InstallerManifest.Installer.InstallerType.EXE &&
-                        aSwitch != Switch.Custom -> Prompts.required
-                    else -> Prompts.optional
+                if (installerType == InstallerManifest.Installer.InstallerType.EXE && aSwitch != Switch.Custom) {
+                    Prompts.required
+                } else {
+                    Prompts.optional
                 }
             )
             append(" Enter the ${aSwitch.toString().lowercase()} install switch")

@@ -1,13 +1,13 @@
 
-import detection.github.getFormattedReleaseNotes
+import com.appmattus.crypto.Algorithm
+import extensions.GitHubExtensions.getFormattedReleaseNotes
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import org.kohsuke.github.GHRelease
 import org.kohsuke.github.GHRepository
-import utils.Hashing.buildHash
-import java.security.MessageDigest
+import utils.Hashing.hash
 
 class GitHubTests : FunSpec({
     context("formatted release notes tests") {
@@ -196,7 +196,7 @@ class GitHubTests : FunSpec({
         }
 
         test("commit SHA-1's are removed") {
-            val sha1 = buildHash(MessageDigest.getInstance("SHA-1").apply { update("".toByteArray()) }.digest())
+            val sha1 = "".hash(Algorithm.SHA_1)
             every { ghRelease.body } returns "- $sha1 New feature"
             ghRelease.getFormattedReleaseNotes() shouldBe "- New feature"
         }

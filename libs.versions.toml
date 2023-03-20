@@ -2,6 +2,7 @@
 buildconfig = "3.1.0"
 clikt = "4.0.0.198-SNAPSHOT"
 coroutines = "1.6.4"
+cryptohash = "0.10.1"
 detekt = "1.22.0"
 github-api = "1.314"
 jline = "3.23.0"
@@ -25,6 +26,8 @@ slf4j = "2.0.7"
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+
+crypto-cryptohash = { module = "com.appmattus.crypto:cryptohash", version.ref = "cryptohash" }
 
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 

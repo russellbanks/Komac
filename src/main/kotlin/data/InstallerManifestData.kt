@@ -1,19 +1,21 @@
 package data
 
+import detection.files.msi.Msi
 import extensions.IterableExtensions.getDistinctOrNull
 import extensions.IterableExtensions.takeIfNotDistinct
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import schemas.Schemas
+import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import utils.ManifestUtils.updateVersionInString
 
 object InstallerManifestData {
     suspend fun addInstaller(
         allManifestData: AllManifestData,
-        previousManifestData: PreviousManifestData?
+        previousManifest: InstallerManifest?,
+        previousDefaultLocaleData: DefaultLocaleManifest?
     ) = with(allManifestData) {
-        val previousManifest = previousManifestData?.remoteInstallerData?.await()
         val previousInstaller = previousManifest?.installers?.getOrNull(installers.size)
         val installer = getInstallerBase(previousInstaller).copy(
             installerLocale = msi?.productLanguage
@@ -21,7 +23,7 @@ object InstallerManifestData {
                 ?: previousInstaller?.installerLocale,
             platform = msix?.targetDeviceFamily?.let { listOf(it.toPerInstallerPlatform()) }
                 ?: previousInstaller?.platform
-                ?: previousManifest?.platform?.map { it.toPerInstallerPlatform() },
+                ?: previousManifest?.platform?.map(InstallerManifest.Platform::toPerInstallerPlatform),
             minimumOSVersion = msix?.minVersion,
             architecture = previousInstaller?.architecture ?: architecture,
             installerType = installerType ?: previousInstaller?.installerType,
@@ -56,46 +58,48 @@ object InstallerManifestData {
             releaseDate = gitHubDetection?.releaseDate ?: additionalMetadata?.releaseDate ?: releaseDate,
             appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
-                    appsAndFeaturesEntry.fillARPEntry(allManifestData, previousManifestData)
+                    appsAndFeaturesEntry.fillARPEntry(
+                        packageName, packageVersion, allVersions, msi, previousDefaultLocaleData
+                    )
                 } ?: previousManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                 appsAndFeaturesEntry.toInstallerAppsAndFeaturesEntry().fillARPEntry(
-                    allManifestData = allManifestData,
-                    previousManifestData = previousManifestData
+                    packageName, packageVersion, allVersions, msi, previousDefaultLocaleData
                 )
             } ?: listOfNotNull(
                 InstallerManifest.Installer.AppsAndFeaturesEntry()
-                    .fillARPEntry(allManifestData, previousManifestData)
+                    .fillARPEntry(packageName, packageVersion, allVersions, msi, previousDefaultLocaleData)
                     .takeUnless { it.areAllNull() }
             ).ifEmpty { null },
         )
-        when (msixBundle) {
-            null -> installers += installer
-            else -> {
-                msixBundle?.packages?.forEach { individualPackage ->
-                    individualPackage.processorArchitecture?.let { architecture ->
-                        installers += installer.copy(
-                            architecture = architecture,
-                            platform = individualPackage.targetDeviceFamily?.map { it.toPerInstallerPlatform() },
-                        )
-                    }
+        if (msixBundle == null) {
+            installers += installer
+        } else {
+            msixBundle?.packages?.forEach { individualPackage ->
+                individualPackage.processorArchitecture?.let { architecture ->
+                    installers += installer.copy(
+                        architecture = architecture,
+                        platform = individualPackage.targetDeviceFamily?.map { it.toPerInstallerPlatform() },
+                    )
                 }
             }
         }
         resetValues(allManifestData)
     }
 
-    private suspend fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry(
-        allManifestData: AllManifestData,
-        previousManifestData: PreviousManifestData?
-    ): InstallerManifest.Installer.AppsAndFeaturesEntry = with(allManifestData) {
-        val remoteDefaultLocaleData = previousManifestData?.remoteDefaultLocaleData?.await()
+    private fun InstallerManifest.Installer.AppsAndFeaturesEntry.fillARPEntry(
+        packageName: String?,
+        packageVersion: String,
+        allVersions: List<String>?,
+        msi: Msi?,
+        previousDefaultLocaleData: DefaultLocaleManifest?
+    ): InstallerManifest.Installer.AppsAndFeaturesEntry {
         val arpDisplayName = msi?.productName ?: displayName
-        val packageName = packageName ?: remoteDefaultLocaleData?.packageName
+        val name = packageName ?: previousDefaultLocaleData?.packageName
         val arpPublisher = msi?.manufacturer ?: publisher
-        val publisher = publisher ?: remoteDefaultLocaleData?.publisher
+        val publisher = publisher ?: previousDefaultLocaleData?.publisher
         val displayVersion = msi?.productVersion ?: displayVersion
         return copy(
-            displayName = if (arpDisplayName != packageName) {
+            displayName = if (arpDisplayName != name) {
                 arpDisplayName?.updateVersionInString(allVersions, packageVersion)
             } else {
                 null
@@ -123,7 +127,8 @@ object InstallerManifestData {
             installerType = installers.getDistinctOrNull { it.installerType }?.toManifestInstallerType()
                 ?: previousInstallerManifest?.installerType,
             nestedInstallerType = installers.getDistinctOrNull { it.nestedInstallerType }
-                ?.toManifestNestedInstallerType() ?: previousInstallerManifest?.nestedInstallerType,
+                ?.toManifestNestedInstallerType()
+                ?: previousInstallerManifest?.nestedInstallerType,
             nestedInstallerFiles = (
                 installers.getDistinctOrNull { it.nestedInstallerFiles }
                     ?.map { it.toManifestNestedInstallerFiles() }
@@ -150,8 +155,15 @@ object InstallerManifestData {
                 1 -> installers.first().appsAndFeaturesEntries?.map { it.toManifestARPEntry() }
                 else -> null
             },
-            installers = installers.removeNonDistinctKeys(allManifestData)
-                .sortedWith(compareBy({ it.installerLocale }, { it.architecture }, { it.installerType }, { it.scope })),
+            installers = installers.removeNonDistinctKeys(installers)
+                .sortedWith(
+                    compareBy(
+                        InstallerManifest.Installer::installerLocale,
+                        InstallerManifest.Installer::architecture,
+                        InstallerManifest.Installer::installerType,
+                        InstallerManifest.Installer::scope
+                    )
+                ),
             manifestType = Schemas.installerManifestType,
             manifestVersion = manifestOverride ?: Schemas.manifestVersion
         ).toString()
@@ -169,8 +181,8 @@ object InstallerManifestData {
         )
     }
 
-    private fun List<InstallerManifest.Installer>.removeNonDistinctKeys(allManifestData: AllManifestData):
-        List<InstallerManifest.Installer> = with(allManifestData) {
+    private fun List<InstallerManifest.Installer>.removeNonDistinctKeys(installers: List<InstallerManifest.Installer>):
+        List<InstallerManifest.Installer> {
         return map { installer ->
             installer.copy(
                 installerLocale = installers.takeIfNotDistinct(installer.installerLocale) { it.installerLocale },
@@ -208,7 +220,6 @@ object InstallerManifestData {
         releaseDate = null
         msi?.resetExceptShared()
         msix?.resetExceptShared()
-        msixBundle?.resetExceptShared()
         zip = null
         gitHubDetection?.releaseDate = null
     }

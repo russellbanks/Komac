@@ -11,10 +11,7 @@ object FileUtils {
     suspend fun createTempFile(identifier: String, version: String, url: Url): File {
         return withContext(Dispatchers.IO) {
             val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
-            File.createTempFile(
-                /* prefix = */ "$identifier v$version - $formattedDate",
-                /* suffix = */ ".${url.getExtension()}}"
-            )
+            File.createTempFile("$identifier v$version - $formattedDate", ".${url.getExtension()}}")
         }
     }
 }

@@ -1,34 +1,11 @@
 package data.locale
 
-import com.github.ajalt.mordant.terminal.ConversionResult
-import com.github.ajalt.mordant.terminal.Terminal
-import commands.CommandPrompt
-import detection.github.GitHubDetection
-import input.Prompts
+import commands.interfaces.UrlPrompt
 import io.ktor.client.HttpClient
 import io.ktor.http.Url
-import kotlinx.coroutines.runBlocking
 
-class PackageUrl(
-    private val gitHubDetection: GitHubDetection?,
-    private val previousPackageUrl: Url?,
-    private val client: HttpClient
-) : CommandPrompt<Url> {
-    override fun prompt(terminal: Terminal): Url? = with(terminal) {
-        return gitHubDetection?.packageUrl ?: let {
-            println(colors.brightYellow("${Prompts.optional} Enter the package home page"))
-            return prompt(
-                prompt = "Package Url",
-                default = previousPackageUrl?.also { muted("Previous package url: $it") }
-            ) { input ->
-                runBlocking { data.shared.Url.isUrlValid(url = Url(input.trim()), canBeBlank = true, client) }
-                    ?.let { ConversionResult.Invalid(it) }
-                    ?: ConversionResult.Valid(Url(input.trim()))
-            }
-        }
-    }
+class PackageUrl(override val previousUrl: Url?, override val client: HttpClient) : UrlPrompt {
+    override val name: String = "Package url"
 
-    override fun getError(input: String?): String? = runBlocking {
-        data.shared.Url.isUrlValid(url = input?.trim()?.let(::Url), canBeBlank = true, client)
-    }
+    override val description: String = "package home page"
 }

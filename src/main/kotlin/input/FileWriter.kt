@@ -1,5 +1,6 @@
 package input
 
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import utils.yesNoMenu
 import java.io.File
@@ -9,24 +10,24 @@ object FileWriter {
         do {
             println()
             println(colors.brightYellow("Enter a directory to write the files to:"))
-            val directory = prompt("Directory")?.let(::File)
-            if (directory?.isDirectory == true) {
+            val directory = prompt("Directory")?.let(::File) ?: throw ProgramResult(ExitCode.CtrlC)
+            if (directory.isDirectory) {
                 writeFilesToDirectory(directory, files, terminal)
             } else {
                 createDirectoryIfNecessary(directory, files, terminal)
             }
-        } while (directory?.isDirectory != true)
+        } while (!directory.isDirectory)
     }
 
-    private fun createDirectoryIfNecessary(directory: File?, files: Map<String, String?>, terminal: Terminal) {
+    private fun createDirectoryIfNecessary(directory: File, files: Map<String, String?>, terminal: Terminal) {
         with(terminal) {
             warning("The directory entered does not exist. Would you like to create it?")
             if (yesNoMenu(default = true)) {
-                if (directory?.mkdirs() == true) {
+                if (directory.mkdirs()) {
                     success("Successfully created ${directory.path}")
                     writeFilesToDirectory(directory, files, terminal)
                 } else {
-                    danger("Failed to create ${directory?.path}")
+                    danger("Failed to create ${directory.path}")
                 }
             }
         }

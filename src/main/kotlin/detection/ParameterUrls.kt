@@ -1,25 +1,23 @@
 package detection
 
 import com.github.ajalt.clikt.core.CliktError
-import com.github.ajalt.mordant.terminal.Terminal
+import com.github.ajalt.mordant.terminal.TerminalColors
 import io.ktor.client.HttpClient
 import io.ktor.http.Url
 import schemas.manifest.InstallerManifest
 import utils.getExtension
 
 object ParameterUrls {
-    fun assertUniqueUrlsCount(parameterUrls: List<Url>, previousUrls: List<Url>, terminal: Terminal) {
-        val parameterUrlsSet = parameterUrls.toHashSet()
-        val previousUrlsSet = previousUrls.toHashSet()
-        if (parameterUrlsSet.size != previousUrlsSet.size) {
+    fun assertUniqueUrlsCount(parameterUrls: Set<Url>, previousUrls: Set<Url>, colors: TerminalColors) {
+        if (parameterUrls.size != previousUrls.size) {
             throw CliktError(
-                terminal.colors.danger(
+                colors.danger(
                     buildString {
                         append("The number of unique installer urls ")
                         append(
                             when {
-                                parameterUrlsSet.size > previousUrlsSet.size -> "is greater than"
-                                parameterUrlsSet.size < previousUrlsSet.size -> "is less than"
+                                parameterUrls.size > previousUrls.size -> "is greater than"
+                                parameterUrls.size < previousUrls.size -> "is less than"
                                 else -> "does not match"
                             }
                         )
@@ -30,10 +28,14 @@ object ParameterUrls {
         }
     }
 
-    suspend fun assertUrlsValid(parameterUrls: List<Url>, terminal: Terminal, client: HttpClient) {
-        parameterUrls.forEach { url ->
-            data.shared.Url.isUrlValid(url, false, client)
-                ?.let { throw CliktError(terminal.colors.danger("$it on $url")) }
+    suspend fun assertUrlsValid(parameterUrls: Set<Url>, client: HttpClient, colors: TerminalColors) {
+        val errorList = parameterUrls.mapNotNull { url ->
+            data.shared.Url.isUrlValid(url, false, client)?.let { error -> url to error }
+        }
+        if (errorList.isNotEmpty()) {
+            throw CliktError(
+                colors.danger(errorList.joinToString(System.lineSeparator()) { (url, error) -> "$error on $url" })
+            )
         }
     }
 

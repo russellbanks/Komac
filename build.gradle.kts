@@ -15,11 +15,11 @@ plugins {
 }
 
 group = "com.russellbanks"
-version = "1.2.0"
+version = "1.3.0"
 
 repositories {
     mavenCentral()
-    maven("https://oss.sonatype.org/content/repositories/snapshots/")
+    maven("https://oss.sonatype.org/content/repositories/snapshots")
 }
 
 dependencies {
@@ -31,6 +31,9 @@ dependencies {
 
     // Kotlin Coroutines - https://github.com/Kotlin/kotlinx.coroutines
     implementation(libs.coroutines.core)
+
+    // Crypto - https://github.com/appmattus/crypto
+    implementation(libs.crypto.cryptohash)
 
     // Detekt Formatting Plugin - https://github.com/detekt/detekt
     detektPlugins(libs.detekt.formatting)

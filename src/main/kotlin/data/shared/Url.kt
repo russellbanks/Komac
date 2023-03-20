@@ -2,6 +2,7 @@ package data.shared
 
 import Errors
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -24,6 +25,7 @@ import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
 import network.HttpUtils.downloadFile
+import network.HttpUtils.getDownloadProgressBar
 import schemas.manifest.InstallerManifest
 import utils.FileAnalyser
 import utils.Hashing.hash
@@ -54,7 +56,7 @@ object Url {
         }?.let {
             println()
             promptIfRedirectedUrl(it, client)
-        } ?: throw ProgramResult(ExitCode.CtrlC.code)
+        } ?: throw ProgramResult(ExitCode.CtrlC)
     }
 
     private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url, client: HttpClient): Url {
@@ -98,26 +100,27 @@ object Url {
             } else {
                 pageScraper = PageScraper(installerUrl, client)
             }
-            val (file, fileDeletionThread) = client.downloadFile(installerUrl, allManifestData, this@downloadInstaller)
-            val fileAnalyser = FileAnalyser(file)
+            val progress = getDownloadProgressBar(installerUrl).apply(ProgressAnimation::start)
+            val downloadedFile = client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress)
+            val fileAnalyser = FileAnalyser(downloadedFile.file)
             installerType = fileAnalyser.getInstallerType()
             architecture = installerUrl.findArchitecture() ?: fileAnalyser.getArchitecture()
             scope = fileAnalyser.getScope()
             upgradeBehavior = fileAnalyser.getUpgradeBehaviour()
-            installerSha256 = gitHubDetection?.sha256?.await() ?: file.hash()
-            when (file.extension.lowercase()) {
+            installerSha256 = gitHubDetection?.sha256?.await() ?: downloadedFile.file.hash()
+            when (downloadedFile.file.extension.lowercase()) {
                 InstallerManifest.InstallerType.MSIX.toString(),
-                InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(file)
+                InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(downloadedFile.file)
                 MsixBundle.msixBundleConst,
-                MsixBundle.appxBundleConst -> msixBundle = MsixBundle(file)
-                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(file)
+                MsixBundle.appxBundleConst -> msixBundle = MsixBundle(downloadedFile.file)
+                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(downloadedFile.file)
                 InstallerManifest.InstallerType.ZIP.toString() -> zip = Zip(
-                    zip = file,
+                    zip = downloadedFile.file,
                     terminal = this@downloadInstaller
                 )
             }
-            file.delete()
-            Runtime.getRuntime().removeShutdownHook(fileDeletionThread)
+            downloadedFile.file.delete()
+            Runtime.getRuntime().removeShutdownHook(downloadedFile.fileDeletionThread)
         }
     }
 
@@ -143,7 +146,7 @@ object Url {
                                 var newValue = value
                                 if (value is List<*>) {
                                     if (value.size > 1) newText = "${text}s"
-                                    newValue = value.joinToString(", ")
+                                    newValue = value.joinToString()
                                 }
                                 cell(colors.brightWhite("${" ".repeat(Prompts.optionIndent)} $newText: $newValue"))
                             }

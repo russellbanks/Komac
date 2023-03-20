@@ -8,39 +8,56 @@ import com.github.ajalt.mordant.rendering.OverflowWrap
 import com.github.ajalt.mordant.rendering.TextAlign
 import com.github.ajalt.mordant.rendering.Whitespace
 import com.github.ajalt.mordant.terminal.Terminal
+import commands.interfaces.ListPrompt
+import commands.interfaces.MenuPrompt
+import commands.interfaces.Prompt
+import commands.interfaces.TextPrompt
+import commands.interfaces.UrlPrompt
 import input.ExitCode
+import io.ktor.http.Url
 
-inline fun <reified T> Terminal.prompt(commandPrompt: CommandPrompt<T>, parameter: String? = null): T {
-    val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
-    val error = commandPrompt.getError(parameter)
+suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, transform: (String) -> T): T {
+    val isCIEnvironmentPresent = System.getenv("CI")?.toBooleanStrictOrNull() == true
+    val error = parameter?.let { prompt.getError(it) }
     return when {
         error != null -> {
-            if (!isCIEnvironment) {
+            if (!isCIEnvironmentPresent) {
                 danger(error)
                 println()
-                commandPrompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC.code)
+                prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC)
             } else {
-                throw CliktError(colors.danger(error), statusCode = 1)
+                throw CliktError(colors.danger(error))
             }
         }
-        parameter != null && parameter is T -> parameter
-        isCIEnvironment -> throw CliktError(
+        parameter != null -> transform(parameter)
+        isCIEnvironmentPresent -> throw CliktError(
             message = colors.danger(
                 buildString {
                     append(Errors.error)
                     append(" ")
-                    append(commandPrompt::class.simpleName?.replace("([A-Z])".toRegex(), " $1")?.trim() ?: "Parameter")
+                    append(prompt::class.simpleName?.replace("([A-Z])".toRegex(), " $1")?.trim() ?: "Parameter")
                     append(" not provided")
                 }
-            ),
-            statusCode = 1
+            )
         )
-        else -> commandPrompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC.code)
+        else -> prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC)
     }
 }
 
-inline fun <reified T> CliktCommand.prompt(commandPrompt: CommandPrompt<T>, parameter: String? = null): T {
-    return currentContext.terminal.prompt(commandPrompt, parameter)
+suspend fun CliktCommand.prompt(textPrompt: TextPrompt, parameter: String? = null): String {
+    return currentContext.terminal.prompt(textPrompt, parameter, transform = { it })
+}
+
+suspend fun <T> CliktCommand.prompt(listPrompt: ListPrompt<T>, parameter: String? = null): List<T> {
+    return currentContext.terminal.prompt(listPrompt, parameter, transform = { listPrompt.validationRules.transform(it) })
+}
+
+suspend fun CliktCommand.prompt(urlPrompt: UrlPrompt, parameter: String? = null): Url {
+    return currentContext.terminal.prompt(urlPrompt, parameter, transform = { urlPrompt.transform(it) })
+}
+
+suspend fun <T> CliktCommand.prompt(menuPrompt: MenuPrompt<T>, parameter: String? = null): T? {
+    return currentContext.terminal.prompt(menuPrompt, parameter, transform = { it as T })
 }
 
 fun CliktCommand.info(

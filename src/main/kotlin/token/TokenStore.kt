@@ -31,7 +31,7 @@ class TokenStore {
 
     suspend fun invalidTokenPrompt(terminal: Terminal) = with(terminal) {
         warning("Token is invalid. Please enter a new token.")
-        prompt(Token).also { putToken(it) }
+        prompt(Token, parameter = null, transform = { it }).also { putToken(it) }
         println()
     }
 
