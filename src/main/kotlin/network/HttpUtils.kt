@@ -42,7 +42,11 @@ object HttpUtils {
         return DownloadedFile(file, lastModified, fileDeletionThread)
     }
 
-    data class DownloadedFile(val file: File, val lastModified: LocalDate?, val fileDeletionThread: Thread)
+    data class DownloadedFile(val file: File, val lastModified: LocalDate?, val fileDeletionHook: Thread) {
+        fun removeFileDeletionHook(): Boolean {
+            return Runtime.getRuntime().removeShutdownHook(fileDeletionHook)
+        }
+    }
 
     fun Terminal.getDownloadProgressBar(url: Url): ProgressAnimation {
         return progressAnimation {

@@ -5,16 +5,12 @@ import commands.interfaces.ValidationRules
 import java.math.BigInteger
 
 object PackageVersion : TextPrompt {
-    private const val pattern = "^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"
-    const val maxLength = 128
-    val regex = Regex(pattern)
-
     override val name: String = "Package Version"
 
     override val validationRules: ValidationRules = ValidationRules(
         maxLength = 128,
         minLength = 1,
-        pattern = Regex(pattern),
+        pattern = Regex("^[^\\\\/:*?\"<>|\\x01-\\x1f]+$"),
         isRequired = true
     )
 

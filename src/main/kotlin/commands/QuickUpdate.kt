@@ -205,8 +205,10 @@ class QuickUpdate : CliktCommand(name = "update") {
                     releaseDate = gitHubDetection?.releaseDate ?: downloadedFile.lastModified
                 )
             } finally {
-                downloadedFile.file.delete()
-                Runtime.getRuntime().removeShutdownHook(downloadedFile.fileDeletionThread)
+                with(downloadedFile) {
+                    file.delete()
+                    removeFileDeletionHook()
+                }
             }
         }
         progressList.forEach(ProgressAnimation::clear)

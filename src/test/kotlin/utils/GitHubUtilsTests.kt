@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GHTree
 import org.kohsuke.github.GHTreeEntry
+import java.io.IOException
 
 class GitHubUtilsTests : FunSpec({
     context("get all versions tests") {
@@ -86,6 +87,11 @@ class GitHubUtilsTests : FunSpec({
                 "subPackage/1.2.3/file.yaml" to "blob"
             ).mapToMockedGHTreeEntry()
             GitHubUtils.getAllVersions(repository, packageIdentifier) shouldBe listOf("1.2.3")
+        }
+
+        test("IOException thrown") {
+            every { repository.getTreeRecursive(any(), 1) } throws IOException()
+            GitHubUtils.getAllVersions(repository, packageIdentifier) shouldBe null
         }
     }
 

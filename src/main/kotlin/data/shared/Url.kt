@@ -102,6 +102,7 @@ object Url {
             }
             val progress = getDownloadProgressBar(installerUrl).apply(ProgressAnimation::start)
             val downloadedFile = client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress)
+            progress.clear()
             val fileAnalyser = FileAnalyser(downloadedFile.file)
             installerType = fileAnalyser.getInstallerType()
             architecture = installerUrl.findArchitecture() ?: fileAnalyser.getArchitecture()
@@ -119,8 +120,10 @@ object Url {
                     terminal = this@downloadInstaller
                 )
             }
-            downloadedFile.file.delete()
-            Runtime.getRuntime().removeShutdownHook(downloadedFile.fileDeletionThread)
+            with(downloadedFile) {
+                file.delete()
+                removeFileDeletionHook()
+            }
         }
     }
 
