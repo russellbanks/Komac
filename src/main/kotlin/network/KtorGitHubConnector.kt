@@ -10,6 +10,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
 import io.ktor.util.toMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.connector.GitHubConnector
 import org.kohsuke.github.connector.GitHubConnectorRequest
@@ -18,7 +19,7 @@ import org.kohsuke.github.connector.GitHubConnectorResponse.ByteArrayResponse
 import java.io.InputStream
 
 class KtorGitHubConnector(private val client: HttpClient) : GitHubConnector {
-    override fun send(connectorRequest: GitHubConnectorRequest): GitHubConnectorResponse = runBlocking {
+    override fun send(connectorRequest: GitHubConnectorRequest): GitHubConnectorResponse = runBlocking(Dispatchers.IO) {
         val request = client.request(connectorRequest.url()) {
             method = HttpMethod.parse(connectorRequest.method())
             if (connectorRequest.hasBody()) {
@@ -38,7 +39,7 @@ class KtorGitHubConnector(private val client: HttpClient) : GitHubConnector {
         request: GitHubConnectorRequest,
         private val response: HttpResponse
     ) : ByteArrayResponse(request, response.status.value, response.headers.toMap()) {
-        override fun rawBodyStream(): InputStream? = runBlocking {
+        override fun rawBodyStream(): InputStream? = runBlocking(Dispatchers.IO) {
             return@runBlocking response.body()
         }
     }

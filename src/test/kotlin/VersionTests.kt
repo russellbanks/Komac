@@ -1,5 +1,5 @@
+
 import data.shared.PackageVersion
-import data.shared.PackageVersion.getError
 import data.shared.PackageVersion.getHighestVersion
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
@@ -53,7 +53,7 @@ class VersionTests : FunSpec({
         }
 
         test("largest version allowed") {
-            val maxVersion = "9".repeat(PackageVersion.maxLength)
+            val maxVersion = "9".repeat(PackageVersion.validationRules.maxLength as Int)
             listOf(maxVersion).getHighestVersion() shouldBe maxVersion
         }
 
@@ -82,19 +82,19 @@ class VersionTests : FunSpec({
             "14.0.1",
             "1.10"
         ) {
-            getError(it) shouldBe null
+            PackageVersion.getError(it) shouldBe null
         }
 
         test("version greater than max length fails") {
-            getError("A".repeat(PackageVersion.maxLength.inc())) shouldNotBe null
+            PackageVersion.getError("A".repeat(PackageVersion.validationRules.maxLength?.inc() as Int)) shouldNotBe null
         }
 
         test("blank or empty string fails") {
-            getError(" ".repeat(10)) shouldNotBe null
+            PackageVersion.getError(" ".repeat(10)) shouldNotBe null
         }
 
         test("invalid version pattern fails") {
-            getError("£$%^&*()") shouldNotBe null
+            PackageVersion.getError("£$%^&*()") shouldNotBe null
         }
     }
 })
