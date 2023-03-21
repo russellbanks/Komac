@@ -43,21 +43,45 @@ object ParameterUrls {
         newInstallers: List<InstallerManifest.Installer>,
         previousInstallers: List<InstallerManifest.Installer>
     ): Map<InstallerManifest.Installer, InstallerManifest.Installer> {
-        return previousInstallers.associateWith { previousInstaller ->
-            newInstallers.firstOrNull {
+        val result = hashMapOf<InstallerManifest.Installer, InstallerManifest.Installer>()
+        for (previousInstaller in previousInstallers) {
+            var newInstaller: InstallerManifest.Installer? = newInstallers.firstOrNull {
                 it.architecture == previousInstaller.architecture &&
-                    it.installerType == previousInstaller.installerType &&
-                    (it.scope == previousInstaller.scope || it.scope == null)
-            } ?: newInstallers.firstOrNull {
-                it.architecture == previousInstaller.architecture &&
+                        it.installerType == previousInstaller.installerType &&
+                        it.scope == previousInstaller.scope
+            }
+            if (newInstaller == null) {
+                newInstaller = newInstallers.firstOrNull {
+                    it.architecture == previousInstaller.architecture &&
+                            it.installerType == previousInstaller.installerType &&
+                            it.scope == null
+                }
+            }
+            if (newInstaller == null) {
+                newInstaller = newInstallers.firstOrNull {
+                    it.architecture == previousInstaller.architecture &&
+                            it.installerType == previousInstaller.installerType
+                }
+            }
+            if (newInstaller == null) {
+                newInstaller = newInstallers.firstOrNull {
                     it.installerType == previousInstaller.installerType
-            } ?: newInstallers.firstOrNull {
-                it.installerType == previousInstaller.installerType
-            } ?: newInstallers.firstOrNull {
-                it.architecture == previousInstaller.architecture
-            } ?: newInstallers.firstOrNull {
-                it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension()
-            } ?: previousInstaller // If no match was found, use the previous installer itself
+                }
+            }
+            if (newInstaller == null) {
+                newInstaller = newInstallers.firstOrNull {
+                    it.architecture == previousInstaller.architecture
+                }
+            }
+            if (newInstaller == null) {
+                newInstaller = newInstallers.firstOrNull {
+                    it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension()
+                }
+            }
+            if (newInstaller != null) {
+                result[previousInstaller] = newInstaller
+            }
         }
+        return result
     }
 }
