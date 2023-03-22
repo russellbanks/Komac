@@ -23,7 +23,8 @@ object ParameterUrls {
                         )
                         append(" the number of previous manifest urls")
                     }
-                )
+                ),
+                statusCode = 1
             )
         }
     }
@@ -34,7 +35,8 @@ object ParameterUrls {
         }
         if (errorList.isNotEmpty()) {
             throw CliktError(
-                colors.danger(errorList.joinToString(System.lineSeparator()) { (url, error) -> "$error on $url" })
+                colors.danger(errorList.joinToString(System.lineSeparator()) { (url, error) -> "$error on $url" }),
+                statusCode = 1
             )
         }
     }

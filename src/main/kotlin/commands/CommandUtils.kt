@@ -26,7 +26,7 @@ suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, tr
                 println()
                 prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC)
             } else {
-                throw CliktError(colors.danger(error))
+                throw CliktError(colors.danger(error), statusCode = 1)
             }
         }
         parameter != null -> transform(parameter)
@@ -38,7 +38,8 @@ suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, tr
                     append(prompt::class.simpleName?.replace("([A-Z])".toRegex(), " $1")?.trim() ?: "Parameter")
                     append(" not provided")
                 }
-            )
+            ),
+            statusCode = 1
         )
         else -> prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC)
     }
