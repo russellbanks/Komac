@@ -38,7 +38,8 @@ class GitHubImpl(token: String, client: HttpClient) {
             } catch (ioException: IOException) {
                 throw CliktError(
                     message = colors.danger("Failed to fork $wingetpkgs. Please try again or fork it manually"),
-                    cause = ioException
+                    cause = ioException,
+                    statusCode = 1
                 )
             }
         }
@@ -89,7 +90,7 @@ class GitHubImpl(token: String, client: HttpClient) {
                 return github.getRepository("$Microsoft/$wingetpkgs")
             } catch (ioException: IOException) {
                 if (++count == maxTries) {
-                    throw CliktError(message = "Failed to get $wingetPkgsFullName", cause = ioException)
+                    throw CliktError(message = "Failed to get $wingetPkgsFullName", cause = ioException, statusCode = 1)
                 }
             }
         }

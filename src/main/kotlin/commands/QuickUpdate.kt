@@ -59,7 +59,7 @@ class QuickUpdate : CliktCommand(name = "update") {
     private lateinit var previousManifestData: PreviousManifestData
     private val previousInstallerManifest: InstallerManifest
         get() = previousManifestData.remoteInstallerData
-            ?: throw CliktError(colors.danger("Failed to retrieve previous installers"))
+            ?: throw CliktError(colors.danger("Failed to retrieve previous installers"), statusCode = 1)
     private val client = Http.client
     private val gitHubImpl by lazy { GitHubImpl(tokenStore.token as String, client) }
     private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
