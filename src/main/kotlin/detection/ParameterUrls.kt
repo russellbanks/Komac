@@ -61,6 +61,11 @@ object ParameterUrls {
             }
             if (newInstaller == null) {
                 newInstaller = newInstallers.firstOrNull {
+                    it.architecture == previousInstaller.architecture && it.scope == previousInstaller.scope
+                }
+            }
+            if (newInstaller == null) {
+                newInstaller = newInstallers.firstOrNull {
                     it.architecture == previousInstaller.architecture &&
                             it.installerType == previousInstaller.installerType
                 }
