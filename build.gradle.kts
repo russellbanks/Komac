@@ -161,3 +161,8 @@ buildConfig {
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
 }
+
+tasks.withType<JavaCompile> {
+    sourceCompatibility = JavaVersion.VERSION_19.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+}

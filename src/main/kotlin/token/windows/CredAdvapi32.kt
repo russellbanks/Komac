@@ -70,19 +70,19 @@ internal interface CredAdvapi32 : StdCallLibrary {
          *
          * See MSDN doc for additional requirement
          */
-        lateinit var TargetName: String
+        @JvmField var TargetName: String? = null
 
         /**
          * A string comment from the user that describes this credential. This member cannot be longer than
          * CRED_MAX_STRING_LENGTH (256) characters.
          */
-        lateinit var Comment: String
+        @JvmField var Comment: String? = null
 
         /**
          * The time, in Coordinated Universal Time (Greenwich Mean Time), of the last modification of the credential.
          * For write operations, the value of this member is ignored.
          */
-        lateinit var LastWritten: FILETIME
+        @JvmField var LastWritten: FILETIME? = null
 
         /**
          * The size, in bytes, of the CredentialBlob member. This member cannot be larger than
@@ -104,7 +104,7 @@ internal interface CredAdvapi32 : StdCallLibrary {
          * Credentials are expected to be portable. Applications should ensure that the data in CredentialBlob is
          * portable. The application defines the byte-endian and alignment of the data in CredentialBlob.
          */
-        lateinit var CredentialBlob: Pointer
+        @JvmField var CredentialBlob: Pointer? = null
 
         /**
          * Defines the persistence of this credential. This member can be read and written.
@@ -123,7 +123,7 @@ internal interface CredAdvapi32 : StdCallLibrary {
          * Application-defined attributes that are associated with the credential. This member can be read
          * and written.
          */
-        lateinit var Attributes: Pointer
+        @JvmField var Attributes: Pointer? = null
 
         /**
          * Alias for the TargetName member. This member can be read and written. It cannot be longer than
@@ -132,7 +132,7 @@ internal interface CredAdvapi32 : StdCallLibrary {
          * If the credential Type is CRED_TYPE_GENERIC, this member can be non-NULL, but the credential manager
          * ignores the member.
          */
-        lateinit var TargetAlias: String
+        @JvmField var TargetAlias: String? = null
 
         /**
          * The username of the account used to connect to TargetName.
@@ -147,7 +147,7 @@ internal interface CredAdvapi32 : StdCallLibrary {
          *
          * This member cannot be longer than CRED_MAX_USERNAME_LENGTH (513) characters.
          */
-        lateinit var UserName: String
+        @JvmField var UserName: String? = null
     }
 
     /**
@@ -155,7 +155,7 @@ internal interface CredAdvapi32 : StdCallLibrary {
      */
     @FieldOrder("credential")
     class PCREDENTIAL : Structure() {
-        lateinit var credential: Pointer
+        @JvmField var credential: Pointer? = null
     }
 
     /**

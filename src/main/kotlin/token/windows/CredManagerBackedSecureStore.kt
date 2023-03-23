@@ -61,11 +61,11 @@ abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
             // MSDN doc doesn't mention threading safety, so let's just be careful and synchronize the access
             synchronized(instance) { read = instance.CredRead(key, CredAdvapi32.CRED_TYPE_GENERIC, 0, pcredential) }
             cred = if (read) {
-                val credential = CredAdvapi32.CREDENTIAL(pcredential.credential)
-                val secretBytes: ByteArray = credential.CredentialBlob.getByteArray(0, credential.CredentialBlobSize)
-                val secret = secretBytes.toString(Charsets.UTF_8)
-                val username = credential.UserName
-                create(username, secret)
+                val credential = pcredential.credential?.let { CredAdvapi32.CREDENTIAL(it) }
+                val secretBytes: ByteArray? = credential?.CredentialBlob?.getByteArray(0, credential.CredentialBlobSize)
+                val secret = secretBytes?.toString(Charsets.UTF_8)
+                val username = credential?.UserName
+                if (username != null && secret != null) create(username, secret) else null
             } else {
                 null
             }
@@ -119,7 +119,7 @@ abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
         } catch (_: LastErrorException) {
             false
         } finally {
-            cred.CredentialBlob.clear(credBlob.size.toLong())
+            cred.CredentialBlob?.clear(credBlob.size.toLong())
             credBlob.fill(0.toByte())
         }
     }
