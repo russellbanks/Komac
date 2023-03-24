@@ -35,6 +35,7 @@ import data.shared.PackageVersion.getHighestVersion
 import data.shared.Publisher
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
+import extensions.GitHubExtensions.printResultTo
 import input.ExitCode
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
@@ -140,7 +141,7 @@ class NewManifest : CliktCommand(name = "new") {
                         packageIdentifier = packageIdentifier,
                         packageVersion = packageVersion,
                         updateState = updateState
-                    )
+                    ) printResultTo currentContext.terminal
                 }
                 ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
                 else -> return@runBlocking

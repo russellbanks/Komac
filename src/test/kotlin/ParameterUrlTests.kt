@@ -38,5 +38,11 @@ class ParameterUrlTests : FunSpec({
                 previousInstallerMachineX64 to installerX64
             )
         }
+
+        test("empty map is returned if both newInstallers and previousInstallers are empty") {
+            val newInstallers = emptyList<InstallerManifest.Installer>()
+            val previousInstallers = emptyList<InstallerManifest.Installer>()
+            ParameterUrls.matchInstallers(newInstallers, previousInstallers) shouldBe emptyMap()
+        }
     }
 })

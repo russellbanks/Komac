@@ -26,6 +26,7 @@ import data.shared.getUpdateState
 import detection.ParameterUrls
 import detection.github.GitHubDetection
 import extensions.GitHubExtensions.printResultTo
+import extensions.PathExtensions.hash
 import input.FileWriter
 import input.ManifestResultOption
 import input.Prompts.pullRequestPrompt
@@ -34,6 +35,7 @@ import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils.downloadFile
 import network.HttpUtils.getDownloadProgressBar
+import okio.FileSystem
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import schemas.AdditionalMetadata
@@ -46,7 +48,6 @@ import token.Token
 import token.TokenStore
 import utils.FileAnalyser
 import utils.GitHubUtils
-import utils.Hashing.hash
 import utils.ManifestUtils.formattedManifestLinesSequence
 import utils.ManifestUtils.updateVersionInString
 import utils.findArchitecture
@@ -79,6 +80,7 @@ class QuickUpdate : CliktCommand(name = "update") {
     private val additionalMetadataParam by option(hidden = true).convert {
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
     }
+    val fileSystem = FileSystem.SYSTEM
 
     override fun run(): Unit = runBlocking {
         val terminal = currentContext.terminal
@@ -190,14 +192,14 @@ class QuickUpdate : CliktCommand(name = "update") {
             gitHubDetection = parameterUrls
                 .firstOrNull { it.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true) }
                 ?.let { GitHubDetection(it, gitHubImpl, client) }
-            val downloadedFile = client.downloadFile(url, packageIdentifier, packageVersion, progressList[index])
-            val fileAnalyser = FileAnalyser(downloadedFile.file)
+            val downloadedFile = client.downloadFile(url, packageIdentifier, packageVersion, progressList[index], fileSystem)
+            val fileAnalyser = FileAnalyser(downloadedFile.path, fileSystem)
             installerResults += try {
                 InstallerManifest.Installer(
                     architecture = url.findArchitecture() ?: fileAnalyser.getArchitecture(),
                     installerType = fileAnalyser.getInstallerType(),
                     scope = url.findScope(),
-                    installerSha256 = downloadedFile.file.hash(),
+                    installerSha256 = downloadedFile.path.hash(fileSystem),
                     signatureSha256 = fileAnalyser.getSignatureSha256(),
                     installerUrl = url,
                     productCode = fileAnalyser.getProductCode(),
@@ -206,7 +208,7 @@ class QuickUpdate : CliktCommand(name = "update") {
                 )
             } finally {
                 with(downloadedFile) {
-                    file.delete()
+                    fileSystem.delete(path)
                     removeFileDeletionHook()
                 }
             }

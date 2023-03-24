@@ -133,7 +133,7 @@ data class InstallerManifest(
     enum class InstallModes {
         @SerialName("interactive") Interactive,
         @SerialName("silent") Silent,
-        @SerialName("silentWithProgress") SilentWithProgress;
+        @SerialName("silentWithProgress") SilentWithProgress
     }
 
     @Serializable
@@ -188,7 +188,7 @@ data class InstallerManifest(
             @SerialName("downgrade") Downgrade,
             @SerialName("blockedByPolicy") BlockedByPolicy,
             @SerialName("systemNotSupported") SystemNotSupported,
-            @SerialName("custom") Custom;
+            @SerialName("custom") Custom
         }
     }
 
@@ -220,12 +220,12 @@ data class InstallerManifest(
         @SerialName("x86") X86,
         @SerialName("x64") X64,
         @SerialName("arm") ARM,
-        @SerialName("arm64") ARM64;
+        @SerialName("arm64") ARM64
     }
 
     enum class UnsupportedArguments {
         @SerialName("log") Log,
-        @SerialName("location") Location;
+        @SerialName("location") Location
     }
 
     /**
@@ -275,7 +275,7 @@ data class InstallerManifest(
     enum class ElevationRequirement {
         @SerialName("elevationRequired") ElevationRequired,
         @SerialName("elevationProhibited") ElevationProhibited,
-        @SerialName("elevatesSelf") ElevatesSelf;
+        @SerialName("elevatesSelf") ElevatesSelf
     }
 
     /**
@@ -303,7 +303,7 @@ data class InstallerManifest(
             enum class FileType {
                 @SerialName("launch") Launch,
                 @SerialName("uninstall") Uninstall,
-                @SerialName("other") Other;
+                @SerialName("other") Other
             }
         }
     }
@@ -509,7 +509,7 @@ data class InstallerManifest(
                 @SerialName("downgrade") Downgrade,
                 @SerialName("blockedByPolicy") BlockedByPolicy,
                 @SerialName("systemNotSupported") SystemNotSupported,
-                @SerialName("custom") Custom;
+                @SerialName("custom") Custom
             }
         }
 
@@ -541,12 +541,12 @@ data class InstallerManifest(
             @SerialName("x86") X86,
             @SerialName("x64") X64,
             @SerialName("arm") ARM,
-            @SerialName("arm64") ARM64;
+            @SerialName("arm64") ARM64
         }
 
         enum class UnsupportedArguments {
             @SerialName("log") Log,
-            @SerialName("location") Location;
+            @SerialName("location") Location
         }
 
         /**
@@ -604,7 +604,7 @@ data class InstallerManifest(
         enum class ElevationRequirement {
             @SerialName("elevationRequired") ElevationRequired,
             @SerialName("elevationProhibited") ElevationProhibited,
-            @SerialName("elevatesSelf") ElevatesSelf;
+            @SerialName("elevatesSelf") ElevatesSelf
         }
 
         /**
@@ -632,7 +632,7 @@ data class InstallerManifest(
                 enum class FileType {
                     @SerialName("launch") Launch,
                     @SerialName("uninstall") Uninstall,
-                    @SerialName("other") Other;
+                    @SerialName("other") Other
                 }
             }
         }

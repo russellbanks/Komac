@@ -6,11 +6,10 @@ import com.sun.jna.WString
 import com.sun.jna.platform.win32.WinBase.FILETIME
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
+import okio.Path
 import schemas.manifest.InstallerManifest
-import java.io.File
 
-@Suppress("LoopWithTooManyJumpStatements")
-class Msi(private val msiFile: File) {
+class Msi(private val msiFile: Path) {
     var productCode: String? = null
     var upgradeCode: String? = null
     var productName: String? = null
@@ -77,7 +76,7 @@ class Msi(private val msiFile: File) {
 
     private fun openDatabase(): PointerByReference? {
         val phDatabase = PointerByReference()
-        val result = msiLibrary.MsiOpenDatabaseW(WString(msiFile.path), WString(msiDbOpenReadOnly), phDatabase)
+        val result = msiLibrary.MsiOpenDatabaseW(WString(msiFile.toString()), WString(msiDbOpenReadOnly), phDatabase)
         if (result != 0) {
             println("Error opening database: $result")
             return null

@@ -22,7 +22,7 @@ import kotlinx.coroutines.async
  */
 class PageScraper(url: Url, client: HttpClient) {
     private val urlRoot = URLBuilder(url).apply {
-        host = host.split(".").takeLast(2).joinToString(".")
+        host = host.split('.').takeLast(2).joinToString(".")
         pathSegments = emptyList()
     }.build()
     private val scope = CoroutineScope(Dispatchers.IO)

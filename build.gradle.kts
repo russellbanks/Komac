@@ -32,9 +32,6 @@ dependencies {
     // Kotlin Coroutines - https://github.com/Kotlin/kotlinx.coroutines
     implementation(libs.coroutines.core)
 
-    // Crypto - https://github.com/appmattus/crypto
-    implementation(libs.crypto.cryptohash)
-
     // Detekt Formatting Plugin - https://github.com/detekt/detekt
     detektPlugins(libs.detekt.formatting)
 
@@ -67,6 +64,10 @@ dependencies {
 
     // Mordant - https://github.com/ajalt/mordant
     implementation(libs.mordant)
+
+    // Okio - https://github.com/square/okio
+    implementation(libs.okio)
+    testImplementation(libs.okio.fakefilesystem)
 
     // Skrape{it} - https://github.com/skrapeit/skrape.it
     implementation(libs.skrapeit.htmlparser) {
@@ -104,12 +105,9 @@ tasks.jpackage {
     addModules = listOf(
         "java.base",
         "java.desktop",
-        "java.instrument",
         "java.management",
         "java.net.http",
-        "java.sql",
-        "jdk.crypto.cryptoki",
-        "jdk.unsupported"
+        "java.sql"
     )
     resourceDir = "$rootDir/config/wix"
     appName = project.name
@@ -163,6 +161,6 @@ tasks.withType<KotlinCompile> {
 }
 
 tasks.withType<JavaCompile> {
-    sourceCompatibility = JavaVersion.VERSION_19.toString()
+    sourceCompatibility = JavaVersion.current().toString()
     targetCompatibility = JavaVersion.VERSION_17.toString()
 }

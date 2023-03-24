@@ -4,55 +4,30 @@ import com.sun.jna.Platform
 import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
+import extensions.PathExtensions.extension
+import okio.Buffer
+import okio.ByteString
+import okio.ByteString.Companion.encodeUtf8
+import okio.ByteString.Companion.toByteString
+import okio.FileHandle
+import okio.FileSystem
+import okio.Path
+import okio.buffer
 import schemas.manifest.InstallerManifest.Installer.Architecture
 import schemas.manifest.InstallerManifest.Installer.InstallerType
 import schemas.manifest.InstallerManifest.Installer.Scope
 import schemas.manifest.InstallerManifest.Installer.UpgradeBehavior
-import java.io.File
-import java.io.IOException
-import java.io.RandomAccessFile
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
-class FileAnalyser(private val file: File) {
+class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
     private val msi = if (file.extension == InstallerType.MSI.toString() && Platform.isWindows()) Msi(file) else null
     private val msix = when (file.extension) {
-        InstallerType.MSIX.toString(), InstallerType.APPX.toString() -> Msix(file)
+        InstallerType.MSIX.toString(), InstallerType.APPX.toString() -> Msix(file.toFile())
         else -> null
     }
     private val msixBundle = when (file.extension) {
-        MsixBundle.msixBundleConst, MsixBundle.appxBundleConst -> MsixBundle(file)
+        MsixBundle.msixBundleConst, MsixBundle.appxBundleConst -> MsixBundle(file.toFile())
         else -> null
     }
-
-    /**
-     * The first 224 bytes of an exe made with NSIS are the same
-     */
-    private val nullsoftBytes = byteArrayOf(
-        77, 90, -112, 0, 3, 0, 0, 0, 4, 0, 0, 0, -1, -1, 0, 0, -72, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -40, 0, 0, 0, 14, 31, -70, 14, 0,
-        -76, 9, -51, 33, -72, 1, 76, -51, 33, 84, 104, 105, 115, 32, 112, 114, 111, 103, 114, 97, 109, 32, 99, 97, 110,
-        110, 111, 116, 32, 98, 101, 32, 114, 117, 110, 32, 105, 110, 32, 68, 79, 83, 32, 109, 111, 100, 101, 46, 13, 13,
-        10, 36, 0, 0, 0, 0, 0, 0, 0, -83, 49, 8, -127, -23, 80, 102, -46, -23, 80, 102, -46, -23, 80, 102, -46, 42, 95,
-        57, -46, -21, 80, 102, -46, -23, 80, 103, -46, 76, 80, 102, -46, 42, 95, 59, -46, -26, 80, 102, -46, -67, 115,
-        86, -46, -29, 80, 102, -46, 46, 86, 96, -46, -24, 80, 102, -46, 82, 105, 99, 104, -23, 80, 102, -46, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 69, 0, 0, 76, 1, 5, 0
-    )
-
-    /**
-     * The first 264 bytes of an exe made with Inno Setup are the same
-     */
-    private val innoBytes = byteArrayOf(
-        77, 90, 80, 0, 2, 0, 0, 0, 4, 0, 15, 0, -1, -1, 0, 0, -72, 0, 0, 0, 0, 0, 0, 0, 64, 0, 26, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -70, 16, 0, 14, 31,
-        -76, 9, -51, 33, -72, 1, 76, -51, 33, -112, -112, 84, 104, 105, 115, 32, 112, 114, 111, 103, 114, 97, 109, 32,
-        109, 117, 115, 116, 32, 98, 101, 32, 114, 117, 110, 32, 117, 110, 100, 101, 114, 32, 87, 105, 110, 51, 50, 13,
-        10, 36, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 69, 0, 0, 76, 1, 10,
-        0
-    )
 
     fun getInstallerType(): InstallerType? {
         return when (file.extension) {
@@ -60,7 +35,7 @@ class FileAnalyser(private val file: File) {
             InstallerType.ZIP.toString() -> InstallerType.ZIP
             InstallerType.APPX.toString() -> InstallerType.APPX
             InstallerType.MSIX.toString() -> InstallerType.MSIX
-            else -> RandomAccessFile(file, readOnly).use {
+            else -> fileSystem.openReadOnly(file).use {
                 when {
                     it.isNullsoft() -> InstallerType.NULLSOFT
                     it.isInno() -> InstallerType.INNO
@@ -110,75 +85,110 @@ class FileAnalyser(private val file: File) {
     fun getMinVersion(): String? = msix?.minVersion ?: msixBundle?.packages?.first()?.minVersion
 
     /**
-     * Returns `true` if the [RandomAccessFile] has been made with the Nullsoft Scriptable Install System.
+     * Returns `true` if the [FileHandle] has been made with the Nullsoft Scriptable Install System.
      *
      * This works by comparing the first 224 bytes of the file to [nullsoftBytes].
      *
-     * @return `true` if the [RandomAccessFile] has been made with NSIS, `false` otherwise.
+     * @return `true` if the [FileHandle] has been made with NSIS, `false` otherwise.
      */
-    private fun RandomAccessFile.isNullsoft(): Boolean {
-        val magicBytes = ByteArray(nullsoftBytes.size)
-        seek(0)
-        read(magicBytes)
-        return magicBytes.contentEquals(nullsoftBytes)
+    private fun FileHandle.isNullsoft(): Boolean {
+        return Buffer().also { read(0L, it, nullsoftBytes.size.toLong()) }.rangeEquals(0L, nullsoftBytes)
     }
 
     /**
-     * Returns `true` if the [RandomAccessFile] has been made with Inno Setup.
+     * Returns `true` if the [FileHandle] has been made with Inno Setup.
      *
      * This works by comparing the first 264 bytes of the file to [innoBytes].
      *
-     * @return `true` if the [RandomAccessFile] has been made with Inno Setup, `false` otherwise.
+     * @return `true` if the [FileHandle] has been made with Inno Setup, `false` otherwise.
      */
-    private fun RandomAccessFile.isInno(): Boolean {
-        val magicBytes = ByteArray(innoBytes.size)
-        seek(0)
-        read(magicBytes)
-        return magicBytes.contentEquals(innoBytes)
+    private fun FileHandle.isInno(): Boolean {
+        return Buffer().also { read(0L, it, innoBytes.size.toLong()) }.rangeEquals(0L, innoBytes)
     }
 
     /**
-     * Returns `true` if the [RandomAccessFile] has been made with WiX's burn installer type.
+     * Returns `true` if the [FileHandle] has been made with WiX's burn installer type.
      *
      * This works by searching for the `.wixburn` header in a specific section of the binary.
      *
      * See [GetWixburnSectionInfo](https://github.com/AnalogJ/Wix3.6Toolset/blob/master/RC0-source/wix36-sources/src/wix/BurnCommon.cs#L252) in WiX Toolset v3.
-     * @return `true` if the [RandomAccessFile] has been made with WiX's burn installer type, `false` otherwise.
+     * @return `true` if the [FileHandle] has been made with WiX's burn installer type, `false` otherwise.
      */
-    private fun RandomAccessFile.isBurn(): Boolean {
-        val bytes = ByteArray(8)
-        seek(0)
-        skipBytes(UInt.MAX_VALUE.toInt())
-        repeat(UShort.MAX_VALUE.toInt()) {
-            read(bytes)
-            if (bytes.contentEquals(wixBurnHeader.toByteArray())) {
-                return true
+    private fun FileHandle.isBurn(): Boolean {
+        source().buffer().use { bufferedSource ->
+            val sink = Buffer()
+            var offset = 0L
+            val wixBurnHeaderBytes = wixBurnHeader.encodeUtf8()
+            repeat(UShort.MAX_VALUE.toInt()) {
+                bufferedSource.read(sink, burnBufferSize)
+                if (sink.rangeEquals(offset, wixBurnHeaderBytes)) return true
+                offset += burnBufferSize
             }
+            return false
         }
-        return false
     }
 
-    private fun getPEArchitectureValue(): String? {
-        return try {
-            RandomAccessFile(file, readOnly).use {
-                it.seek(peHeaderLocation)
-                val peSignatureBuffer = ByteArray(Int.SIZE_BYTES)
-                it.read(peSignatureBuffer)
-                val offset: Int = ByteBuffer.wrap(peSignatureBuffer).order(ByteOrder.LITTLE_ENDIAN).int
-                it.seek((offset + Int.SIZE_BYTES).toLong())
-                val machineBuffer = ByteArray(Short.SIZE_BYTES)
-                it.read(machineBuffer)
-                val machine: Short = ByteBuffer.wrap(machineBuffer).order(ByteOrder.LITTLE_ENDIAN).short
-                Integer.toHexString(machine.toInt() and UShort.MAX_VALUE.toInt())
-            }
-        } catch (_: IOException) {
-            null
+    /**
+     * Returns the hexadecimal string representation of the machine value
+     * stored in the PE header of the given file.
+     *
+     * This function reads the PE header of the file and extracts the machine
+     * value, which represents the target architecture of the binary. The machine
+     * value is a 2-byte little-endian integer stored at a specific offset in the
+     * PE header.
+     *
+     * @return The hexadecimal string representation of the machine value.
+     */
+    fun getPEArchitectureValue(): String {
+        fileSystem.source(file).buffer().use { source ->
+            // Skip DOS header
+            source.skip(peHeaderLocation)
+            val peOffset = source.readIntLe()
+
+            // Skip PE signature
+            source.skip(peOffset - peHeaderLocation)
+
+            // Read machine value from PE header
+            val machine = source.readShortLe() // Machine is stored as a 2-byte little-endian value
+
+            return machine.toInt().and(UShort.MAX_VALUE.toInt()).toString(hexBase16)
         }
     }
 
     companion object {
-        private const val wixBurnHeader: String = ".wixburn"
-        private const val peHeaderLocation: Long = 0x3C
-        private const val readOnly = "r"
+        const val burnBufferSize: Long = 8
+        const val wixBurnHeader = ".wixburn"
+        const val peHeaderLocation: Long = 0x3C
+        private const val hexBase16 = 16
+
+        /**
+         * The first 224 bytes of an exe made with NSIS are the same
+         */
+        val nullsoftBytes = ByteString.of(
+            77, 90, -112, 0, 3, 0, 0, 0, 4, 0, 0, 0, -1, -1, 0, 0, -72, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -40, 0, 0, 0, 14, 31, -70,
+            14, 0, -76, 9, -51, 33, -72, 1, 76, -51, 33, 84, 104, 105, 115, 32, 112, 114, 111, 103, 114, 97, 109, 32,
+            99, 97, 110, 110, 111, 116, 32, 98, 101, 32, 114, 117, 110, 32, 105, 110, 32, 68, 79, 83, 32, 109, 111, 100,
+            101, 46, 13, 13, 10, 36, 0, 0, 0, 0, 0, 0, 0, -83, 49, 8, -127, -23, 80, 102, -46, -23, 80, 102, -46, -23,
+            80, 102, -46, 42, 95, 57, -46, -21, 80, 102, -46, -23, 80, 103, -46, 76, 80, 102, -46, 42, 95, 59, -46, -26,
+            80, 102, -46, -67, 115, 86, -46, -29, 80, 102, -46, 46, 86, 96, -46, -24, 80, 102, -46, 82, 105, 99, 104,
+            -23, 80, 102, -46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 69, 0, 0, 76,
+            1, 5, 0
+        )
+
+        /**
+         * The first 264 bytes of an exe made with Inno Setup are the same
+         */
+        val innoBytes = ByteString.of(
+            77, 90, 80, 0, 2, 0, 0, 0, 4, 0, 15, 0, -1, -1, 0, 0, -72, 0, 0, 0, 0, 0, 0, 0, 64, 0, 26, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, -70, 16, 0, 14,
+            31, -76, 9, -51, 33, -72, 1, 76, -51, 33, -112, -112, 84, 104, 105, 115, 32, 112, 114, 111, 103, 114, 97,
+            109, 32, 109, 117, 115, 116, 32, 98, 101, 32, 114, 117, 110, 32, 117, 110, 100, 101, 114, 32, 87, 105, 110,
+            51, 50, 13, 10, 36, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            80, 69, 0, 0, 76, 1, 10, 0
+        )
     }
 }

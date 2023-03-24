@@ -12,12 +12,11 @@ object Http {
     /**
      * The [HttpClient] instance.
      *
-     * This uses the [Java] engine for performance and support for HTTP 2.
+     * This uses the [Java] engine
      */
     val client = HttpClient(Java) {
         engine {
             pipelining = true
-            protocolVersion = java.net.http.HttpClient.Version.HTTP_2
         }
         install(UserAgent) {
             agent = userAgent

@@ -44,7 +44,7 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
  * @return The extension of this Url, or "winget-tmp" if no extension is found.
  */
 fun Url.getExtension() = fullPath
-    .substringAfterLast(".")
+    .substringAfterLast('.')
     .split("[^A-Za-z0-9]".toRegex())
     .firstOrNull()
     ?: "winget-tmp"

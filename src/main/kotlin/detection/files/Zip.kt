@@ -8,6 +8,7 @@ import com.github.ajalt.mordant.terminal.YesNoPrompt
 import detection.files.msi.Msi
 import detection.files.msix.MsixBundle
 import input.Prompts
+import okio.Path.Companion.toOkioPath
 import schemas.manifest.InstallerManifest
 import java.io.File
 import java.util.zip.ZipEntry
@@ -35,10 +36,10 @@ class Zip(zip: File, terminal: Terminal) {
             val zipEntries = zipFile.entries()
                 .asSequence()
                 .toList()
-                .filter { zipEntry -> zipEntry.name.substringAfterLast(".").lowercase() in validExtensionsList }
+                .filter { zipEntry -> zipEntry.name.substringAfterLast('.').lowercase() in validExtensionsList }
             installerTypeCounts = validExtensionsList.associateWith { validExtension ->
                 zipEntries.count { zipEntry ->
-                    val extension = zipEntry.name.substringAfterLast(".").lowercase()
+                    val extension = zipEntry.name.substringAfterLast('.').lowercase()
                     extension == validExtensionsList.find { it == validExtension }
                 }
             }
@@ -191,7 +192,7 @@ class Zip(zip: File, terminal: Terminal) {
                             colors.cyan(
                                 buildString {
                                     append("Detected ")
-                                    append(zipEntry.name.substringAfterLast(".").lowercase())
+                                    append(zipEntry.name.substringAfterLast('.').lowercase())
                                     append(" ")
                                     append(index.inc())
                                     append("/")
@@ -225,7 +226,7 @@ class Zip(zip: File, terminal: Terminal) {
         zipFile: ZipFile
     ): InstallerManifest.Installer.NestedInstallerType {
         val smallestEntry = chosenZipEntries.minBy { it.size }
-        return when (smallestEntry.name.substringAfterLast(".").lowercase()) {
+        return when (smallestEntry.name.substringAfterLast('.').lowercase()) {
             InstallerManifest.Installer.NestedInstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
                 InstallerManifest.Installer.NestedInstallerType.MSIX
             }
@@ -243,7 +244,7 @@ class Zip(zip: File, terminal: Terminal) {
                 zipFile.getInputStream(smallestEntry).use { input ->
                     tempFile.outputStream().use(input::copyTo)
                 }
-                if (Msi(tempFile).isWix.also { tempFile.delete() }) {
+                if (Msi(tempFile.toOkioPath()).isWix.also { tempFile.delete() }) {
                     InstallerManifest.Installer.NestedInstallerType.WIX
                 } else {
                     InstallerManifest.Installer.NestedInstallerType.MSI

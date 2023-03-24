@@ -2,8 +2,7 @@
 buildconfig = "3.1.0"
 clikt = "4.0.0.198-SNAPSHOT"
 coroutines = "1.6.4"
-cryptohash = "0.10.1"
-detekt = "1.22.0"
+detekt = "main-SNAPSHOT"
 github-api = "1.314"
 jline = "3.23.0"
 jna = "5.13.0"
@@ -18,6 +17,7 @@ ksp = "1.8.10-1.0.9"
 ktor = "2.2.4"
 mockk = "1.13.4"
 mordant = "2.0.0-beta11.72-SNAPSHOT"
+okio = "3.3.0"
 shadow = "8.1.1"
 skrapeit = "1.2.2"
 slf4j = "2.0.7"
@@ -26,8 +26,6 @@ slf4j = "2.0.7"
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
-
-crypto-cryptohash = { module = "com.appmattus.crypto:cryptohash", version.ref = "cryptohash" }
 
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 
@@ -57,6 +55,9 @@ ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 mordant = { module = "com.github.ajalt.mordant:mordant", version.ref = "mordant" }
+
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
 
 skrapeit-htmlparser = { module = "it.skrape:skrapeit-html-parser", version.ref = "skrapeit" }
 

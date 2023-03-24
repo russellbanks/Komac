@@ -12,9 +12,11 @@ import io.ktor.http.lastModified
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
+import okio.FileSystem
+import okio.Path
+import okio.buffer
 import utils.FileUtils
 import utils.getFileName
-import java.io.File
 import java.time.LocalDate
 import java.time.ZoneOffset
 
@@ -23,29 +25,31 @@ object HttpUtils {
         url: Url,
         packageIdentifier: String,
         packageVersion: String,
-        progress: ProgressAnimation? = null
+        progress: ProgressAnimation? = null,
+        fileSystem: FileSystem,
+        tempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY
     ): DownloadedFile {
-        val file = FileUtils.createTempFile(identifier = packageIdentifier, version = packageVersion, url = url)
-        val fileDeletionThread = Thread { file.delete() }
-        var lastModified: LocalDate? = null
-        prepareGet(url).execute { httpResponse ->
-            lastModified = httpResponse.lastModified()?.toInstant()?.atZone(ZoneOffset.UTC)?.toLocalDate()
-            val channel: ByteReadChannel = httpResponse.body()
-            while (!channel.isClosedForRead) {
-                val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-                while (packet.isNotEmpty) {
-                    file.appendBytes(packet.readBytes())
-                    progress?.update(file.length(), httpResponse.contentLength())
+        val path = FileUtils.createTempFile(packageIdentifier, packageVersion, url, tempDirectory)
+        val fileDeletionThread = Thread { fileSystem.delete(path) }
+        fileSystem.sink(path).buffer().use { sink ->
+            var lastModified: LocalDate? = null
+            prepareGet(url).execute { httpResponse ->
+                lastModified = httpResponse.lastModified()?.toInstant()?.atZone(ZoneOffset.UTC)?.toLocalDate()
+                val channel: ByteReadChannel = httpResponse.body()
+                while (!channel.isClosedForRead) {
+                    val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                    while (packet.isNotEmpty) {
+                        sink.write(packet.readBytes())
+                        fileSystem.metadata(path).size?.let { progress?.update(it, httpResponse.contentLength()) }
+                    }
                 }
             }
+            return DownloadedFile(path, lastModified, fileDeletionThread)
         }
-        return DownloadedFile(file, lastModified, fileDeletionThread)
     }
 
-    data class DownloadedFile(val file: File, val lastModified: LocalDate?, val fileDeletionHook: Thread) {
-        fun removeFileDeletionHook(): Boolean {
-            return Runtime.getRuntime().removeShutdownHook(fileDeletionHook)
-        }
+    data class DownloadedFile(val path: Path, val lastModified: LocalDate?, val fileDeletionHook: Thread) {
+        fun removeFileDeletionHook() = Runtime.getRuntime().removeShutdownHook(fileDeletionHook)
     }
 
     fun Terminal.getDownloadProgressBar(url: Url): ProgressAnimation {

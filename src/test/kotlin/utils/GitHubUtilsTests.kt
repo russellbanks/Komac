@@ -178,8 +178,8 @@ class GitHubUtilsTests : FunSpec({
             GitHubUtils.getBranchName(identifier, version) should startWith("$identifier-$version-")
         }
 
-        test("generated branch name should end with a unique identifier of length 16") {
-            GitHubUtils.getBranchName(identifier, version) shouldMatch "^$identifier-$version-[A-Z0-9]{16}$"
+        test("generated branch name should end with a unique identifier of length 32") {
+            GitHubUtils.getBranchName(identifier, version) shouldMatch "^$identifier-$version-[A-Z0-9]{32}$"
         }
 
         test("generated branch name should be different each time it is generated") {

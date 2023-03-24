@@ -4,6 +4,9 @@ import com.sun.jna.LastErrorException
 import com.sun.jna.Memory
 import com.sun.jna.Platform
 import com.sun.jna.Pointer
+import okio.ByteString
+import okio.ByteString.Companion.encodeUtf8
+import okio.ByteString.Companion.toByteString
 import token.SecretStore
 import token.TokenData
 
@@ -62,8 +65,10 @@ abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
             synchronized(instance) { read = instance.CredRead(key, CredAdvapi32.CRED_TYPE_GENERIC, 0, pcredential) }
             cred = if (read) {
                 val credential = pcredential.credential?.let { CredAdvapi32.CREDENTIAL(it) }
-                val secretBytes: ByteArray? = credential?.CredentialBlob?.getByteArray(0, credential.CredentialBlobSize)
-                val secret = secretBytes?.toString(Charsets.UTF_8)
+                val secretBytes: ByteString? = credential?.CredentialBlob
+                    ?.getByteArray(0, credential.CredentialBlobSize)
+                    ?.toByteString()
+                val secret = secretBytes?.utf8()
                 val username = credential?.UserName
                 if (username != null && secret != null) create(username, secret) else null
             } else {
@@ -111,8 +116,8 @@ abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
     override fun add(key: String, secret: E): Boolean {
         val username = getUsername(secret)
         val credentialBlob = getCredentialBlob(secret)
-        val credBlob = credentialBlob.toByteArray(Charsets.UTF_8)
-        val cred: CredAdvapi32.CREDENTIAL = buildCred(key, username, credBlob)
+        val credBlob = credentialBlob.encodeUtf8()
+        val cred = buildCred(key, username, credBlob)
         return try {
             synchronized(instance) { instance.CredWrite(cred, 0) }
             true
@@ -120,11 +125,10 @@ abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
             false
         } finally {
             cred.CredentialBlob?.clear(credBlob.size.toLong())
-            credBlob.fill(0.toByte())
         }
     }
 
-    private fun buildCred(key: String, username: String, credentialBlob: ByteArray): CredAdvapi32.CREDENTIAL {
+    private fun buildCred(key: String, username: String, credentialBlob: ByteString): CredAdvapi32.CREDENTIAL {
         val credential = CredAdvapi32.CREDENTIAL().apply {
             Flags = 0
             Type = CredAdvapi32.CRED_TYPE_GENERIC
@@ -137,8 +141,8 @@ abstract class CredManagerBackedSecureStore<E : TokenData?> : SecretStore<E> {
         return credential
     }
 
-    private fun getPointer(array: ByteArray): Pointer {
-        return Memory(array.size.toLong()).apply { write(0, array, 0, array.size) }
+    private fun getPointer(array: ByteString): Pointer {
+        return Memory(array.size.toLong()).apply { write(0, array.toByteArray(), 0, array.size) }
     }
 
     companion object {
