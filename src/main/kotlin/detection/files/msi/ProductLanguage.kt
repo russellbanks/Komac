@@ -3,8 +3,8 @@ package detection.files.msi
 import com.sun.jna.Native
 import com.sun.jna.Platform
 
-class ProductLanguage(languageCode: Int?) {
-    val locale = languageCode?.toLanguageTag()
+class ProductLanguage(languageCode: Int) {
+    val locale = languageCode.toLanguageTag()
 
     init {
         require(Platform.isWindows())
