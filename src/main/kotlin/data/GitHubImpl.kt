@@ -69,7 +69,7 @@ class GitHubImpl(token: String, client: HttpClient) {
         ) ?: return
         warning("A pull request for $identifier $version was created on ${existingPullRequest.createdAt}")
         info(existingPullRequest.htmlUrl)
-        if (isCI || YesNoPrompt("Would you like to proceed?", terminal = this).ask() != true) {
+        if (!isCI && YesNoPrompt("Would you like to proceed?", terminal = this).ask() != true) {
             throw ProgramResult(0)
         }
         println()
