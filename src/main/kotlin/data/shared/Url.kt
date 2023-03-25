@@ -15,6 +15,8 @@ import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
 import detection.github.GitHubDetection
+import extensions.PathExtensions.extension
+import extensions.PathExtensions.hash
 import input.ExitCode
 import input.Prompts
 import io.ktor.client.HttpClient
@@ -26,9 +28,9 @@ import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
 import network.HttpUtils.downloadFile
 import network.HttpUtils.getDownloadProgressBar
+import okio.FileSystem
 import schemas.manifest.InstallerManifest
 import utils.FileAnalyser
-import utils.Hashing.hash
 import utils.findArchitecture
 import utils.getRedirectedUrl
 import utils.isRedirect
@@ -43,7 +45,7 @@ object Url {
         parameterUrl: Url? = null
     ) = with(allManifestData) {
         installerUrl = parameterUrl ?: promptForInstaller(client)
-        downloadInstaller(allManifestData, client, gitHubImpl)
+        downloadInstaller(allManifestData, client, gitHubImpl, FileSystem.SYSTEM)
         msixBundleDetection(allManifestData)
     }
 
@@ -89,7 +91,8 @@ object Url {
     private suspend fun Terminal.downloadInstaller(
         allManifestData: AllManifestData,
         client: HttpClient,
-        gitHubImpl: GitHubImpl
+        gitHubImpl: GitHubImpl,
+        fileSystem: FileSystem
     ) = with(allManifestData) {
         if (installers.map { it.installerUrl }.contains(installerUrl)) {
             installers += installers.first { it.installerUrl == installerUrl }
@@ -101,27 +104,27 @@ object Url {
                 pageScraper = PageScraper(installerUrl, client)
             }
             val progress = getDownloadProgressBar(installerUrl).apply(ProgressAnimation::start)
-            val downloadedFile = client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress)
+            val downloadedFile = client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress, fileSystem)
             progress.clear()
-            val fileAnalyser = FileAnalyser(downloadedFile.file)
+            val fileAnalyser = FileAnalyser(downloadedFile.path, fileSystem)
             installerType = fileAnalyser.getInstallerType()
             architecture = installerUrl.findArchitecture() ?: fileAnalyser.getArchitecture()
             scope = fileAnalyser.getScope()
             upgradeBehavior = fileAnalyser.getUpgradeBehaviour()
-            installerSha256 = gitHubDetection?.sha256?.await() ?: downloadedFile.file.hash()
-            when (downloadedFile.file.extension.lowercase()) {
+            installerSha256 = gitHubDetection?.sha256?.await() ?: downloadedFile.path.hash(fileSystem)
+            when (downloadedFile.path.extension.lowercase()) {
                 InstallerManifest.InstallerType.MSIX.toString(),
-                InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(downloadedFile.file)
+                InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(downloadedFile.path.toFile())
                 MsixBundle.msixBundleConst,
-                MsixBundle.appxBundleConst -> msixBundle = MsixBundle(downloadedFile.file)
-                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(downloadedFile.file)
+                MsixBundle.appxBundleConst -> msixBundle = MsixBundle(downloadedFile.path.toFile())
+                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(downloadedFile.path)
                 InstallerManifest.InstallerType.ZIP.toString() -> zip = Zip(
-                    zip = downloadedFile.file,
+                    zip = downloadedFile.path.toFile(),
                     terminal = this@downloadInstaller
                 )
             }
             with(downloadedFile) {
-                file.delete()
+                fileSystem.delete(path)
                 removeFileDeletionHook()
             }
         }

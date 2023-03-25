@@ -22,7 +22,8 @@ class Description {
 
         override val validationRules: ValidationRules = ValidationRules(
             minLength = 3,
-            maxLength = 10_000
+            maxLength = 10_000,
+            isRequired = false
         )
 
         override val default: String? = previousDescription

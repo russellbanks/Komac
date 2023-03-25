@@ -1,10 +1,13 @@
 package detection.files.msix
 
-import com.appmattus.crypto.Algorithm
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
+import okio.ByteString.Companion.readByteString
+import okio.HashingSink.Companion.sha256
+import okio.blackholeSink
+import okio.buffer
+import okio.source
 import schemas.manifest.InstallerManifest
-import utils.Hashing
 import utils.MsixUtils
 import java.io.File
 import java.util.zip.ZipFile
@@ -52,9 +55,14 @@ class Msix(msixFile: File) {
                 )
             }
             zip.getEntry(appxSignatureP7x)?.let { appxSignature ->
-                val digest = Algorithm.SHA_256.createDigest()
-                zip.getInputStream(appxSignature).use { Hashing.updateDigest(it, digest) }
-                signatureSha256 = Hashing.buildHash(digest.digest())
+                zip.getInputStream(appxSignature).use {
+                    sha256(blackholeSink()).use { hashingSink ->
+                        it.source().buffer().use { source ->
+                            source.readAll(hashingSink)
+                            signatureSha256 = hashingSink.hash.hex()
+                        }
+                    }
+                }
             }
         }
     }

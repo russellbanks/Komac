@@ -1,6 +1,6 @@
 package utils
 
-import com.appmattus.crypto.Algorithm
+import okio.ByteString.Companion.encode
 
 object MsixUtils {
     private const val firstEightBytes = 8
@@ -27,12 +27,13 @@ object MsixUtils {
      * @return the package family name generated using the algorithm.
      */
     fun getPackageFamilyName(identityName: String, identityPublisher: String): String {
-        val hashPart = Algorithm.SHA_256.createDigest()
-            .digest(identityPublisher.toByteArray(Charsets.UTF_16LE))
+        val hashPart = identityPublisher.encode(Charsets.UTF_16LE)
+            .sha256()
+            .toByteArray()
             .take(firstEightBytes)
             .map { it.toInt() and hex255 }
             .joinToString("") { it.toString(binaryRadix).padStart(padLength, '0') }
-            .plus("0")
+            .plus('0')
             .chunked(bitGroupsSize)
             .map { "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[it.toInt(binaryRadix)] }
             .joinToString("")

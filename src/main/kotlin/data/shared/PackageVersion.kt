@@ -49,7 +49,7 @@ object PackageVersion : TextPrompt {
      * Returns the highest version string from a list of version strings.
      */
     fun List<String>.getHighestVersion(): String? {
-        return map { version -> version.split(".").map(::parseVersionPart) }
+        return map { version -> version.split('.').map(::parseVersionPart) }
             .maxWithOrNull(::compareVersionParts)
             ?.joinToString(".") { (value, supplement) -> "$value$supplement" }
     }

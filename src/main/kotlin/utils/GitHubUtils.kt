@@ -1,13 +1,12 @@
 package utils
 
-import com.appmattus.crypto.Algorithm
 import com.russellbanks.Komac.BuildConfig
 import data.VersionUpdateState
 import data.shared.Locale
+import okio.ByteString.Companion.encodeUtf8
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GHTreeEntry
 import schemas.Schemas
-import utils.Hashing.hash
 import java.io.IOException
 import java.time.Instant
 import kotlin.random.Random
@@ -64,7 +63,7 @@ object GitHubUtils {
      * identifier
      */
     fun getPackagePath(identifier: String): String {
-        return "manifests/${identifier.first().lowercase()}/${identifier.replace(".", "/")}"
+        return "manifests/${identifier.first().lowercase()}/${identifier.replace('.', '/')}"
     }
 
     /**
@@ -102,10 +101,10 @@ object GitHubUtils {
             .getEntry("manifests")
             .asTree()
             .getEntry(identifier.first().lowercase())
-            .let { identifier.split(".").fold(it) { acc, s -> acc.asTree().getEntry(s) } }
+            .let { identifier.split('.').fold(it) { acc, s -> acc.asTree().getEntry(s) } }
             .let { winGetPkgs.getTreeRecursive(it.sha, 1).tree }
             .filter { ghTreeEntry -> ghTreeEntry.path.count { it == '/' } in 1..2 }
-            .groupBy { it.path.substringBefore("/") }
+            .groupBy { it.path.substringBefore('/') }
             .filterNot { entry -> entry.value.any { it.type == "tree" } }
             .map(Map.Entry<String, List<GHTreeEntry>>::key)
             .takeUnless(List<String>::isEmpty)
@@ -144,7 +143,7 @@ object GitHubUtils {
      */
     fun getBranchName(packageIdentifier: String, packageVersion: String): String {
         val timestamp: Instant = Instant.now()
-        val hash = "$packageIdentifier-$packageVersion-$timestamp".hash(Algorithm.XXH3_64()).uppercase()
+        val hash = "$packageIdentifier-$packageVersion-$timestamp".encodeUtf8().md5().hex().uppercase()
         return "$packageIdentifier-$packageVersion-$hash"
     }
 }
