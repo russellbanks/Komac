@@ -8,7 +8,6 @@ import extensions.PathExtensions.extension
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
-import okio.ByteString.Companion.toByteString
 import okio.FileHandle
 import okio.FileSystem
 import okio.Path

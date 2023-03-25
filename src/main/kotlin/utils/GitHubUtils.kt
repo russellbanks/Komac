@@ -101,13 +101,16 @@ object GitHubUtils {
             .getEntry("manifests")
             .asTree()
             .getEntry(identifier.first().lowercase())
-            .let { identifier.split('.').fold(it) { acc, s -> acc.asTree().getEntry(s) } }
-            .let { winGetPkgs.getTreeRecursive(it.sha, 1).tree }
-            .filter { ghTreeEntry -> ghTreeEntry.path.count { it == '/' } in 1..2 }
-            .groupBy { it.path.substringBefore('/') }
-            .filterNot { entry -> entry.value.any { it.type == "tree" } }
-            .map(Map.Entry<String, List<GHTreeEntry>>::key)
-            .takeUnless(List<String>::isEmpty)
+            .let { identifier.split('.').fold(it) { acc, s -> acc?.asTree()?.getEntry(s) } }
+            ?.run {
+                winGetPkgs.getTreeRecursive(sha, 1).tree
+                    .filter { ghTreeEntry -> ghTreeEntry.path.count { it == '/' } in 1..2 }
+                    .groupBy { it.path.substringBefore('/') }
+                    .filterNot { entry -> entry.value.any { it.type == "tree" } }
+                    .map(Map.Entry<String, List<GHTreeEntry>>::key)
+                    .takeUnless(List<String>::isEmpty)
+            }
+
     } catch (_: IOException) {
         null
     }
