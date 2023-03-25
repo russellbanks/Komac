@@ -158,7 +158,7 @@ class NewManifest : CliktCommand(name = "new") {
             ),
             GitHubUtils.getDefaultLocaleManifestName(
                 identifier = packageIdentifier,
-                defaultLocale = packageVersion,
+                defaultLocale = defaultLocale,
                 previousDefaultLocale = defaultLocaleManifest?.packageLocale
             ) to DefaultLocaleManifestData.createDefaultLocaleManifest(
                 allManifestData = allManifestData,
