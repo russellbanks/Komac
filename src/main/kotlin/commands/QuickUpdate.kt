@@ -80,7 +80,7 @@ class QuickUpdate : CliktCommand(name = "update") {
     private val additionalMetadataParam by option(hidden = true).convert {
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
     }
-    val fileSystem = FileSystem.SYSTEM
+    private val fileSystem = FileSystem.SYSTEM
 
     override fun run(): Unit = runBlocking {
         val terminal = currentContext.terminal

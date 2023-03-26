@@ -1,6 +1,7 @@
 package detection.files.msi
 
 import com.sun.jna.Native
+import com.sun.jna.Platform
 import com.sun.jna.WString
 import com.sun.jna.platform.win32.WinBase.FILETIME
 import com.sun.jna.ptr.IntByReference
@@ -29,7 +30,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
 
     init {
         require(msiFile.extension == InstallerManifest.InstallerType.MSI.toString())
-        if (/* Platform.isWindows() */ false) getValuesFromDatabase() else getValuesFromBinary()
+        if (Platform.isWindows()) getValuesFromDatabase() else getValuesFromBinary()
     }
 
     private fun getValuesFromDatabase() {

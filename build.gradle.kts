@@ -94,6 +94,14 @@ tasks.withType<ShadowJar> {
     }
 }
 
+kotlin {
+    sourceSets.all {
+        languageSettings {
+            languageVersion = "2.0"
+        }
+    }
+}
+
 detekt {
     ignoreFailures = true
 }
