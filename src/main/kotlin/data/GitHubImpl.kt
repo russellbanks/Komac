@@ -10,6 +10,7 @@ import org.kohsuke.github.GHContent
 import org.kohsuke.github.GHDirection
 import org.kohsuke.github.GHIssue
 import org.kohsuke.github.GHIssueSearchBuilder
+import org.kohsuke.github.GHIssueState
 import org.kohsuke.github.GHPullRequest
 import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
@@ -17,7 +18,6 @@ import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
 import utils.GitHubUtils
 import java.io.IOException
-import java.time.LocalDate
 
 class GitHubImpl(token: String, client: HttpClient) {
     val github: GitHub = GitHubBuilder().withConnector(KtorGitHubConnector(client)).withOAuthToken(token).build()
@@ -45,14 +45,13 @@ class GitHubImpl(token: String, client: HttpClient) {
         }
     }
 
-    private fun getExistingPullRequest(identifier: String, version: String, createdSince: LocalDate? = null): GHIssue? {
+    private fun getExistingPullRequest(identifier: String, version: String): GHIssue? {
         return github.searchIssues()
             .q("repo:$Microsoft/$wingetpkgs")
-            .q("is:pr")
+            .q("is:pull-request")
+            .q("in:title")
             .q(identifier)
             .q(version)
-            .q("in:path")
-            .let { if (createdSince != null) it.q("created:>$createdSince") else it }
             .sort(GHIssueSearchBuilder.Sort.CREATED)
             .order(GHDirection.DESC)
             .list()
@@ -61,16 +60,18 @@ class GitHubImpl(token: String, client: HttpClient) {
     }
 
     fun promptIfPullRequestExists(identifier: String, version: String, terminal: Terminal) = with(terminal) {
-        val isCI = System.getenv("CI")?.toBooleanStrictOrNull() == true
-        val existingPullRequest = getExistingPullRequest(
-            identifier = identifier,
-            version = version,
-            createdSince = if (isCI) null else LocalDate.now().minusWeeks(WEEKS_SINCE_CREATED)
-        ) ?: return
-        warning("A pull request for $identifier $version was created on ${existingPullRequest.createdAt}")
+        val existingPullRequest = getExistingPullRequest(identifier, version) ?: return
+        val isOpen = existingPullRequest.state == GHIssueState.OPEN
+        warning(
+            "There is already ${
+                if (isOpen) "an open" else "a closed"
+            } pull request for $identifier $version that was created on ${existingPullRequest.createdAt}"
+        )
         info(existingPullRequest.htmlUrl)
-        if (!isCI && YesNoPrompt("Would you like to proceed?", terminal = this).ask() != true) {
-            throw ProgramResult(0)
+        if (System.getenv("CI")?.toBooleanStrictOrNull() == true) {
+            if (isOpen) throw ProgramResult(0)
+        } else {
+            if (YesNoPrompt("Would you like to proceed?", terminal = this).ask() != true) throw ProgramResult(0)
         }
         println()
     }
@@ -78,7 +79,7 @@ class GitHubImpl(token: String, client: HttpClient) {
     fun versionExists(identifier: String, version: String): Boolean {
         return getMicrosoftWinGetPkgs()
             .getDirectoryContent(GitHubUtils.getPackagePath(identifier))
-            ?.map(GHContent::getName)
+            ?.map(GHContent::name)
             ?.contains(version) == true
     }
 
@@ -193,7 +194,7 @@ class GitHubImpl(token: String, client: HttpClient) {
         const val Microsoft = "Microsoft"
         const val wingetpkgs = "winget-pkgs"
         const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
-        private const val WEEKS_SINCE_CREATED = 2L
+        private const val WEEKS_SINCE_CREATED: Long = 2
         private const val customForkOwnerEnv = "KMC_FRK_OWNER"
     }
 }
