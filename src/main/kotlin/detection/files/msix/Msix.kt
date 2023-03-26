@@ -2,7 +2,6 @@ package detection.files.msix
 
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
-import okio.ByteString.Companion.readByteString
 import okio.HashingSink.Companion.sha256
 import okio.blackholeSink
 import okio.buffer

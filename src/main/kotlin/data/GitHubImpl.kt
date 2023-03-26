@@ -194,7 +194,6 @@ class GitHubImpl(token: String, client: HttpClient) {
         const val Microsoft = "Microsoft"
         const val wingetpkgs = "winget-pkgs"
         const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
-        private const val WEEKS_SINCE_CREATED: Long = 2
         private const val customForkOwnerEnv = "KMC_FRK_OWNER"
     }
 }

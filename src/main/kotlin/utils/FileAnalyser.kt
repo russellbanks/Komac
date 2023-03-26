@@ -1,6 +1,5 @@
 package utils
 
-import com.sun.jna.Platform
 import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle

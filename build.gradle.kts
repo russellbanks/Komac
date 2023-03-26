@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "com.russellbanks"
-version = "1.3.2"
+version = "1.4.0"
 
 repositories {
     mavenCentral()
@@ -113,9 +113,12 @@ tasks.jpackage {
     addModules = listOf(
         "java.base",
         "java.desktop",
+        "java.instrument",
         "java.management",
         "java.net.http",
-        "java.sql"
+        "java.sql",
+        "jdk.crypto.cryptoki",
+        "jdk.unsupported"
     )
     resourceDir = "$rootDir/config/wix"
     appName = project.name

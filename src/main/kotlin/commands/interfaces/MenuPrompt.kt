@@ -12,7 +12,7 @@ interface MenuPrompt<T> : Prompt<T> {
 
     override suspend fun prompt(terminal: Terminal): T? = with(terminal) {
         println(colors.brightYellow("Enter the ${name.lowercase()}"))
-        if (default != null) println(colors.muted("Previous value: $default"))
+        default?.let { muted("Previous value: $it") }
         return menu(
             items = items,
             default = default
