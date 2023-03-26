@@ -117,7 +117,7 @@ object Url {
                 InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(downloadedFile.path.toFile())
                 MsixBundle.msixBundleConst,
                 MsixBundle.appxBundleConst -> msixBundle = MsixBundle(downloadedFile.path.toFile())
-                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(downloadedFile.path)
+                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(downloadedFile.path, fileSystem)
                 InstallerManifest.InstallerType.ZIP.toString() -> zip = Zip(
                     zip = downloadedFile.path.toFile(),
                     terminal = this@downloadInstaller

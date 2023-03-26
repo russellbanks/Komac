@@ -18,7 +18,7 @@ import schemas.manifest.InstallerManifest.Installer.Scope
 import schemas.manifest.InstallerManifest.Installer.UpgradeBehavior
 
 class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
-    private val msi = if (file.extension == InstallerType.MSI.toString() && Platform.isWindows()) Msi(file) else null
+    private val msi = if (file.extension == InstallerType.MSI.toString()) Msi(file, fileSystem) else null
     private val msix = when (file.extension) {
         InstallerType.MSIX.toString(), InstallerType.APPX.toString() -> Msix(file.toFile())
         else -> null
