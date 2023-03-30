@@ -19,14 +19,16 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
     val archInUrl = Regex("(x86_64|i?[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?|amd64?)", RegexOption.IGNORE_CASE)
         .find(fullPath)
         ?.run { groupValues.last() }
-    return when (archInUrl?.lowercase()) {
-        "aarch" -> InstallerManifest.Installer.Architecture.ARM
-        "aarch64" -> InstallerManifest.Installer.Architecture.ARM64
-        "x86_64", "amd64" -> InstallerManifest.Installer.Architecture.X64
-        "i386", "386", "i486", "486", "i586", "586", "i686", "686" -> InstallerManifest.Installer.Architecture.X86
-        else -> {
-            try {
-                InstallerManifest.Installer.Architecture.valueOf(archInUrl?.uppercase().orEmpty())
+        ?.lowercase()
+
+    return archInUrl?.let { arch ->
+        when {
+            arch.startsWith("aarch") -> InstallerManifest.Installer.Architecture.ARM.takeIf { arch == "aarch" }
+                ?: InstallerManifest.Installer.Architecture.ARM64
+            arch == "x86_64" || arch == "amd64" -> InstallerManifest.Installer.Architecture.X64
+            arch matches Regex("i?[3-6]86") || arch == "x32" -> InstallerManifest.Installer.Architecture.X86
+            else -> try {
+                InstallerManifest.Installer.Architecture.valueOf(arch.uppercase())
             } catch (_: IllegalArgumentException) {
                 null
             }

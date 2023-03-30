@@ -16,7 +16,7 @@ class UrlUtilTests : FunSpec({
         fun architectureUrl(architecture: String) = Url("file-$architecture.extension")
 
         context("x86 tests") {
-            withData("x86", "i386", "386", "i486", "486", "i586", "586", "i686", "686") {
+            withData("x86", "i386", "386", "i486", "486", "i586", "586", "i686", "686", "x32") {
                 architectureUrl(it).findArchitecture() shouldBe Architecture.X86
             }
         }
