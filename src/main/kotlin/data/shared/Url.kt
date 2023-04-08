@@ -15,8 +15,8 @@ import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
 import detection.github.GitHubDetection
-import extensions.PathExtensions.extension
-import extensions.PathExtensions.hash
+import extensions.extension
+import extensions.hash
 import input.ExitCode
 import input.Prompts
 import io.ktor.client.HttpClient
@@ -111,7 +111,7 @@ object Url {
             architecture = installerUrl.findArchitecture() ?: fileAnalyser.getArchitecture()
             scope = fileAnalyser.getScope()
             upgradeBehavior = fileAnalyser.getUpgradeBehaviour()
-            installerSha256 = gitHubDetection?.sha256?.await() ?: downloadedFile.path.hash(fileSystem)
+            installerSha256 = gitHubDetection?.sha256 ?: downloadedFile.path.hash(fileSystem)
             when (downloadedFile.path.extension.lowercase()) {
                 InstallerManifest.InstallerType.MSIX.toString(),
                 InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(downloadedFile.path.toFile())

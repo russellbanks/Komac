@@ -52,14 +52,12 @@ object HttpUtils {
         fun removeFileDeletionHook() = Runtime.getRuntime().removeShutdownHook(fileDeletionHook)
     }
 
-    fun Terminal.getDownloadProgressBar(url: Url): ProgressAnimation {
-        return progressAnimation {
-            url.getFileName()?.let(::text)
-            percentage()
-            progressBar()
-            completed()
-            speed("B/s")
-            timeRemaining()
-        }
+    fun Terminal.getDownloadProgressBar(url: Url): ProgressAnimation = progressAnimation {
+        url.getFileName()?.let(::text)
+        percentage()
+        progressBar()
+        completed()
+        speed("B/s")
+        timeRemaining()
     }
 }

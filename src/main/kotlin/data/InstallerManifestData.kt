@@ -11,7 +11,7 @@ import schemas.manifest.InstallerManifest
 import utils.ManifestUtils.updateVersionInString
 
 object InstallerManifestData {
-    suspend fun addInstaller(
+    fun addInstaller(
         allManifestData: AllManifestData,
         previousManifest: InstallerManifest?,
         previousDefaultLocaleData: DefaultLocaleManifest?
@@ -38,7 +38,7 @@ object InstallerManifestData {
                 it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString(allVersions, packageVersion))
             },
             installerUrl = installerUrl,
-            installerSha256 = (gitHubDetection?.sha256?.await() ?: installerSha256).uppercase(),
+            installerSha256 = (gitHubDetection?.sha256 ?: installerSha256).uppercase(),
             signatureSha256 = msix?.signatureSha256 ?: msixBundle?.signatureSha256,
             scope = scope ?: previousInstaller?.scope ?: previousManifest?.scope?.toPerScopeInstallerType(),
             packageFamilyName = msix?.packageFamilyName

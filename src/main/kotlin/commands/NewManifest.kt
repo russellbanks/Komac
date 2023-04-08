@@ -31,11 +31,11 @@ import data.shared.Locale
 import data.shared.PackageIdentifier
 import data.shared.PackageName
 import data.shared.PackageVersion
-import data.shared.PackageVersion.getHighestVersion
 import data.shared.Publisher
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
-import extensions.GitHubExtensions.printResultTo
+import extensions.printResultTo
+import extensions.versionStringComparator
 import input.ExitCode
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
@@ -75,7 +75,7 @@ class NewManifest : CliktCommand(name = "new") {
             packageIdentifier = prompt(PackageIdentifier)
             if (!tokenStore.isTokenValid.await()) tokenStore.invalidTokenPrompt(currentContext.terminal)
             allVersions = GitHubUtils.getAllVersions(gitHubImpl.getMicrosoftWinGetPkgs(), packageIdentifier)
-            val latestVersion = allVersions?.getHighestVersion()
+            val latestVersion = allVersions?.maxWithOrNull(versionStringComparator)
             if (latestVersion != null) {
                 info("Found $packageIdentifier in the winget-pkgs repository")
                 info("Found latest version: $latestVersion")

@@ -45,19 +45,17 @@ class GitHubImpl(token: String, client: HttpClient) {
         }
     }
 
-    private fun getExistingPullRequest(identifier: String, version: String): GHIssue? {
-        return github.searchIssues()
-            .q("repo:$Microsoft/$wingetpkgs")
-            .q("is:pull-request")
-            .q("in:title")
-            .q(identifier)
-            .q(version)
-            .sort(GHIssueSearchBuilder.Sort.CREATED)
-            .order(GHDirection.DESC)
-            .list()
-            .withPageSize(1)
-            .firstOrNull()
-    }
+    private fun getExistingPullRequest(identifier: String, version: String): GHIssue? = github.searchIssues()
+        .q("repo:$Microsoft/$wingetpkgs")
+        .q("is:pull-request")
+        .q("in:title")
+        .q(identifier)
+        .q(version)
+        .sort(GHIssueSearchBuilder.Sort.CREATED)
+        .order(GHDirection.DESC)
+        .list()
+        .withPageSize(1)
+        .firstOrNull()
 
     fun promptIfPullRequestExists(identifier: String, version: String, terminal: Terminal) = with(terminal) {
         val existingPullRequest = getExistingPullRequest(identifier, version) ?: return
@@ -76,12 +74,10 @@ class GitHubImpl(token: String, client: HttpClient) {
         println()
     }
 
-    fun versionExists(identifier: String, version: String): Boolean {
-        return getMicrosoftWinGetPkgs()
-            .getDirectoryContent(GitHubUtils.getPackagePath(identifier))
-            ?.map(GHContent::name)
-            ?.contains(version) == true
-    }
+    fun versionExists(identifier: String, version: String): Boolean = getMicrosoftWinGetPkgs()
+        .getDirectoryContent(GitHubUtils.getPackagePath(identifier))
+        ?.map(GHContent::name)
+        ?.contains(version) == true
 
     fun getMicrosoftWinGetPkgs(): GHRepository {
         var count = 0

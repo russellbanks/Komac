@@ -2,7 +2,7 @@ package data.shared
 
 import data.GitHubImpl
 import data.VersionUpdateState
-import data.shared.PackageVersion.getHighestVersion
+import extensions.versionStringComparator
 
 fun getUpdateState(
     packageIdentifier: String,
@@ -13,7 +13,9 @@ fun getUpdateState(
     return when {
         latestVersion == null -> VersionUpdateState.NewPackage
         gitHubImpl.versionExists(packageIdentifier, packageVersion) -> VersionUpdateState.UpdateVersion
-        packageVersion == listOf(packageVersion, latestVersion).getHighestVersion() -> VersionUpdateState.NewVersion
+        packageVersion == maxOf(packageVersion, latestVersion, versionStringComparator) ->
+            VersionUpdateState.NewVersion
+
         else -> VersionUpdateState.AddVersion
     }
 }

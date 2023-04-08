@@ -3,7 +3,7 @@ package utils
 import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
-import extensions.PathExtensions.extension
+import extensions.extension
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
