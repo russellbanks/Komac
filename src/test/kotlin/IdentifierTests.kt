@@ -11,7 +11,7 @@ class IdentifierTests : FunSpec({
 
         test("identifier greater than max segments fails") {
             PackageIdentifier.getError(
-                mutableListOf<String>().apply { repeat(9) { add("A") } }.joinToString(".")
+                List(9) { 'A' }.joinToString(".")
             ) shouldNotBe null
         }
 

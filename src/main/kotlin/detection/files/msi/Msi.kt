@@ -6,7 +6,7 @@ import com.sun.jna.WString
 import com.sun.jna.platform.win32.WinBase.FILETIME
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import extensions.PathExtensions.extension
+import extensions.extension
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8

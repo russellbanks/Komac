@@ -45,52 +45,33 @@ object ParameterUrls {
         newInstallers: List<InstallerManifest.Installer>,
         previousInstallers: List<InstallerManifest.Installer>
     ): Map<InstallerManifest.Installer, InstallerManifest.Installer> {
-        val result = hashMapOf<InstallerManifest.Installer, InstallerManifest.Installer>()
+        val result = mutableMapOf<InstallerManifest.Installer, InstallerManifest.Installer>()
+
         for (previousInstaller in previousInstallers) {
-            var newInstaller: InstallerManifest.Installer? = newInstallers.firstOrNull {
-                it.architecture == previousInstaller.architecture &&
-                        it.installerType == previousInstaller.installerType &&
-                        it.scope == previousInstaller.scope
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture &&
-                            it.installerType == previousInstaller.installerType &&
-                            it.scope == null
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture &&
-                            it.installerType == null &&
-                            it.scope == previousInstaller.scope
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture &&
-                            it.installerType == previousInstaller.installerType
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.installerType == previousInstaller.installerType
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension()
-                }
-            }
-            if (newInstaller != null) {
-                result[previousInstaller] = newInstaller
-            }
+            val matchingConditions = sequenceOf<(InstallerManifest.Installer) -> Boolean>(
+                { it.architecture == previousInstaller.architecture
+                        && it.installerType == previousInstaller.installerType
+                        && it.scope == previousInstaller.scope },
+                { it.architecture == previousInstaller.architecture
+                        && it.installerType == previousInstaller.installerType
+                        && it.scope == null },
+                { it.architecture == previousInstaller.architecture
+                        && it.installerType == null
+                        && it.scope == previousInstaller.scope },
+                { it.architecture == previousInstaller.architecture
+                        && it.installerType == previousInstaller.installerType },
+                { it.installerType == previousInstaller.installerType },
+                { it.architecture == previousInstaller.architecture },
+                { it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension() }
+            )
+
+            val newInstaller = matchingConditions
+                .mapNotNull(newInstallers::firstOrNull)
+                .firstOrNull()
+
+            newInstaller?.let { result[previousInstaller] = it }
         }
+
         return result
     }
 }

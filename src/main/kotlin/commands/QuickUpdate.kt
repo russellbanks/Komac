@@ -20,13 +20,13 @@ import data.VersionManifestData
 import data.installer.InstallerType
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
-import data.shared.PackageVersion.getHighestVersion
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
 import detection.ParameterUrls
 import detection.github.GitHubDetection
-import extensions.GitHubExtensions.printResultTo
-import extensions.PathExtensions.hash
+import extensions.hash
+import extensions.printResultTo
+import extensions.versionStringComparator
 import input.FileWriter
 import input.ManifestResultOption
 import input.Prompts.pullRequestPrompt
@@ -96,7 +96,7 @@ class QuickUpdate : CliktCommand(name = "update") {
             allVersions = GitHubUtils.getAllVersions(microsoftWingetPkgs, packageIdentifier)
                 ?.also { info("Found $packageIdentifier in the winget-pkgs repository") }
                 ?: throw doesNotExistError(packageIdentifier, isUpdate = true, colors = colors)
-            val latestVersion = (allVersions as List<String>).getHighestVersion()
+            val latestVersion = (allVersions as List<String>).maxWithOrNull(versionStringComparator)
             info("Found latest version: $latestVersion")
             previousManifestData = PreviousManifestData(packageIdentifier, latestVersion, microsoftWingetPkgs)
             packageVersion = prompt(PackageVersion, parameter = packageVersionParam)

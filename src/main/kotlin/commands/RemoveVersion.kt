@@ -12,8 +12,8 @@ import data.AllManifestData
 import data.GitHubImpl
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
-import data.shared.PackageVersion.getHighestVersion
-import extensions.GitHubExtensions.printResultTo
+import extensions.printResultTo
+import extensions.versionStringComparator
 import input.ExitCode
 import input.Prompts
 import kotlinx.coroutines.runBlocking
@@ -40,7 +40,9 @@ class RemoveVersion : CliktCommand(name = "remove") {
             if (!tokenStore.isTokenValid.await()) tokenStore.invalidTokenPrompt(terminal)
             allVersions = GitHubUtils.getAllVersions(gitHubImpl.getMicrosoftWinGetPkgs(), packageIdentifier)
             info("Found $packageIdentifier in the winget-pkgs repository")
-            allVersions?.getHighestVersion()?.let { latestVersion -> info("Found latest version: $latestVersion") }
+            allVersions?.maxWithOrNull(versionStringComparator)?.let { latestVersion ->
+                info("Found latest version: $latestVersion")
+            }
             packageVersion = prompt(PackageVersion)
             gitHubImpl.promptIfPullRequestExists(
                 identifier = packageIdentifier,

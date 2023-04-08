@@ -20,29 +20,37 @@ import kotlinx.coroutines.async
  *
  * @param url of the website
  */
-class PageScraper(url: Url, client: HttpClient) {
+class PageScraper(url: Url, private val client: HttpClient) {
     private val urlRoot = URLBuilder(url).apply {
         host = host.split('.').takeLast(2).joinToString(".")
         pathSegments = emptyList()
     }.build()
     private val scope = CoroutineScope(Dispatchers.IO)
     private val linksMap: Deferred<Map<String, String>> = scope.async {
-        runCatching {
-            htmlDocument(client.get(urlRoot).bodyAsText()) {
-                a {
-                    findAll {
-                        eachLink
-                    }
-                }
-            }
-        }.getOrDefault(HashMap())
+        parseLinks(client.get(urlRoot).bodyAsText()).getOrDefault(HashMap())
     }
-    var supportUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(support, help) }
-    var faqUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(faq) }
-    var privacyUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(privacy) }
+    val supportUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(support, help) }
+    val faqUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(faq) }
+    val privacyUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(privacy) }
 
     /**
-     * This abstracts [findFirstLink] and cleans up the returned String to ensure that it is always in the format of
+     * Parses an HTML document into a map of link text to href values.
+     *
+     * @param html the HTML document to parse
+     * @return a map of link text to href values
+     */
+    private fun parseLinks(html: String): Result<Map<String, String>> = runCatching {
+        htmlDocument(html) {
+            a {
+                findAll {
+                    eachLink
+                }
+            }
+        }
+    }
+
+    /**
+     * This abstracts [findFirstLink] and ensures that the returned String is always in the format of
      * https://www.host.com.
      *
      * @param searchValues the values to sequentially search for
@@ -54,7 +62,7 @@ class PageScraper(url: Url, client: HttpClient) {
             result == null -> null
             result.startsWith("https://") -> Url(result)
             result.startsWith("http://") -> Url(result.replace("http://", "https://"))
-            else -> URLBuilder(urlRoot).apply { pathSegments = result.split("/") }.build()
+            else -> URLBuilder(urlRoot).apply { pathSegments = result.split('/') }.build()
         }
     }
 
@@ -70,22 +78,12 @@ class PageScraper(url: Url, client: HttpClient) {
      */
     private suspend fun findFirstLink(vararg searchValues: String): String? {
         val linksMap = linksMap.await()
-        var result: String? = null
-        outer@ for (searchValue in searchValues) {
-            for (value in linksMap.values) {
-                if (value.contains(searchValue, ignoreCase = true)) {
-                    result = value
-                    break@outer
-                }
-            }
-            for (key in linksMap.keys) {
-                if (key.contains(searchValue, ignoreCase = true)) {
-                    result = linksMap[key]
-                    break@outer
-                }
-            }
-        }
-        return result
+        return searchValues.asSequence()
+            .mapNotNull { searchValue ->
+                linksMap.entries.firstOrNull { (key, value) ->
+                    key.contains(searchValue, ignoreCase = true) || value.contains(searchValue, ignoreCase = true)
+                }?.value
+            }.firstOrNull()
     }
 
     companion object {
