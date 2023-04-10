@@ -1,6 +1,6 @@
 [versions]
 buildconfig = "3.1.0"
-clikt = "4.0.0.198-SNAPSHOT"
+clikt = "4.0.0.212-SNAPSHOT"
 coroutines = "1.6.4"
 detekt = "main-SNAPSHOT"
 github-api = "1.314"
