@@ -15,37 +15,41 @@ object ManifestUtils {
      *   and the first part is formatted using the [TerminalColors.info] function and the second part (if any) is left
      *   unformatted.
      * - Otherwise, the line is left unchanged.
-     * Each formatted line is returned as a string in a sequence using the yield function.
      *
      * @param rawString the raw manifest string to be formatted.
      * @param colors the [TerminalColors] instance to use for formatting the manifest.
      * @return a sequence of formatted lines for the manifest.
      */
-    fun formattedManifestLinesSequence(rawString: String, colors: TerminalColors): Sequence<String> = sequence {
-        rawString.lines().forEach { line ->
-            yield(
-                when {
-                    line.startsWith("#") -> colors.green(line)
-                    line.firstOrNull()?.isLetter() == true -> {
-                        val part = line.split(":", limit = 2)
-                        "${colors.info(part.first())}${part.getOrNull(1)?.let { ":$it" }.orEmpty()}"
-                    }
-                    else -> line
+    fun formattedManifestLinesSequence(rawString: String, colors: TerminalColors): Sequence<String> {
+        return rawString.lineSequence().map { line ->
+            when {
+                line.startsWith('#') -> colors.green(line)
+                line.firstOrNull()?.isLetter() == true -> {
+                    val (key, value) = line.split(':', limit = 2)
+                    "${colors.info(key)}:${value}"
                 }
-            )
+                else -> line
+            }
         }
     }
 
+
     /**
-     * Returns a new [String] in which the first occurrence of any version in [previousVersions] is replaced with the
+     * Returns a new [String] in which all occurrences of any version in [previousVersions] are replaced with the
      * [newVersion]. If [previousVersions] is null or empty, this function returns the original [String] itself.
      *
      * @param previousVersions A list of [String] versions to replace in the [String].
-     * @param newVersion The new [String] version to replace the old version with.
-     * @return The updated [String] with the [newVersion] in place of the old version.
+     * @param newVersion The new [String] version to replace the old versions with.
+     * @return The updated [String] with the [newVersion] in place of the old versions.
      */
-    fun String.updateVersionInString(previousVersions: List<String>?, newVersion: String) = previousVersions
-        ?.joinToString("|") { it }
-        ?.let { replaceFirst(it.toRegex(), newVersion) }
-        ?: this
+    fun String.updateVersionInString(previousVersions: List<String>?, newVersion: String): String {
+        // If previousVersions is null or empty, return the original string
+        if (previousVersions.isNullOrEmpty()) return this
+
+        // Create a regex pattern from the previous versions
+        val pattern = previousVersions.joinToString("|") { Regex.escape(it) }.toRegex()
+
+        // Replace all occurrences of the pattern with the new version
+        return replace(pattern, newVersion)
+    }
 }

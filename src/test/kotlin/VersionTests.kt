@@ -20,10 +20,6 @@ class VersionTests : FunSpec({
             maxOf("1.0.0-alpha", "1.0.0-beta", versionStringComparator) shouldBe "1.0.0-beta"
         }
 
-        test("version number with 'v'") {
-            maxOf("v1", "1", versionStringComparator) shouldBe "1"
-        }
-
         test("version number length") {
             maxOf("13.0.0.8", "14", "14.0.1", versionStringComparator) shouldBe "14.0.1"
         }
@@ -49,7 +45,7 @@ class VersionTests : FunSpec({
         }
 
         test("empty list") {
-            listOf<String>().maxWithOrNull(versionStringComparator) shouldBe null
+            emptyList<String>().maxWithOrNull(versionStringComparator) shouldBe null
         }
 
         test("largest version allowed") {

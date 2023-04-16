@@ -34,7 +34,6 @@ import data.shared.PackageVersion
 import data.shared.Publisher
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
-import extensions.printResultTo
 import extensions.versionStringComparator
 import input.ExitCode
 import input.FileWriter.writeFiles
@@ -141,7 +140,7 @@ class NewManifest : CliktCommand(name = "new") {
                         packageIdentifier = packageIdentifier,
                         packageVersion = packageVersion,
                         updateState = updateState
-                    ) printResultTo currentContext.terminal
+                    ).also { success("Pull request created: ${it.htmlUrl}") }
                 }
                 ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
                 else -> return@runBlocking

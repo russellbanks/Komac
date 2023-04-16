@@ -25,7 +25,6 @@ import data.shared.getUpdateState
 import detection.ParameterUrls
 import detection.github.GitHubDetection
 import extensions.hash
-import extensions.printResultTo
 import extensions.versionStringComparator
 import input.FileWriter
 import input.ManifestResultOption
@@ -116,7 +115,7 @@ class QuickUpdate : CliktCommand(name = "update") {
                     packageIdentifier = packageIdentifier,
                     packageVersion = packageVersion,
                     updateState = updateState
-                ) printResultTo terminal
+                ).also { success("Pull request created: ${it.htmlUrl}") }
             } else if (!isCIEnvironment) {
                 terminal.pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
                     when (manifestResultOption) {
@@ -127,7 +126,7 @@ class QuickUpdate : CliktCommand(name = "update") {
                                 packageIdentifier = packageIdentifier,
                                 packageVersion = packageVersion,
                                 updateState = updateState
-                            ) printResultTo terminal
+                            ).also { success("Pull request created: ${it.htmlUrl}") }
                         }
                         ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, terminal)
                         else -> return@also

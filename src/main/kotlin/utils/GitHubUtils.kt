@@ -110,7 +110,6 @@ object GitHubUtils {
                     .map(Map.Entry<String, List<GHTreeEntry>>::key)
                     .takeUnless(List<String>::isEmpty)
             }
-
     } catch (_: IOException) {
         null
     }
