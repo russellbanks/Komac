@@ -13,8 +13,8 @@ class UpgradeBehaviour(
     override val default: InstallerManifest.UpgradeBehavior =
         getPreviousValue() ?: InstallerManifest.UpgradeBehavior.Install
 
-    override val items: List<InstallerManifest.UpgradeBehavior?> =
-        InstallerManifest.UpgradeBehavior.values().toList()
+    @OptIn(ExperimentalStdlibApi::class)
+    override val items = InstallerManifest.UpgradeBehavior.entries
 
     private fun getPreviousValue(): InstallerManifest.UpgradeBehavior? = with(allManifestData) {
         return previousInstallerManifest?.let {

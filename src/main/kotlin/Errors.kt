@@ -23,8 +23,8 @@ object Errors {
             items?.let { nonNullItems ->
                 appendLine()
                 appendLine("Items that did not match:")
-                nonNullItems.forEach {
-                    appendLine(" - $it")
+                for (item in nonNullItems) {
+                    appendLine(" - $item")
                 }
             }
         }
@@ -37,8 +37,8 @@ object Errors {
             items?.let { nonNullItems ->
                 appendLine()
                 appendLine("Items that did not match:")
-                nonNullItems.forEach {
-                    appendLine(" - $it")
+                for (item in nonNullItems) {
+                    appendLine(" - $item")
                 }
             }
         }

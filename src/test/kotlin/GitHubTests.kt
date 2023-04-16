@@ -199,5 +199,20 @@ class GitHubTests : FunSpec({
             every { ghRelease.body } returns "- $sha1 New feature"
             ghRelease.getFormattedReleaseNotes() shouldBe "- New feature"
         }
+
+        test("amount of indentation is correct when there are multiple headers") {
+            every { ghRelease.body } returns """
+                # Header 1
+                * Changes in Header 1
+                # Header 2
+                * Changes in Header 2
+            """.trimIndent()
+            ghRelease.getFormattedReleaseNotes() shouldBe """
+                Header 1
+                - Changes in Header 1
+                Header 2
+                - Changes in Header 2
+            """.trimIndent()
+        }
     }
 })

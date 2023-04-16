@@ -34,7 +34,6 @@ import data.shared.PackageVersion
 import data.shared.Publisher
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
-import extensions.printResultTo
 import extensions.versionStringComparator
 import input.ExitCode
 import input.FileWriter.writeFiles
@@ -69,6 +68,7 @@ class NewManifest : CliktCommand(name = "new") {
     private val defaultLocaleManifest: DefaultLocaleManifest?
         get() = previousManifestData?.remoteDefaultLocaleData
 
+    @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking {
         with(allManifestData) {
             if (tokenStore.token == null) prompt(Token).also { tokenStore.putToken(it) }
@@ -95,7 +95,9 @@ class NewManifest : CliktCommand(name = "new") {
             do {
                 currentContext.terminal.installerDownloadPrompt(allManifestData, client, gitHubImpl)
                 installerType = installerType ?: prompt(InstallerType(previousInstallerManifest, installers.size))
-                Switch.values().forEach { InstallerSwitch(allManifestData, previousInstallerManifest).installerSwitchPrompt(it, currentContext.terminal) }
+                for (switch in Switch.entries) {
+                    InstallerSwitch(allManifestData, previousInstallerManifest).installerSwitchPrompt(switch, currentContext.terminal)
+                }
                 installerLocale = msi?.productLanguage ?: prompt(Locale.Installer(previousInstallerManifest, installers.size))
                 InstallerScope(allManifestData, previousInstallerManifest).installerScopePrompt(currentContext.terminal)
                 upgradeBehavior = prompt(UpgradeBehaviour(allManifestData, previousInstallerManifest))
@@ -132,7 +134,9 @@ class NewManifest : CliktCommand(name = "new") {
             description = prompt(Description.Long(defaultLocaleManifest?.description))
             releaseNotesUrl = gitHubDetection?.releaseNotesUrl ?: prompt(ReleaseNotesUrl(client))
             val files = createFiles()
-            files.values.forEach { manifest -> formattedManifestLinesSequence(manifest, colors).forEach(::echo) }
+            for (manifest in files.values) {
+                formattedManifestLinesSequence(manifest, colors).forEach(::echo)
+            }
             when (currentContext.terminal.pullRequestPrompt(packageIdentifier, packageVersion)) {
                 ManifestResultOption.PullRequest -> {
                     gitHubImpl.commitAndPullRequest(
@@ -141,7 +145,7 @@ class NewManifest : CliktCommand(name = "new") {
                         packageIdentifier = packageIdentifier,
                         packageVersion = packageVersion,
                         updateState = updateState
-                    ) printResultTo currentContext.terminal
+                    ).also { success("Pull request created: ${it.htmlUrl}") }
                 }
                 ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
                 else -> return@runBlocking

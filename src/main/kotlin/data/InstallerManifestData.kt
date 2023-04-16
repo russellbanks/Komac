@@ -1,8 +1,8 @@
 package data
 
 import detection.files.msi.Msi
-import extensions.IterableExtensions.getDistinctOrNull
-import extensions.IterableExtensions.takeIfNotDistinct
+import extensions.getDistinctOrNull
+import extensions.takeIfNotDistinct
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import schemas.Schemas

@@ -117,7 +117,7 @@ class GitHubImpl(token: String, client: HttpClient) {
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState
-    ): GHPullRequest? {
+    ): GHPullRequest {
         commitFiles(
             wingetPkgsFork = wingetPkgsFork,
             files = files.mapKeys { "${GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion)}/${it.key}" },
@@ -132,7 +132,7 @@ class GitHubImpl(token: String, client: HttpClient) {
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState,
-    ): GHPullRequest? {
+    ): GHPullRequest {
         val ghRepository = getMicrosoftWinGetPkgs()
         return try {
             ghRepository.createPullRequest(
@@ -141,8 +141,8 @@ class GitHubImpl(token: String, client: HttpClient) {
                 /* base = */ ghRepository.defaultBranch,
                 /* body = */ GitHubUtils.getPullRequestBody()
             )
-        } catch (_: IOException) {
-            null
+        } catch (ioException: IOException) {
+            throw CliktError(message = "Failed to create pull request", cause = ioException, statusCode = 1)
         }
     }
 
@@ -162,7 +162,7 @@ class GitHubImpl(token: String, client: HttpClient) {
                     .createTree()
                     .baseTree(wingetPkgsFork.getBranch(branch.ref).shA1)
                     .apply {
-                        files.forEach { (path, content) ->
+                        for ((path, content) in files) {
                             if (content != null) {
                                 add(path, content.replace("\n", "\r\n"), false)
                             }

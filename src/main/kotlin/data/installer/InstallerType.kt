@@ -9,10 +9,10 @@ class InstallerType(
 ) : MenuPrompt<InstallerManifest.InstallerType> {
     override val name: String = "Installer type"
 
-    override val items: List<InstallerManifest.InstallerType> =
-        InstallerManifest.InstallerType.values().toList()
+    @OptIn(ExperimentalStdlibApi::class)
+    override val items = InstallerManifest.InstallerType.entries
 
-    override val default: InstallerManifest.InstallerType? = getPreviousValue()
+    override val default = getPreviousValue()
 
     private fun getPreviousValue(): InstallerManifest.InstallerType? {
         return previousInstaller?.run { installerType ?: installers.getOrNull(installersSize)?.installerType }

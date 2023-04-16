@@ -12,7 +12,6 @@ import data.AllManifestData
 import data.GitHubImpl
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
-import extensions.printResultTo
 import extensions.versionStringComparator
 import input.ExitCode
 import input.Prompts
@@ -84,7 +83,7 @@ class RemoveVersion : CliktCommand(name = "remove") {
                 "${gitHubImpl.forkOwner}:${ref.ref}",
                 wingetPkgs.defaultBranch,
                 "## $deletionReason"
-            ) printResultTo terminal
+            ).also { success("Pull request created: ${it.htmlUrl}") }
         }
     }
 

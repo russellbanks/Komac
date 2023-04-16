@@ -222,11 +222,12 @@ class Zip(zip: File, terminal: Terminal) {
         return chosenZipEntries
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     private fun Terminal.nestedInstallerTypePrompt(
         chosenZipEntries: List<ZipEntry>,
         zipFile: ZipFile
     ): InstallerManifest.NestedInstallerType {
-        val smallestEntry = chosenZipEntries.minBy { it.size }
+        val smallestEntry = chosenZipEntries.minBy(ZipEntry::size)
         return when (smallestEntry.name.substringAfterLast('.').lowercase()) {
             InstallerManifest.NestedInstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
                 InstallerManifest.NestedInstallerType.MSIX
@@ -275,9 +276,8 @@ class Zip(zip: File, terminal: Terminal) {
                 ) ?: InstallerManifest.NestedInstallerType.EXE
             }
             else -> {
-                val nestedInstallerTypes = InstallerManifest.NestedInstallerType
-                    .values()
-                    .map { it.toString() }
+                val nestedInstallerTypes = InstallerManifest.NestedInstallerType.entries
+                    .map(InstallerManifest.NestedInstallerType::toString)
                 prompt(
                     prompt = Prompts.enterChoice,
                     convert = { string ->

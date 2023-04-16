@@ -6,6 +6,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Url
+import io.ktor.http.decodeURLPart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,7 +55,7 @@ class GitHubDetection(url: Url, gitHubImpl: GitHubImpl, private val client: Http
     }.getOrNull()
 
     private fun findAsset(url: Url): GHAsset? = assets?.firstOrNull {
-        it.browserDownloadUrl == url.toString()
+        it.browserDownloadUrl.decodeURLPart() == url.toString().decodeURLPart()
     }
 
     private fun findPublisherUrl(): Url? = runCatching {

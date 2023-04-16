@@ -34,7 +34,7 @@ object FileWriter {
     }
 
     fun writeFilesToDirectory(directory: File, files: Map<String, String?>, terminal: Terminal) {
-        files.forEach { (key, value) ->
+        for ((key, value) in files) {
             value?.let { manifestText ->
                 writeFileToDirectory(directory, key, manifestText, terminal)
             }

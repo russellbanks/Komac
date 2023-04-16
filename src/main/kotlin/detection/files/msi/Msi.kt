@@ -167,6 +167,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
         return result
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     private fun fetchRecords(phView: PointerByReference) {
         val phRecord = PointerByReference()
         while (true) {
@@ -186,7 +187,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
                 manufacturerConst -> manufacturer = value
                 productLanguageConst -> productLanguage = value?.toIntOrNull()?.let { ProductLanguage(it).locale }
                 wixUiModeConst -> isWix = true
-                allUsersConst -> allUsers = AllUsers.values().find { it.code == value }
+                allUsersConst -> allUsers = AllUsers.entries.find { it.code == value }
             }
 
             msiLibrary.MsiCloseHandle(phRecord.value)

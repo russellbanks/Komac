@@ -89,8 +89,9 @@ fun <T> Terminal.menu(
     nameConvert: (String) -> String = { it }
 ): MenuCreator<T> = MenuCreator(items, default, optionalItemName, nameConvert, this)
 
+@OptIn(ExperimentalStdlibApi::class)
 fun Terminal.yesNoMenu(default: Boolean? = null) = menu(
-    items = YesNo.values().toList(),
+    items = YesNo.entries,
     default = if (default == true) YesNo.Yes else YesNo.No
 ).prompt()?.toBoolean() ?: throw ProgramResult(ExitCode.CtrlC)
 

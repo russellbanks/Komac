@@ -1,8 +1,5 @@
 package extensions
 
-import com.github.ajalt.clikt.core.CliktError
-import com.github.ajalt.mordant.terminal.Terminal
-import org.kohsuke.github.GHPullRequest
 import org.kohsuke.github.GHRelease
 
 /**
@@ -22,7 +19,7 @@ import org.kohsuke.github.GHRelease
 fun GHRelease.getFormattedReleaseNotes(): String? {
     val lines = body
         ?.replace("<details>.*</details>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
-        ?.lines()
+        ?.lineSequence()
         ?.map { line ->
             line.trim()
                 .let { if (it.startsWith("* ")) it.replaceFirst("* ", "- ") else it }
@@ -39,11 +36,12 @@ fun GHRelease.getFormattedReleaseNotes(): String? {
                 }
                 .trim()
         }
+        ?.toList()
     return buildString {
         lines?.forEachIndexed { index, line ->
             when {
-                line.startsWith("#") && (1..2).any { lines.getOrNull(index + it)?.startsWith("- ") == true } -> {
-                    appendLine(line.dropWhile { it == '#' }.trimEnd())
+                line.startsWith('#') && (1..2).any { lines.getOrNull(index + it)?.startsWith("- ") == true } -> {
+                    appendLine(line.trimStart('#').trim())
                 }
                 line.startsWith("- ") -> {
                     appendLine(
@@ -53,18 +51,4 @@ fun GHRelease.getFormattedReleaseNotes(): String? {
             }
         }
     }.trim().takeUnless(String::isBlank)
-}
-
-/**
- * Prints the result of a GitHub pull request creation to the provided [terminal].
- *
- * @param terminal The [Terminal] instance to use for printing the result
- * @throws CliktError if the pull request creation failed and the receiver [GHPullRequest] is null
- */
-infix fun GHPullRequest?.printResultTo(terminal: Terminal) {
-    if (this != null) {
-        terminal.success("Pull request created: $htmlUrl")
-    } else {
-        throw CliktError("Failed to create pull request", statusCode = 1)
-    }
 }

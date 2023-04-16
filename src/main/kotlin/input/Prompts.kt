@@ -13,17 +13,18 @@ object Prompts {
 
     const val enterChoice = "Enter Choice"
 
+    @OptIn(ExperimentalStdlibApi::class)
     fun Terminal.pullRequestPrompt(packageIdentifier: String, packageVersion: String): ManifestResultOption {
         println(
             verticalLayout {
                 cell(colors.info("What would you like to do with $packageIdentifier $packageVersion?"))
-                ManifestResultOption.values().forEach {
+                for (option in ManifestResultOption.entries) {
                     cell(
                         colors.brightWhite(
                             buildString {
                                 append(" ".repeat(optionIndent))
-                                append("[${it.toString().first().titlecase()}] ")
-                                append(it.toString().replaceFirstChar(Char::titlecase))
+                                append("[${option.toString().first().titlecase()}] ")
+                                append(option.toString().replaceFirstChar(Char::titlecase))
                             }
                         )
                     )
