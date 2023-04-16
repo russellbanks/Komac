@@ -11,12 +11,12 @@ class InstallerScope(
     private val previousInstallerManifest: InstallerManifest?
 ) {
     fun installerScopePrompt(terminal: Terminal) = with(terminal) {
-        if (allManifestData.scope == null && allManifestData.installerType != InstallerManifest.Installer.InstallerType.PORTABLE) {
+        if (allManifestData.scope == null && allManifestData.installerType != InstallerManifest.InstallerType.PORTABLE) {
             val previousValue = getPreviousValue()
             println(colors.brightYellow(installerScopeInfo))
             previousValue?.let { println(colors.muted("Previous value: $it")) }
             allManifestData.scope = menu(
-                items = InstallerManifest.Installer.Scope.values().toList(),
+                items = InstallerManifest.Scope.values().toList(),
                 default = previousValue,
                 optionalItemName = "No idea"
             ).prompt()
@@ -24,10 +24,8 @@ class InstallerScope(
         }
     }
 
-    private fun getPreviousValue(): InstallerManifest.Installer.Scope? = with(allManifestData) {
-        return previousInstallerManifest?.let {
-            it.scope?.toPerScopeInstallerType() ?: it.installers.getOrNull(installers.size)?.scope
-        }
+    private fun getPreviousValue(): InstallerManifest.Scope? = with(allManifestData) {
+        return previousInstallerManifest?.let { it.scope ?: it.installers.getOrNull(installers.size)?.scope }
     }
 
     companion object {

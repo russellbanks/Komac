@@ -218,8 +218,8 @@ class QuickUpdate : CliktCommand(name = "update") {
             installerResults,
             previousInstallers.map {
                 it.copy(
-                    installerType = previousInstallerManifest.installerType?.toPerInstallerType() ?: it.installerType,
-                    scope = previousInstallerManifest.scope?.toPerScopeInstallerType() ?: it.scope
+                    installerType = previousInstallerManifest.installerType ?: it.installerType,
+                    scope = previousInstallerManifest.scope ?: it.scope
                 )
             }
         ).forEach { (previousInstaller, newInstaller) ->

@@ -6,7 +6,7 @@ import okio.Path
 import okio.Path.Companion.toPath
 import okio.fakefilesystem.FakeFileSystem
 import schemas.manifest.InstallerManifest.Installer.Architecture
-import schemas.manifest.InstallerManifest.Installer.InstallerType
+import schemas.manifest.InstallerManifest.InstallerType
 
 class FileAnalyserTests : FunSpec({
     val fileSystem = FakeFileSystem()

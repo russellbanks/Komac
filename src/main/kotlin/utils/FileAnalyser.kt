@@ -12,9 +12,9 @@ import okio.FileSystem
 import okio.Path
 import okio.buffer
 import schemas.manifest.InstallerManifest.Installer.Architecture
-import schemas.manifest.InstallerManifest.Installer.InstallerType
-import schemas.manifest.InstallerManifest.Installer.Scope
-import schemas.manifest.InstallerManifest.Installer.UpgradeBehavior
+import schemas.manifest.InstallerManifest.InstallerType
+import schemas.manifest.InstallerManifest.Scope
+import schemas.manifest.InstallerManifest.UpgradeBehavior
 
 class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
     private val msi = if (file.extension == InstallerType.MSI.toString()) Msi(file, fileSystem) else null

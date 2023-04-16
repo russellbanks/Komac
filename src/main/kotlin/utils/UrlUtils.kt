@@ -83,10 +83,10 @@ fun Url.getFileNameWithoutExtension(): String? = getFileName()?.removeSuffix(".$
  *
  * @return the installation scope of the installer manifest at this URL, or null if no scope can be determined
  */
-fun Url.findScope(): InstallerManifest.Installer.Scope? {
+fun Url.findScope(): InstallerManifest.Scope? {
     return when {
-        fullPath.contains(other = "user", ignoreCase = true) -> InstallerManifest.Installer.Scope.User
-        fullPath.contains(other = "machine", ignoreCase = true) -> InstallerManifest.Installer.Scope.Machine
+        fullPath.contains(other = "user", ignoreCase = true) -> InstallerManifest.Scope.User
+        fullPath.contains(other = "machine", ignoreCase = true) -> InstallerManifest.Scope.Machine
         else -> null
     }
 }

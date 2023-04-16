@@ -217,8 +217,8 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
         Dependent("2");
 
         fun toInstallerScope() = when (this) {
-            Machine -> InstallerManifest.Installer.Scope.Machine
-            User -> InstallerManifest.Installer.Scope.User
+            Machine -> InstallerManifest.Scope.Machine
+            User -> InstallerManifest.Scope.User
             Dependent -> null
         }
     }

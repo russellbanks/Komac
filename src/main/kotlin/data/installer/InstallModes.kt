@@ -17,11 +17,7 @@ class InstallModes(
     override val extraText: String = "Options: ${InstallerManifest.InstallModes.values().joinToString()}"
 
     override val default: List<InstallerManifest.InstallModes>? = previousInstallerManifest?.let { installerManifest ->
-        installerManifest.installModes
-            ?: installerManifest.installers
-                .getOrNull(installerSize)
-                ?.installModes
-                ?.map(InstallerManifest.Installer.InstallModes::toManifestInstallMode)
+        installerManifest.installModes ?: installerManifest.installers.getOrNull(installerSize)?.installModes
     }
 
     override val validationRules: ListValidationRules<InstallerManifest.InstallModes> = ListValidationRules(

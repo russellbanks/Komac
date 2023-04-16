@@ -17,10 +17,10 @@ class InstallerSwitch(
 ) {
     fun installerSwitchPrompt(installerSwitch: Switch, terminal: Terminal) = with(allManifestData) {
         if (
-            installerType == InstallerManifest.Installer.InstallerType.EXE ||
+            installerType == InstallerManifest.InstallerType.EXE ||
             installerSwitch == Switch.Custom
         ) {
-            val isRequired = installerType == InstallerManifest.Installer.InstallerType.EXE &&
+            val isRequired = installerType == InstallerManifest.InstallerType.EXE &&
                 installerSwitch != Switch.Custom
             switchInfo(installerType, installerSwitch).also { (info, infoColor) ->
                 println(infoColor(info))
@@ -78,14 +78,14 @@ class InstallerSwitch(
     }
 
     private fun switchInfo(
-        installerType: InstallerManifest.Installer.InstallerType?,
+        installerType: InstallerManifest.InstallerType?,
         aSwitch: Switch
     ): Pair<String, TextColors> = with(allManifestData) {
-        val isRequired = installerType == InstallerManifest.Installer.InstallerType.EXE &&
+        val isRequired = installerType == InstallerManifest.InstallerType.EXE &&
             aSwitch != Switch.Custom
         return buildString {
             append(
-                if (installerType == InstallerManifest.Installer.InstallerType.EXE && aSwitch != Switch.Custom) {
+                if (installerType == InstallerManifest.InstallerType.EXE && aSwitch != Switch.Custom) {
                     Prompts.required
                 } else {
                     Prompts.optional

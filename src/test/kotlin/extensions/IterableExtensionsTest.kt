@@ -14,8 +14,8 @@ class IterableExtensionsTest : FunSpec({
             installerUrl = Url(URLBuilder()),
             installerSha256 = ""
         )
-        val userScopeInstaller = baseInstaller.copy(scope = InstallerManifest.Installer.Scope.User)
-        val machineScopeInstaller = baseInstaller.copy(scope = InstallerManifest.Installer.Scope.Machine)
+        val userScopeInstaller = baseInstaller.copy(scope = InstallerManifest.Scope.User)
+        val machineScopeInstaller = baseInstaller.copy(scope = InstallerManifest.Scope.Machine)
 
         test("returns default value if iterable is not distinct") {
             listOf(
