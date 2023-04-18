@@ -1,6 +1,7 @@
 package utils
 
 import com.russellbanks.Komac.BuildConfig
+import data.PreviousManifestData
 import data.VersionUpdateState
 import data.shared.Locale
 import okio.ByteString.Companion.encodeUtf8
@@ -34,7 +35,7 @@ object GitHubUtils {
     fun getDefaultLocaleManifestName(
         identifier: String,
         defaultLocale: String? = null,
-        previousDefaultLocale: String?
+        previousDefaultLocale: String? = PreviousManifestData.defaultLocaleManifest?.packageLocale
     ) = "$identifier.locale.${defaultLocale ?: previousDefaultLocale ?: Locale.defaultLocale}.yaml"
 
     /**

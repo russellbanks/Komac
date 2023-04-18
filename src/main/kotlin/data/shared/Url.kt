@@ -8,7 +8,6 @@ import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Platform
 import data.AllManifestData
-import data.GitHubImpl
 import detection.PageScraper
 import detection.files.Zip
 import detection.files.msi.Msi
@@ -26,6 +25,7 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.runBlocking
+import network.Http
 import network.HttpUtils.downloadFile
 import network.HttpUtils.getDownloadProgressBar
 import okio.FileSystem
@@ -38,31 +38,26 @@ import utils.yesNoMenu
 import java.net.ConnectException
 
 object Url {
-    suspend fun Terminal.installerDownloadPrompt(
-        allManifestData: AllManifestData,
-        client: HttpClient,
-        gitHubImpl: GitHubImpl,
-        parameterUrl: Url? = null
-    ) = with(allManifestData) {
-        installerUrl = parameterUrl ?: promptForInstaller(client)
-        downloadInstaller(allManifestData, client, gitHubImpl, FileSystem.SYSTEM)
-        msixBundleDetection(allManifestData)
+    suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) = with(AllManifestData) {
+        installerUrl = parameterUrl ?: promptForInstaller()
+        downloadInstaller(FileSystem.SYSTEM)
+        msixBundleDetection()
     }
 
-    private suspend fun Terminal.promptForInstaller(client: HttpClient): Url {
+    private suspend fun Terminal.promptForInstaller(): Url {
         println(colors.brightGreen(installerUrlInfo))
         return prompt(installerUrlConst) { input ->
-            runBlocking { isUrlValid(url = Url(input), canBeBlank = false, client) }
+            runBlocking { isUrlValid(url = Url(input), canBeBlank = false) }
                 ?.let { ConversionResult.Invalid(it) }
                 ?: ConversionResult.Valid(Url(input.trim()))
         }?.let {
             println()
-            promptIfRedirectedUrl(it, client)
+            promptIfRedirectedUrl(it)
         } ?: throw ProgramResult(ExitCode.CtrlC)
     }
 
-    private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url, client: HttpClient): Url {
-        val redirectedUrl = installerUrl.getRedirectedUrl(client)
+    private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url): Url {
+        val redirectedUrl = installerUrl.getRedirectedUrl()
         return if (
             redirectedUrl != installerUrl &&
             !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
@@ -70,7 +65,7 @@ object Url {
             println(colors.brightYellow(redirectFound))
             println(colors.cyan("Discovered URL: $redirectedUrl"))
             if (yesNoMenu(default = true)) {
-                val error = isUrlValid(url = redirectedUrl, canBeBlank = false, client)
+                val error = isUrlValid(url = redirectedUrl, canBeBlank = false)
                 if (error == null) {
                     success("URL changed to $redirectedUrl")
                 } else {
@@ -88,29 +83,24 @@ object Url {
         }
     }
 
-    private suspend fun Terminal.downloadInstaller(
-        allManifestData: AllManifestData,
-        client: HttpClient,
-        gitHubImpl: GitHubImpl,
-        fileSystem: FileSystem
-    ) = with(allManifestData) {
+    private suspend fun Terminal.downloadInstaller(fileSystem: FileSystem) = with(AllManifestData) {
         if (installers.map { it.installerUrl }.contains(installerUrl)) {
             installers += installers.first { it.installerUrl == installerUrl }
             skipAddInstaller = true
         } else {
             if (installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
-                gitHubDetection = GitHubDetection(installerUrl, gitHubImpl, client)
+                gitHubDetection = GitHubDetection(installerUrl)
             } else {
-                pageScraper = PageScraper(installerUrl, client)
+                pageScraper = PageScraper(installerUrl)
             }
             val progress = getDownloadProgressBar(installerUrl).apply(ProgressAnimation::start)
-            val downloadedFile = client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress, fileSystem)
+            val downloadedFile = Http.client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress, fileSystem)
             progress.clear()
             val fileAnalyser = FileAnalyser(downloadedFile.path, fileSystem)
-            installerType = fileAnalyser.getInstallerType()
-            architecture = installerUrl.findArchitecture() ?: fileAnalyser.getArchitecture()
-            scope = fileAnalyser.getScope()
-            upgradeBehavior = fileAnalyser.getUpgradeBehaviour()
+            installerType = fileAnalyser.installerType
+            architecture = installerUrl.findArchitecture() ?: fileAnalyser.architecture
+            scope = fileAnalyser.scope
+            upgradeBehavior = fileAnalyser.upgradeBehaviour
             installerSha256 = gitHubDetection?.sha256 ?: downloadedFile.path.hash(fileSystem)
             when (downloadedFile.path.extension.lowercase()) {
                 InstallerManifest.InstallerType.MSIX.toString(),
@@ -130,7 +120,7 @@ object Url {
         }
     }
 
-    private fun Terminal.msixBundleDetection(allManifestData: AllManifestData) = with(allManifestData) {
+    private fun Terminal.msixBundleDetection() = with(AllManifestData) {
         if (msixBundle != null) {
             println(
                 verticalLayout {
@@ -166,7 +156,7 @@ object Url {
         }
     }
 
-    suspend fun isUrlValid(url: Url?, canBeBlank: Boolean, client: HttpClient): String? {
+    suspend fun isUrlValid(url: Url?, canBeBlank: Boolean, client: HttpClient = Http.client): String? {
         return when {
             url == null -> null
             url == Url(URLBuilder()) && canBeBlank -> null
@@ -181,7 +171,7 @@ object Url {
         return config { followRedirects = false }.use {
             try {
                 val installerUrlResponse = it.head(url)
-                if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect()) {
+                if (!installerUrlResponse.status.isSuccess() && !installerUrlResponse.status.isRedirect) {
                     Errors.unsuccessfulUrlResponse(installerUrlResponse)
                 } else {
                     null

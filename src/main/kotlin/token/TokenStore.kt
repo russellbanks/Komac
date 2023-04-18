@@ -8,7 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
-class TokenStore {
+object TokenStore {
+    private const val credentialKey = "komac/github-access-token"
     private val credentialStore = StorageProvider.getTokenStorage()
     private var storedToken = credentialStore?.get(credentialKey)
     val token: String?
@@ -33,9 +34,5 @@ class TokenStore {
         warning("Token is invalid. Please enter a new token.")
         prompt(Token, parameter = null, transform = { it }).also { putToken(it) }
         println()
-    }
-
-    companion object {
-        private const val credentialKey = "komac/github-access-token"
     }
 }

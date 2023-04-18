@@ -16,39 +16,41 @@ import org.kohsuke.github.GHRelease
  * @receiver release the [GHRelease] object containing the release notes to be formatted
  * @return A formatted string of the release notes or null if the release notes are blank
  */
-fun GHRelease.getFormattedReleaseNotes(): String? {
-    val lines = body
-        ?.replace("<details>.*</details>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
-        ?.lineSequence()
-        ?.map { line ->
-            line.trim()
-                .let { if (it.startsWith("* ")) it.replaceFirst("* ", "- ") else it }
-                .replace("~+([^~]+)~+".toRegex(), "$1")
-                .replace("\\*+([^*]+)\\*+".toRegex(), "$1")
-                .replace("`", "")
-                .replace("\\[?!\\[(.*?)]\\((.*?)\\)(?:]\\((.*?)\\))?".toRegex(), "")
-                .replace("\\[([^]]+)]\\([^)]+\\)".toRegex(), "$1")
-                .replace("[a-fA-F0-9]{40}".toRegex(), "")
-                .replace("https?://github.com/([\\w-]+)/([\\w-]+)/(pull|issues)/(\\d+)".toRegex()) {
-                    val urlRepository = "${it.groupValues[1]}/${it.groupValues[2]}"
-                    val issueNumber = it.groupValues[4]
-                    if (urlRepository == owner.fullName) "#$issueNumber" else "$urlRepository#$issueNumber"
-                }
-                .trim()
-        }
-        ?.toList()
-    return buildString {
-        lines?.forEachIndexed { index, line ->
-            when {
-                line.startsWith('#') && (1..2).any { lines.getOrNull(index + it)?.startsWith("- ") == true } -> {
-                    appendLine(line.trimStart('#').trim())
-                }
-                line.startsWith("- ") -> {
-                    appendLine(
-                        "- ${line.replace("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))".toRegex(), "$1\n ").drop(2).trim()}"
-                    )
+val GHRelease.formattedReleaseNotes: String?
+    get() {
+        val lines = body
+            ?.replace("<details>.*</details>".toRegex(setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)), "")
+            ?.lineSequence()
+            ?.map { line ->
+                line.trim()
+                    .let { if (it.startsWith("* ")) it.replaceFirst("* ", "- ") else it }
+                    .replace("~+([^~]+)~+".toRegex(), "$1")
+                    .replace("\\*+([^*]+)\\*+".toRegex(), "$1")
+                    .replace("`", "")
+                    .replace("\\[?!\\[(.*?)]\\((.*?)\\)(?:]\\((.*?)\\))?".toRegex(), "")
+                    .replace("\\[([^]]+)]\\([^)]+\\)".toRegex(), "$1")
+                    .replace("[a-fA-F0-9]{40}".toRegex(), "")
+                    .replace("https?://github.com/([\\w-]+)/([\\w-]+)/(pull|issues)/(\\d+)".toRegex()) {
+                        val urlRepository = "${it.groupValues[1]}/${it.groupValues[2]}"
+                        val issueNumber = it.groupValues[4]
+                        if (urlRepository == owner.fullName) "#$issueNumber" else "$urlRepository#$issueNumber"
+                    }
+                    .trim()
+            }
+            ?.toList()
+        return buildString {
+            lines?.forEachIndexed { index, line ->
+                when {
+                    line.startsWith('#') && (1..2).any { lines.getOrNull(index + it)?.startsWith("- ") == true } -> {
+                        appendLine(line.trimStart('#').trim())
+                    }
+
+                    line.startsWith("- ") -> {
+                        appendLine(
+                            "- ${line.replace("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))".toRegex(), "$1\n ").drop(2).trim()}"
+                        )
+                    }
                 }
             }
-        }
-    }.trim().takeUnless(String::isBlank)
-}
+        }.trim().takeUnless(String::isBlank)
+    }

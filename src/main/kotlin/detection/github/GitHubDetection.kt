@@ -1,8 +1,7 @@
 package detection.github
 
 import data.GitHubImpl
-import extensions.getFormattedReleaseNotes
-import io.ktor.client.HttpClient
+import extensions.formattedReleaseNotes
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Url
@@ -10,19 +9,20 @@ import io.ktor.http.decodeURLPart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import network.Http
 import org.kohsuke.github.GHAsset
 import org.kohsuke.github.GHRelease
 import org.kohsuke.github.PagedIterable
-import utils.getExtension
+import utils.extension
 import utils.getFileNameWithoutExtension
 import java.net.URL
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-class GitHubDetection(url: Url, gitHubImpl: GitHubImpl, private val client: HttpClient) {
+class GitHubDetection(url: Url) {
     // Properties
     private val pathSegments = url.pathSegments.filterNot(String::isBlank)
-    private val repository = gitHubImpl.github.getRepository("${pathSegments[0]}/${pathSegments[1]}")
+    private val repository = GitHubImpl.github.getRepository("${pathSegments[0]}/${pathSegments[1]}")
     private val release: GHRelease? = findRelease()
     private val assets = release?.listAssets()
     private val asset = findAsset(url)
@@ -38,7 +38,7 @@ class GitHubDetection(url: Url, gitHubImpl: GitHubImpl, private val client: Http
     var packageUrl: Url? = findPackageUrl()
     var releaseDate: LocalDate? = findReleaseDate()
     var releaseNotesUrl: Url? = findReleaseNotesUrl()
-    var releaseNotes: String? = release?.getFormattedReleaseNotes()
+    var releaseNotes: String? = release?.formattedReleaseNotes
     var privacyUrl: Url? = findPrivacyUrl()
     var topics: List<String>? = findTopics()
 
@@ -99,8 +99,8 @@ class GitHubDetection(url: Url, gitHubImpl: GitHubImpl, private val client: Http
         return assets
             ?.find { it.isSha256(url) || it.name.equals("Sha256Sums", ignoreCase = true) }
             ?.browserDownloadUrl
-            ?.let { client.get(it).bodyAsText() }
-            ?.let("(.*) ${url.getExtension()}".toRegex()::find)
+            ?.let { Http.client.get(it).bodyAsText() }
+            ?.let("(.*) ${url.extension}".toRegex()::find)
             ?.groupValues
             ?.getOrNull(1)
             ?.trim()

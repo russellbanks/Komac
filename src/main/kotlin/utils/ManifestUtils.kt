@@ -26,13 +26,12 @@ object ManifestUtils {
                 line.startsWith('#') -> colors.green(line)
                 line.firstOrNull()?.isLetter() == true -> {
                     val (key, value) = line.split(':', limit = 2)
-                    "${colors.info(key)}:${value}"
+                    "${colors.info(key)}:$value"
                 }
                 else -> line
             }
         }
     }
-
 
     /**
      * Returns a new [String] in which all occurrences of any version in [previousVersions] are replaced with the

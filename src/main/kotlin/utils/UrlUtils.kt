@@ -7,6 +7,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.fullPath
+import network.Http
 import schemas.manifest.InstallerManifest
 
 /**
@@ -45,7 +46,7 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
  *
  * @return The extension of this Url, or "winget-tmp" if no extension is found.
  */
-fun Url.getExtension() = fullPath
+val Url.extension get() = fullPath
     .substringAfterLast('.')
     .split("[^A-Za-z0-9]".toRegex())
     .firstOrNull()
@@ -60,7 +61,7 @@ fun Url.getExtension() = fullPath
  *
  * @return the filename of this URL, including the extension, or null if no such filename can be determined
  */
-fun Url.getFileName(): String? = pathSegments.findLast { it.endsWith(".${getExtension()}") }
+fun Url.getFileName(): String? = pathSegments.findLast { it.endsWith(".${extension}") }
 
 /**
  * Returns the filename of this URL without the extension, if it has one.
@@ -71,7 +72,7 @@ fun Url.getFileName(): String? = pathSegments.findLast { it.endsWith(".${getExte
  *
  * @return the filename of this URL without the extension, or null if no such filename can be determined
  */
-fun Url.getFileNameWithoutExtension(): String? = getFileName()?.removeSuffix(".${getExtension()}")
+fun Url.getFileNameWithoutExtension(): String? = getFileName()?.removeSuffix(".${extension}")
 
 /**
  * Determines the installation scope of the installer manifest at this URL, if any.
@@ -97,7 +98,7 @@ fun Url.findScope(): InstallerManifest.Scope? {
  * @param client a [HttpClient] instance to make the request.
  * @return the final URL after all redirects have been followed.
  */
-suspend fun Url.getRedirectedUrl(client: HttpClient): Url {
+suspend fun Url.getRedirectedUrl(client: HttpClient = Http.client): Url {
     client.config { followRedirects = false }.use { noRedirectClient ->
         var redirectedInstallerUrl: Url = this
         var response: HttpResponse? = noRedirectClient.head(this)
@@ -105,7 +106,7 @@ suspend fun Url.getRedirectedUrl(client: HttpClient): Url {
         var status: HttpStatusCode? = response?.status
         var location: String? = response?.run { headers[HttpHeaders.Location] }
         var redirectCount = 0
-        while (status?.isRedirect() == true && location != null && redirectCount < 5) {
+        while (status?.isRedirect == true && location != null && redirectCount < 5) {
             redirectedInstallerUrl = Url(location)
             response = noRedirectClient.head(redirectedInstallerUrl)
             status = response.status
@@ -124,6 +125,5 @@ suspend fun Url.getRedirectedUrl(client: HttpClient): Url {
  *
  * @return true if this status code represents a redirect, false otherwise
  */
-fun HttpStatusCode.isRedirect(): Boolean {
-    return value in HttpStatusCode.MultipleChoices.value..HttpStatusCode.PermanentRedirect.value
-}
+val HttpStatusCode.isRedirect: Boolean
+    get() = value in HttpStatusCode.MultipleChoices.value..HttpStatusCode.PermanentRedirect.value

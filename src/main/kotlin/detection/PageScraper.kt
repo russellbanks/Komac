@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import network.Http
 
 /**
  * Page Scraper class that finds Locale Manifest Urls from the root page of the provided Url.
@@ -20,7 +21,7 @@ import kotlinx.coroutines.async
  *
  * @param url of the website
  */
-class PageScraper(url: Url, private val client: HttpClient) {
+class PageScraper(url: Url, private val client: HttpClient = Http.client) {
     private val urlRoot = URLBuilder(url).apply {
         host = host.split('.').takeLast(2).joinToString(".")
         pathSegments = emptyList()

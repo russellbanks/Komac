@@ -11,7 +11,6 @@ import token.TokenStore
 import utils.yesNoMenu
 
 class Remove : CliktCommand() {
-    private val tokenStore = TokenStore()
     private val skipPrompt: Boolean by option("-y", "--yes").flag(default = false)
 
     override fun run() = runBlocking {
@@ -22,7 +21,7 @@ class Remove : CliktCommand() {
             currentContext.terminal.yesNoMenu(default = false)
         }
         if (shouldDeleteToken) {
-            tokenStore.deleteToken()
+            TokenStore.deleteToken()
             success("The token has successfully been removed")
         } else {
             info("The token has not been removed")

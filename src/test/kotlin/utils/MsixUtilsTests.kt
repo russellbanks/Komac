@@ -62,7 +62,7 @@ class MsixUtilsTests : FunSpec({
         test("identity publisher that is very long") {
             val identityName = "x"
             val identityPublisher = "y".repeat(1024)
-            MsixUtils.getPackageFamilyName(identityName, identityPublisher) shouldBe  "x_r0rvk7mj3mn82"
+            MsixUtils.getPackageFamilyName(identityName, identityPublisher) shouldBe "x_r0rvk7mj3mn82"
         }
     }
 })

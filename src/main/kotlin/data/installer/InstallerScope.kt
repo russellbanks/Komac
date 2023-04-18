@@ -2,21 +2,22 @@ package data.installer
 
 import com.github.ajalt.mordant.terminal.Terminal
 import data.AllManifestData
+import data.PreviousManifestData
 import input.Prompts
 import schemas.manifest.InstallerManifest
 import utils.menu
 
-class InstallerScope(
-    private val allManifestData: AllManifestData,
-    private val previousInstallerManifest: InstallerManifest?
-) {
+object InstallerScope {
+    const val const = "Installer Scope"
+    private const val installerScopeInfo = "${Prompts.optional} Enter the $const"
+
     @OptIn(ExperimentalStdlibApi::class)
     fun installerScopePrompt(terminal: Terminal) = with(terminal) {
-        if (allManifestData.scope == null && allManifestData.installerType != InstallerManifest.InstallerType.PORTABLE) {
-            val previousValue = getPreviousValue()
+        if (AllManifestData.scope == null && AllManifestData.installerType != InstallerManifest.InstallerType.PORTABLE) {
+            val previousValue = previousValue
             println(colors.brightYellow(installerScopeInfo))
             previousValue?.let { println(colors.muted("Previous value: $it")) }
-            allManifestData.scope = menu(
+            AllManifestData.scope = menu(
                 items = InstallerManifest.Scope.entries,
                 default = previousValue,
                 optionalItemName = "No idea"
@@ -25,12 +26,8 @@ class InstallerScope(
         }
     }
 
-    private fun getPreviousValue(): InstallerManifest.Scope? = with(allManifestData) {
-        return previousInstallerManifest?.let { it.scope ?: it.installers.getOrNull(installers.size)?.scope }
-    }
-
-    companion object {
-        const val const = "Installer Scope"
-        private const val installerScopeInfo = "${Prompts.optional} Enter the $const"
-    }
+    private val previousValue: InstallerManifest.Scope?
+        get() = PreviousManifestData.installerManifest?.let {
+            it.scope ?: it.installers.getOrNull(AllManifestData.installers.size)?.scope
+        }
 }

@@ -4,8 +4,9 @@ import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.TerminalColors
 import io.ktor.client.HttpClient
 import io.ktor.http.Url
+import network.Http
 import schemas.manifest.InstallerManifest
-import utils.getExtension
+import utils.extension
 
 object ParameterUrls {
     fun assertUniqueUrlsCount(parameterUrls: Set<Url>, previousUrls: Set<Url>, colors: TerminalColors) {
@@ -29,9 +30,9 @@ object ParameterUrls {
         }
     }
 
-    suspend fun assertUrlsValid(parameterUrls: Set<Url>, client: HttpClient, colors: TerminalColors) {
+    suspend fun assertUrlsValid(parameterUrls: Set<Url>, colors: TerminalColors) {
         val errorList = parameterUrls.mapNotNull { url ->
-            data.shared.Url.isUrlValid(url, false, client)?.let { error -> url to error }
+            data.shared.Url.isUrlValid(url, false, Http.client)?.let { error -> url to error }
         }
         if (errorList.isNotEmpty()) {
             throw CliktError(
@@ -62,7 +63,7 @@ object ParameterUrls {
                         && it.installerType == previousInstaller.installerType },
                 { it.installerType == previousInstaller.installerType },
                 { it.architecture == previousInstaller.architecture },
-                { it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension() }
+                { it.installerUrl.extension == previousInstaller.installerUrl.extension }
             )
 
             val newInstaller = matchingConditions

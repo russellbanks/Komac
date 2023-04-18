@@ -7,20 +7,16 @@ import schemas.Schemas
 import schemas.manifest.DefaultLocaleManifest
 
 object DefaultLocaleManifestData {
-    suspend fun createDefaultLocaleManifest(
-        allManifestData: AllManifestData,
-        previousManifestData: PreviousManifestData?,
-        manifestOverride: String? = null
-    ): String = with(allManifestData) {
-        val parameterLocaleMetadata = allManifestData.additionalMetadata?.locales?.find {
-            it.name.equals(other = allManifestData.defaultLocale, ignoreCase = true)
+    suspend fun createDefaultLocaleManifest(manifestOverride: String? = null): String = with(AllManifestData) {
+        val parameterLocaleMetadata = additionalMetadata?.locales?.find {
+            it.name.equals(other = defaultLocale, ignoreCase = true)
         }
-        val previousDefaultLocaleData = previousManifestData?.remoteDefaultLocaleData
-        return getDefaultLocaleManifestBase(allManifestData, previousManifestData).copy(
+        val previousDefaultLocaleData = PreviousManifestData.defaultLocaleManifest
+        return defaultLocaleManifestBase.copy(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             packageLocale = defaultLocale
-                ?: previousManifestData?.previousVersionData?.defaultLocale
+                ?: PreviousManifestData.versionManifest?.defaultLocale
                 ?: Locale.defaultLocale,
             publisher = publisher ?: previousDefaultLocaleData?.publisher.orEmpty(),
             publisherUrl = (
@@ -72,20 +68,18 @@ object DefaultLocaleManifestData {
     private inline fun Url.ifBlank(defaultValue: () -> Url?): Url? =
         if (this == Url(URLBuilder())) defaultValue() else this
 
-    private fun getDefaultLocaleManifestBase(
-        allManifestData: AllManifestData,
-        previousManifestData: PreviousManifestData?
-    ): DefaultLocaleManifest = with(allManifestData) {
-        return previousManifestData?.remoteDefaultLocaleData ?: DefaultLocaleManifest(
-            packageIdentifier = packageIdentifier,
-            packageVersion = packageVersion,
-            packageLocale = Locale.defaultLocale,
-            publisher = publisher as String,
-            packageName = packageName as String,
-            license = license as String,
-            shortDescription = shortDescription as String,
-            manifestType = Schemas.defaultLocaleManifestType,
-            manifestVersion = Schemas.manifestVersion
-        )
-    }
+    private val defaultLocaleManifestBase: DefaultLocaleManifest
+        get() = with(AllManifestData) {
+            return PreviousManifestData.defaultLocaleManifest ?: DefaultLocaleManifest(
+                packageIdentifier = packageIdentifier,
+                packageVersion = packageVersion,
+                packageLocale = Locale.defaultLocale,
+                publisher = publisher as String,
+                packageName = packageName as String,
+                license = license as String,
+                shortDescription = shortDescription as String,
+                manifestType = Schemas.defaultLocaleManifestType,
+                manifestVersion = Schemas.manifestVersion
+            )
+        }
 }

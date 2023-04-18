@@ -13,17 +13,18 @@ object PackageVersion : TextPrompt {
         isRequired = true
     )
 
-    override val extraText: String = "Example: ${generateRandomVersion()}"
+    override val extraText: String = "Example: $randomVersion"
 
     /**
      * Generates a random version string in the format "major.minor.patch".
      *
      * @return a randomly generated version string.
      */
-    private fun generateRandomVersion(): String {
-        val major = (1 until 10).random()
-        val minor = (0 until 100).random()
-        val patch = (0 until 10).random()
-        return "$major.$minor.$patch"
-    }
+    private val randomVersion: String
+        get() {
+            val major = (1 until 10).random()
+            val minor = (0 until 100).random()
+            val patch = (0 until 10).random()
+            return "$major.$minor.$patch"
+        }
 }

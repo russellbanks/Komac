@@ -10,17 +10,16 @@ import token.TokenStore
 import utils.yesNoMenu
 
 class Update : CliktCommand() {
-    private val tokenStore = TokenStore()
     private val tokenParameter: String? by option("-t", "--token")
 
     override fun run(): Unit = runBlocking {
-        if (tokenStore.token == null) {
-            prompt(Token, tokenParameter).also { tokenStore.putToken(it) }
+        if (TokenStore.token == null) {
+            prompt(Token, tokenParameter).also { TokenStore.putToken(it) }
             success("Token set successfully")
         } else {
             val confirmed = if (tokenParameter == null) currentContext.terminal.yesNoMenu(default = true) else true
             if (confirmed) {
-                prompt(Token, tokenParameter).also { tokenStore.putToken(it) }
+                prompt(Token, tokenParameter).also { TokenStore.putToken(it) }
                 success("Token changed successfully")
             } else {
                 return@runBlocking

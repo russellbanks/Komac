@@ -15,8 +15,11 @@ import schemas.manifest.LocaleManifest
 import schemas.manifest.VersionManifest
 import utils.GitHubUtils
 
-class PreviousManifestData(packageIdentifier: String, latestVersion: String?, microsoftWinGetPkgs: GHRepository) {
+object PreviousManifestData {
     private val scope = CoroutineScope(Dispatchers.IO)
+    private lateinit var packageIdentifier: String
+    private var latestVersion: String? = null
+    private lateinit var microsoftWinGetPkgs: GHRepository
     private var directoryPath: List<GHContent>? = null
 
     private lateinit var previousVersionDataDeferred: Deferred<VersionManifest?>
@@ -24,7 +27,11 @@ class PreviousManifestData(packageIdentifier: String, latestVersion: String?, mi
     private lateinit var remoteDefaultLocaleDataDeferred: Deferred<DefaultLocaleManifest?>
     private lateinit var remoteLocaleDataDeferred: Deferred<List<LocaleManifest>?>
 
-    init {
+    fun init(packageIdentifier: String, latestVersion: String?, microsoftWinGetPkgs: GHRepository) {
+        this.packageIdentifier = packageIdentifier
+        this.latestVersion = latestVersion
+        this.microsoftWinGetPkgs = microsoftWinGetPkgs
+
         scope.launch {
             directoryPath = latestVersion?.let {
                 microsoftWinGetPkgs.getDirectoryContent("${GitHubUtils.getPackagePath(packageIdentifier)}/$it")
@@ -52,7 +59,7 @@ class PreviousManifestData(packageIdentifier: String, latestVersion: String?, mi
                         nonNullDirectoryPath.first {
                             it.name == GitHubUtils.getDefaultLocaleManifestName(
                                 identifier = packageIdentifier,
-                                previousDefaultLocale = previousVersionData?.defaultLocale
+                                previousDefaultLocale = versionManifest?.defaultLocale
                             )
                         }.path
                     )?.read()?.use { EncodeConfig.yamlDefault.decodeFromStream(DefaultLocaleManifest.serializer(), it) }
@@ -71,8 +78,8 @@ class PreviousManifestData(packageIdentifier: String, latestVersion: String?, mi
         }
     }
 
-    val previousVersionData by lazy { runBlocking { previousVersionDataDeferred.await() } }
-    val remoteInstallerData by lazy { runBlocking { remoteInstallerDataDeferred.await() } }
-    val remoteDefaultLocaleData by lazy { runBlocking { remoteDefaultLocaleDataDeferred.await() } }
+    val versionManifest by lazy { runBlocking { previousVersionDataDeferred.await() } }
+    val installerManifest by lazy { runBlocking { remoteInstallerDataDeferred.await() } }
+    val defaultLocaleManifest by lazy { runBlocking { remoteDefaultLocaleDataDeferred.await() } }
     val remoteLocaleData by lazy { runBlocking { remoteLocaleDataDeferred.await() } }
 }

@@ -2,10 +2,11 @@ package data.locale
 
 import commands.interfaces.TextPrompt
 import commands.interfaces.ValidationRules
-import detection.files.msix.Msix
+import data.AllManifestData
+import data.PreviousManifestData
 
-class Description {
-    class Short(msix: Msix?) : TextPrompt {
+object Description {
+    object Short : TextPrompt {
         override val name: String = "Short description"
 
         override val validationRules: ValidationRules = ValidationRules(
@@ -14,10 +15,12 @@ class Description {
             isRequired = true
         )
 
-        override val extraText: String? = msix?.description?.let { "Description from installer: $it" }
+        override val extraText: String? get() = AllManifestData.msix?.description?.let {
+            "Description from installer: $it"
+        }
     }
 
-    class Long(previousDescription: String?) : TextPrompt {
+    object Long : TextPrompt {
         override val name: String = "Description"
 
         override val validationRules: ValidationRules = ValidationRules(
@@ -26,6 +29,6 @@ class Description {
             isRequired = false
         )
 
-        override val default: String? = previousDescription
+        override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.description
     }
 }
