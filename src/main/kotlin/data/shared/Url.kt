@@ -58,30 +58,33 @@ object Url {
 
     private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url): Url {
         val redirectedUrl = installerUrl.getRedirectedUrl()
-        return if (
-            redirectedUrl != installerUrl &&
-            !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
-        ) {
+        val shouldUseRedirectedUrl = (
+                redirectedUrl != installerUrl &&
+                        !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
+                )
+        return if (shouldUseRedirectedUrl) {
             println(colors.brightYellow(redirectFound))
             println(colors.cyan("Discovered URL: $redirectedUrl"))
             if (yesNoMenu(default = true)) {
                 val error = isUrlValid(url = redirectedUrl, canBeBlank = false)
                 if (error == null) {
                     success("URL changed to $redirectedUrl")
+                    println()
+                    redirectedUrl
                 } else {
                     warning(error)
                     warning(detectedUrlValidationFailed)
-                    return installerUrl
+                    installerUrl
                 }
-                println()
             } else {
                 info("Original URL Retained - Proceeding with $installerUrl")
+                installerUrl
             }
-            redirectedUrl
         } else {
             installerUrl
         }
     }
+
 
     private suspend fun Terminal.downloadInstaller(fileSystem: FileSystem) = with(AllManifestData) {
         if (installers.map { it.installerUrl }.contains(installerUrl)) {
@@ -96,6 +99,7 @@ object Url {
             val progress = getDownloadProgressBar(installerUrl).apply(ProgressAnimation::start)
             val downloadedFile = Http.client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress, fileSystem)
             progress.clear()
+            releaseDate = downloadedFile.lastModified
             val fileAnalyser = FileAnalyser(downloadedFile.path, fileSystem)
             installerType = fileAnalyser.installerType
             architecture = installerUrl.findArchitecture() ?: fileAnalyser.architecture

@@ -27,8 +27,8 @@ class PageScraper(url: Url, private val client: HttpClient = Http.client) {
         pathSegments = emptyList()
     }.build()
     private val scope = CoroutineScope(Dispatchers.IO)
-    private val linksMap: Deferred<Map<String, String>> = scope.async {
-        parseLinks(client.get(urlRoot).bodyAsText()).getOrDefault(HashMap())
+    private val linksMap: Deferred<Map<String, String>?> = scope.async {
+        runCatching { parseLinks(client.get(urlRoot).bodyAsText()).getOrDefault(HashMap()) }.getOrNull()
     }
     val supportUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(support, help) }
     val faqUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(faq) }
@@ -81,10 +81,11 @@ class PageScraper(url: Url, private val client: HttpClient = Http.client) {
         val linksMap = linksMap.await()
         return searchValues.asSequence()
             .mapNotNull { searchValue ->
-                linksMap.entries.firstOrNull { (key, value) ->
+                linksMap?.entries?.firstOrNull { (key, value) ->
                     key.contains(searchValue, ignoreCase = true) || value.contains(searchValue, ignoreCase = true)
                 }?.value
-            }.firstOrNull()
+            }
+            .firstOrNull()
     }
 
     companion object {

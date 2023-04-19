@@ -27,8 +27,8 @@ class MenuCreator<T>(
             return verticalLayout {
                 listItems.forEachIndexed { index, item ->
                     val isSelected = index == selectedIndex
-                    val selectedColour = if (isSelected) terminal.colors.magenta else terminal.colors.plain
-                    cell(selectedColour("[${if (isSelected) "x" else " "}] ${nameConvert(item.toString())}"))
+                    val selectedColour = if (isSelected) terminal.colors.brightMagenta else terminal.colors.plain
+                    cell("${selectedColour("[${if (isSelected) "x" else " "}]")} ${nameConvert(item.toString())}")
                 }
             }
         }
