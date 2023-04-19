@@ -9,17 +9,17 @@ class ProductLanguage(languageCode: Int) {
     private fun Int.toLanguageTag() = if (Platform.isWindows()) getLanguageTagWindows() else lcidMap[this]
 
     private fun Int.getLanguageTagWindows(): String? {
-        val lcidLibrary = LCIDLibrary.INSTANCE
+        val kernel32 = Kernel32.INSTANCE
 
         val lpLanguage = CharArray(localeBufferSize)
-        var result = lcidLibrary.GetLocaleInfoW(this, LOCALE_SABBREVLANGNAME, lpLanguage, lpLanguage.size)
+        var result = kernel32.GetLocaleInfo(this, LOCALE_SISO639LANGNAME, lpLanguage, lpLanguage.size)
         if (result > 0) {
-            val language = Native.toString(lpLanguage).dropLast(1)
+            val language = Native.toString(lpLanguage)
             val lpCountry = CharArray(localeBufferSize)
-            result = lcidLibrary.GetLocaleInfoW(this, LOCALE_SABBREVCTRYNAME, lpCountry, lpCountry.size)
+            result = kernel32.GetLocaleInfo(this, LOCALE_SISO3166CTRYNAME, lpCountry, lpCountry.size)
             if (result > 0) {
-                val country = Native.toString(lpCountry).dropLast(1)
-                return language.lowercase() + "-" + country.uppercase()
+                val country = Native.toString(lpCountry)
+                return "$language-$country"
             }
         }
         return null
@@ -27,8 +27,8 @@ class ProductLanguage(languageCode: Int) {
 
     companion object {
         private const val localeBufferSize = 4 // 3 Characters (e.g. USA) + null terminator
-        private const val LOCALE_SABBREVLANGNAME = 0x3
-        private const val LOCALE_SABBREVCTRYNAME = 0x7
+        private const val LOCALE_SISO639LANGNAME = 0x0059
+        private const val LOCALE_SISO3166CTRYNAME = 0x005A
         private val lcidMap = hashMapOf(
             1078 to "af", 1052 to "sq", 1118 to "am", 5121 to "ar-DZ", 15_361 to "ar-BH", 3073 to "ar-EG",
             2049 to "ar-IQ", 11_265 to "ar-JO", 13_313 to "ar-KW", 12_289 to "ar-LB", 4097 to "ar-LY", 6145 to "ar-MA",
