@@ -13,7 +13,6 @@ kotest = "5.6.1"
 kotest-extensions-ktor = "2.0.0"
 kotlin = "1.8.20"
 kotlinx-serialization = "1.5.0"
-ksp = "1.8.20-1.0.11"
 ktor = "2.3.0"
 mockk = "1.13.5"
 mordant = "2.0.0-beta13"
@@ -69,5 +68,4 @@ detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 jpackage = { id = "org.panteleyev.jpackageplugin", version.ref = "jpackage" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }

@@ -4,7 +4,6 @@ import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
-import io.ktor.client.HttpClient
 import network.KtorGitHubConnector
 import org.kohsuke.github.GHContent
 import org.kohsuke.github.GHDirection
@@ -16,13 +15,38 @@ import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
+import token.TokenStore
 import utils.GitHubUtils
 import java.io.IOException
 
-class GitHubImpl(token: String, client: HttpClient) {
-    val github: GitHub = GitHubBuilder().withConnector(KtorGitHubConnector(client)).withOAuthToken(token).build()
+object GitHubImpl {
+    const val Microsoft = "Microsoft"
+    const val wingetpkgs = "winget-pkgs"
+    const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
+    private const val customForkOwnerEnv = "KMC_FRK_OWNER"
+    val github: GitHub = GitHubBuilder().withConnector(KtorGitHubConnector()).withOAuthToken(TokenStore.token).build()
     private var pullRequestBranch: GHRef? = null
     val forkOwner: String = System.getenv(customForkOwnerEnv) ?: github.myself.login
+
+    val microsoftWinGetPkgs: GHRepository by lazy {
+        var result: GHRepository? = null
+        var count = 0
+        val maxTries = 3
+        while (result == null) {
+            try {
+                result = github.getRepository("$Microsoft/$wingetpkgs")
+            } catch (ioException: IOException) {
+                if (++count == maxTries) {
+                    throw CliktError(
+                        message = "Failed to get $wingetPkgsFullName",
+                        cause = ioException,
+                        statusCode = 1
+                    )
+                }
+            }
+        }
+        result
+    }
 
     fun getWingetPkgsFork(terminal: Terminal): GHRepository = with(terminal) {
         return try {
@@ -45,19 +69,17 @@ class GitHubImpl(token: String, client: HttpClient) {
         }
     }
 
-    private fun getExistingPullRequest(identifier: String, version: String): GHIssue? {
-        return github.searchIssues()
-            .q("repo:$Microsoft/$wingetpkgs")
-            .q("is:pull-request")
-            .q("in:title")
-            .q(identifier)
-            .q(version)
-            .sort(GHIssueSearchBuilder.Sort.CREATED)
-            .order(GHDirection.DESC)
-            .list()
-            .withPageSize(1)
-            .firstOrNull()
-    }
+    private fun getExistingPullRequest(identifier: String, version: String): GHIssue? = github.searchIssues()
+        .q("repo:$Microsoft/$wingetpkgs")
+        .q("is:pull-request")
+        .q("in:title")
+        .q(identifier)
+        .q(version)
+        .sort(GHIssueSearchBuilder.Sort.CREATED)
+        .order(GHDirection.DESC)
+        .list()
+        .withPageSize(1)
+        .firstOrNull()
 
     fun promptIfPullRequestExists(identifier: String, version: String, terminal: Terminal) = with(terminal) {
         val existingPullRequest = getExistingPullRequest(identifier, version) ?: return
@@ -76,44 +98,39 @@ class GitHubImpl(token: String, client: HttpClient) {
         println()
     }
 
-    fun versionExists(identifier: String, version: String): Boolean {
-        return getMicrosoftWinGetPkgs()
-            .getDirectoryContent(GitHubUtils.getPackagePath(identifier))
-            ?.map(GHContent::name)
-            ?.contains(version) == true
-    }
+    fun versionExists(identifier: String, version: String): Boolean = microsoftWinGetPkgs
+        .getDirectoryContent(GitHubUtils.getPackagePath(identifier))
+        ?.map(GHContent::name)
+        ?.contains(version) == true
 
-    fun getMicrosoftWinGetPkgs(): GHRepository {
+    fun createBranchFromUpstreamDefaultBranch(
+        winGetPkgsFork: GHRepository,
+        packageIdentifier: String,
+        packageVersion: String
+    ): GHRef? {
+        require(winGetPkgsFork.isFork)
         var count = 0
         val maxTries = 3
         while (true) {
             try {
-                return github.getRepository("$Microsoft/$wingetpkgs")
+                return winGetPkgsFork.source?.let { upstreamRepository ->
+                    winGetPkgsFork.createRef(
+                        "refs/heads/${GitHubUtils.getBranchName(packageIdentifier, packageVersion)}",
+                        upstreamRepository.getBranch(upstreamRepository.defaultBranch).shA1
+                    ).also { pullRequestBranch = it }
+                }
             } catch (ioException: IOException) {
                 if (++count == maxTries) {
-                    throw CliktError(message = "Failed to get $wingetPkgsFullName", cause = ioException, statusCode = 1)
+                    throw CliktError(
+                        message = "Failed to create branch from upstream default branch",
+                        cause = ioException,
+                        statusCode = 1
+                    )
                 }
             }
         }
     }
 
-    fun createBranchFromUpstreamDefaultBranch(
-        wingetPkgsFork: GHRepository,
-        packageIdentifier: String,
-        packageVersion: String
-    ): GHRef? {
-        require(wingetPkgsFork.isFork)
-        return try {
-            wingetPkgsFork.source?.let { upstreamRepository ->
-                wingetPkgsFork.createRef(
-                    "refs/heads/${GitHubUtils.getBranchName(packageIdentifier, packageVersion)}",
-                    upstreamRepository.getBranch(upstreamRepository.defaultBranch).shA1
-                ).also { pullRequestBranch = it }
-            }
-        } catch (_: IOException) {
-            null
-        }
-    }
 
     fun commitAndPullRequest(
         wingetPkgsFork: GHRepository,
@@ -121,7 +138,7 @@ class GitHubImpl(token: String, client: HttpClient) {
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState
-    ): GHPullRequest? {
+    ): GHPullRequest {
         commitFiles(
             wingetPkgsFork = wingetPkgsFork,
             files = files.mapKeys { "${GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion)}/${it.key}" },
@@ -136,8 +153,8 @@ class GitHubImpl(token: String, client: HttpClient) {
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState,
-    ): GHPullRequest? {
-        val ghRepository = getMicrosoftWinGetPkgs()
+    ): GHPullRequest {
+        val ghRepository = microsoftWinGetPkgs
         return try {
             ghRepository.createPullRequest(
                 /* title = */ GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState),
@@ -145,8 +162,8 @@ class GitHubImpl(token: String, client: HttpClient) {
                 /* base = */ ghRepository.defaultBranch,
                 /* body = */ GitHubUtils.getPullRequestBody()
             )
-        } catch (_: IOException) {
-            null
+        } catch (ioException: IOException) {
+            throw CliktError(message = "Failed to create pull request", cause = ioException, statusCode = 1)
         }
     }
 
@@ -166,7 +183,7 @@ class GitHubImpl(token: String, client: HttpClient) {
                     .createTree()
                     .baseTree(wingetPkgsFork.getBranch(branch.ref).shA1)
                     .apply {
-                        files.forEach { (path, content) ->
+                        for ((path, content) in files) {
                             if (content != null) {
                                 add(path, content.replace("\n", "\r\n"), false)
                             }
@@ -188,12 +205,5 @@ class GitHubImpl(token: String, client: HttpClient) {
             }
             ?.create()
             ?.also { branch.updateTo(it.shA1) }
-    }
-
-    companion object {
-        const val Microsoft = "Microsoft"
-        const val wingetpkgs = "winget-pkgs"
-        const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
-        private const val customForkOwnerEnv = "KMC_FRK_OWNER"
     }
 }

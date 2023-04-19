@@ -1,11 +1,13 @@
 package data.locale
 
 import commands.interfaces.UrlPrompt
-import io.ktor.client.HttpClient
+import data.PreviousManifestData
 import io.ktor.http.Url
 
-class PackageUrl(override val previousUrl: Url?, override val client: HttpClient) : UrlPrompt {
+object PackageUrl : UrlPrompt {
     override val name: String = "Package url"
+
+    override val previousUrl: Url? get() = PreviousManifestData.defaultLocaleManifest?.packageUrl
 
     override val description: String = "package home page"
 }

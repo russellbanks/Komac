@@ -42,11 +42,11 @@ class UrlUtilTests : FunSpec({
 
     context("get extension from url") {
         test("extension at end of url") {
-            Url("example.com/fileName.exe").getExtension() shouldBe "exe"
+            Url("example.com/fileName.exe").extension shouldBe "exe"
         }
 
         test("extension with /download before end of url") {
-            Url("example.com/fileName.msi/download").getExtension() shouldBe "msi"
+            Url("example.com/fileName.msi/download").extension shouldBe "msi"
         }
     }
 
@@ -62,11 +62,11 @@ class UrlUtilTests : FunSpec({
 
     context("get scope from url") {
         test("user in url") {
-            Url("example.com/fileName-user.exe").findScope() shouldBe InstallerManifest.Installer.Scope.User
+            Url("example.com/fileName-user.exe").findScope() shouldBe InstallerManifest.Scope.User
         }
 
         test("machine in url") {
-            Url("example.com/fileName-machine.exe").findScope() shouldBe InstallerManifest.Installer.Scope.Machine
+            Url("example.com/fileName-machine.exe").findScope() shouldBe InstallerManifest.Scope.Machine
         }
     }
 
@@ -127,7 +127,7 @@ class UrlUtilTests : FunSpec({
                 HttpStatusCode.PermanentRedirect
             )
         ) {
-            it.isRedirect() shouldBe true
+            it.isRedirect shouldBe true
         }
     }
 })

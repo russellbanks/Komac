@@ -4,8 +4,9 @@ import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.TerminalColors
 import io.ktor.client.HttpClient
 import io.ktor.http.Url
+import network.Http
 import schemas.manifest.InstallerManifest
-import utils.getExtension
+import utils.extension
 
 object ParameterUrls {
     fun assertUniqueUrlsCount(parameterUrls: Set<Url>, previousUrls: Set<Url>, colors: TerminalColors) {
@@ -29,9 +30,9 @@ object ParameterUrls {
         }
     }
 
-    suspend fun assertUrlsValid(parameterUrls: Set<Url>, client: HttpClient, colors: TerminalColors) {
+    suspend fun assertUrlsValid(parameterUrls: Set<Url>, colors: TerminalColors) {
         val errorList = parameterUrls.mapNotNull { url ->
-            data.shared.Url.isUrlValid(url, false, client)?.let { error -> url to error }
+            data.shared.Url.isUrlValid(url, false, Http.client)?.let { error -> url to error }
         }
         if (errorList.isNotEmpty()) {
             throw CliktError(
@@ -45,52 +46,33 @@ object ParameterUrls {
         newInstallers: List<InstallerManifest.Installer>,
         previousInstallers: List<InstallerManifest.Installer>
     ): Map<InstallerManifest.Installer, InstallerManifest.Installer> {
-        val result = hashMapOf<InstallerManifest.Installer, InstallerManifest.Installer>()
+        val result = mutableMapOf<InstallerManifest.Installer, InstallerManifest.Installer>()
+
         for (previousInstaller in previousInstallers) {
-            var newInstaller: InstallerManifest.Installer? = newInstallers.firstOrNull {
-                it.architecture == previousInstaller.architecture &&
+            val matchingConditions = sequenceOf<(InstallerManifest.Installer) -> Boolean>(
+                { it.architecture == previousInstaller.architecture &&
                         it.installerType == previousInstaller.installerType &&
-                        it.scope == previousInstaller.scope
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture &&
-                            it.installerType == previousInstaller.installerType &&
-                            it.scope == null
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture &&
-                            it.installerType == null &&
-                            it.scope == previousInstaller.scope
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture &&
-                            it.installerType == previousInstaller.installerType
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.installerType == previousInstaller.installerType
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.architecture == previousInstaller.architecture
-                }
-            }
-            if (newInstaller == null) {
-                newInstaller = newInstallers.firstOrNull {
-                    it.installerUrl.getExtension() == previousInstaller.installerUrl.getExtension()
-                }
-            }
-            if (newInstaller != null) {
-                result[previousInstaller] = newInstaller
-            }
+                        it.scope == previousInstaller.scope },
+                { it.architecture == previousInstaller.architecture
+                        && it.installerType == previousInstaller.installerType
+                        && it.scope == null },
+                { it.architecture == previousInstaller.architecture &&
+                        it.installerType == null &&
+                        it.scope == previousInstaller.scope },
+                { it.architecture == previousInstaller.architecture &&
+                        it.installerType == previousInstaller.installerType },
+                { it.installerType == previousInstaller.installerType },
+                { it.architecture == previousInstaller.architecture },
+                { it.installerUrl.extension == previousInstaller.installerUrl.extension }
+            )
+
+            val newInstaller = matchingConditions
+                .mapNotNull(newInstallers::firstOrNull)
+                .firstOrNull()
+
+            newInstaller?.let { result[previousInstaller] = it }
         }
+
         return result
     }
 }

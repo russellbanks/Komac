@@ -1,75 +1,106 @@
 package detection.github
 
 import data.GitHubImpl
-import extensions.GitHubExtensions.getFormattedReleaseNotes
-import io.ktor.client.HttpClient
+import extensions.formattedReleaseNotes
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Url
 import io.ktor.http.decodeURLPart
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import network.Http
 import org.kohsuke.github.GHAsset
 import org.kohsuke.github.GHRelease
 import org.kohsuke.github.PagedIterable
-import utils.getExtension
+import utils.extension
 import utils.getFileNameWithoutExtension
 import java.net.URL
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-class GitHubDetection(url: Url, gitHubImpl: GitHubImpl, private val client: HttpClient) {
+class GitHubDetection(url: Url) {
+    // Properties
     private val pathSegments = url.pathSegments.filterNot(String::isBlank)
-    private val repository = gitHubImpl.github.getRepository("${pathSegments[0]}/${pathSegments[1]}")
-    private val release: GHRelease? = runCatching {
+    private val repository = GitHubImpl.github.getRepository("${pathSegments[0]}/${pathSegments[1]}")
+    private val release: GHRelease? = findRelease()
+    private val assets = release?.listAssets()
+    private val asset = findAsset(url)
+
+    var sha256: String? = null
+        private set
+
+    var publisherUrl: Url? = findPublisherUrl()
+    var shortDescription: String? = repository.description
+    var publisherSupportUrl: Url? = findPublisherSupportUrl()
+    var license: String? = findLicense()
+    var licenseUrl: Url? = findLicenseUrl()
+    var packageUrl: Url? = findPackageUrl()
+    var releaseDate: LocalDate? = findReleaseDate()
+    var releaseNotesUrl: Url? = findReleaseNotesUrl()
+    var releaseNotes: String? = release?.formattedReleaseNotes
+    var privacyUrl: Url? = findPrivacyUrl()
+    var topics: List<String>? = findTopics()
+
+    init {
+        require(url.host.equals(gitHubWebsite, ignoreCase = true)) { "Url must be a GitHub Url" }
+        CoroutineScope(Dispatchers.IO).launch { sha256 = findSha256(url, assets) }
+    }
+
+    // Functions
+    private fun findRelease(): GHRelease? = runCatching {
         repository.listReleases().find {
-            it.tagName.contains(other = pathSegments.dropLast(1).last(), ignoreCase = true)
+            it.tagName.contains(pathSegments.dropLast(1).last(), ignoreCase = true)
         }
     }.getOrNull()
-    private val assets = release?.listAssets()
-    private val asset = assets?.firstOrNull { it.browserDownloadUrl.decodeURLPart() == url.toString().decodeURLPart() }
-    var publisherUrl: Url? = runCatching { repository.owner.blog }.getOrNull()?.let(::Url)
-    var shortDescription: String? = repository.description
-    var publisherSupportUrl: Url? = if (repository.hasIssues()) {
+
+    private fun findAsset(url: Url): GHAsset? = assets?.firstOrNull {
+        it.browserDownloadUrl.decodeURLPart() == url.toString().decodeURLPart()
+    }
+
+    private fun findPublisherUrl(): Url? = runCatching {
+        repository.owner.blog?.let(::Url)
+    }.getOrNull()
+
+    private fun findPublisherSupportUrl(): Url? = if (repository.hasIssues()) {
         Url("https://github.com/${repository.fullName}/issues")
     } else {
         null
     }
-    var license: String? = runCatching {
+
+    private fun findLicense(): String? = runCatching {
         repository.license
             ?.key
             ?.uppercase()
-            ?.takeUnless { it.equals(other = "other", ignoreCase = true) }
+            ?.takeUnless { it.equals("other", ignoreCase = true) }
     }.getOrNull()
-    var licenseUrl: Url? = repository.licenseContent?.htmlUrl?.let(::Url)
-    var packageUrl: Url? = repository.htmlUrl.toURI()?.let(::Url)
-    var releaseDate: LocalDate? = runCatching {
+
+    private fun findLicenseUrl(): Url? = repository.licenseContent?.htmlUrl?.let(::Url)
+
+    private fun findPackageUrl(): Url? = repository.htmlUrl.toURI()?.let(::Url)
+
+    private fun findReleaseDate(): LocalDate? = runCatching {
         asset?.createdAt?.toInstant()?.atOffset(ZoneOffset.UTC)?.toLocalDate()
     }.getOrNull()
-    var releaseNotesUrl: Url? = release?.htmlUrl?.let(URL::toURI)?.let(::Url)
-    var releaseNotes: String? = release?.getFormattedReleaseNotes()
-    var privacyUrl: Url? = runCatching {
+
+    private fun findReleaseNotesUrl(): Url? = release?.htmlUrl?.let(URL::toURI)?.let(::Url)
+
+    private fun findPrivacyUrl(): Url? = runCatching {
         repository
             .getDirectoryContent("")
-            .find { it.name.lowercase().contains(other = "privacy", ignoreCase = true) }
+            .find { it.name.lowercase().contains("privacy", ignoreCase = true) }
             ?.htmlUrl
             ?.let(::Url)
     }.getOrNull()
-    var topics: List<String>? = runCatching { repository.listTopics() }.getOrNull()
-    var sha256: Deferred<String?> = CoroutineScope(Dispatchers.IO).async { findSha256(url, assets) }
 
-    init {
-        require(url.host.equals(other = gitHubWebsite, ignoreCase = true)) { "Url must be a GitHub Url" }
-    }
+    private fun findTopics(): List<String>? = runCatching { repository.listTopics() }.getOrNull()
 
     private suspend fun findSha256(url: Url, assets: PagedIterable<GHAsset>?): String? {
         return assets
-            ?.find { it.isSha256(url) || it.name.equals(other = "Sha256Sums", ignoreCase = true) }
+            ?.find { it.isSha256(url) || it.name.equals("Sha256Sums", ignoreCase = true) }
             ?.browserDownloadUrl
-            ?.let { client.get(it).bodyAsText() }
-            ?.let("(.*) ${url.getExtension()}".toRegex()::find)
+            ?.let { Http.client.get(it).bodyAsText() }
+            ?.let("(.*) ${url.extension}".toRegex()::find)
             ?.groupValues
             ?.getOrNull(1)
             ?.trim()
@@ -77,13 +108,13 @@ class GitHubDetection(url: Url, gitHubImpl: GitHubImpl, private val client: Http
 
     private fun GHAsset.isSha256(url: Url): Boolean {
         return url.getFileNameWithoutExtension()?.let {
-            name.contains(other = it, ignoreCase = true)
+            name.contains(it, ignoreCase = true)
         } == true && endsWithSha256()
     }
 
     private fun GHAsset.endsWithSha256(): Boolean {
-        return name.endsWith(suffix = ".sha256sum", ignoreCase = true) ||
-            name.endsWith(suffix = ".sha256", ignoreCase = true)
+        return name.endsWith(".sha256sum", ignoreCase = true) ||
+            name.endsWith(".sha256", ignoreCase = true)
     }
 
     companion object {

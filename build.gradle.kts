@@ -1,4 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.util.distsDirectory
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.panteleyev.jpackage.ImageType
@@ -9,13 +11,12 @@ plugins {
     alias(libs.plugins.jpackage)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.shadow)
     application
 }
 
 group = "com.russellbanks"
-version = "1.4.1"
+version = "1.5.0"
 
 repositories {
     mavenCentral()
@@ -94,13 +95,6 @@ tasks.withType<ShadowJar> {
     }
 }
 
-kotlin {
-    sourceSets.all {
-        languageSettings {
-            languageVersion = "2.0"
-        }
-    }
-}
 
 detekt {
     ignoreFailures = true
@@ -158,17 +152,16 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
-sourceSets.main {
-    kotlin.srcDirs("build/generated/ksp/main/kotlin")
-}
-
 buildConfig {
     buildConfigField("String", "appName", "\"${project.name}\"")
     buildConfigField("String", "appVersion", "\"${project.version}\"")
 }
 
 tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = JavaVersion.VERSION_17.toString()
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+        languageVersion.set(KotlinVersion.KOTLIN_2_0)
+    }
 }
 
 tasks.withType<JavaCompile> {

@@ -11,15 +11,15 @@ import schemas.AdditionalMetadata
 import schemas.manifest.InstallerManifest
 import java.time.LocalDate
 
-class AllManifestData {
+object AllManifestData {
     lateinit var installerUrl: Url
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture
-    var installerType: InstallerManifest.Installer.InstallerType? = null
-    var installerSwitches = InstallerManifest.Installer.InstallerSwitches()
+    var installerType: InstallerManifest.InstallerType? = null
+    var installerSwitches = InstallerManifest.InstallerSwitches()
     var installerLocale: String? = null
-    var scope: InstallerManifest.Installer.Scope? = null
-    var upgradeBehavior: InstallerManifest.Installer.UpgradeBehavior? = null
+    var scope: InstallerManifest.Scope? = null
+    var upgradeBehavior: InstallerManifest.UpgradeBehavior? = null
     var releaseDate: LocalDate? = null
     var installers = emptyList<InstallerManifest.Installer>()
     var fileExtensions: List<String>? = null

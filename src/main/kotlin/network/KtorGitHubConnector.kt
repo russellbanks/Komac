@@ -1,6 +1,5 @@
 package network
 
-import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.headers
 import io.ktor.client.request.request
@@ -18,9 +17,9 @@ import org.kohsuke.github.connector.GitHubConnectorResponse
 import org.kohsuke.github.connector.GitHubConnectorResponse.ByteArrayResponse
 import java.io.InputStream
 
-class KtorGitHubConnector(private val client: HttpClient) : GitHubConnector {
+class KtorGitHubConnector : GitHubConnector {
     override fun send(connectorRequest: GitHubConnectorRequest): GitHubConnectorResponse = runBlocking(Dispatchers.IO) {
-        val request = client.request(connectorRequest.url()) {
+        val request = Http.client.request(connectorRequest.url()) {
             method = HttpMethod.parse(connectorRequest.method())
             if (connectorRequest.hasBody()) {
                 setBody(connectorRequest.body())

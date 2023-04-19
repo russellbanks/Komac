@@ -6,7 +6,7 @@ import okio.Path
 import okio.Path.Companion.toPath
 import okio.fakefilesystem.FakeFileSystem
 import schemas.manifest.InstallerManifest.Installer.Architecture
-import schemas.manifest.InstallerManifest.Installer.InstallerType
+import schemas.manifest.InstallerManifest.InstallerType
 
 class FileAnalyserTests : FunSpec({
     val fileSystem = FakeFileSystem()
@@ -25,7 +25,7 @@ class FileAnalyserTests : FunSpec({
         test("exe contains expected inno bytes") {
             val file = directory / "innoFile.exe"
             fileSystem.write(file) { write(FileAnalyser.innoBytes) }
-            FileAnalyser(file, fileSystem).getInstallerType() shouldBe InstallerType.INNO
+            FileAnalyser(file, fileSystem).installerType shouldBe InstallerType.INNO
         }
 
         test("exe contains incorrect amount of inno bytes") {
@@ -34,7 +34,7 @@ class FileAnalyserTests : FunSpec({
                 write(FileAnalyser.innoBytes.substring(0, FileAnalyser.innoBytes.size - 2))
                 repeat(8) { writeByte(0) }
             }
-            FileAnalyser(file, fileSystem).getInstallerType() shouldBe null
+            FileAnalyser(file, fileSystem).installerType shouldBe null
         }
     }
 
@@ -42,7 +42,7 @@ class FileAnalyserTests : FunSpec({
         test("exe contains expected nullsoft bytes") {
             val file = directory / "nullsoft.exe"
             fileSystem.write(file) { write(FileAnalyser.nullsoftBytes) }
-            FileAnalyser(file, fileSystem).getInstallerType() shouldBe InstallerType.NULLSOFT
+            FileAnalyser(file, fileSystem).installerType shouldBe InstallerType.NULLSOFT
         }
 
         test("exe contains incorrect amount of nullsoft bytes") {
@@ -51,7 +51,7 @@ class FileAnalyserTests : FunSpec({
                 write(FileAnalyser.nullsoftBytes.substring(0, FileAnalyser.nullsoftBytes.size - 2))
                 repeat(8) { writeByte(0) }
             }
-            FileAnalyser(file, fileSystem).getInstallerType() shouldBe null
+            FileAnalyser(file, fileSystem).installerType shouldBe null
         }
     }
 
@@ -62,7 +62,7 @@ class FileAnalyserTests : FunSpec({
                 repeat(64) { writeByte(0) }
                 writeString(FileAnalyser.wixBurnHeader, Charsets.UTF_8)
             }
-            FileAnalyser(file, fileSystem).getInstallerType() shouldBe InstallerType.BURN
+            FileAnalyser(file, fileSystem).installerType shouldBe InstallerType.BURN
         }
 
         test("exe contains burn header in wrong place") {
@@ -71,7 +71,7 @@ class FileAnalyserTests : FunSpec({
                 repeat(UShort.MAX_VALUE.toInt() * FileAnalyser.burnBufferSize.toInt()) { writeByte(0) }
                 writeString(FileAnalyser.wixBurnHeader, Charsets.UTF_8)
             }
-            FileAnalyser(file, fileSystem).getInstallerType() shouldBe null
+            FileAnalyser(file, fileSystem).installerType shouldBe null
         }
     }
 
@@ -90,25 +90,25 @@ class FileAnalyserTests : FunSpec({
         test("should return 8664 when machine value is 0x8664") {
             val file = directory / "64bit.exe"
             file.writeExeWithMachine(0x8664)
-            FileAnalyser(file, fileSystem).getPEArchitectureValue() shouldBe "8664"
+            FileAnalyser(file, fileSystem).peArchitectureValue shouldBe "8664"
         }
 
         test("should return x64 when machine value is 0x8664") {
             val file = directory / "64bit.exe"
             file.writeExeWithMachine(0x8664)
-            FileAnalyser(file, fileSystem).getArchitecture() shouldBe Architecture.X64
+            FileAnalyser(file, fileSystem).architecture shouldBe Architecture.X64
         }
 
         test("should return x86 when machine value is 0x8664") {
             val file = directory / "32bit.exe"
             file.writeExeWithMachine(0x014c)
-            FileAnalyser(file, fileSystem).getArchitecture() shouldBe Architecture.X86
+            FileAnalyser(file, fileSystem).architecture shouldBe Architecture.X86
         }
 
         test("should return 14c when machine value is 0x014c") {
             val file = directory / "32bit.exe"
             file.writeExeWithMachine(0x014c)
-            FileAnalyser(file, fileSystem).getPEArchitectureValue() shouldBe "14c"
+            FileAnalyser(file, fileSystem).peArchitectureValue shouldBe "14c"
         }
     }
 })

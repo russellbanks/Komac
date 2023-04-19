@@ -3,9 +3,9 @@ package data.shared
 import commands.interfaces.TextPrompt
 import commands.interfaces.UrlPrompt
 import commands.interfaces.ValidationRules
-import io.ktor.client.HttpClient
+import data.PreviousManifestData
 
-class Publisher(previousPublisher: String?) : TextPrompt {
+object Publisher : TextPrompt {
 
     override val name: String = "Publisher"
 
@@ -15,12 +15,14 @@ class Publisher(previousPublisher: String?) : TextPrompt {
         isRequired = true
     )
 
-    override val default: String? = previousPublisher
+    override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.publisher
 
     override val extraText: String = "Example: Microsoft Corporation"
 
-    class Url(override val previousUrl: io.ktor.http.Url?, override val client: HttpClient) : UrlPrompt {
+    object Url : UrlPrompt {
         override val name: String = "Publisher url"
+
+        override val previousUrl = PreviousManifestData.defaultLocaleManifest?.publisherUrl
 
         override val description: String = "publisher home page"
     }

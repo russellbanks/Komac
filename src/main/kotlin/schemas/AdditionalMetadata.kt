@@ -14,7 +14,7 @@ data class AdditionalMetadata(
     @SerialName("ProductCode") val productCode: String? = null,
     @SerialName("ReleaseDate") @Contextual val releaseDate: LocalDate? = null,
     @SerialName("AppsAndFeaturesEntries")
-    val appsAndFeaturesEntries: List<InstallerManifest.Installer.AppsAndFeaturesEntry>? = null
+    val appsAndFeaturesEntries: List<InstallerManifest.AppsAndFeaturesEntry>? = null
 ) {
     @Serializable
     data class Locale(

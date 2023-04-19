@@ -1,22 +1,18 @@
 package data.installer
 
 import commands.interfaces.MenuPrompt
+import data.AllManifestData
+import data.PreviousManifestData
 import schemas.manifest.InstallerManifest
 
-class InstallerType(
-    private val previousInstaller: InstallerManifest?,
-    private val installersSize: Int
-) : MenuPrompt<InstallerManifest.Installer.InstallerType> {
+object InstallerType : MenuPrompt<InstallerManifest.InstallerType> {
     override val name: String = "Installer type"
 
-    override val items: List<InstallerManifest.Installer.InstallerType> =
-        InstallerManifest.Installer.InstallerType.values().toList()
+    @OptIn(ExperimentalStdlibApi::class)
+    override val items = InstallerManifest.InstallerType.entries
 
-    override val default: InstallerManifest.Installer.InstallerType? = getPreviousValue()
-
-    private fun getPreviousValue(): InstallerManifest.Installer.InstallerType? {
-        return previousInstaller?.run {
-            installerType?.toPerInstallerType() ?: installers.getOrNull(installersSize)?.installerType
+    override val default: InstallerManifest.InstallerType?
+        get() = PreviousManifestData.installerManifest?.run {
+            installerType ?: installers.getOrNull(AllManifestData.installers.size)?.installerType
         }
-    }
 }

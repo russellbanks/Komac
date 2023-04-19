@@ -23,8 +23,8 @@ object Errors {
             items?.let { nonNullItems ->
                 appendLine()
                 appendLine("Items that did not match:")
-                nonNullItems.forEach {
-                    appendLine(" - $it")
+                for (item in nonNullItems) {
+                    appendLine(" - $item")
                 }
             }
         }
@@ -37,8 +37,8 @@ object Errors {
             items?.let { nonNullItems ->
                 appendLine()
                 appendLine("Items that did not match:")
-                nonNullItems.forEach {
-                    appendLine(" - $it")
+                for (item in nonNullItems) {
+                    appendLine(" - $item")
                 }
             }
         }
@@ -53,12 +53,10 @@ object Errors {
 
     fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
 
-    fun invalidEnum(enum: List<String>): String {
-        return buildString {
-            append(error)
-            append(" - Value must exist in the enum - ")
-            append(enum.joinToString())
-        }
+    fun invalidEnum(enum: Iterable<String>): String = buildString {
+        append(error)
+        append(" - Value must exist in the enum - ")
+        append(enum.joinToString())
     }
 
     fun doesNotExistError(
@@ -66,17 +64,15 @@ object Errors {
         packageVersion: String? = null,
         isUpdate: Boolean = false,
         colors: TerminalColors
-    ): CliktError {
-        return CliktError(
-            message = colors.warning(
-                buildString {
-                    append("$packageIdentifier ")
-                    if (packageVersion != null) append("$packageVersion ")
-                    appendLine("does not exist in ${GitHubImpl.wingetPkgsFullName}")
-                    if (isUpdate) appendLine("Please use the 'new' command to create a new manifest.")
-                }
-            ),
-            statusCode = 1
-        )
-    }
+    ): CliktError = CliktError(
+        message = colors.warning(
+            buildString {
+                append("$packageIdentifier ")
+                if (packageVersion != null) append("$packageVersion ")
+                appendLine("does not exist in ${GitHubImpl.wingetPkgsFullName}")
+                if (isUpdate) appendLine("Please use the 'new' command to create a new manifest.")
+            }
+        ),
+        statusCode = 1
+    )
 }

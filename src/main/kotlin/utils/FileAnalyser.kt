@@ -3,7 +3,7 @@ package utils
 import detection.files.msi.Msi
 import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
-import extensions.PathExtensions.extension
+import extensions.extension
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
@@ -12,9 +12,9 @@ import okio.FileSystem
 import okio.Path
 import okio.buffer
 import schemas.manifest.InstallerManifest.Installer.Architecture
-import schemas.manifest.InstallerManifest.Installer.InstallerType
-import schemas.manifest.InstallerManifest.Installer.Scope
-import schemas.manifest.InstallerManifest.Installer.UpgradeBehavior
+import schemas.manifest.InstallerManifest.InstallerType
+import schemas.manifest.InstallerManifest.Scope
+import schemas.manifest.InstallerManifest.UpgradeBehavior
 
 class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
     private val msi = if (file.extension == InstallerType.MSI.toString()) Msi(file, fileSystem) else null
@@ -27,30 +27,30 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
         else -> null
     }
 
-    fun getInstallerType(): InstallerType? {
-        return when (file.extension) {
+    val installerType: InstallerType?
+        get() = when (file.extension) {
             InstallerType.MSI.toString() -> if (msi?.isWix == true) InstallerType.WIX else InstallerType.MSI
             InstallerType.ZIP.toString() -> InstallerType.ZIP
             InstallerType.APPX.toString() -> InstallerType.APPX
             InstallerType.MSIX.toString() -> InstallerType.MSIX
             else -> fileSystem.openReadOnly(file).use {
                 when {
-                    it.isNullsoft() -> InstallerType.NULLSOFT
-                    it.isInno() -> InstallerType.INNO
-                    it.isBurn() -> InstallerType.BURN
+                    it.isNullsoft -> InstallerType.NULLSOFT
+                    it.isInno -> InstallerType.INNO
+                    it.isBurn -> InstallerType.BURN
                     else -> null
                 }
             }
         }
-    }
 
-    fun getArchitecture(): Architecture {
-        return when (file.extension) {
+    val architecture: Architecture
+        get() = when (file.extension) {
             InstallerType.MSI.toString() -> msi?.architecture
             InstallerType.MSIX.toString() -> {
                 msix?.processorArchitecture ?: msixBundle?.packages?.first()?.processorArchitecture
             }
-            else -> when (getPEArchitectureValue()) {
+
+            else -> when (peArchitectureValue) {
                 "8664" -> Architecture.X64
                 "14c" -> Architecture.X86
                 "aa64" -> Architecture.ARM64
@@ -58,29 +58,30 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
                 else -> null
             }
         } ?: Architecture.X64
-    }
 
-    fun getSignatureSha256(): String? = msix?.signatureSha256 ?: msixBundle?.signatureSha256
+    val signatureSha256: String? get() = msix?.signatureSha256 ?: msixBundle?.signatureSha256
 
-    fun getProductCode(): String? = msi?.productCode
+    val productCode: String? get() = msi?.productCode
 
-    fun getUpgradeBehaviour(): UpgradeBehavior? {
-        val validExtensions = listOf(
-            InstallerType.APPX.toString(),
-            InstallerType.MSIX.toString(),
-            MsixBundle.appxBundleConst,
-            MsixBundle.msixBundleConst
-        )
-        return if (file.extension in validExtensions) UpgradeBehavior.Install else null
-    }
+    val upgradeBehaviour: UpgradeBehavior?
+        get() {
+            val validExtensions = listOf(
+                InstallerType.APPX.toString(),
+                InstallerType.MSIX.toString(),
+                MsixBundle.appxBundleConst,
+                MsixBundle.msixBundleConst
+            )
+            return if (file.extension in validExtensions) UpgradeBehavior.Install else null
+        }
 
-    fun getScope(): Scope? = when {
-        msi?.allUsers != null -> msi.allUsers?.toInstallerScope()
-        msix != null || msixBundle != null -> Scope.User
-        else -> null
-    }
+    val scope: Scope?
+        get() = when {
+            msi?.allUsers != null -> msi.allUsers?.toInstallerScope()
+            msix != null || msixBundle != null -> Scope.User
+            else -> null
+        }
 
-    fun getMinVersion(): String? = msix?.minVersion ?: msixBundle?.packages?.first()?.minVersion
+    val minVersion: String? get() = msix?.minVersion ?: msixBundle?.packages?.first()?.minVersion
 
     /**
      * Returns `true` if the [FileHandle] has been made with the Nullsoft Scriptable Install System.
@@ -89,9 +90,8 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
      *
      * @return `true` if the [FileHandle] has been made with NSIS, `false` otherwise.
      */
-    private fun FileHandle.isNullsoft(): Boolean {
-        return Buffer().also { read(0L, it, nullsoftBytes.size.toLong()) }.rangeEquals(0L, nullsoftBytes)
-    }
+    private val FileHandle.isNullsoft: Boolean
+        get() = Buffer().also { read(0L, it, nullsoftBytes.size.toLong()) }.rangeEquals(0L, nullsoftBytes)
 
     /**
      * Returns `true` if the [FileHandle] has been made with Inno Setup.
@@ -100,9 +100,8 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
      *
      * @return `true` if the [FileHandle] has been made with Inno Setup, `false` otherwise.
      */
-    private fun FileHandle.isInno(): Boolean {
-        return Buffer().also { read(0L, it, innoBytes.size.toLong()) }.rangeEquals(0L, innoBytes)
-    }
+    private val FileHandle.isInno: Boolean
+        get() = Buffer().also { read(0L, it, innoBytes.size.toLong()) }.rangeEquals(0L, innoBytes)
 
     /**
      * Returns `true` if the [FileHandle] has been made with WiX's burn installer type.
@@ -112,19 +111,20 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
      * See [GetWixburnSectionInfo](https://github.com/AnalogJ/Wix3.6Toolset/blob/master/RC0-source/wix36-sources/src/wix/BurnCommon.cs#L252) in WiX Toolset v3.
      * @return `true` if the [FileHandle] has been made with WiX's burn installer type, `false` otherwise.
      */
-    private fun FileHandle.isBurn(): Boolean {
-        source().buffer().use { bufferedSource ->
-            val sink = Buffer()
-            var offset = 0L
-            val wixBurnHeaderBytes = wixBurnHeader.encodeUtf8()
-            repeat(UShort.MAX_VALUE.toInt()) {
-                bufferedSource.read(sink, burnBufferSize)
-                if (sink.rangeEquals(offset, wixBurnHeaderBytes)) return true
-                offset += burnBufferSize
+    private val FileHandle.isBurn: Boolean
+        get() {
+            source().buffer().use { bufferedSource ->
+                val sink = Buffer()
+                var offset = 0L
+                val wixBurnHeaderBytes = wixBurnHeader.encodeUtf8()
+                repeat(UShort.MAX_VALUE.toInt()) {
+                    bufferedSource.read(sink, burnBufferSize)
+                    if (sink.rangeEquals(offset, wixBurnHeaderBytes)) return true
+                    offset += burnBufferSize
+                }
+                return false
             }
-            return false
         }
-    }
 
     /**
      * Returns the hexadecimal string representation of the machine value
@@ -137,21 +137,22 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
      *
      * @return The hexadecimal string representation of the machine value.
      */
-    fun getPEArchitectureValue(): String {
-        fileSystem.source(file).buffer().use { source ->
-            // Skip DOS header
-            source.skip(peHeaderLocation)
-            val peOffset = source.readIntLe()
+    val peArchitectureValue: String
+        get() {
+            fileSystem.source(file).buffer().use { source ->
+                // Skip DOS header
+                source.skip(peHeaderLocation)
+                val peOffset = source.readIntLe()
 
-            // Skip PE signature
-            source.skip(peOffset - peHeaderLocation)
+                // Skip PE signature
+                source.skip(peOffset - peHeaderLocation)
 
-            // Read machine value from PE header
-            val machine = source.readShortLe() // Machine is stored as a 2-byte little-endian value
+                // Read machine value from PE header
+                val machine = source.readShortLe() // Machine is stored as a 2-byte little-endian value
 
-            return machine.toInt().and(UShort.MAX_VALUE.toInt()).toString(hexBase16)
+                return machine.toInt().and(UShort.MAX_VALUE.toInt()).toString(hexBase16)
+            }
         }
-    }
 
     companion object {
         const val burnBufferSize: Long = 8

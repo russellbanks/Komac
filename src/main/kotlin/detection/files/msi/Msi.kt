@@ -6,7 +6,7 @@ import com.sun.jna.WString
 import com.sun.jna.platform.win32.WinBase.FILETIME
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import extensions.PathExtensions.extension
+import extensions.extension
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
@@ -104,12 +104,12 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
 
     private fun getArchitecture(phDatabase: PointerByReference): InstallerManifest.Installer.Architecture? {
         val phSummaryInfo = PointerByReference()
-        var result = msiLibrary.MsiGetSummaryInformationW(phDatabase.value, null, 0, phSummaryInfo)
+        var result = msiLibrary.MsiGetSummaryInformation(phDatabase.value, null, 0, phSummaryInfo)
         return if (result == 0) {
             val pcchBuf = IntByReference()
             val szBuf = CharArray(16)
             pcchBuf.value = 16
-            result = msiLibrary.MsiSummaryInfoGetPropertyW(
+            result = msiLibrary.MsiSummaryInfoGetProperty(
                 hSummaryInfo = phSummaryInfo.value,
                 uiProperty = architecturePropertyOrdinal,
                 puiDataType = IntByReference(),
@@ -131,7 +131,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
 
     private fun openDatabase(): PointerByReference? {
         val phDatabase = PointerByReference()
-        val result = msiLibrary.MsiOpenDatabaseW(WString(msiFile.toString()), WString(msiDbOpenReadOnly), phDatabase)
+        val result = msiLibrary.MsiOpenDatabase(WString(msiFile.toString()), WString(msiDbOpenReadOnly), phDatabase)
         if (result != 0) {
             println("Error opening database: $result")
             return null
@@ -141,14 +141,14 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
 
     private fun openView(phDatabase: PointerByReference): PointerByReference? {
         val phView = PointerByReference()
-        val result = msiLibrary.MsiDatabaseOpenViewW(
+        val result = msiLibrary.MsiDatabaseOpenView(
             phDatabase.value,
             WString(
-                SQLBuilder()
-                    .select(property, value)
-                    .from(property)
-                    .where(property, values)
-                    .toString()
+                sqlQuery {
+                    select(property, value)
+                    from(property)
+                    where(property, values)
+                }
             ),
             phView
         )
@@ -167,6 +167,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
         return result
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     private fun fetchRecords(phView: PointerByReference) {
         val phRecord = PointerByReference()
         while (true) {
@@ -186,7 +187,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
                 manufacturerConst -> manufacturer = value
                 productLanguageConst -> productLanguage = value?.toIntOrNull()?.let { ProductLanguage(it).locale }
                 wixUiModeConst -> isWix = true
-                allUsersConst -> allUsers = AllUsers.values().find { it.code == value }
+                allUsersConst -> allUsers = AllUsers.entries.find { it.code == value }
             }
 
             msiLibrary.MsiCloseHandle(phRecord.value)
@@ -198,7 +199,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
         val szBuf = CharArray(bufferSize)
         pcchBuf.value = bufferSize
 
-        val result = msiLibrary.MsiRecordGetStringW(phRecord.value, field, szBuf, pcchBuf)
+        val result = msiLibrary.MsiRecordGetString(phRecord.value, field, szBuf, pcchBuf)
         return if (result == 0) Native.toString(szBuf) else null
     }
 
@@ -217,8 +218,8 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
         Dependent("2");
 
         fun toInstallerScope() = when (this) {
-            Machine -> InstallerManifest.Installer.Scope.Machine
-            User -> InstallerManifest.Installer.Scope.User
+            Machine -> InstallerManifest.Scope.Machine
+            User -> InstallerManifest.Scope.User
             Dependent -> null
         }
     }

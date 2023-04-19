@@ -7,20 +7,18 @@ import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.AllManifestData
+import data.PreviousManifestData
 import input.Prompts
 import input.Switch
 import schemas.manifest.InstallerManifest
 
-class InstallerSwitch(
-    private val allManifestData: AllManifestData,
-    private val previousInstallerData: InstallerManifest?
-) {
-    fun installerSwitchPrompt(installerSwitch: Switch, terminal: Terminal) = with(allManifestData) {
+object InstallerSwitch {
+    fun installerSwitchPrompt(installerSwitch: Switch, terminal: Terminal) = with(AllManifestData) {
         if (
-            installerType == InstallerManifest.Installer.InstallerType.EXE ||
+            installerType == InstallerManifest.InstallerType.EXE ||
             installerSwitch == Switch.Custom
         ) {
-            val isRequired = installerType == InstallerManifest.Installer.InstallerType.EXE &&
+            val isRequired = installerType == InstallerManifest.InstallerType.EXE &&
                 installerSwitch != Switch.Custom
             switchInfo(installerType, installerSwitch).also { (info, infoColor) ->
                 println(infoColor(info))
@@ -53,23 +51,23 @@ class InstallerSwitch(
     }
 
     private fun getPreviousValue(aSwitch: Switch): String? {
-        return previousInstallerData?.run {
+        return PreviousManifestData.installerManifest?.run {
             when (aSwitch) {
                 Switch.Silent -> {
                     installerSwitches?.silent
-                        ?: installers.getOrNull(allManifestData.installers.size)
+                        ?: installers.getOrNull(AllManifestData.installers.size)
                             ?.installerSwitches
                             ?.silent
                 }
                 Switch.SilentWithProgress -> {
                     installerSwitches?.silentWithProgress
-                        ?: installers.getOrNull(allManifestData.installers.size)
+                        ?: installers.getOrNull(AllManifestData.installers.size)
                             ?.installerSwitches
                             ?.silentWithProgress
                 }
                 Switch.Custom -> {
                     installerSwitches?.custom
-                        ?: installers.getOrNull(allManifestData.installers.size)
+                        ?: installers.getOrNull(AllManifestData.installers.size)
                             ?.installerSwitches
                             ?.custom
                 }
@@ -78,14 +76,13 @@ class InstallerSwitch(
     }
 
     private fun switchInfo(
-        installerType: InstallerManifest.Installer.InstallerType?,
+        installerType: InstallerManifest.InstallerType?,
         aSwitch: Switch
-    ): Pair<String, TextColors> = with(allManifestData) {
-        val isRequired = installerType == InstallerManifest.Installer.InstallerType.EXE &&
-            aSwitch != Switch.Custom
+    ): Pair<String, TextColors> {
+        val isRequired = installerType == InstallerManifest.InstallerType.EXE && aSwitch != Switch.Custom
         return buildString {
             append(
-                if (installerType == InstallerManifest.Installer.InstallerType.EXE && aSwitch != Switch.Custom) {
+                if (installerType == InstallerManifest.InstallerType.EXE && aSwitch != Switch.Custom) {
                     Prompts.required
                 } else {
                     Prompts.optional

@@ -2,8 +2,9 @@ package data.locale
 
 import commands.interfaces.TextPrompt
 import commands.interfaces.ValidationRules
+import data.PreviousManifestData
 
-class Moniker(previousMoniker: String?) : TextPrompt {
+object Moniker : TextPrompt {
     override val name = "Moniker"
 
     override val validationRules: ValidationRules = ValidationRules(
@@ -12,7 +13,7 @@ class Moniker(previousMoniker: String?) : TextPrompt {
         isRequired = false
     )
 
-    override val default: String? = previousMoniker
+    override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.moniker
 
     override val extraText: String = "Example: vscode"
 }

@@ -13,6 +13,6 @@ object FileUtils {
         tempDirectory: Path
     ): Path {
         val formattedDate = DateTimeFormatter.ofPattern("yyyy.MM.dd-hh.mm.ss").format(LocalDateTime.now())
-        return tempDirectory / "$identifier v$version - $formattedDate.${url.getExtension()}"
+        return tempDirectory / "$identifier v$version - $formattedDate.${url.extension}"
     }
 }

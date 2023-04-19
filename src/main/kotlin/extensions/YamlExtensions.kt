@@ -5,7 +5,7 @@ object YamlExtensions {
         return string.trim()
             .split("\\W+".toRegex())
             .filterNot(String::isBlank)
-            .toSet()
-            .sorted()
+            .toSortedSet()
+            .toList()
     }
 }

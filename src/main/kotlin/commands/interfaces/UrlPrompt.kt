@@ -15,8 +15,6 @@ interface UrlPrompt : Prompt<Url> {
 
     val previousUrl: Url? get() = null
 
-    val client: HttpClient
-
     val transform: (String) -> Url get() = { urlString -> Url(urlString.trim()) }
 
     override suspend fun prompt(terminal: Terminal): Url = with(terminal) {
@@ -32,6 +30,6 @@ interface UrlPrompt : Prompt<Url> {
     }
 
     override suspend fun getError(input: String): String? {
-        return data.shared.Url.isUrlValid(transform(input), canBeBlank = true, client)
+        return data.shared.Url.isUrlValid(transform(input), canBeBlank = true)
     }
 }

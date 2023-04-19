@@ -3,9 +3,9 @@ package data.locale
 import commands.interfaces.TextPrompt
 import commands.interfaces.UrlPrompt
 import commands.interfaces.ValidationRules
-import io.ktor.client.HttpClient
+import data.PreviousManifestData
 
-class License(previousLicense: String?) : TextPrompt {
+object License : TextPrompt {
     override val name = "License"
 
     override val validationRules: ValidationRules = ValidationRules(
@@ -14,12 +14,14 @@ class License(previousLicense: String?) : TextPrompt {
         isRequired = true
     )
 
-    override val default: String? = previousLicense
+    override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.license
 
     override val extraText: String = "Example: MIT, GPL-3.0, Freeware, Proprietary"
 
-    class Url(override val previousUrl: io.ktor.http.Url?, override val client: HttpClient) : UrlPrompt {
+    object Url : UrlPrompt {
         override val name: String = "License url"
+
+        override val previousUrl: io.ktor.http.Url? get() = PreviousManifestData.defaultLocaleManifest?.licenseUrl
 
         override val description: String = "license page url"
     }

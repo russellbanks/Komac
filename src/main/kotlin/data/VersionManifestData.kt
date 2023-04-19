@@ -5,17 +5,15 @@ import schemas.Schemas
 import schemas.manifest.VersionManifest
 
 object VersionManifestData {
-    fun createVersionManifest(
-        allManifestData: AllManifestData,
-        manifestOverride: String? = null,
-        previousVersionData: VersionManifest?
-    ): String = with(allManifestData) {
+    fun createVersionManifest(): String = with(AllManifestData) {
         return VersionManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            defaultLocale = defaultLocale ?: previousVersionData?.defaultLocale ?: Locale.defaultLocale,
+            defaultLocale = defaultLocale
+                ?: PreviousManifestData.versionManifest?.defaultLocale
+                ?: Locale.defaultLocale,
             manifestType = Schemas.versionManifestType,
-            manifestVersion = manifestOverride ?: Schemas.manifestVersion
+            manifestVersion = Schemas.manifestVersion
         ).toString()
     }
 }
