@@ -120,7 +120,7 @@ object GitHubImpl {
                     ).also { pullRequestBranch = it }
                 }
             } catch (ioException: IOException) {
-                if (++count == maxTries) {
+                if (++count >= maxTries) {
                     throw CliktError(
                         message = "Failed to create branch from upstream default branch",
                         cause = ioException,
@@ -155,15 +155,28 @@ object GitHubImpl {
         updateState: VersionUpdateState,
     ): GHPullRequest {
         val ghRepository = microsoftWinGetPkgs
-        return try {
-            ghRepository.createPullRequest(
-                /* title = */ GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState),
-                /* head = */ "$forkOwner:${pullRequestBranch?.ref}",
-                /* base = */ ghRepository.defaultBranch,
-                /* body = */ GitHubUtils.getPullRequestBody()
-            )
-        } catch (ioException: IOException) {
-            throw CliktError(message = "Failed to create pull request", cause = ioException, statusCode = 1)
+        var count = 0
+        val maxTries = 3
+        while (true) {
+            try {
+                return ghRepository.createPullRequest(
+                    /* title = */ GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState),
+                    /* head = */ "$forkOwner:${pullRequestBranch?.ref}",
+                    /* base = */ ghRepository.defaultBranch,
+                    /* body = */ GitHubUtils.getPullRequestBody()
+                )
+            } catch (ioException: IOException) {
+                if (++count >= maxTries) {
+                    throw CliktError(
+                        message = """
+                            Failed to create pull request after $maxTries attempts.
+                            ${ioException.message?.let { "Reason: $it" }}.
+                        """.trimIndent(),
+                        cause = ioException,
+                        statusCode = 1
+                    )
+                }
+            }
         }
     }
 
