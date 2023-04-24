@@ -137,21 +137,23 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
      *
      * @return The hexadecimal string representation of the machine value.
      */
-    val peArchitectureValue: String
+    val peArchitectureValue: String?
         get() {
-            fileSystem.source(file).buffer().use { source ->
-                // Skip DOS header
-                source.skip(peHeaderLocation)
-                val peOffset = source.readIntLe()
+            return runCatching {
+                fileSystem.source(file).buffer().use { source ->
+                    // Skip DOS header
+                    source.skip(peHeaderLocation)
+                    val peOffset = source.readIntLe()
 
-                // Skip PE signature
-                source.skip(peOffset - peHeaderLocation)
+                    // Skip PE signature
+                    source.skip(peOffset - peHeaderLocation)
 
-                // Read machine value from PE header
-                val machine = source.readShortLe() // Machine is stored as a 2-byte little-endian value
+                    // Read machine value from PE header
+                    val machine = source.readShortLe() // Machine is stored as a 2-byte little-endian value
 
-                return machine.toInt().and(UShort.MAX_VALUE.toInt()).toString(hexBase16)
-            }
+                    machine.toInt().and(UShort.MAX_VALUE.toInt()).toString(hexBase16)
+                }
+            }.getOrNull()
         }
 
     companion object {
