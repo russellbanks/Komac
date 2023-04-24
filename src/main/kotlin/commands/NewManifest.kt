@@ -69,11 +69,7 @@ class NewManifest : CliktCommand(name = "new") {
                 info("Found $packageIdentifier in the winget-pkgs repository")
                 info("Found latest version: $latestVersion")
             }
-            launch {
-                if (latestVersion != null) {
-                    PreviousManifestData.init(packageIdentifier, latestVersion, GitHubImpl.microsoftWinGetPkgs)
-                }
-            }
+            PreviousManifestData.init(packageIdentifier, latestVersion, GitHubImpl.microsoftWinGetPkgs)
             packageVersion = prompt(PackageVersion)
             GitHubImpl.promptIfPullRequestExists(
                 identifier = packageIdentifier,
