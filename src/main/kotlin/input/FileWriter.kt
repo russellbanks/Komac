@@ -22,7 +22,7 @@ object FileWriter {
     private fun createDirectoryIfNecessary(directory: File, files: Map<String, String?>, terminal: Terminal) {
         with(terminal) {
             warning("The directory entered does not exist. Would you like to create it?")
-            if (yesNoMenu(default = true)) {
+            if (yesNoMenu(default = true).prompt()) {
                 if (directory.mkdirs()) {
                     success("Successfully created ${directory.path}")
                     writeFilesToDirectory(directory, files, terminal)

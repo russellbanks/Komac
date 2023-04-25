@@ -65,7 +65,7 @@ object Url {
         return if (shouldUseRedirectedUrl) {
             println(colors.brightYellow(redirectFound))
             println(colors.cyan("Discovered URL: $redirectedUrl"))
-            if (yesNoMenu(default = true)) {
+            if (yesNoMenu(default = true).prompt()) {
                 val error = isUrlValid(url = redirectedUrl, canBeBlank = false)
                 if (error == null) {
                     success("URL changed to $redirectedUrl")

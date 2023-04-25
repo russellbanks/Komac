@@ -18,7 +18,7 @@ class Remove : CliktCommand() {
             true
         } else {
             warning("Would you like to remove the currently stored token?")
-            currentContext.terminal.yesNoMenu(default = false)
+            currentContext.terminal.yesNoMenu(default = false).prompt()
         }
         if (shouldDeleteToken) {
             TokenStore.deleteToken()

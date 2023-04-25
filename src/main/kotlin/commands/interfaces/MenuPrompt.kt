@@ -13,10 +13,10 @@ interface MenuPrompt<T> : Prompt<T> {
     override suspend fun prompt(terminal: Terminal): T? = with(terminal) {
         println(colors.brightYellow("Enter the ${name.lowercase()}"))
         default?.let { muted("Previous value: $it") }
-        return menu(
-            items = items,
-            default = default
-        ).prompt()
+        return menu<T> {
+            items = this@MenuPrompt.items
+            default = this@MenuPrompt.default
+        }.prompt()
     }
 
     override suspend fun getError(input: String): String? = null

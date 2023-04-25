@@ -17,11 +17,11 @@ object InstallerScope {
             val previousValue = previousValue
             println(colors.brightYellow(installerScopeInfo))
             previousValue?.let { println(colors.muted("Previous value: $it")) }
-            AllManifestData.scope = menu(
-                items = InstallerManifest.Scope.entries,
-                default = previousValue,
+            AllManifestData.scope = menu<InstallerManifest.Scope> {
+                items = InstallerManifest.Scope.entries
+                default = previousValue
                 optionalItemName = "No idea"
-            ).prompt()
+            }.prompt()
             println()
         }
     }
