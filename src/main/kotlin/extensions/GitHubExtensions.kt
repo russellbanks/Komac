@@ -44,7 +44,6 @@ val GHRelease.formattedReleaseNotes: String?
                     line.startsWith('#') && (1..2).any { lines.getOrNull(index + it)?.startsWith("- ") == true } -> {
                         appendLine(line.trimStart('#').trim())
                     }
-
                     line.startsWith("- ") -> {
                         appendLine(
                             "- ${line.replace("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))".toRegex(), "$1\n ").drop(2).trim()}"

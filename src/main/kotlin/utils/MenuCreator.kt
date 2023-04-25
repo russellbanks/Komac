@@ -19,17 +19,14 @@ class MenuCreator<T>(
 ) {
     private val listItems: List<T> = optionalItemName?.let { items + it as T } ?: items
     private var selectedIndex = listItems.indexOf(default ?: optionalItemName).takeIf { it != -1 } ?: 0
-    private val selectedItem
-        get() = listItems[selectedIndex]
+    private val selectedItem get() = listItems[selectedIndex]
 
     private val menuWidget: Widget
-        get() {
-            return verticalLayout {
-                listItems.forEachIndexed { index, item ->
-                    val isSelected = index == selectedIndex
-                    val selectedColour = if (isSelected) terminal.colors.brightMagenta else terminal.colors.plain
-                    cell("${selectedColour("[${if (isSelected) "x" else " "}]")} ${nameConvert(item.toString())}")
-                }
+        get() = verticalLayout {
+            listItems.forEachIndexed { index, item ->
+                val isSelected = index == selectedIndex
+                val selectedColour = if (isSelected) terminal.colors.brightMagenta else terminal.colors.plain
+                cell("${selectedColour("[${if (isSelected) "x" else " "}]")} ${nameConvert(item.toString())}")
             }
         }
 
@@ -37,10 +34,7 @@ class MenuCreator<T>(
         val animation = animation<T> { menuWidget }
         cursor.hide(showOnExit = true)
         animation.update(selectedItem)
-        val terminal = TerminalBuilder.terminal().apply {
-            enterRawMode()
-            handle(org.jline.terminal.Terminal.Signal.INT) { throw ProgramResult(ExitCode.CtrlC) }
-        }
+        val terminal = TerminalBuilder.terminal().apply { enterRawMode() }
         val reader = terminal.reader()
         while (true) {
             when (reader.read()) {
