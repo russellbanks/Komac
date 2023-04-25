@@ -149,11 +149,10 @@ class QuickUpdate : CliktCommand(name = "update") {
             previousInstallerManifest?.installers?.forEachIndexed { index, installer ->
                 info("Installer Entry ${index.inc()}/${previousInstallerManifest.installers.size}")
                 listOf(
-                    InstallerManifest.Installer.Architecture::class.simpleName to installer.architecture,
-                    InstallerType::class.simpleName to (installer.installerType ?: previousInstallerManifest.installerType),
-                    InstallerManifest.Scope::class.simpleName to (installer.scope ?: previousInstallerManifest.scope),
-                    InstallerManifest::installerLocale::class.simpleName to
-                        (installer.installerLocale ?: previousInstallerManifest.installerLocale)
+                    "Architecture" to installer.architecture,
+                    "Installer Type" to (installer.installerType ?: previousInstallerManifest.installerType),
+                    "Installer Scope" to (installer.scope ?: previousInstallerManifest.scope),
+                    "Installer Locale" to (installer.installerLocale ?: previousInstallerManifest.installerLocale)
                 ).forEach { (promptType, value) ->
                     value?.let {
                         echo("  $promptType: ${colors.info(it.toString())}")
