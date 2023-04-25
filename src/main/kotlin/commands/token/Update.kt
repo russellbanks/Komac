@@ -7,7 +7,7 @@ import commands.success
 import kotlinx.coroutines.runBlocking
 import token.Token
 import token.TokenStore
-import utils.yesNoMenu
+import utils.menu.yesNoMenu
 
 class Update : CliktCommand() {
     private val tokenParameter: String? by option("-t", "--token")

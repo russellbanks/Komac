@@ -87,11 +87,13 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
                         val groupValues = fullRegex.find(byteStringUtf8)?.groupValues?.map { it.ifBlank { null } }
                         if (manufacturer == null) manufacturer = groupValues?.getOrNull(1)
                         productCode = groupValues?.getOrNull(2)
-                        if (productLanguage == null) productLanguage = groupValues
-                            ?.getOrNull(3)
-                            ?.toIntOrNull()
-                            ?.let(::ProductLanguage)
-                            ?.locale
+                        if (productLanguage == null) {
+                            productLanguage = groupValues
+                                ?.getOrNull(3)
+                                ?.toIntOrNull()
+                                ?.let(::ProductLanguage)
+                                ?.locale
+                        }
                         productName = groupValues?.getOrNull(4)
                         productVersion = groupValues?.getOrNull(5)
                         upgradeCode = groupValues?.getOrNull(6)

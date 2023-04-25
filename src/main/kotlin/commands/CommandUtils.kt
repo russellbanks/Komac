@@ -8,9 +8,10 @@ import com.github.ajalt.mordant.rendering.OverflowWrap
 import com.github.ajalt.mordant.rendering.TextAlign
 import com.github.ajalt.mordant.rendering.Whitespace
 import com.github.ajalt.mordant.terminal.Terminal
+import commands.interfaces.CheckMenuPrompt
 import commands.interfaces.ListPrompt
-import commands.interfaces.MenuPrompt
 import commands.interfaces.Prompt
+import commands.interfaces.RadioMenuPrompt
 import commands.interfaces.TextPrompt
 import commands.interfaces.UrlPrompt
 import input.ExitCode
@@ -57,8 +58,12 @@ suspend fun CliktCommand.prompt(urlPrompt: UrlPrompt, parameter: String? = null)
     return currentContext.terminal.prompt(urlPrompt, parameter, transform = { urlPrompt.transform(it) })
 }
 
-suspend fun <T> CliktCommand.prompt(menuPrompt: MenuPrompt<T>, parameter: String? = null): T? {
-    return currentContext.terminal.prompt(menuPrompt, parameter, transform = { it as T })
+suspend fun <T> CliktCommand.prompt(radioMenuPrompt: RadioMenuPrompt<T>, parameter: String? = null): T? {
+    return currentContext.terminal.prompt(radioMenuPrompt, parameter, transform = { it as T })
+}
+
+suspend fun <T> CliktCommand.prompt(checkMenuPrompt: CheckMenuPrompt<T>, parameter: String? = null): List<T>? {
+    return currentContext.terminal.prompt(checkMenuPrompt, parameter, transform = { it as List<T> })
 }
 
 fun CliktCommand.info(

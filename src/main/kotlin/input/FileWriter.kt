@@ -2,7 +2,7 @@ package input
 
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
-import utils.yesNoMenu
+import utils.menu.yesNoMenu
 import java.io.File
 
 object FileWriter {

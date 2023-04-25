@@ -61,7 +61,7 @@ val Url.extension get() = fullPath
  *
  * @return the filename of this URL, including the extension, or null if no such filename can be determined
  */
-fun Url.getFileName(): String? = pathSegments.findLast { it.endsWith(".${extension}") }
+fun Url.getFileName(): String? = pathSegments.findLast { it.endsWith(".$extension") }
 
 /**
  * Returns the filename of this URL without the extension, if it has one.
@@ -72,7 +72,7 @@ fun Url.getFileName(): String? = pathSegments.findLast { it.endsWith(".${extensi
  *
  * @return the filename of this URL without the extension, or null if no such filename can be determined
  */
-fun Url.getFileNameWithoutExtension(): String? = getFileName()?.removeSuffix(".${extension}")
+fun Url.getFileNameWithoutExtension(): String? = getFileName()?.removeSuffix(".$extension")
 
 /**
  * Determines the installation scope of the installer manifest at this URL, if any.

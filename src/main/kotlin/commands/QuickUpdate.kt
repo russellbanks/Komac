@@ -167,7 +167,7 @@ class QuickUpdate : CliktCommand(name = "update") {
     }
 
     private suspend fun Terminal.loopParameterUrls(parameterUrls: Set<Url>) = with(AllManifestData) {
-        val previousInstallerManifest = PreviousManifestData.installerManifest!!
+        val previousInstallerManifest = PreviousManifestData.installerManifest as InstallerManifest
         val previousInstallers = previousInstallerManifest.installers
         val previousUrls = previousInstallers.map(InstallerManifest.Installer::installerUrl)
         ParameterUrls.assertUniqueUrlsCount(parameterUrls, previousUrls.toSet(), colors)
