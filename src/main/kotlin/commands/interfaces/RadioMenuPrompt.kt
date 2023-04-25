@@ -1,9 +1,10 @@
 package commands.interfaces
 
 import com.github.ajalt.mordant.terminal.Terminal
-import utils.menu
+import input.Prompts
+import utils.menu.radioMenu
 
-interface MenuPrompt<T> : Prompt<T> {
+interface RadioMenuPrompt<T> : Prompt<T> {
     val name: String
 
     val default: T? get() = null
@@ -11,11 +12,11 @@ interface MenuPrompt<T> : Prompt<T> {
     val items: List<T>
 
     override suspend fun prompt(terminal: Terminal): T? = with(terminal) {
-        println(colors.brightYellow("Enter the ${name.lowercase()}"))
+        println(colors.brightYellow("${Prompts.optional} Enter the ${name.lowercase()}"))
         default?.let { muted("Previous value: $it") }
-        return menu<T> {
-            items = this@MenuPrompt.items
-            default = this@MenuPrompt.default
+        return radioMenu<T> {
+            items = this@RadioMenuPrompt.items
+            default = this@RadioMenuPrompt.default
         }.prompt()
     }
 

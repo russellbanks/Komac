@@ -8,7 +8,7 @@ import commands.success
 import commands.warning
 import kotlinx.coroutines.runBlocking
 import token.TokenStore
-import utils.yesNoMenu
+import utils.menu.yesNoMenu
 
 class Remove : CliktCommand() {
     private val skipPrompt: Boolean by option("-y", "--yes").flag(default = false)

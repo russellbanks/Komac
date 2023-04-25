@@ -21,7 +21,7 @@ interface TextPrompt : Prompt<String> {
         val textColour = if (validationRules.isRequired) colors.brightGreen else colors.brightYellow
         val requiredText = if (validationRules.isRequired) Prompts.required else Prompts.optional
         println(textColour("$requiredText Enter the $name"))
-        extraText?.let { info(extraText) }
+        extraText?.let(::info)
         return prompt(
             prompt = name,
             default = default?.also { muted("Previous ${name.lowercase()}: $it") }

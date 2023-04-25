@@ -1,11 +1,11 @@
 package data.installer
 
-import commands.interfaces.MenuPrompt
+import commands.interfaces.RadioMenuPrompt
 import data.AllManifestData
 import data.PreviousManifestData
 import schemas.manifest.InstallerManifest
 
-object UpgradeBehaviour : MenuPrompt<InstallerManifest.UpgradeBehavior?> {
+object UpgradeBehaviour : RadioMenuPrompt<InstallerManifest.UpgradeBehavior?> {
     override val name: String = "Upgrade behaviour"
 
     override val default: InstallerManifest.UpgradeBehavior = previousValue ?: InstallerManifest.UpgradeBehavior.Install

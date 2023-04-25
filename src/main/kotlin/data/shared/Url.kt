@@ -34,7 +34,7 @@ import utils.FileAnalyser
 import utils.findArchitecture
 import utils.getRedirectedUrl
 import utils.isRedirect
-import utils.yesNoMenu
+import utils.menu.yesNoMenu
 import java.net.ConnectException
 
 object Url {
@@ -58,10 +58,8 @@ object Url {
 
     private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url): Url {
         val redirectedUrl = installerUrl.getRedirectedUrl()
-        val shouldUseRedirectedUrl = (
-                redirectedUrl != installerUrl &&
-                        !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
-                )
+        val shouldUseRedirectedUrl = redirectedUrl != installerUrl &&
+                !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
         return if (shouldUseRedirectedUrl) {
             println(colors.brightYellow(redirectFound))
             println(colors.cyan("Discovered URL: $redirectedUrl"))
@@ -84,7 +82,6 @@ object Url {
             installerUrl
         }
     }
-
 
     private suspend fun Terminal.downloadInstaller(fileSystem: FileSystem) = with(AllManifestData) {
         if (installers.map { it.installerUrl }.contains(installerUrl)) {
