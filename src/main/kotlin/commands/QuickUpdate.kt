@@ -17,6 +17,7 @@ import data.GitHubImpl
 import data.InstallerManifestData
 import data.PreviousManifestData
 import data.VersionManifestData
+import data.installer.InstallerScope
 import data.installer.InstallerType
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
@@ -150,8 +151,8 @@ class QuickUpdate : CliktCommand(name = "update") {
                 info("Installer Entry ${index.inc()}/${previousInstallerManifest.installers.size}")
                 listOf(
                     "Architecture" to installer.architecture,
-                    "Installer Type" to (installer.installerType ?: previousInstallerManifest.installerType),
-                    "Installer Scope" to (installer.scope ?: previousInstallerManifest.scope),
+                    InstallerType.name to (installer.installerType ?: previousInstallerManifest.installerType),
+                    InstallerScope.name to (installer.scope ?: previousInstallerManifest.scope),
                     "Installer Locale" to (installer.installerLocale ?: previousInstallerManifest.installerLocale)
                 ).forEach { (promptType, value) ->
                     value?.let {

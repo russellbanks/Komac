@@ -2,7 +2,6 @@ package detection
 
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.TerminalColors
-import io.ktor.client.HttpClient
 import io.ktor.http.Url
 import network.Http
 import schemas.manifest.InstallerManifest

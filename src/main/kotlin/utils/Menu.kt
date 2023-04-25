@@ -1,12 +1,10 @@
 package utils
 
-import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.animation.Animation
 import com.github.ajalt.mordant.animation.animation
 import com.github.ajalt.mordant.rendering.Widget
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
-import input.ExitCode
 import org.jline.terminal.TerminalBuilder
 
 open class Menu<T>(

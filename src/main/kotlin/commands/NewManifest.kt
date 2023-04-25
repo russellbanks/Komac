@@ -40,11 +40,11 @@ import input.FileWriter.writeFiles
 import input.ManifestResultOption
 import input.Prompts.pullRequestPrompt
 import input.Switch
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import schemas.Schema
 import schemas.Schemas
 import schemas.manifest.EncodeConfig
+import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import token.Token
 import token.TokenStore
@@ -84,13 +84,11 @@ class NewManifest : CliktCommand(name = "new") {
                     InstallerSwitch.installerSwitchPrompt(switch, currentContext.terminal)
                 }
                 installerLocale = msi?.productLanguage ?: prompt(Locale.Installer)
-                InstallerScope.installerScopePrompt(currentContext.terminal)
-                upgradeBehavior = prompt(UpgradeBehaviour)
-                if (!skipAddInstaller) {
-                    InstallerManifestData.addInstaller()
-                } else {
-                    skipAddInstaller = false
+                if (scope == null && installerType != InstallerManifest.InstallerType.PORTABLE) {
+                    scope = prompt(InstallerScope)
                 }
+                upgradeBehavior = prompt(UpgradeBehaviour)
+                if (!skipAddInstaller) InstallerManifestData.addInstaller() else skipAddInstaller = false
                 val loop = confirm(colors.info(additionalInstallerInfo)) ?: throw ProgramResult(ExitCode.CtrlC)
             } while (loop)
             fileExtensions = prompt(FileExtensions)

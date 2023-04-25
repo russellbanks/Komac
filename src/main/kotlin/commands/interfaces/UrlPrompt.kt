@@ -4,7 +4,6 @@ import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import input.Prompts
-import io.ktor.client.HttpClient
 import io.ktor.http.Url
 import kotlinx.coroutines.runBlocking
 

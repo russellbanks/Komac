@@ -50,28 +50,20 @@ object InstallerSwitch {
         }
     }
 
-    private fun getPreviousValue(aSwitch: Switch): String? {
-        return PreviousManifestData.installerManifest?.run {
-            when (aSwitch) {
-                Switch.Silent -> {
-                    installerSwitches?.silent
-                        ?: installers.getOrNull(AllManifestData.installers.size)
-                            ?.installerSwitches
-                            ?.silent
-                }
-                Switch.SilentWithProgress -> {
-                    installerSwitches?.silentWithProgress
-                        ?: installers.getOrNull(AllManifestData.installers.size)
-                            ?.installerSwitches
-                            ?.silentWithProgress
-                }
-                Switch.Custom -> {
-                    installerSwitches?.custom
-                        ?: installers.getOrNull(AllManifestData.installers.size)
-                            ?.installerSwitches
-                            ?.custom
-                }
-            }
+    private fun getPreviousValue(switch: Switch): String? = PreviousManifestData.installerManifest?.run {
+        when (switch) {
+            Switch.Silent -> installerSwitches?.silent
+                ?: installers.getOrNull(AllManifestData.installers.size)
+                    ?.installerSwitches
+                    ?.silent
+            Switch.SilentWithProgress -> installerSwitches?.silentWithProgress
+                ?: installers.getOrNull(AllManifestData.installers.size)
+                    ?.installerSwitches
+                    ?.silentWithProgress
+            Switch.Custom -> installerSwitches?.custom
+                ?: installers.getOrNull(AllManifestData.installers.size)
+                    ?.installerSwitches
+                    ?.custom
         }
     }
 

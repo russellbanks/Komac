@@ -15,7 +15,7 @@ object Protocols : ListPrompt<String> {
         transform = ::convertToList
     )
 
-    override val description = "List of protocols the package provides a handler for"
+    override val description: String = "List of protocols the package provides a handler for"
 
     override val extraText: String? = null
 
