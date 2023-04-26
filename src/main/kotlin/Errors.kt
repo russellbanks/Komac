@@ -20,6 +20,7 @@ object Errors {
                 min != null -> append("greater than $min")
                 max != null -> append("less than $max")
             }
+            append(" characters")
             items?.let { nonNullItems ->
                 appendLine()
                 appendLine("Items that did not match:")
