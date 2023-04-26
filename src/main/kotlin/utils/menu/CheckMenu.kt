@@ -24,7 +24,7 @@ class CheckMenu<T>(
                 val isSelected = index in selectedIndices
                 val highlightedColour = if (isHighlighted) terminal.colors.brightMagenta else terminal.colors.plain
                 cell(
-                    "${highlightedColour("[")}${if (isSelected) "x" else " "}${highlightedColour("]")} ${
+                    "${highlightedColour("[")}${highlightedColour(if (isSelected) "x" else " ")}${highlightedColour("]")} ${
                         nameConvert(item)
                     }"
                 )
