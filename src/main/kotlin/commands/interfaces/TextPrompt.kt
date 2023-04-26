@@ -20,7 +20,7 @@ interface TextPrompt : Prompt<String> {
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
         val textColour = if (validationRules.isRequired) colors.brightGreen else colors.brightYellow
         val requiredText = if (validationRules.isRequired) Prompts.required else Prompts.optional
-        println(textColour("$requiredText Enter the $name"))
+        println(textColour("$requiredText Enter the ${name.lowercase()}"))
         extraText?.let(::info)
         return prompt(
             prompt = name,
