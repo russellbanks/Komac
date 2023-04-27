@@ -227,37 +227,24 @@ class QuickUpdate : CliktCommand(name = "update") {
         packageVersion: String,
         defaultLocale: String?
     ): Map<String, String> {
+        val allLocale = additionalMetadataParam?.locales?.find { it.name.equals("all", ignoreCase = true) }
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier) to InstallerManifestData.createInstallerManifest(manifestOverride),
             GitHubUtils.getDefaultLocaleManifestName(packageIdentifier, defaultLocale) to DefaultLocaleManifestData.createDefaultLocaleManifest(
                 manifestOverride
             ),
             GitHubUtils.getVersionManifestName(packageIdentifier) to VersionManifestData.createVersionManifest()
-        ) + PreviousManifestData.remoteLocaleData?.mapNotNull { localeManifest ->
-            additionalMetadataParam?.locales
-                ?.find { it.name.equals(other = localeManifest.packageLocale, ignoreCase = true) }
-                ?.let { metadataCurrentLocale ->
-                    val allLocale = additionalMetadataParam?.locales?.find {
-                        it.name.equals(other = "all", ignoreCase = true)
-                    }
-                    GitHubUtils.getLocaleManifestName(packageIdentifier, localeManifest.packageLocale) to run {
-                        val copyLocaleManifest = localeManifest.copy(
-                            packageIdentifier = packageIdentifier,
-                            packageVersion = packageVersion,
-                            manifestVersion = manifestOverride ?: Schemas.manifestVersion,
-                            releaseNotes = allLocale?.releaseNotes ?: metadataCurrentLocale.releaseNotes,
-                            releaseNotesUrl = allLocale?.releaseNotesUrl ?: metadataCurrentLocale.releaseNotesUrl,
-                            documentations = allLocale?.documentations ?: metadataCurrentLocale.documentations
-                        )
-                        Schemas.buildManifestString(
-                            schema = Schema.Locale,
-                            rawString = EncodeConfig.yamlDefault.encodeToString(
-                                serializer = LocaleManifest.serializer(),
-                                value = copyLocaleManifest
-                            )
-                        )
-                    }
-                }
+        ) + PreviousManifestData.remoteLocaleData?.map { localeManifest ->
+            val currentLocaleMetadata = additionalMetadataParam?.locales
+                ?.find { it.name.equals(localeManifest.packageLocale, ignoreCase = true) }
+            GitHubUtils.getLocaleManifestName(packageIdentifier, localeManifest.packageLocale) to localeManifest.copy(
+                packageIdentifier = packageIdentifier,
+                packageVersion = packageVersion,
+                manifestVersion = manifestOverride ?: Schemas.manifestVersion,
+                releaseNotes = allLocale?.releaseNotes ?: currentLocaleMetadata?.releaseNotes,
+                releaseNotesUrl = allLocale?.releaseNotesUrl ?: currentLocaleMetadata?.releaseNotesUrl,
+                documentations = allLocale?.documentations ?: currentLocaleMetadata?.documentations
+            ).toString()
         }.orEmpty()
     }
 }
