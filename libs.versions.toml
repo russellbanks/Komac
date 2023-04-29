@@ -2,7 +2,7 @@
 buildconfig = "4.0.2"
 clikt = "4.0.0.214-SNAPSHOT"
 coroutines = "1.6.4"
-detekt = "1.23.0-RC2"
+detekt = "1.23.0-RC3"
 github-api = "1.314"
 jline = "3.23.0"
 jna = "5.13.0"
