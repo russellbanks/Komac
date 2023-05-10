@@ -98,14 +98,10 @@ class RemoveVersion : CliktCommand(name = "remove") {
     private fun Terminal.promptForDeletionReason(): String {
         echo(colors.brightGreen("${Prompts.required} Give a reason for removing this manifest"))
         return prompt("Reason") {
-            when {
-                it.isBlank() -> ConversionResult.Invalid(Errors.blankInput(null as String?))
-                it.length < minimumReasonLength || it.length > maximumReasonLength -> {
-                    ConversionResult.Invalid(
-                        Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength)
-                    )
-                }
-                else -> ConversionResult.Valid(it)
+            if (it.length < minimumReasonLength || it.length > maximumReasonLength) {
+                ConversionResult.Invalid(Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength))
+            } else {
+                ConversionResult.Valid(it)
             }
         } ?: throw ProgramResult(ExitCode.CtrlC)
     }
