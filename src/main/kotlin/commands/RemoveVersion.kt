@@ -22,7 +22,6 @@ import token.TokenStore
 import utils.GitHubUtils
 
 class RemoveVersion : CliktCommand(name = "remove") {
-    private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
     private val packageIdentifierParam: String? by option("--id", "--package-identifier")
     private val packageVersionParam: String? by option("--version", "--package-version")
     private val deletionReasonParam: String? by option("--reason", "--reason-for-deletion")
@@ -50,7 +49,7 @@ class RemoveVersion : CliktCommand(name = "remove") {
                 ?.find { it.name == packageVersion }
                 ?: throw doesNotExistError(packageIdentifier, packageVersion, colors = colors)
             val deletionReason = deletionReasonParam ?: terminal.promptForDeletionReason()
-            val shouldRemoveManifest = if (isCIEnvironment) {
+            val shouldRemoveManifest = if (System.getenv("CI")?.toBooleanStrictOrNull() == true) {
                 true
             } else {
                 confirm("Would you like to make a pull request to remove $packageIdentifier $packageVersion?")
