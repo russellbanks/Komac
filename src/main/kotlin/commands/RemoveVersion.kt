@@ -27,7 +27,11 @@ import utils.GitHubUtils
 class RemoveVersion : CliktCommand(name = "remove") {
     private val packageIdentifierParam: String? by option("--id", "--package-identifier")
     private val packageVersionParam: String? by option("--version", "--package-version")
-    private val deletionReasonParam: String? by option("--reason", "--reason-for-deletion")
+    private val deletionReasonParam: String? by option("--reason", "--reason-for-deletion").validate {
+        require(it.length in minimumReasonLength..maximumReasonLength) {
+            colors.danger(Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength))
+        }
+    }
     private val submit: Boolean by option().flag(default = false)
     private val token: String? by option("-t", "--token", envvar = "GITHUB_TOKEN").validate {
         require(GitHub.connectUsingOAuth(it).isCredentialValid) {
