@@ -1,11 +1,17 @@
 package commands
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import data.GitHubImpl
 import org.kohsuke.github.GHIssueState
 
 class Cleanup : CliktCommand(name = "cleanup") {
+    private val onlyMerged: Boolean by option().flag(default = false)
+
     override fun run() {
+        val mergeState = if (onlyMerged) "merged" else "merged or closed"
+        info("Deleting branches with a $mergeState pull request to ${GitHubImpl.wingetPkgsFullName} from them")
         val wingetPkgsFork = GitHubImpl.getWingetPkgsFork(currentContext.terminal)
         var branchesDeleted = 0
 
@@ -22,34 +28,27 @@ class Cleanup : CliktCommand(name = "cleanup") {
                         .withPageSize(1)
                         .first()
 
-                    pullRequest.let {
-                        val branchName = branch.name
-                        warning(
-                            buildString {
-                                append("Deleting ")
-                                append(branchName)
-                                append(" because its pull request was ")
-                                append(if (it.isMerged) "merged" else "closed")
-                                append(" in ")
-                                append(
-                                    if (it.isMerged) {
-                                        "${GitHubImpl.microsoftWinGetPkgs.htmlUrl}/commit/${it.mergeCommitSha}"
-                                    } else {
-                                        it.htmlUrl
-                                    }
-                                )
+                    pullRequest?.let {
+                        if (!onlyMerged || it.isMerged) {
+                            val branchName = branch.name
+                            val action = if (it.isMerged) "merged" else "closed"
+                            val url = if (it.isMerged) {
+                                "${GitHubImpl.microsoftWinGetPkgs.htmlUrl}/commit/${it.mergeCommitSha}"
+                            } else {
+                                it.htmlUrl
                             }
-                        )
-                        wingetPkgsFork.getRef("heads/$branchName").delete()
-                        branchesDeleted++
+                            warning("Deleting $branchName because its pull request was $action in $url")
+                            wingetPkgsFork.getRef("heads/$branchName").delete()
+                            branchesDeleted++
+                        }
                     }
                 }
             }
 
-        if (branchesDeleted == 0) {
-            echo("No branches were found that could be deleted")
-        } else {
+        if (branchesDeleted > 0) {
             success("$branchesDeleted branches were deleted")
+        } else {
+            echo("No branches were found that could be deleted")
         }
     }
 }
