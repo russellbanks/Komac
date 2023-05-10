@@ -117,8 +117,7 @@ object InstallerManifestData {
             platform = installers.getDistinctOrNull(InstallerManifest.Installer::platform)
                 ?: previousInstallerManifest?.platform,
             minimumOSVersion = installers.getDistinctOrNull(InstallerManifest.Installer::minimumOSVersion)
-                ?.ifBlank { null }
-                ?: previousInstallerManifest?.minimumOSVersion,
+                ?.ifBlank { null },
             installerType = installers.getDistinctOrNull(InstallerManifest.Installer::installerType)
                 ?: previousInstallerManifest?.installerType,
             nestedInstallerType = installers.getDistinctOrNull(InstallerManifest.Installer::nestedInstallerType)
