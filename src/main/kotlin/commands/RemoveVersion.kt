@@ -4,6 +4,7 @@ import Errors
 import Errors.doesNotExistError
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.ConversionResult
@@ -25,6 +26,7 @@ class RemoveVersion : CliktCommand(name = "remove") {
     private val packageIdentifierParam: String? by option("--id", "--package-identifier")
     private val packageVersionParam: String? by option("--version", "--package-version")
     private val deletionReasonParam: String? by option("--reason", "--reason-for-deletion")
+    private val submit: Boolean by option().flag(default = false)
 
     override fun run(): Unit = runBlocking {
         val terminal = currentContext.terminal
@@ -49,7 +51,7 @@ class RemoveVersion : CliktCommand(name = "remove") {
                 ?.find { it.name == packageVersion }
                 ?: throw doesNotExistError(packageIdentifier, packageVersion, colors = colors)
             val deletionReason = deletionReasonParam ?: terminal.promptForDeletionReason()
-            val shouldRemoveManifest = if (System.getenv("CI")?.toBooleanStrictOrNull() == true) {
+            val shouldRemoveManifest = if (submit) {
                 true
             } else {
                 confirm("Would you like to make a pull request to remove $packageIdentifier $packageVersion?")
