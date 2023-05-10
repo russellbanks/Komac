@@ -22,7 +22,10 @@ import token.TokenStore
 import utils.GitHubUtils
 
 class RemoveVersion : CliktCommand(name = "remove") {
-    private val identifierParam: String? by option("--id", "--package-identifier")
+    private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
+    private val packageIdentifierParam: String? by option("--id", "--package-identifier")
+    private val packageVersionParam: String? by option("--version", "--package-version")
+    private val reasonForDeletionParam: String? by option("--reason", "--reason-for-deletion")
 
     override fun run(): Unit = runBlocking {
         val terminal = currentContext.terminal
@@ -30,14 +33,14 @@ class RemoveVersion : CliktCommand(name = "remove") {
             if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
             warning("Packages should only be removed when necessary.")
             echo()
-            packageIdentifier = prompt(PackageIdentifier, parameter = identifierParam)
+            packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
             if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
             allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
             info("Found $packageIdentifier in the winget-pkgs repository")
             allVersions?.maxWithOrNull(versionStringComparator)?.let { latestVersion ->
                 info("Found latest version: $latestVersion")
             }
-            packageVersion = prompt(PackageVersion)
+            packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
             GitHubImpl.promptIfPullRequestExists(
                 identifier = packageIdentifier,
                 version = packageVersion,
@@ -47,9 +50,11 @@ class RemoveVersion : CliktCommand(name = "remove") {
                 ?.find { it.name == packageVersion }
                 ?: throw doesNotExistError(packageIdentifier, packageVersion, colors = colors)
             val deletionReason = terminal.promptForDeletionReason()
-            val shouldRemoveManifest = confirm(
-                text = "Would you like to make a pull request to remove $packageIdentifier $packageVersion?"
-            ) ?: throw ProgramResult(ExitCode.CtrlC)
+            val shouldRemoveManifest = isCIEnvironment
+                ? true
+                : confirm(
+                    text = "Would you like to make a pull request to remove $packageIdentifier $packageVersion?"
+                  ) ?: throw ProgramResult(ExitCode.CtrlC)
             if (!shouldRemoveManifest) return@runBlocking
             echo()
             val forkRepository = GitHubImpl.getWingetPkgsFork(terminal)
@@ -81,9 +86,11 @@ class RemoveVersion : CliktCommand(name = "remove") {
         }
     }
 
-    private fun Terminal.promptForDeletionReason(): String {
+    private fun Terminal.promptForDeletionReason(
+        reasonForDeletionParam: String? = null
+    ): String {
         echo(colors.brightGreen("${Prompts.required} Give a reason for removing this manifest"))
-        return prompt("Reason") {
+        return prompt("Reason", parameter = reasonForDeletionParam) {
             when {
                 it.isBlank() -> ConversionResult.Invalid(Errors.blankInput(null as String?))
                 it.length < minimumReasonLength || it.length > maximumReasonLength -> {
