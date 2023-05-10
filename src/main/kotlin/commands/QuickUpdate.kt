@@ -39,11 +39,9 @@ import okio.FileSystem
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import schemas.AdditionalMetadata
-import schemas.Schema
 import schemas.Schemas
 import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
-import schemas.manifest.LocaleManifest
 import token.Token
 import token.TokenStore
 import utils.FileAnalyser
@@ -69,7 +67,7 @@ class QuickUpdate : CliktCommand(name = "update") {
             colors.danger("The token is invalid or has expired")
         }
     }
-    private val additionalMetadataParam by option(hidden = true).convert {
+    private val additionalMetadata by option(hidden = true).convert {
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
     }
     private val fileSystem = FileSystem.SYSTEM
@@ -227,7 +225,7 @@ class QuickUpdate : CliktCommand(name = "update") {
         packageVersion: String,
         defaultLocale: String?
     ): Map<String, String> {
-        val allLocale = additionalMetadataParam?.locales?.find { it.name.equals("all", ignoreCase = true) }
+        val allLocale = additionalMetadata?.locales?.find { it.name.equals("all", ignoreCase = true) }
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier) to InstallerManifestData.createInstallerManifest(manifestOverride),
             GitHubUtils.getDefaultLocaleManifestName(packageIdentifier, defaultLocale) to DefaultLocaleManifestData.createDefaultLocaleManifest(
@@ -235,7 +233,7 @@ class QuickUpdate : CliktCommand(name = "update") {
             ),
             GitHubUtils.getVersionManifestName(packageIdentifier) to VersionManifestData.createVersionManifest()
         ) + PreviousManifestData.remoteLocaleData?.map { localeManifest ->
-            val currentLocaleMetadata = additionalMetadataParam?.locales
+            val currentLocaleMetadata = additionalMetadata?.locales
                 ?.find { it.name.equals(localeManifest.packageLocale, ignoreCase = true) }
             GitHubUtils.getLocaleManifestName(packageIdentifier, localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = packageIdentifier,
