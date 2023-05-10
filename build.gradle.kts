@@ -155,6 +155,7 @@ tasks.withType<Test>().configureEach {
 buildConfig {
     buildConfigField("String", "appName", "\"${project.name}\"")
     buildConfigField("String", "appVersion", "\"${project.version}\"")
+    buildConfigField("String", "projectUrl", "\"https://github.com/russellbanks/Komac\"")
 }
 
 tasks.withType<KotlinCompile> {

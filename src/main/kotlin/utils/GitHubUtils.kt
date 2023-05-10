@@ -128,7 +128,10 @@ object GitHubUtils {
         )
         return buildString {
             append("### Pull request has been created with ")
-            append(System.getenv(Schemas.customToolEnv) ?: "${BuildConfig.appName} v${BuildConfig.appVersion}")
+            append(
+                System.getenv(Schemas.customToolEnv)
+                    ?: "[${BuildConfig.appName}](${BuildConfig.projectUrl}) v${BuildConfig.appVersion}"
+            )
             append(" ")
             append(if (Random.nextInt(30) == 0) ":${fruits.random()}:" else ":rocket:")
         }
