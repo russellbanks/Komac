@@ -43,6 +43,7 @@ object DefaultLocaleManifestData {
                 ?.replace(Regex("([A-Z][a-z].*?[.:!?]) ?(?=\$|[A-Z])"), "$1\n")
                 ?.lines()
                 ?.joinToString("\n") { it.trim() }
+                ?.trim()
                 ?.ifBlank { null },
             moniker = (moniker ?: previousDefaultLocaleData?.moniker)?.ifBlank { null },
             tags = (tags ?: previousDefaultLocaleData?.tags)?.take(Tags.validationRules.maxItems)?.ifEmpty { null },
