@@ -67,7 +67,7 @@ class QuickUpdate : CliktCommand(name = "update") {
             colors.danger("The token is invalid or has expired")
         }
     }
-    private val additionalMetadata by option(hidden = true).convert {
+    private val additionalMetadata by option("--additional-metadata", hidden = true).convert {
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
     }
     private val fileSystem = FileSystem.SYSTEM
