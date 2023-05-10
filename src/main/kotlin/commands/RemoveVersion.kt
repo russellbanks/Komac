@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -18,6 +19,7 @@ import input.ExitCode
 import input.Prompts
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHContent
+import org.kohsuke.github.GitHub
 import token.Token
 import token.TokenStore
 import utils.GitHubUtils
@@ -27,9 +29,15 @@ class RemoveVersion : CliktCommand(name = "remove") {
     private val packageVersionParam: String? by option("--version", "--package-version")
     private val deletionReasonParam: String? by option("--reason", "--reason-for-deletion")
     private val submit: Boolean by option().flag(default = false)
+    private val token: String? by option("-t", "--token", envvar = "GITHUB_TOKEN").validate {
+        require(GitHub.connectUsingOAuth(it).isCredentialValid) {
+            colors.danger("The token is invalid or has expired")
+        }
+    }
 
     override fun run(): Unit = runBlocking {
         val terminal = currentContext.terminal
+        token?.let { TokenStore.useTokenParameter(it) }
         with(AllManifestData) {
             if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
             warning("Packages should only be removed when necessary.")
