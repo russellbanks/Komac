@@ -25,7 +25,7 @@ class RemoveVersion : CliktCommand(name = "remove") {
     private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
     private val packageIdentifierParam: String? by option("--id", "--package-identifier")
     private val packageVersionParam: String? by option("--version", "--package-version")
-    private val reasonForDeletionParam: String? by option("--reason", "--reason-for-deletion")
+    private val deletionReasonParam: String? by option("--reason", "--reason-for-deletion")
 
     override fun run(): Unit = runBlocking {
         val terminal = currentContext.terminal
@@ -49,12 +49,13 @@ class RemoveVersion : CliktCommand(name = "remove") {
             GitHubImpl.microsoftWinGetPkgs.getDirectoryContent(GitHubUtils.getPackagePath(packageIdentifier))
                 ?.find { it.name == packageVersion }
                 ?: throw doesNotExistError(packageIdentifier, packageVersion, colors = colors)
-            val deletionReason = terminal.promptForDeletionReason()
-            val shouldRemoveManifest = isCIEnvironment
-                ? true
-                : confirm(
-                    text = "Would you like to make a pull request to remove $packageIdentifier $packageVersion?"
-                  ) ?: throw ProgramResult(ExitCode.CtrlC)
+            val deletionReason = deletionReasonParam ?: terminal.promptForDeletionReason()
+            val shouldRemoveManifest = if (isCIEnvironment) {
+                true
+            } else {
+                confirm("Would you like to make a pull request to remove $packageIdentifier $packageVersion?")
+                    ?: throw ProgramResult(ExitCode.CtrlC)
+            }
             if (!shouldRemoveManifest) return@runBlocking
             echo()
             val forkRepository = GitHubImpl.getWingetPkgsFork(terminal)
@@ -86,11 +87,9 @@ class RemoveVersion : CliktCommand(name = "remove") {
         }
     }
 
-    private fun Terminal.promptForDeletionReason(
-        reasonForDeletionParam: String? = null
-    ): String {
+    private fun Terminal.promptForDeletionReason(): String {
         echo(colors.brightGreen("${Prompts.required} Give a reason for removing this manifest"))
-        return prompt("Reason", parameter = reasonForDeletionParam) {
+        return prompt("Reason") {
             when {
                 it.isBlank() -> ConversionResult.Invalid(Errors.blankInput(null as String?))
                 it.length < minimumReasonLength || it.length > maximumReasonLength -> {
