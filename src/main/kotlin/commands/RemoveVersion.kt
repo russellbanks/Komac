@@ -42,11 +42,6 @@ class RemoveVersion : CliktCommand(name = "remove") {
                 info("Found latest version: $latestVersion")
             }
             packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
-            GitHubImpl.promptIfPullRequestExists(
-                identifier = packageIdentifier,
-                version = packageVersion,
-                terminal = terminal
-            )
             GitHubImpl.microsoftWinGetPkgs.getDirectoryContent(GitHubUtils.getPackagePath(packageIdentifier))
                 ?.find { it.name == packageVersion }
                 ?: throw doesNotExistError(packageIdentifier, packageVersion, colors = colors)
