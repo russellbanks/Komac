@@ -40,8 +40,9 @@ object DefaultLocaleManifestData {
                 ?: previousDefaultLocaleData?.shortDescription
                 ?: gitHubDetection?.shortDescription.orEmpty(),
             description = (description ?: previousDefaultLocaleData?.description)
-                ?.replace(Regex("([A-Z][a-z].*?[.:!?](?=\$| [A-Z]))"), "$1\n")
-                ?.trim()
+                ?.replace(Regex("([A-Z][a-z].*?[.:!?]) ?(?=\$|[A-Z])"), "$1\n")
+                ?.lines()
+                ?.joinToString("\n") { it.trimStart() }
                 ?.ifBlank { null },
             moniker = (moniker ?: previousDefaultLocaleData?.moniker)?.ifBlank { null },
             tags = (tags ?: previousDefaultLocaleData?.tags)?.take(Tags.validationRules.maxItems)?.ifEmpty { null },
