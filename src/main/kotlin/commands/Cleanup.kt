@@ -2,6 +2,7 @@ package commands
 
 import com.github.ajalt.clikt.core.CliktCommand
 import data.GitHubImpl
+import org.kohsuke.github.GHIssueState
 
 class Cleanup : CliktCommand(name = "cleanup") {
     override fun run() {
@@ -12,18 +13,22 @@ class Cleanup : CliktCommand(name = "cleanup") {
             .filterNot { it.name == GitHubImpl.microsoftWinGetPkgs.defaultBranch }
             .forEach { branch ->
                 runCatching {
-                    val commit = GitHubImpl.microsoftWinGetPkgs
-                        .queryCommits()
-                        .from(branch.shA1)
+                    val pullRequest = GitHubImpl.microsoftWinGetPkgs
+                        .queryPullRequests()
+                        .head("${wingetPkgsFork.ownerName}:${branch.name}")
+                        .base(GitHubImpl.microsoftWinGetPkgs.defaultBranch)
+                        .state(GHIssueState.ALL)
                         .list()
                         .withPageSize(1)
                         .first()
 
-                    commit.let {
-                        val branchName = branch.name
-                        warning("Deleting $branchName because it was merged in ${it.htmlUrl}")
-                        wingetPkgsFork.getRef("heads/$branchName").delete()
-                        branchesDeleted++
+                    pullRequest.let {
+                        if (it.isMerged) {
+                            val branchName = branch.name
+                            warning("Deleting $branchName because it was merged in ${GitHubImpl.microsoftWinGetPkgs.htmlUrl}/commit/${it.mergeCommitSha}")
+                            wingetPkgsFork.getRef("heads/$branchName").delete()
+                            branchesDeleted++
+                        }
                     }
                 }
             }
