@@ -17,18 +17,31 @@ class Cleanup : CliktCommand(name = "cleanup") {
                         .queryPullRequests()
                         .head("${wingetPkgsFork.ownerName}:${branch.name}")
                         .base(GitHubImpl.microsoftWinGetPkgs.defaultBranch)
-                        .state(GHIssueState.ALL)
+                        .state(GHIssueState.CLOSED)
                         .list()
                         .withPageSize(1)
                         .first()
 
                     pullRequest.let {
-                        if (it.isMerged) {
-                            val branchName = branch.name
-                            warning("Deleting $branchName because it was merged in ${GitHubImpl.microsoftWinGetPkgs.htmlUrl}/commit/${it.mergeCommitSha}")
-                            wingetPkgsFork.getRef("heads/$branchName").delete()
-                            branchesDeleted++
-                        }
+                        val branchName = branch.name
+                        warning(
+                            buildString {
+                                append("Deleting ")
+                                append(branchName)
+                                append(" because its pull request was ")
+                                append(if (it.isMerged) "merged" else "closed")
+                                append(" in ")
+                                append(
+                                    if (it.isMerged) {
+                                        "${GitHubImpl.microsoftWinGetPkgs.htmlUrl}/commit/${it.mergeCommitSha}"
+                                    } else {
+                                        it.htmlUrl
+                                    }
+                                )
+                            }
+                        )
+                        wingetPkgsFork.getRef("heads/$branchName").delete()
+                        branchesDeleted++
                     }
                 }
             }
