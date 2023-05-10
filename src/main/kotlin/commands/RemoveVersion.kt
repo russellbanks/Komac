@@ -46,7 +46,7 @@ class RemoveVersion : CliktCommand(name = "remove") {
                 ?.find { it.name == packageVersion }
                 ?: throw doesNotExistError(packageIdentifier, packageVersion, colors = colors)
             val deletionReason = deletionReasonParam ?: terminal.promptForDeletionReason()
-            val shouldRemoveManifest = if (submit) {
+            val shouldRemoveManifest = if (submit || System.getenv("CI")?.toBooleanStrictOrNull() == true) {
                 true
             } else {
                 confirm("Would you like to make a pull request to remove $packageIdentifier $packageVersion?")
