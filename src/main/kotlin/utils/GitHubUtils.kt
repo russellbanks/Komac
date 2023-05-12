@@ -149,7 +149,7 @@ object GitHubUtils {
      */
     fun getBranchName(packageIdentifier: String, packageVersion: String): String {
         val timestamp: Instant = Instant.now()
-        val hash = "$packageIdentifier-$packageVersion-$timestamp".encodeUtf8().md5().hex().uppercase()
+        val hash = "$packageIdentifier-$packageVersion-$timestamp".encodeUtf8().sha1().hex().uppercase()
         return "$packageIdentifier-$packageVersion-$hash"
     }
 }
