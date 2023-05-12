@@ -15,7 +15,7 @@ object PackageName : TextPrompt {
     )
 
     override val extraText: String = buildString {
-        appendLine("Example: Microsoft Teams")
+        append("Example: Microsoft Teams")
         AllManifestData.msi?.productName?.let { appendLine("Detected from MSI: $it") }
     }
 
