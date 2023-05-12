@@ -13,7 +13,6 @@ interface RadioMenuPrompt<T> : Prompt<T> {
 
     override suspend fun prompt(terminal: Terminal): T? = with(terminal) {
         println(colors.brightYellow("${Prompts.optional} Enter the ${name.lowercase()}"))
-        default?.let { muted("Previous value: $it") }
         return radioMenu<T> {
             items = this@RadioMenuPrompt.items
             default = this@RadioMenuPrompt.default
