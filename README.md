@@ -107,8 +107,6 @@ While other manifest creation tools have made remarkable strides in the winget-p
 
 Komac isn't just a tool – it's an integral part of a larger ecosystem, playing a pivotal role in projects like [WinGet Releaser](https://github.com/vedantmgoyal2009/winget-releaser). WinGet Releaser is a GitHub action that retrieves URLs from your releases and passes them directly to Komac.
 
-What's more, Komac is trusted by some of the most prominent and well-established repositories on GitHub, including Audacity and Vim. Our tool is enabling these major players to optimise their workflows and improve their software distribution processes.
-
 We're immensely proud of what Komac is achieving, and we invite you to join our community, contribute, and help shape the future of Komac!
 
 ## How can I support Komac? ❤️

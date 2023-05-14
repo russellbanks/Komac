@@ -15,40 +15,37 @@ class Cleanup : CliktCommand(name = "cleanup") {
         val wingetPkgsFork = GitHubImpl.getWingetPkgsFork(currentContext.terminal)
         var branchesDeleted = 0
 
-        wingetPkgsFork.branches.values
-            .filterNot { it.name == GitHubImpl.microsoftWinGetPkgs.defaultBranch }
-            .forEach { branch ->
-                runCatching {
-                    val pullRequest = GitHubImpl.microsoftWinGetPkgs
-                        .queryPullRequests()
-                        .head("${wingetPkgsFork.ownerName}:${branch.name}")
-                        .base(GitHubImpl.microsoftWinGetPkgs.defaultBranch)
-                        .state(GHIssueState.CLOSED)
-                        .list()
-                        .withPageSize(1)
-                        .first()
+        val branches = wingetPkgsFork.branches.values.filterNot {
+            it.name == GitHubImpl.microsoftWinGetPkgs.defaultBranch
+        }
 
-                    pullRequest?.let {
-                        if (!onlyMerged || it.isMerged) {
-                            val branchName = branch.name
-                            val action = if (it.isMerged) "merged" else "closed"
-                            val url = if (it.isMerged) {
-                                "${GitHubImpl.microsoftWinGetPkgs.htmlUrl}/commit/${it.mergeCommitSha}"
-                            } else {
-                                it.htmlUrl
-                            }
-                            warning("Deleting $branchName because its pull request was $action in $url")
-                            wingetPkgsFork.getRef("heads/$branchName").delete()
-                            branchesDeleted++
-                        }
+        for (branch in branches) {
+            runCatching {
+                val pullRequest = GitHubImpl.microsoftWinGetPkgs
+                    .queryPullRequests()
+                    .head("${wingetPkgsFork.ownerName}:${branch.name}")
+                    .base(GitHubImpl.microsoftWinGetPkgs.defaultBranch)
+                    .state(GHIssueState.CLOSED)
+                    .list()
+                    .withPageSize(1)
+                    .first()
+
+                pullRequest?.let {
+                    if (!onlyMerged || it.isMerged) {
+                        val branchName = branch.name
+                        val action = if (it.isMerged) "merged" else "closed"
+                        warning("Deleting $branchName because ${it.htmlUrl} was $action")
+                        wingetPkgsFork.getRef("heads/$branchName").delete()
+                        branchesDeleted++
                     }
                 }
             }
+        }
 
         if (branchesDeleted > 0) {
-            success("$branchesDeleted branches were deleted")
+            success("$branchesDeleted out of ${branches.size} total branches were deleted")
         } else {
-            echo("No branches were found that could be deleted")
+            info("No branches were found that could be deleted")
         }
     }
 }
