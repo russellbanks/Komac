@@ -6,14 +6,14 @@ import com.github.ajalt.mordant.rendering.TextColors.brightGreen
 import com.github.ajalt.mordant.rendering.TextColors.brightYellow
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import input.Prompts
 import input.Switch
 import schemas.manifest.InstallerManifest
 
 object InstallerSwitch {
-    fun installerSwitchPrompt(installerSwitch: Switch, terminal: Terminal) = with(AllManifestData) {
+    fun installerSwitchPrompt(installerSwitch: Switch, terminal: Terminal) = with(ManifestData) {
         if (
             installerType == InstallerManifest.InstallerType.EXE ||
             installerSwitch == Switch.Custom
@@ -53,15 +53,15 @@ object InstallerSwitch {
     private fun getPreviousValue(switch: Switch): String? = PreviousManifestData.installerManifest?.run {
         when (switch) {
             Switch.Silent -> installerSwitches?.silent
-                ?: installers.getOrNull(AllManifestData.installers.size)
+                ?: installers.getOrNull(ManifestData.installers.size)
                     ?.installerSwitches
                     ?.silent
             Switch.SilentWithProgress -> installerSwitches?.silentWithProgress
-                ?: installers.getOrNull(AllManifestData.installers.size)
+                ?: installers.getOrNull(ManifestData.installers.size)
                     ?.installerSwitches
                     ?.silentWithProgress
             Switch.Custom -> installerSwitches?.custom
-                ?: installers.getOrNull(AllManifestData.installers.size)
+                ?: installers.getOrNull(ManifestData.installers.size)
                     ?.installerSwitches
                     ?.custom
         }

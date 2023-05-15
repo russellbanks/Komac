@@ -9,8 +9,6 @@ import input.Prompts
 import kotlinx.coroutines.runBlocking
 
 interface TextPrompt : Prompt<String> {
-    val name: String
-
     val extraText: String? get() = null
 
     val validationRules: ValidationRules

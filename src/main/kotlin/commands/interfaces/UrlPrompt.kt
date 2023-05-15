@@ -8,8 +8,6 @@ import io.ktor.http.Url
 import kotlinx.coroutines.runBlocking
 
 interface UrlPrompt : Prompt<Url> {
-    val name: String
-
     val description: String
 
     val previousUrl: Url? get() = null

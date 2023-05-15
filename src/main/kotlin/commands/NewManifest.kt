@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
-import data.AllManifestData
+import data.ManifestData
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
 import data.InstallerManifestData
@@ -58,7 +58,7 @@ class NewManifest : CliktCommand(name = "new") {
 
     @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking {
-        with(AllManifestData) {
+        with(ManifestData) {
             if (manifestOverride != null) Schemas.manifestVersion = manifestOverride as String
             if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
             packageIdentifier = prompt(PackageIdentifier)
@@ -135,7 +135,7 @@ class NewManifest : CliktCommand(name = "new") {
         }
     }
 
-    private suspend fun createFiles(): Map<String, String> = with(AllManifestData) {
+    private suspend fun createFiles(): Map<String, String> = with(ManifestData) {
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier) to InstallerManifestData.createInstallerManifest(),
             GitHubUtils.getDefaultLocaleManifestName(

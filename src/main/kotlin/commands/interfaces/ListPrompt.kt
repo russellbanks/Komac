@@ -8,8 +8,6 @@ import input.Prompts
 import kotlinx.coroutines.runBlocking
 
 interface ListPrompt<T> : Prompt<List<T>> {
-    val name: String
-
     val validationRules: ListValidationRules<T>
 
     val default: List<T>? get() = null

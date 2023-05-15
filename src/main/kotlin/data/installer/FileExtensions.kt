@@ -2,7 +2,7 @@ package data.installer
 
 import commands.interfaces.ListPrompt
 import commands.interfaces.ListValidationRules
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import extensions.YamlExtensions.convertToList
 
@@ -22,6 +22,6 @@ object FileExtensions : ListPrompt<String> {
     )
 
     override val default: List<String>? get() = PreviousManifestData.installerManifest?.run {
-        fileExtensions ?: installers.getOrNull(AllManifestData.installers.size)?.fileExtensions
+        fileExtensions ?: installers.getOrNull(ManifestData.installers.size)?.fileExtensions
     }
 }

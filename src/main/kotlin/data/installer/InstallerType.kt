@@ -1,7 +1,7 @@
 package data.installer
 
 import commands.interfaces.RadioMenuPrompt
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import schemas.manifest.InstallerManifest
 
@@ -12,6 +12,6 @@ object InstallerType : RadioMenuPrompt<InstallerManifest.InstallerType> {
     override val items = InstallerManifest.InstallerType.entries
 
     override val default: InstallerManifest.InstallerType? get() = PreviousManifestData.installerManifest?.run {
-        installerType ?: installers.getOrNull(AllManifestData.installers.size)?.installerType
+        installerType ?: installers.getOrNull(ManifestData.installers.size)?.installerType
     }
 }

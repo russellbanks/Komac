@@ -5,8 +5,6 @@ import input.Prompts
 import utils.menu.checkMenu
 
 interface CheckMenuPrompt<T> : Prompt<List<T>> {
-    val name: String
-
     val defaultChecked: List<T>? get() = emptyList()
 
     val items: List<T>

@@ -2,7 +2,7 @@ package data.shared
 
 import commands.interfaces.TextPrompt
 import commands.interfaces.ValidationRules
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import java.util.Locale
 
@@ -23,7 +23,7 @@ object Locale {
         )
 
         override val default: String? get() = PreviousManifestData.installerManifest?.run {
-            installerLocale ?: installers[AllManifestData.installers.size].installerLocale
+            installerLocale ?: installers[ManifestData.installers.size].installerLocale
         }
 
         override val extraText: String = example

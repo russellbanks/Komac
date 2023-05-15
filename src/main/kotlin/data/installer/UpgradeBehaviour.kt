@@ -1,7 +1,7 @@
 package data.installer
 
 import commands.interfaces.RadioMenuPrompt
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import schemas.manifest.InstallerManifest
 
@@ -15,6 +15,6 @@ object UpgradeBehaviour : RadioMenuPrompt<InstallerManifest.UpgradeBehavior?> {
 
     private val previousValue: InstallerManifest.UpgradeBehavior?
         get() = PreviousManifestData.installerManifest?.let {
-            it.upgradeBehavior ?: it.installers.getOrNull(AllManifestData.installers.size)?.upgradeBehavior
+            it.upgradeBehavior ?: it.installers.getOrNull(ManifestData.installers.size)?.upgradeBehavior
         }
 }

@@ -7,7 +7,7 @@ import schemas.Schemas
 import schemas.manifest.DefaultLocaleManifest
 
 object DefaultLocaleManifestData {
-    suspend fun createDefaultLocaleManifest(manifestOverride: String? = null): String = with(AllManifestData) {
+    suspend fun createDefaultLocaleManifest(manifestOverride: String? = null): String = with(ManifestData) {
         val parameterLocaleMetadata = additionalMetadata?.locales?.find {
             it.name.equals(other = defaultLocale, ignoreCase = true)
         }
@@ -69,7 +69,7 @@ object DefaultLocaleManifestData {
     private inline fun Url.ifBlank(defaultValue: () -> Url?): Url? = if (this == Url("")) defaultValue() else this
 
     private val defaultLocaleManifestBase: DefaultLocaleManifest
-        get() = with(AllManifestData) {
+        get() = with(ManifestData) {
             return PreviousManifestData.defaultLocaleManifest ?: DefaultLocaleManifest(
                 packageIdentifier = packageIdentifier,
                 packageVersion = packageVersion,

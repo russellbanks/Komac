@@ -1,7 +1,7 @@
 package data.installer
 
 import commands.interfaces.CheckMenuPrompt
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import schemas.manifest.InstallerManifest
 
@@ -14,6 +14,6 @@ object InstallModes : CheckMenuPrompt<InstallerManifest.InstallModes> {
     override val defaultChecked: List<InstallerManifest.InstallModes>? get() = PreviousManifestData.installerManifest
         ?.let { installerManifest ->
             installerManifest.installModes
-                ?: installerManifest.installers.getOrNull(AllManifestData.installers.size)?.installModes
+                ?: installerManifest.installers.getOrNull(ManifestData.installers.size)?.installModes
         }
 }
