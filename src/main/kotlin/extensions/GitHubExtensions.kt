@@ -46,7 +46,7 @@ val GHRelease.formattedReleaseNotes: String?
                     }
                     line.startsWith("- ") -> {
                         appendLine(
-                            "- ${line.replace(Regex("([A-Z][a-z].*?[.:!?]) ?(?=\$|[A-Z])"), "$1\n  ").drop(2).trim()}"
+                            "- ${line.replace(Regex("([A-Z][a-z].*?[.!?]) ?(?=\$|[A-Z])"), "$1\n  ").drop(2).trim()}"
                         )
                     }
                 }

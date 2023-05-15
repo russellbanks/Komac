@@ -40,7 +40,7 @@ object DefaultLocaleManifestData {
                 ?: previousDefaultLocaleData?.shortDescription
                 ?: gitHubDetection?.shortDescription.orEmpty(),
             description = (description ?: previousDefaultLocaleData?.description)
-                ?.replace(Regex("([A-Z][a-z].*?[.:!?]) ?(?=\$|[A-Z])"), "$1\n")
+                ?.replace(Regex("([A-Z][a-z].*?[.!?]) ?(?=\$|[A-Z])"), "$1\n")
                 ?.lines()
                 ?.joinToString("\n") { it.trim() }
                 ?.trim()
