@@ -29,6 +29,8 @@ object EncodeConfig {
         )
     )
     val jsonDefault = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
         serializersModule = SerializersModule {
             contextual(LocalDate::class, JsonLocalDateSerializer)
             contextual(Url::class, JsonUrlSerializer)
