@@ -18,7 +18,7 @@ object InstallerManifestData {
             installerLocale = msi?.productLanguage
                 ?: installerLocale?.ifBlank { null }
                 ?: previousInstaller?.installerLocale,
-            platform = msix?.targetDeviceFamily?.let { listOf(it) }
+            platform = msix?.targetDeviceFamily?.let(::listOf)
                 ?: previousInstaller?.platform
                 ?: previousInstallerManifest?.platform,
             minimumOSVersion = msix?.minVersion,
@@ -42,7 +42,7 @@ object InstallerManifestData {
                 ?: msixBundle?.packageFamilyName
                 ?: previousInstaller?.packageFamilyName
                 ?: previousInstallerManifest?.packageFamilyName,
-            installerSwitches = installerSwitches.takeUnless { it.areAllNullOrBlank() }
+            installerSwitches = installerSwitches.takeUnless(InstallerManifest.InstallerSwitches::areAllNullOrBlank)
                 ?: previousInstaller?.installerSwitches
                 ?: previousInstallerManifest?.installerSwitches,
             upgradeBehavior = upgradeBehavior

@@ -95,7 +95,6 @@ tasks.withType<ShadowJar> {
     }
 }
 
-
 detekt {
     ignoreFailures = true
 }
