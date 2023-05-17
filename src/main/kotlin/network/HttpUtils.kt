@@ -25,12 +25,13 @@ object HttpUtils {
         url: Url,
         packageIdentifier: String,
         packageVersion: String,
-        progress: ProgressAnimation? = null,
+        progress: ProgressAnimation,
         fileSystem: FileSystem,
         tempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY
     ): DownloadedFile {
         val path = FileUtils.createTempFile(packageIdentifier, packageVersion, url, tempDirectory)
         val fileDeletionThread = Thread { fileSystem.delete(path) }
+        Runtime.getRuntime().addShutdownHook(fileDeletionThread)
         fileSystem.sink(path).buffer().use { sink ->
             var lastModified: LocalDate? = null
             prepareGet(url).execute { httpResponse ->
@@ -40,10 +41,10 @@ object HttpUtils {
                     val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
                     while (packet.isNotEmpty) {
                         sink.write(packet.readBytes())
-                        fileSystem.metadata(path).size?.let { progress?.update(it, httpResponse.contentLength()) }
+                        fileSystem.metadata(path).size?.let { progress.update(it, httpResponse.contentLength()) }
                     }
                 }
-                progress?.update(1L, 1L)
+                httpResponse.contentLength()?.let { progress.update(it, it) }
             }
             return DownloadedFile(path, lastModified, fileDeletionThread)
         }
