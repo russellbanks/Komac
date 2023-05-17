@@ -10,7 +10,7 @@ object InstallerType : RadioMenuPrompt<InstallerManifest.InstallerType> {
     override val name: String = "Installer type"
 
     @OptIn(ExperimentalStdlibApi::class)
-    override val items = if (ManifestData.installerUrl.extension.equals("exe", ignoreCase = true)) {
+    override val items get() = if (ManifestData.installerUrl.extension.equals("exe", ignoreCase = true)) {
         listOf(
             InstallerManifest.InstallerType.BURN,
             InstallerManifest.InstallerType.EXE,
