@@ -2,7 +2,7 @@ package data.installer
 
 import commands.interfaces.ListPrompt
 import commands.interfaces.ListValidationRules
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import extensions.YamlExtensions.convertToList
 
@@ -20,6 +20,6 @@ object Protocols : ListPrompt<String> {
     override val extraText: String? = null
 
     override val default: List<String>? get() = PreviousManifestData.installerManifest?.run {
-        protocols ?: installers.getOrNull(AllManifestData.installers.size)?.protocols
+        protocols ?: installers.getOrNull(ManifestData.installers.size)?.protocols
     }
 }

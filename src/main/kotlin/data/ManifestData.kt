@@ -11,7 +11,7 @@ import schemas.AdditionalMetadata
 import schemas.manifest.InstallerManifest
 import java.time.LocalDate
 
-object AllManifestData {
+object ManifestData {
     lateinit var installerUrl: Url
     lateinit var installerSha256: String
     lateinit var architecture: InstallerManifest.Installer.Architecture

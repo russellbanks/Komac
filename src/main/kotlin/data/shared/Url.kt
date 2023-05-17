@@ -7,7 +7,7 @@ import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Platform
-import data.AllManifestData
+import data.ManifestData
 import detection.PageScraper
 import detection.files.Zip
 import detection.files.msi.Msi
@@ -38,7 +38,7 @@ import utils.menu.yesNoMenu
 import java.net.ConnectException
 
 object Url {
-    suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) = with(AllManifestData) {
+    suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) = with(ManifestData) {
         installerUrl = parameterUrl ?: promptForInstaller()
         downloadInstaller(FileSystem.SYSTEM)
         msixBundleDetection()
@@ -83,7 +83,7 @@ object Url {
         }
     }
 
-    private suspend fun Terminal.downloadInstaller(fileSystem: FileSystem) = with(AllManifestData) {
+    private suspend fun Terminal.downloadInstaller(fileSystem: FileSystem) = with(ManifestData) {
         if (installers.map { it.installerUrl }.contains(installerUrl)) {
             installers += installers.first { it.installerUrl == installerUrl }
             skipAddInstaller = true
@@ -121,7 +121,7 @@ object Url {
         }
     }
 
-    private fun Terminal.msixBundleDetection() = with(AllManifestData) {
+    private fun Terminal.msixBundleDetection() = with(ManifestData) {
         if (msixBundle != null) {
             println(
                 verticalLayout {

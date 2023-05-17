@@ -5,8 +5,6 @@ import input.Prompts
 import utils.menu.radioMenu
 
 interface RadioMenuPrompt<T> : Prompt<T> {
-    val name: String
-
     val default: T? get() = null
 
     val items: List<T>

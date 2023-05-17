@@ -2,7 +2,7 @@ package data.locale
 
 import commands.interfaces.TextPrompt
 import commands.interfaces.ValidationRules
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 
 object Description {
@@ -15,7 +15,7 @@ object Description {
             isRequired = true
         )
 
-        override val extraText: String? get() = AllManifestData.msix?.description?.let {
+        override val extraText: String? get() = ManifestData.msix?.description?.let {
             "Description from installer: $it"
         }
     }

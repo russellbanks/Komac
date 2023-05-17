@@ -1,5 +1,6 @@
 package data
 
+import Environment
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -50,9 +51,7 @@ object GitHubImpl {
 
     fun getWingetPkgsFork(terminal: Terminal): GHRepository = with(terminal) {
         return try {
-            github.getRepository("$forkOwner/$wingetpkgs").also {
-                success("Found forked $wingetpkgs repository: ${it.fullName}")
-            }
+            github.getRepository("$forkOwner/$wingetpkgs")
         } catch (_: IOException) {
             info("Fork of $wingetpkgs not found. Forking...")
             try {
@@ -90,7 +89,7 @@ object GitHubImpl {
             } pull request for $identifier $version that was created on ${existingPullRequest.createdAt}"
         )
         info(existingPullRequest.htmlUrl)
-        if (System.getenv("CI")?.toBooleanStrictOrNull() == true) {
+        if (Environment.isCI) {
             if (isOpen) throw ProgramResult(0)
         } else {
             if (YesNoPrompt("Would you like to proceed?", terminal = this).ask() != true) throw ProgramResult(0)

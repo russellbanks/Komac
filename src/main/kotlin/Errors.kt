@@ -5,13 +5,12 @@ import data.GitHubImpl
 import io.ktor.client.statement.HttpResponse
 
 object Errors {
-    const val error = "[Error]"
-    const val connectionTimeout = "$error Connection timed out"
-    const val connectionFailure = "$error Failed to connect"
+    const val connectionTimeout = "Connection timed out"
+    const val connectionFailure = "Failed to connect"
 
     fun invalidLength(min: Number? = null, max: Number? = null, items: Iterable<String>? = null): String {
         return buildString {
-            append("$error Invalid Length")
+            append("Invalid Length")
             if (min != null || max != null) {
                 append(" -${items?.let { "Item" }.orEmpty()} ${items?.let { "Length" } ?: "length"} must be ")
             }
@@ -33,7 +32,7 @@ object Errors {
 
     fun invalidRegex(regex: Regex? = null, items: Iterable<String>? = null): String {
         return buildString {
-            append("$error Invalid Pattern")
+            append("Invalid Pattern")
             regex?.let { append(" - Must match regex: $it") }
             items?.let { nonNullItems ->
                 appendLine()
@@ -47,18 +46,14 @@ object Errors {
 
     fun unsuccessfulUrlResponse(response: HttpResponse?): String {
         return buildString {
-            append("$error Unsuccessful Response Code - The server ")
+            append("Unsuccessful Response Code - The server ")
             append(response?.let { "responded with ${it.status}" } ?: "did not return a successful response")
         }
     }
 
-    fun blankInput(promptName: String? = null) = "$error ${promptName ?: "Input"} cannot be blank"
+    fun blankInput(promptName: String? = null) = "$${promptName ?: "Input"} cannot be blank"
 
-    fun invalidEnum(enum: Iterable<String>): String = buildString {
-        append(error)
-        append(" - Value must exist in the enum - ")
-        append(enum.joinToString())
-    }
+    fun invalidEnum(enum: Iterable<String>): String = "Value must exist in the enum - ${enum.joinToString()}"
 
     fun doesNotExistError(
         packageIdentifier: String,

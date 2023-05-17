@@ -1,20 +1,20 @@
 package commands
 
-import Errors
+import Environment
 import Errors.doesNotExistError
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
+import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
-import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
-import data.AllManifestData
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
 import data.InstallerManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import data.VersionManifestData
 import data.installer.InstallerScope
@@ -40,6 +40,7 @@ import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import schemas.AdditionalMetadata
 import schemas.Schemas
+import schemas.installerSorter
 import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import token.Token
@@ -52,21 +53,21 @@ import utils.findArchitecture
 import utils.findScope
 import java.io.File
 
-class QuickUpdate : CliktCommand(name = "update") {
-    private val isCIEnvironment = System.getenv("CI")?.toBooleanStrictOrNull() == true
+class QuickUpdate : CliktCommand(
+    help = "Updates a pre-existing manifest with minimal input",
+    name = "update"
+) {
     private val packageIdentifierParam: String? by option("--id", "--package-identifier")
     private val packageVersionParam: String? by option("--version", "--package-version")
     private val urls: List<Url>? by option().convert { Url(it) }.split(",")
     private lateinit var microsoftWingetPkgs: GHRepository
-    private val manifestOverride: String? by option().validate {
-        require("^\\d+\\.\\d+\\.\\d+$".toRegex() matches it) { "Manifest version must be in the format X.X.X" }
-    }
-    private val submit: Boolean by option().flag(default = false)
-    private val tokenParameter: String? by option("-t", "--token", envvar = "GITHUB_TOKEN").validate {
-        require(GitHub.connectUsingOAuth(it).isCredentialValid) {
-            colors.danger("The token is invalid or has expired")
-        }
-    }
+    private val manifestOverride: String? by option(
+        help = "Overrides the custom manifest version. Must be in the format X.X.X"
+    ).check("Manifest version must be in the format X.X.X") { Regex("^\\d+\\.\\d+\\.\\d+$") matches it }
+    private val submit: Boolean by option(help = "Automatically submits a pull request with the updated pull request")
+        .flag(default = false)
+    private val tokenParameter: String? by option("-t", "--token", envvar = "GITHUB_TOKEN")
+        .check("The token is invalid or has expired") { GitHub.connectUsingOAuth(it).isCredentialValid }
     private val additionalMetadata by option(hidden = true).convert {
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
     }
@@ -75,18 +76,18 @@ class QuickUpdate : CliktCommand(name = "update") {
     override fun run(): Unit = runBlocking {
         val terminal = currentContext.terminal
         tokenParameter?.let { TokenStore.useTokenParameter(it) }
-        with(AllManifestData) {
-            if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
-            if (isCIEnvironment) {
-                info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
-            }
-            packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
-            if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
-            microsoftWingetPkgs = GitHubImpl.microsoftWinGetPkgs
+        if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
+        if (Environment.isCI) {
+            info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
+        }
+        ManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
+        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
+        microsoftWingetPkgs = GitHubImpl.microsoftWinGetPkgs
+        with(ManifestData) {
             allVersions = GitHubUtils.getAllVersions(microsoftWingetPkgs, packageIdentifier)
                 ?.also { info("Found $packageIdentifier in the winget-pkgs repository") }
                 ?: throw doesNotExistError(packageIdentifier, isUpdate = true, colors = colors)
-            val latestVersion = (allVersions as List<String>).maxWithOrNull(versionStringComparator)
+            val latestVersion = (allVersions as List<String>).maxWith(versionStringComparator)
             info("Found latest version: $latestVersion")
             PreviousManifestData.init(packageIdentifier, latestVersion, microsoftWingetPkgs)
             packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
@@ -96,7 +97,7 @@ class QuickUpdate : CliktCommand(name = "update") {
                 terminal = terminal
             )
             updateState = getUpdateState(packageIdentifier, packageVersion, latestVersion)
-            terminal.loopThroughInstallers(parameterUrls = urls?.toSet(), isCIEnvironment = isCIEnvironment)
+            terminal.loopThroughInstallers(parameterUrls = urls?.toSet())
             val files = createFiles(packageIdentifier, packageVersion, defaultLocale)
             for (manifest in files.values) {
                 formattedManifestLinesSequence(manifest, colors).forEach(::echo)
@@ -109,18 +110,16 @@ class QuickUpdate : CliktCommand(name = "update") {
                     packageVersion = packageVersion,
                     updateState = updateState
                 ).also { success("Pull request created: ${it.htmlUrl}") }
-            } else if (!isCIEnvironment) {
+            } else if (!Environment.isCI) {
                 terminal.pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
                     when (manifestResultOption) {
-                        ManifestResultOption.PullRequest -> {
-                            GitHubImpl.commitAndPullRequest(
-                                GitHubImpl.getWingetPkgsFork(terminal),
-                                files = files,
-                                packageIdentifier = packageIdentifier,
-                                packageVersion = packageVersion,
-                                updateState = updateState
-                            ).also { success("Pull request created: ${it.htmlUrl}") }
-                        }
+                        ManifestResultOption.PullRequest -> GitHubImpl.commitAndPullRequest(
+                            GitHubImpl.getWingetPkgsFork(terminal),
+                            files = files,
+                            packageIdentifier = packageIdentifier,
+                            packageVersion = packageVersion,
+                            updateState = updateState
+                        ).also { success("Pull request created: ${it.htmlUrl}") }
                         ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, terminal)
                         else -> return@also
                     }
@@ -135,17 +134,14 @@ class QuickUpdate : CliktCommand(name = "update") {
         }
     }
 
-    private suspend fun Terminal.loopThroughInstallers(
-        parameterUrls: Set<Url>? = null,
-        isCIEnvironment: Boolean = false
-    ) = with(AllManifestData) {
+    private suspend fun Terminal.loopThroughInstallers(parameterUrls: Set<Url>? = null) = with(ManifestData) {
         if (parameterUrls != null) {
             loopParameterUrls(parameterUrls)
-        } else if (isCIEnvironment) {
-            throw CliktError(colors.danger("${Errors.error} No installers have been provided"), statusCode = 1)
+        } else if (Environment.isCI) {
+            throw CliktError(colors.danger("No installers have been provided"), statusCode = 1)
         } else {
             val previousInstallerManifest = PreviousManifestData.installerManifest
-            previousInstallerManifest?.installers?.forEachIndexed { index, installer ->
+            previousInstallerManifest?.installers?.sortedWith(installerSorter)?.forEachIndexed { index, installer ->
                 info("Installer Entry ${index.inc()}/${previousInstallerManifest.installers.size}")
                 listOf(
                     "Architecture" to installer.architecture,
@@ -164,7 +160,7 @@ class QuickUpdate : CliktCommand(name = "update") {
         }
     }
 
-    private suspend fun Terminal.loopParameterUrls(parameterUrls: Set<Url>) = with(AllManifestData) {
+    private suspend fun Terminal.loopParameterUrls(parameterUrls: Set<Url>) = with(ManifestData) {
         val previousInstallerManifest = PreviousManifestData.installerManifest as InstallerManifest
         val previousInstallers = previousInstallerManifest.installers
         val previousUrls = previousInstallers.map(InstallerManifest.Installer::installerUrl)
@@ -174,7 +170,7 @@ class QuickUpdate : CliktCommand(name = "update") {
         val progressList = parameterUrls.map { url -> getDownloadProgressBar(url).apply(ProgressAnimation::start) }
         parameterUrls.forEachIndexed { index, url ->
             gitHubDetection = parameterUrls
-                .firstOrNull { it.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true) }
+                .firstOrNull { it.host.equals(GitHubDetection.gitHubWebsite, ignoreCase = true) }
                 ?.let(::GitHubDetection)
             val downloadedFile = Http.client.downloadFile(url, packageIdentifier, packageVersion, progressList[index], fileSystem)
             val fileAnalyser = FileAnalyser(downloadedFile.path, fileSystem)

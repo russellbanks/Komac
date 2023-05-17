@@ -3,7 +3,7 @@ package data.installer
 import Errors
 import commands.interfaces.ListPrompt
 import commands.interfaces.ListValidationRules
-import data.AllManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import extensions.YamlExtensions.convertToList
 import java.util.SortedSet
@@ -17,7 +17,7 @@ object InstallerSuccessCodes : ListPrompt<Long> {
     override val extraText: String = "Example: ${randomInstallerSuccessCodes.joinToString()}"
 
     override val default: List<Long>? get() = PreviousManifestData.installerManifest?.run {
-        installerSuccessCodes ?: installers.getOrNull(AllManifestData.installers.size)?.installerSuccessCodes
+        installerSuccessCodes ?: installers.getOrNull(ManifestData.installers.size)?.installerSuccessCodes
     }
 
     override val validationRules: ListValidationRules<Long> = ListValidationRules(

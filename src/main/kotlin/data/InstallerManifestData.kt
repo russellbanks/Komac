@@ -5,12 +5,13 @@ import extensions.getDistinctOrNull
 import extensions.takeIfNotDistinct
 import io.ktor.http.Url
 import schemas.Schemas
+import schemas.installerSorter
 import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import utils.ManifestUtils.updateVersionInString
 
 object InstallerManifestData {
-    fun addInstaller() = with(AllManifestData) {
+    fun addInstaller() = with(ManifestData) {
         val previousInstallerManifest = PreviousManifestData.installerManifest
         val previousDefaultLocaleManifest = PreviousManifestData.defaultLocaleManifest
         val previousInstaller = previousInstallerManifest?.installers?.getOrNull(installers.size)
@@ -80,7 +81,7 @@ object InstallerManifestData {
                 }
             }
         }
-        resetValues(AllManifestData)
+        resetValues(ManifestData)
     }
 
     private fun InstallerManifest.AppsAndFeaturesEntry.fillARPEntry(
@@ -107,12 +108,13 @@ object InstallerManifestData {
         )
     }
 
-    fun createInstallerManifest(manifestOverride: String? = null): String = with(AllManifestData) {
+    fun createInstallerManifest(manifestOverride: String? = null): String = with(ManifestData) {
         val previousInstallerManifest = PreviousManifestData.installerManifest
         return getInstallerManifestBase(previousInstallerManifest).copy(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            installerLocale = installers.getDistinctOrNull { it.installerLocale }?.ifBlank { null }
+            installerLocale = installers.getDistinctOrNull(InstallerManifest.Installer::installerLocale)
+                ?.ifBlank { null }
                 ?: previousInstallerManifest?.installerLocale,
             platform = installers.getDistinctOrNull(InstallerManifest.Installer::platform)
                 ?: previousInstallerManifest?.platform,
@@ -149,15 +151,7 @@ object InstallerManifestData {
                 1 -> installers.first().appsAndFeaturesEntries
                 else -> null
             },
-            installers = installers.removeNonDistinctKeys(installers)
-                .sortedWith(
-                    compareBy(
-                        InstallerManifest.Installer::installerLocale,
-                        InstallerManifest.Installer::architecture,
-                        InstallerManifest.Installer::installerType,
-                        InstallerManifest.Installer::scope
-                    )
-                ),
+            installers = installers.removeNonDistinctKeys(installers).sortedWith(installerSorter),
             manifestType = Schemas.installerManifestType,
             manifestVersion = manifestOverride ?: Schemas.manifestVersion
         ).toString()
@@ -165,7 +159,7 @@ object InstallerManifestData {
 
     private fun getInstallerManifestBase(
         previousManifestData: InstallerManifest?
-    ): InstallerManifest = with(AllManifestData) {
+    ): InstallerManifest = with(ManifestData) {
         return previousManifestData ?: InstallerManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
@@ -205,7 +199,7 @@ object InstallerManifestData {
         )
     }
 
-    private fun resetValues(allManifestData: AllManifestData) = with(allManifestData) {
+    private fun resetValues(allManifestData: ManifestData) = with(allManifestData) {
         installerLocale = null
         scope = null
         installerSwitches = InstallerManifest.InstallerSwitches()
