@@ -43,6 +43,7 @@ object HttpUtils {
                         fileSystem.metadata(path).size?.let { progress?.update(it, httpResponse.contentLength()) }
                     }
                 }
+                progress?.update(1L, 1L)
             }
             return DownloadedFile(path, lastModified, fileDeletionThread)
         }
