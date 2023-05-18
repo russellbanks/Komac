@@ -51,8 +51,8 @@ object InstallerManifestData {
                 ?: previousInstallerManifest?.upgradeBehavior,
             productCode = msi?.productCode
                 ?: additionalMetadata?.productCode?.ifBlank { null }
-                ?: previousInstallerManifest?.productCode
-                ?: previousInstaller?.productCode,
+                ?: (previousInstallerManifest?.productCode ?: previousInstaller?.productCode)
+                    ?.updateVersionInString(allVersions, packageVersion),
             releaseDate = gitHubDetection?.releaseDate ?: additionalMetadata?.releaseDate ?: releaseDate,
             appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
