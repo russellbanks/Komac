@@ -195,13 +195,15 @@ class QuickUpdate : CliktCommand(
         }
         progressList.forEach(ProgressAnimation::clear)
         ParameterUrls.matchInstallers(
-            installerResults,
-            previousInstallers.map {
-                it.copy(
-                    installerType = previousInstallerManifest.installerType ?: it.installerType,
-                    scope = previousInstallerManifest.scope ?: it.scope
-                )
-            }
+            installerResults.sortedWith(installerSorter),
+            previousInstallers
+                .sortedWith(installerSorter)
+                .map {
+                    it.copy(
+                        installerType = previousInstallerManifest.installerType ?: it.installerType,
+                        scope = previousInstallerManifest.scope ?: it.scope
+                    )
+                }
         ).forEach { (previousInstaller, newInstaller) ->
             installers += previousInstaller.copy(
                 installerUrl = newInstaller.installerUrl,
