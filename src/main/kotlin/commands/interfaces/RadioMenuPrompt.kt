@@ -2,7 +2,7 @@ package commands.interfaces
 
 import com.github.ajalt.mordant.terminal.Terminal
 import input.Prompts
-import utils.menu.radioMenu
+import input.menu.radioMenu
 
 interface RadioMenuPrompt<T> : Prompt<T> {
     val default: T? get() = null

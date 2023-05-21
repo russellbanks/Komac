@@ -1,4 +1,4 @@
-package utils.menu
+package input.menu
 
 import com.github.ajalt.mordant.terminal.Terminal
 import org.jline.terminal.TerminalBuilder

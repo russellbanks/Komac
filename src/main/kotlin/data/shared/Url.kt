@@ -34,7 +34,7 @@ import utils.FileAnalyser
 import utils.findArchitecture
 import utils.getRedirectedUrl
 import utils.isRedirect
-import utils.menu.yesNoMenu
+import input.menu.yesNoMenu
 import java.net.ConnectException
 
 object Url {

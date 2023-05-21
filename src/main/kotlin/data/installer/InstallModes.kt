@@ -11,9 +11,10 @@ object InstallModes : CheckMenuPrompt<InstallerManifest.InstallModes> {
     @OptIn(ExperimentalStdlibApi::class)
     override val items: List<InstallerManifest.InstallModes> = InstallerManifest.InstallModes.entries
 
-    override val defaultChecked: List<InstallerManifest.InstallModes>? get() = PreviousManifestData.installerManifest
-        ?.let { installerManifest ->
-            installerManifest.installModes
-                ?: installerManifest.installers.getOrNull(ManifestData.installers.size)?.installModes
-        }
+    override val defaultChecked: List<InstallerManifest.InstallModes>
+        get() = PreviousManifestData.installerManifest
+            ?.let { installerManifest ->
+                installerManifest.installModes
+                    ?: installerManifest.installers.getOrNull(ManifestData.installers.size)?.installModes
+            }.orEmpty()
 }

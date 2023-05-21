@@ -2,10 +2,10 @@ package commands.interfaces
 
 import com.github.ajalt.mordant.terminal.Terminal
 import input.Prompts
-import utils.menu.checkMenu
+import input.menu.checkMenu
 
 interface CheckMenuPrompt<T> : Prompt<List<T>> {
-    val defaultChecked: List<T>? get() = emptyList()
+    val defaultChecked: List<T> get() = emptyList()
 
     val items: List<T>
 

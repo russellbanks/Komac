@@ -1,4 +1,4 @@
-package utils.menu
+package input.menu
 
 import com.github.ajalt.mordant.animation.animation
 import com.github.ajalt.mordant.rendering.Widget
@@ -39,7 +39,7 @@ class CheckMenu<T>(
 
     private val confirmPressed get() = selectedIndex == items.size
 
-    override fun prompt(): List<T>? = terminal.withJLineTerminal {
+    override fun prompt(): List<T> = terminal.withJLineTerminal {
         terminal.cursor.hide(showOnExit = true)
         updateAnimation()
         handleKeyPress(reader(), shouldBreak = { confirmPressed }) {
@@ -56,8 +56,8 @@ class CheckMenu<T>(
                 is MenuItem.Item -> item.value
                 is MenuItem.Optional -> null
             }
-        }.ifEmpty { null }
-    }
+        }
+    }.orEmpty()
 
     private fun toggleSelected() {
         if (selectedIndex in selectedIndices) {
