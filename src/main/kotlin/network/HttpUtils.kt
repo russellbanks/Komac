@@ -12,8 +12,10 @@ import io.ktor.http.lastModified
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.isNotEmpty
 import io.ktor.utils.io.core.readBytes
-import java.time.LocalDate
-import java.time.ZoneOffset
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toKotlinInstant
+import kotlinx.datetime.toLocalDateTime
 import okio.FileSystem
 import okio.Path
 import okio.buffer
@@ -35,7 +37,7 @@ object HttpUtils {
         fileSystem.sink(path).buffer().use { sink ->
             var lastModified: LocalDate? = null
             prepareGet(url).execute { httpResponse ->
-                lastModified = httpResponse.lastModified()?.toInstant()?.atZone(ZoneOffset.UTC)?.toLocalDate()
+                lastModified = httpResponse.lastModified()?.toInstant()?.toKotlinInstant()?.toLocalDateTime(TimeZone.UTC)?.date
                 val channel: ByteReadChannel = httpResponse.body()
                 while (!channel.isClosedForRead) {
                     val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())

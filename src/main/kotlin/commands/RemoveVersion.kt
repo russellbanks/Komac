@@ -5,9 +5,9 @@ import Errors
 import Errors.doesNotExistError
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
@@ -33,20 +33,31 @@ class RemoveVersion : CliktCommand(
     """.trimIndent(),
     name = "remove"
 ) {
-    private val packageIdentifierParam: String? by option("--id", "--package-identifier")
-    private val packageVersionParam: String? by option("--version", "--package-version")
+    private val packageIdentifierParam: String? by option(
+        "-i", "--id", "--package-identifier",
+        help = "Package identifier. Example: Publisher.Package"
+    )
+
+    private val packageVersionParam: String? by option(
+        "-v", "--version", "--package-version",
+        help = "Package version. Example: 1.2.3"
+    )
+
     private val deletionReasonParam: String? by option("--reason", "--reason-for-deletion", "--deletion-reason")
-        .validate {
-            require(it.length in minimumReasonLength..maximumReasonLength) {
-                colors.danger(Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength))
-            }
+        .check(Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength)) {
+            it.length in minimumReasonLength..maximumReasonLength
         }
-    private val submit: Boolean by option().flag(default = false)
-    private val token: String? by option("-t", "--token", envvar = "GITHUB_TOKEN").validate {
-        require(GitHub.connectUsingOAuth(it).isCredentialValid) {
-            colors.danger("The token is invalid or has expired")
-        }
-    }
+
+    private val submit: Boolean by option(
+        "-s", "--submit",
+        help = "Automatically submits a pull request with the updated pull request"
+    ).flag(default = false)
+
+    private val token: String? by option(
+        "-t", "--token", "--pat", "--personal-access-token",
+        help = "GitHub personal access token with the public_repo scope",
+        envvar = "GITHUB_TOKEN"
+    ).check("The token is invalid or has expired") { GitHub.connectUsingOAuth(it).isCredentialValid }
 
     override fun run(): Unit = runBlocking {
         token?.let { TokenStore.useTokenParameter(it) }

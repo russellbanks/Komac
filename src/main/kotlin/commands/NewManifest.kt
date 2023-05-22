@@ -2,6 +2,7 @@ package commands
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
 import data.DefaultLocaleManifestData
@@ -52,9 +53,11 @@ import utils.GitHubUtils
 import utils.ManifestUtils.formattedManifestLinesSequence
 
 class NewManifest : CliktCommand(name = "new") {
-    private val manifestOverride: String? by option().validate {
-        require("^\\d+\\.\\d+\\.\\d+$".toRegex() matches it) { "Manifest version must be in the format X.X.X" }
-    }
+    private val manifestOverride: String? by option(
+        "--manifest-version", "--manifest-override",
+        help = "Overrides the manifest version.",
+        envvar = "MANIFEST_VERSION"
+    ).check { Regex(Schemas.manifestVersionRegex) matches it }
 
     @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking {

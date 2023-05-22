@@ -2,7 +2,7 @@ package schemas.manifest
 
 import input.Switch
 import io.ktor.http.Url
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -41,7 +41,7 @@ data class InstallerManifest(
     @SerialName("RestrictedCapabilities") val restrictedCapabilities: List<String>? = null,
     @SerialName("Markets") @Contextual val markets: Any? = null,
     @SerialName("InstallerAbortsTerminal") val installerAbortsTerminal: Boolean? = null,
-    @SerialName("ReleaseDate") @Contextual val releaseDate: LocalDate? = null,
+    @SerialName("ReleaseDate") val releaseDate: LocalDate? = null,
     @SerialName("InstallLocationRequired") val installLocationRequired: Boolean? = null,
     @SerialName("RequireExplicitUpgrade") val requireExplicitUpgrade: Boolean? = null,
     @SerialName("DisplayInstallWarnings") val displayInstallWarnings: Boolean? = null,
@@ -315,7 +315,7 @@ data class InstallerManifest(
         @SerialName("RestrictedCapabilities") val restrictedCapabilities: List<String>? = null,
         @SerialName("Markets") @Contextual val markets: Any? = null,
         @SerialName("InstallerAbortsTerminal") val installerAbortsTerminal: Boolean? = null,
-        @SerialName("ReleaseDate") @Contextual val releaseDate: LocalDate? = null,
+        @SerialName("ReleaseDate") val releaseDate: LocalDate? = null,
         @SerialName("InstallLocationRequired") val installLocationRequired: Boolean? = null,
         @SerialName("RequireExplicitUpgrade") val requireExplicitUpgrade: Boolean? = null,
         @SerialName("DisplayInstallWarnings") val displayInstallWarnings: Boolean? = null,

@@ -9,7 +9,11 @@ package extensions
  * @return the default value if the elements are not distinct, `null` otherwise
  */
 inline fun <T, R> Iterable<T>.takeIfNotDistinct(default: R, selector: (T) -> R): R? {
-    return if (distinctBy(selector).size == 1) null else default
+    return if (any()) {
+        if (distinctBy(selector).size == 1) null else default
+    } else {
+        null
+    }
 }
 
 /**
@@ -22,5 +26,12 @@ inline fun <T, R> Iterable<T>.takeIfNotDistinct(default: R, selector: (T) -> R):
  * after applying the [selector].
  */
 inline fun <T, R> Iterable<T>.getDistinctOrNull(selector: (T) -> R?): R? {
-    return mapNotNull(selector).toSet().singleOrNull()
+    val distinctValues = HashSet<R>()
+    for (item in this) {
+        val value = selector(item) ?: continue
+        if (!distinctValues.add(value)) {
+            return null
+        }
+    }
+    return distinctValues.singleOrNull()
 }

@@ -53,34 +53,61 @@ import utils.findArchitecture
 import utils.findScope
 
 class QuickUpdate : CliktCommand(
-    help = "Updates a pre-existing manifest with minimal input",
+    help = """
+        Updates a pre-existing manifest with minimal input
+        
+        Example: komac update --id Package.Identifier --version 1.2.3 --urls https://www.example.com --submit
+    """.trimIndent(),
     name = "update"
 ) {
-    private val packageIdentifierParam: String? by option("--id", "--package-identifier")
-    private val packageVersionParam: String? by option("--version", "--package-version")
-    private val urls: List<Url>? by option().convert { Url(it) }.split(",")
-    private lateinit var microsoftWingetPkgs: GHRepository
+    private val packageIdentifierParam: String? by option(
+        "-i", "--id", "--package-identifier",
+        help = "Package identifier. Example: Publisher.Package"
+    )
+
+    private val packageVersionParam: String? by option(
+        "-v", "--version", "--package-version",
+        help = "Package version. Example: 1.2.3"
+    )
+
+    private val urls: List<Url>? by option(
+        "-u", "--url", "--urls",
+        help = "List of new installer URLs. Multiple URLs are delimited by a comma (,)"
+    ).convert { Url(it) }.split(",")
+
     private val manifestOverride: String? by option(
-        help = "Overrides the custom manifest version. Must be in the format X.X.X"
-    ).check("Manifest version must be in the format X.X.X") { Regex("^\\d+\\.\\d+\\.\\d+$") matches it }
-    private val submit: Boolean by option(help = "Automatically submits a pull request with the updated pull request")
-        .flag(default = false)
-    private val tokenParameter: String? by option("-t", "--token", envvar = "GITHUB_TOKEN")
-        .check("The token is invalid or has expired") { GitHub.connectUsingOAuth(it).isCredentialValid }
+        "-mv", "--manifest-version", "--manifest-override",
+        help = "Overrides the manifest version.",
+        envvar = "MANIFEST_VERSION"
+    ).check { Regex(Schemas.manifestVersionRegex) matches it }
+
+    private val submit: Boolean by option(
+        "-s", "--submit",
+        help = "Automatically submits a pull request to remove the manifest"
+    ).flag(default = false)
+
+    private val tokenParameter: String? by option(
+        "-t", "--token", "--pat", "--personal-access-token",
+        help = "GitHub personal access token with the public_repo scope",
+        envvar = "GITHUB_TOKEN"
+    ).check("The token is invalid or has expired") { GitHub.connectUsingOAuth(it).isCredentialValid }
+
     private val additionalMetadata by option(hidden = true).convert {
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
     }
+
+    private lateinit var microsoftWingetPkgs: GHRepository
+
     private val fileSystem = FileSystem.SYSTEM
 
     override fun run(): Unit = runBlocking {
-        val terminal = currentContext.terminal
         tokenParameter?.let { TokenStore.useTokenParameter(it) }
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
         if (Environment.isCI) {
             info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
         }
         ManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
-        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
+        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
         microsoftWingetPkgs = GitHubImpl.microsoftWinGetPkgs
         with(ManifestData) {
             allVersions = GitHubUtils.getAllVersions(microsoftWingetPkgs, packageIdentifier)
@@ -93,33 +120,33 @@ class QuickUpdate : CliktCommand(
             GitHubImpl.promptIfPullRequestExists(
                 identifier = packageIdentifier,
                 version = packageVersion,
-                terminal = terminal
+                terminal = currentContext.terminal
             )
             updateState = getUpdateState(packageIdentifier, packageVersion, latestVersion)
-            terminal.loopThroughInstallers(parameterUrls = urls?.toSet())
+            currentContext.terminal.loopThroughInstallers(parameterUrls = urls?.toSet())
             val files = createFiles(packageIdentifier, packageVersion, defaultLocale)
             for (manifest in files.values) {
                 formattedManifestLinesSequence(manifest, colors).forEach(::echo)
             }
             if (submit) {
                 GitHubImpl.commitAndPullRequest(
-                    GitHubImpl.getWingetPkgsFork(terminal),
+                    GitHubImpl.getWingetPkgsFork(currentContext.terminal),
                     files = files,
                     packageIdentifier = packageIdentifier,
                     packageVersion = packageVersion,
                     updateState = updateState
                 ).also { success("Pull request created: ${it.htmlUrl}") }
             } else if (!Environment.isCI) {
-                terminal.pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
+                currentContext.terminal.pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
                     when (manifestResultOption) {
                         ManifestResultOption.PullRequest -> GitHubImpl.commitAndPullRequest(
-                            GitHubImpl.getWingetPkgsFork(terminal),
+                            GitHubImpl.getWingetPkgsFork(currentContext.terminal),
                             files = files,
                             packageIdentifier = packageIdentifier,
                             packageVersion = packageVersion,
                             updateState = updateState
                         ).also { success("Pull request created: ${it.htmlUrl}") }
-                        ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, terminal)
+                        ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, currentContext.terminal)
                         else -> return@also
                     }
                 }
@@ -127,7 +154,7 @@ class QuickUpdate : CliktCommand(
                 FileWriter.writeFilesToDirectory(
                     directory = File(System.getProperty("user.dir"), "$packageIdentifier version $packageVersion"),
                     files = files,
-                    terminal = terminal
+                    terminal = currentContext.terminal
                 )
             }
         }

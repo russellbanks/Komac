@@ -12,6 +12,7 @@ kaml = "0.53.0"
 kotest = "5.6.2"
 kotest-extensions-ktor = "2.0.0"
 kotlin = "1.8.21"
+kotlinx-datetime = "0.4.0"
 kotlinx-serialization = "1.5.1"
 ktor = "2.3.0"
 mockk = "1.13.5"
@@ -45,6 +46,7 @@ kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.
 kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }
 kotest-extensions-assertions-ktor = { module = "io.kotest.extensions:kotest-assertions-ktor", version.ref = "kotest-extensions-ktor" }
 
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

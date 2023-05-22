@@ -52,6 +52,9 @@ dependencies {
     testImplementation(libs.kotest.framework.datatest)
     testImplementation(libs.kotest.extensions.assertions.ktor)
 
+    // KotlinX DateTime - https://github.com/Kotlin/kotlinx-datetime
+    implementation(libs.kotlinx.datetime)
+
     // KotlinX Serialization - https://github.com/Kotlin/kotlinx.serialization
     implementation(libs.kotlinx.serialization.json)
 

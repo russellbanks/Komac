@@ -7,11 +7,14 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Url
 import io.ktor.http.decodeURLPart
 import java.net.URL
-import java.time.LocalDate
-import java.time.ZoneOffset
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.offsetIn
+import kotlinx.datetime.toKotlinInstant
+import kotlinx.datetime.toLocalDateTime
 import network.Http
 import org.kohsuke.github.GHAsset
 import org.kohsuke.github.GHRelease
@@ -80,7 +83,7 @@ class GitHubDetection(url: Url) {
     private fun findPackageUrl(): Url? = repository.htmlUrl.toURI()?.let(::Url)
 
     private fun findReleaseDate(): LocalDate? = runCatching {
-        asset?.createdAt?.toInstant()?.atOffset(ZoneOffset.UTC)?.toLocalDate()
+        asset?.createdAt?.toInstant()?.toKotlinInstant()?.toLocalDateTime(TimeZone.UTC)?.date
     }.getOrNull()
 
     private fun findReleaseNotesUrl(): Url? = release?.htmlUrl?.let(URL::toURI)?.let(::Url)

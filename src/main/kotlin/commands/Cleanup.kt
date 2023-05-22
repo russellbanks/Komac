@@ -6,8 +6,11 @@ import com.github.ajalt.clikt.parameters.options.option
 import data.GitHubImpl
 import org.kohsuke.github.GHIssueState
 
-class Cleanup : CliktCommand(name = "cleanup") {
-    private val onlyMerged: Boolean by option().flag(default = false)
+class Cleanup : CliktCommand(
+    help = "Deletes branches that have had a merged or closed pull request associated with them",
+    name = "cleanup"
+) {
+    private val onlyMerged: Boolean by option(help = "Only delete merged branches").flag(default = false)
 
     override fun run() {
         val mergeState = if (onlyMerged) "merged" else "merged or closed"

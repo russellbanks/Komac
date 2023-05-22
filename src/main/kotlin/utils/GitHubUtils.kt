@@ -5,8 +5,8 @@ import data.PreviousManifestData
 import data.VersionUpdateState
 import data.shared.Locale
 import java.io.IOException
-import java.time.Instant
 import kotlin.random.Random
+import kotlinx.datetime.Clock
 import okio.ByteString.Companion.encodeUtf8
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GHTreeEntry
@@ -148,7 +148,7 @@ object GitHubUtils {
      * @return a string representing the branch name for the package
      */
     fun getBranchName(packageIdentifier: String, packageVersion: String): String {
-        val timestamp: Instant = Instant.now()
+        val timestamp = Clock.System.now()
         val hash = "$packageIdentifier-$packageVersion-$timestamp".encodeUtf8().sha1().hex().uppercase()
         return "$packageIdentifier-$packageVersion-$hash"
     }
