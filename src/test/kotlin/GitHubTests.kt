@@ -214,5 +214,27 @@ class GitHubTests : FunSpec({
                 - Changes in Header 2
             """.trimIndent()
         }
+
+        test("GitHub emojis in the format of :emoji: are replaced with actual emojis") {
+            every { ghRelease.body } returns """
+                # :wrench: Big changes :sparkles:
+                - :100: Bullet point :+1:
+            """.trimIndent()
+            ghRelease.formattedReleaseNotes shouldBe """
+                🔧 Big changes ✨
+                - 💯 Bullet point 👍
+            """.trimIndent()
+        }
+
+        test("Emojis that are already in unicode stay as they are") {
+            every { ghRelease.body } returns """
+                # 🔧 Big changes ✨
+                * 💯 Bullet point 👍
+            """.trimIndent()
+            ghRelease.formattedReleaseNotes shouldBe """
+                🔧 Big changes ✨
+                - 💯 Bullet point 👍
+            """.trimIndent()
+        }
     }
 })

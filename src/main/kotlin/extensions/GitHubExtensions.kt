@@ -35,6 +35,9 @@ val GHRelease.formattedReleaseNotes: String?
                         val issueNumber = it.groupValues[4]
                         if (urlRepository == owner.fullName) "#$issueNumber" else "$urlRepository#$issueNumber"
                     }
+                    .replace(Emojis.pattern) { matchResult ->
+                        Emojis.map[matchResult.value.trim(':')] ?: matchResult.value
+                    }
                     .trim()
             }
             ?.toList()
