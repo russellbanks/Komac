@@ -18,12 +18,13 @@ import extensions.extension
 import extensions.hash
 import input.ExitCode
 import input.Prompts
+import input.menu.yesNoMenu
 import io.ktor.client.HttpClient
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
-import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.isSuccess
+import java.net.ConnectException
 import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils.downloadFile
@@ -34,8 +35,6 @@ import utils.FileAnalyser
 import utils.findArchitecture
 import utils.getRedirectedUrl
 import utils.isRedirect
-import input.menu.yesNoMenu
-import java.net.ConnectException
 
 object Url {
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) = with(ManifestData) {
@@ -84,7 +83,7 @@ object Url {
     }
 
     private suspend fun Terminal.downloadInstaller(fileSystem: FileSystem) = with(ManifestData) {
-        if (installers.map { it.installerUrl }.contains(installerUrl)) {
+        if (installers.map(InstallerManifest.Installer::installerUrl).contains(installerUrl)) {
             installers += installers.first { it.installerUrl == installerUrl }
             skipAddInstaller = true
         } else {
@@ -160,8 +159,8 @@ object Url {
     suspend fun isUrlValid(url: Url?, canBeBlank: Boolean, client: HttpClient = Http.client): String? {
         return when {
             url == null -> null
-            url == Url(URLBuilder()) && canBeBlank -> null
-            url == Url(URLBuilder()) -> Errors.blankInput(installerUrlConst)
+            url == Url("") && canBeBlank -> null
+            url == Url("") -> Errors.blankInput(installerUrlConst)
             url.toString().length > maxLength -> Errors.invalidLength(max = maxLength)
             !url.toString().matches(regex) -> Errors.invalidRegex(regex)
             else -> client.checkUrlResponse(url)
@@ -187,8 +186,7 @@ object Url {
 
     private const val installerUrlInfo = "${Prompts.required} Enter the download url to the installer"
 
-    private const val redirectFound = "The URL appears to be redirected. " +
-        "Would you like to use the destination URL instead?"
+    private const val redirectFound = "The URL is redirected. Would you like to use the destination URL instead?"
 
     private const val detectedUrlValidationFailed = "Validation has failed for the detected URL. Using original URL."
 

@@ -1,12 +1,12 @@
 package schemas
 
 import io.ktor.http.Url
+import java.time.LocalDate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
-import java.time.LocalDate
 
 @Serializable
 data class AdditionalMetadata(

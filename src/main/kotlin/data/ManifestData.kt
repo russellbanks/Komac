@@ -7,9 +7,9 @@ import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
 import detection.github.GitHubDetection
 import io.ktor.http.Url
+import java.time.LocalDate
 import schemas.AdditionalMetadata
 import schemas.manifest.InstallerManifest
-import java.time.LocalDate
 
 object ManifestData {
     lateinit var installerUrl: Url

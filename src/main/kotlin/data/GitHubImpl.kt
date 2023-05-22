@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
+import java.io.IOException
 import network.KtorGitHubConnector
 import org.kohsuke.github.GHContent
 import org.kohsuke.github.GHDirection
@@ -18,7 +19,6 @@ import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
 import token.TokenStore
 import utils.GitHubUtils
-import java.io.IOException
 
 object GitHubImpl {
     const val Microsoft = "Microsoft"

@@ -6,6 +6,9 @@ import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Url
 import io.ktor.http.decodeURLPart
+import java.net.URL
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -15,9 +18,6 @@ import org.kohsuke.github.GHRelease
 import org.kohsuke.github.PagedIterable
 import utils.extension
 import utils.getFileNameWithoutExtension
-import java.net.URL
-import java.time.LocalDate
-import java.time.ZoneOffset
 
 class GitHubDetection(url: Url) {
     // Properties

@@ -31,6 +31,7 @@ import input.FileWriter
 import input.ManifestResultOption
 import input.Prompts.pullRequestPrompt
 import io.ktor.http.Url
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils.downloadFile
@@ -48,10 +49,8 @@ import token.TokenStore
 import utils.FileAnalyser
 import utils.GitHubUtils
 import utils.ManifestUtils.formattedManifestLinesSequence
-import utils.ManifestUtils.updateVersionInString
 import utils.findArchitecture
 import utils.findScope
-import java.io.File
 
 class QuickUpdate : CliktCommand(
     help = "Updates a pre-existing manifest with minimal input",
@@ -180,9 +179,7 @@ class QuickUpdate : CliktCommand(
                     installerType = fileAnalyser.installerType,
                     scope = url.findScope(),
                     installerSha256 = downloadedFile.path.hash(fileSystem),
-                    signatureSha256 = fileAnalyser.signatureSha256,
                     installerUrl = url,
-                    productCode = fileAnalyser.productCode,
                     upgradeBehavior = fileAnalyser.upgradeBehaviour,
                     releaseDate = gitHubDetection?.releaseDate ?: downloadedFile.lastModified
                 )
@@ -204,17 +201,15 @@ class QuickUpdate : CliktCommand(
                         scope = previousInstallerManifest.scope ?: it.scope
                     )
                 }
-        ).forEach { (previousInstaller, newInstaller) ->
-            installers += previousInstaller.copy(
-                installerUrl = newInstaller.installerUrl,
-                installerSha256 = newInstaller.installerSha256.uppercase(),
-                signatureSha256 = newInstaller.signatureSha256?.uppercase(),
-                productCode = newInstaller.productCode,
-                releaseDate = newInstaller.releaseDate,
-                nestedInstallerFiles = previousInstaller.nestedInstallerFiles?.map {
-                    it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString(allVersions, packageVersion))
-                }
-            )
+        ).forEach { (_, newInstaller) ->
+            architecture = newInstaller.architecture
+            installerUrl = newInstaller.installerUrl
+            installerSha256 = newInstaller.installerSha256.uppercase()
+            upgradeBehavior = newInstaller.upgradeBehavior
+            releaseDate = newInstaller.releaseDate
+            scope = newInstaller.scope
+            installerType = newInstaller.installerType
+            InstallerManifestData.addInstaller()
         }
     }
 

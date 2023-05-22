@@ -9,13 +9,13 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
 import io.ktor.util.toMap
+import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.connector.GitHubConnector
 import org.kohsuke.github.connector.GitHubConnectorRequest
 import org.kohsuke.github.connector.GitHubConnectorResponse
 import org.kohsuke.github.connector.GitHubConnectorResponse.ByteArrayResponse
-import java.io.InputStream
 
 class KtorGitHubConnector : GitHubConnector {
     override fun send(connectorRequest: GitHubConnectorRequest): GitHubConnectorResponse = runBlocking(Dispatchers.IO) {

@@ -4,13 +4,13 @@ import com.russellbanks.Komac.BuildConfig
 import data.PreviousManifestData
 import data.VersionUpdateState
 import data.shared.Locale
+import java.io.IOException
+import java.time.Instant
+import kotlin.random.Random
 import okio.ByteString.Companion.encodeUtf8
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GHTreeEntry
 import schemas.Schemas
-import java.io.IOException
-import java.time.Instant
-import kotlin.random.Random
 
 object GitHubUtils {
     /**

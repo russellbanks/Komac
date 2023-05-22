@@ -8,12 +8,12 @@ import com.github.ajalt.mordant.terminal.YesNoPrompt
 import detection.files.msi.Msi
 import detection.files.msix.MsixBundle
 import input.Prompts
-import okio.FileSystem
-import okio.Path.Companion.toOkioPath
-import schemas.manifest.InstallerManifest
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import okio.FileSystem
+import okio.Path.Companion.toOkioPath
+import schemas.manifest.InstallerManifest
 
 class Zip(zip: File, terminal: Terminal) {
     var nestedInstallerType: InstallerManifest.NestedInstallerType? = null

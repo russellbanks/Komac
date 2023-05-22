@@ -4,10 +4,10 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.validate
-import data.ManifestData
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
 import data.InstallerManifestData
+import data.ManifestData
 import data.PreviousManifestData
 import data.VersionManifestData
 import data.installer.Commands

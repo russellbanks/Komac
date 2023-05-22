@@ -6,9 +6,9 @@ import com.github.ajalt.clikt.parameters.options.option
 import commands.info
 import commands.success
 import commands.warning
+import input.menu.yesNoMenu
 import kotlinx.coroutines.runBlocking
 import token.TokenStore
-import input.menu.yesNoMenu
 
 class Remove : CliktCommand() {
     private val skipPrompt: Boolean by option("-y", "--yes").flag(default = false)

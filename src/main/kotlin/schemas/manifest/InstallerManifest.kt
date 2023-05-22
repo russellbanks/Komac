@@ -2,12 +2,12 @@ package schemas.manifest
 
 import input.Switch
 import io.ktor.http.Url
+import java.time.LocalDate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import schemas.Schema
 import schemas.Schemas
-import java.time.LocalDate
 
 /**
  * A representation of a single-file manifest representing an app installers in the OWC. v1.4.0

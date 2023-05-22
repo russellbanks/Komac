@@ -4,10 +4,10 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import commands.prompt
 import commands.success
+import input.menu.yesNoMenu
 import kotlinx.coroutines.runBlocking
 import token.Token
 import token.TokenStore
-import input.menu.yesNoMenu
 
 class Update : CliktCommand() {
     private val tokenParameter: String? by option("-t", "--token")

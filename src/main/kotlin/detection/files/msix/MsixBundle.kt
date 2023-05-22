@@ -3,14 +3,14 @@ package detection.files.msix
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
 import it.skrape.selects.attribute
+import java.io.File
+import java.util.zip.ZipFile
 import okio.HashingSink.Companion.sha256
 import okio.blackholeSink
 import okio.buffer
 import okio.source
 import schemas.manifest.InstallerManifest
 import utils.MsixUtils
-import java.io.File
-import java.util.zip.ZipFile
 
 class MsixBundle(msixBundleFile: File) {
     var signatureSha256: String? = null

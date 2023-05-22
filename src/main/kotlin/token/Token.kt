@@ -6,9 +6,9 @@ import com.github.ajalt.mordant.terminal.Terminal
 import commands.interfaces.TextPrompt
 import commands.interfaces.ValidationRules
 import input.ExitCode
+import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GitHub
-import java.io.IOException
 
 object Token : TextPrompt {
     override val name: String = "Token"
