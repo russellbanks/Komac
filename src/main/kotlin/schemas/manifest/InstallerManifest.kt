@@ -16,43 +16,43 @@ import schemas.Schemas
 @Suppress("unused")
 @Serializable
 data class InstallerManifest(
-    @SerialName("PackageIdentifier") val packageIdentifier: String,
-    @SerialName("PackageVersion") val packageVersion: String,
-    @SerialName("Channel") val channel: String? = null,
-    @SerialName("InstallerLocale") val installerLocale: String? = null,
-    @SerialName("Platform") val platform: List<Platform>? = null,
-    @SerialName("MinimumOSVersion") val minimumOSVersion: String? = null,
-    @SerialName("InstallerType") val installerType: InstallerType? = null,
-    @SerialName("NestedInstallerType") val nestedInstallerType: NestedInstallerType? = null,
-    @SerialName("NestedInstallerFiles") val nestedInstallerFiles: List<NestedInstallerFiles>? = null,
-    @SerialName("Scope") val scope: Scope? = null,
-    @SerialName("InstallModes") val installModes: List<InstallModes>? = null,
-    @SerialName("InstallerSwitches") val installerSwitches: InstallerSwitches? = null,
-    @SerialName("InstallerSuccessCodes") val installerSuccessCodes: List<Long>? = null,
-    @SerialName("ExpectedReturnCodes") val expectedReturnCodes: List<ExpectedReturnCodes>? = null,
-    @SerialName("UpgradeBehavior") val upgradeBehavior: UpgradeBehavior? = null,
-    @SerialName("Commands") val commands: List<String>? = null,
-    @SerialName("Protocols") val protocols: List<String>? = null,
-    @SerialName("FileExtensions") val fileExtensions: List<String>? = null,
-    @SerialName("Dependencies") val dependencies: Dependencies? = null,
-    @SerialName("PackageFamilyName") val packageFamilyName: String? = null,
-    @SerialName("ProductCode") val productCode: String? = null,
-    @SerialName("Capabilities") val capabilities: List<String>? = null,
-    @SerialName("RestrictedCapabilities") val restrictedCapabilities: List<String>? = null,
-    @SerialName("Markets") @Contextual val markets: Any? = null,
-    @SerialName("InstallerAbortsTerminal") val installerAbortsTerminal: Boolean? = null,
-    @SerialName("ReleaseDate") val releaseDate: LocalDate? = null,
-    @SerialName("InstallLocationRequired") val installLocationRequired: Boolean? = null,
-    @SerialName("RequireExplicitUpgrade") val requireExplicitUpgrade: Boolean? = null,
-    @SerialName("DisplayInstallWarnings") val displayInstallWarnings: Boolean? = null,
-    @SerialName("UnsupportedOSArchitectures") val unsupportedOSArchitectures: List<UnsupportedOSArchitectures>? = null,
-    @SerialName("UnsupportedArguments") val unsupportedArguments: List<UnsupportedArguments>? = null,
-    @SerialName("AppsAndFeaturesEntries") val appsAndFeaturesEntries: List<AppsAndFeaturesEntry>? = null,
-    @SerialName("ElevationRequirement") val elevationRequirement: ElevationRequirement? = null,
-    @SerialName("InstallationMetadata") val installationMetadata: InstallationMetadata? = null,
-    @SerialName("Installers") val installers: List<Installer> = emptyList(),
-    @SerialName("ManifestType") val manifestType: String,
-    @SerialName("ManifestVersion") val manifestVersion: String
+    val packageIdentifier: String,
+    val packageVersion: String,
+    val channel: String? = null,
+    val installerLocale: String? = null,
+    val platform: List<Platform>? = null,
+    val minimumOSVersion: String? = null,
+    val installerType: InstallerType? = null,
+    val nestedInstallerType: NestedInstallerType? = null,
+    val nestedInstallerFiles: List<NestedInstallerFiles>? = null,
+    val scope: Scope? = null,
+    val installModes: List<InstallModes>? = null,
+    val installerSwitches: InstallerSwitches? = null,
+    val installerSuccessCodes: List<Long>? = null,
+    val expectedReturnCodes: List<ExpectedReturnCodes>? = null,
+    val upgradeBehavior: UpgradeBehavior? = null,
+    val commands: List<String>? = null,
+    val protocols: List<String>? = null,
+    val fileExtensions: List<String>? = null,
+    val dependencies: Dependencies? = null,
+    val packageFamilyName: String? = null,
+    val productCode: String? = null,
+    val capabilities: List<String>? = null,
+    val restrictedCapabilities: List<String>? = null,
+    @Contextual val markets: Any? = null,
+    val installerAbortsTerminal: Boolean? = null,
+    val releaseDate: LocalDate? = null,
+    val installLocationRequired: Boolean? = null,
+    val requireExplicitUpgrade: Boolean? = null,
+    val displayInstallWarnings: Boolean? = null,
+    val unsupportedOSArchitectures: List<UnsupportedOSArchitectures>? = null,
+    val unsupportedArguments: List<UnsupportedArguments>? = null,
+    val appsAndFeaturesEntries: List<AppsAndFeaturesEntry>? = null,
+    val elevationRequirement: ElevationRequirement? = null,
+    val installationMetadata: InstallationMetadata? = null,
+    val installers: List<Installer> = emptyList(),
+    val manifestType: String,
+    val manifestVersion: String
 ) {
     enum class Platform {
         @SerialName("Windows.Desktop") WindowsDesktop,
@@ -104,8 +104,8 @@ data class InstallerManifest(
      */
     @Serializable
     data class NestedInstallerFiles(
-        @SerialName("RelativeFilePath") val relativeFilePath: String,
-        @SerialName("PortableCommandAlias") val portableCommandAlias: String? = null
+        val relativeFilePath: String,
+        val portableCommandAlias: String? = null
     )
 
     /**
@@ -124,13 +124,13 @@ data class InstallerManifest(
 
     @Serializable
     data class InstallerSwitches(
-        @SerialName("Silent") var silent: String? = null,
-        @SerialName("SilentWithProgress") var silentWithProgress: String? = null,
-        @SerialName("Interactive") val interactive: String? = null,
-        @SerialName("InstallLocation") val installLocation: String? = null,
-        @SerialName("Log") val log: String? = null,
-        @SerialName("Upgrade") val upgrade: String? = null,
-        @SerialName("Custom") var custom: String? = null
+        var silent: String? = null,
+        var silentWithProgress: String? = null,
+        val interactive: String? = null,
+        val installLocation: String? = null,
+        val log: String? = null,
+        val upgrade: String? = null,
+        var custom: String? = null
     ) {
         private val listOfAll = listOf(silent, silentWithProgress, interactive, installLocation, log, upgrade, custom)
         fun areAllNull(): Boolean = listOfAll.all { it == null }
@@ -148,9 +148,9 @@ data class InstallerManifest(
 
     @Serializable
     data class ExpectedReturnCodes(
-        @SerialName("InstallerReturnCode") val installerReturnCode: Int? = null,
-        @SerialName("ReturnResponse") val returnResponse: ReturnResponse,
-        @SerialName("ReturnResponseUrl") val returnResponseUrl: String? = null
+        val installerReturnCode: Int? = null,
+        val returnResponse: ReturnResponse,
+        val returnResponseUrl: String? = null
     ) {
         enum class ReturnResponse {
             @SerialName("packageInUse") PackageInUse,
@@ -185,15 +185,15 @@ data class InstallerManifest(
 
     @Serializable
     data class Dependencies(
-        @SerialName("WindowsFeatures") val windowsFeatures: List<String>? = null,
-        @SerialName("WindowsLibraries") val windowsLibraries: List<String>? = null,
-        @SerialName("PackageDependencies") val packageDependencies: List<PackageDependencies>? = null,
-        @SerialName("ExternalDependencies") val externalDependencies: List<String>? = null
+        val windowsFeatures: List<String>? = null,
+        val windowsLibraries: List<String>? = null,
+        val packageDependencies: List<PackageDependencies>? = null,
+        val externalDependencies: List<String>? = null
     ) {
         @Serializable
         data class PackageDependencies(
-            @SerialName("PackageIdentifier") val packageIdentifier: String,
-            @SerialName("MinimumVersion") val minimumVersion: String? = null
+            val packageIdentifier: String,
+            val minimumVersion: String? = null
         )
     }
 
@@ -214,12 +214,12 @@ data class InstallerManifest(
      */
     @Serializable
     data class AppsAndFeaturesEntry(
-        @SerialName("DisplayName") val displayName: String? = null,
-        @SerialName("Publisher") val publisher: String? = null,
-        @SerialName("DisplayVersion") val displayVersion: String? = null,
-        @SerialName("ProductCode") val productCode: String? = null,
-        @SerialName("UpgradeCode") val upgradeCode: String? = null,
-        @SerialName("InstallerType") val installerType: InstallerType? = null
+        val displayName: String? = null,
+        val publisher: String? = null,
+        val displayVersion: String? = null,
+        val productCode: String? = null,
+        val upgradeCode: String? = null,
+        val installerType: InstallerType? = null
     ) {
         fun areAllNull(): Boolean {
             return listOf(displayName, publisher, displayVersion, productCode, upgradeCode, installerType).all {
@@ -262,19 +262,19 @@ data class InstallerManifest(
      */
     @Serializable
     data class InstallationMetadata(
-        @SerialName("DefaultInstallLocation") val defaultInstallLocation: String? = null,
-        @SerialName("Files") val files: List<Files>? = null
+        val defaultInstallLocation: String? = null,
+        val files: List<Files>? = null
     ) {
         /**
          * Represents an installed file.
          */
         @Serializable
         data class Files(
-            @SerialName("RelativeFilePath") val relativeFilePath: String,
-            @SerialName("FileSha256") val fileSha256: String? = null,
-            @SerialName("FileType") val fileType: FileType? = null,
-            @SerialName("InvocationParameter") val invocationParameter: String? = null,
-            @SerialName("DisplayName") val displayName: String? = null
+            val relativeFilePath: String,
+            val fileSha256: String? = null,
+            val fileType: FileType? = null,
+            val invocationParameter: String? = null,
+            val displayName: String? = null
         ) {
             /**
              * The optional installed file type. If not specified, the file is treated as other.
@@ -289,42 +289,41 @@ data class InstallerManifest(
 
     @Serializable
     data class Installer(
-        @SerialName("InstallerLocale") val installerLocale: String? = null,
-        @SerialName("Platform") val platform: List<Platform>? = null,
-        @SerialName("MinimumOSVersion") val minimumOSVersion: String? = null,
-        @SerialName("Architecture") val architecture: Architecture,
-        @SerialName("InstallerType") val installerType: InstallerType? = null,
-        @SerialName("NestedInstallerType") val nestedInstallerType: NestedInstallerType? = null,
-        @SerialName("NestedInstallerFiles") val nestedInstallerFiles: List<NestedInstallerFiles>? = null,
-        @SerialName("Scope") val scope: Scope? = null,
-        @SerialName("InstallerUrl") @Contextual val installerUrl: Url,
-        @SerialName("InstallerSha256") val installerSha256: String,
-        @SerialName("SignatureSha256") val signatureSha256: String? = null,
-        @SerialName("InstallModes") val installModes: List<InstallModes>? = null,
-        @SerialName("InstallerSwitches") val installerSwitches: InstallerSwitches? = null,
-        @SerialName("InstallerSuccessCodes") val installerSuccessCodes: List<Long>? = null,
-        @SerialName("ExpectedReturnCodes") val expectedReturnCodes: List<ExpectedReturnCodes>? = null,
-        @SerialName("UpgradeBehavior") val upgradeBehavior: UpgradeBehavior? = null,
-        @SerialName("Commands") val commands: List<String>? = null,
-        @SerialName("Protocols") val protocols: List<String>? = null,
-        @SerialName("FileExtensions") val fileExtensions: List<String>? = null,
-        @SerialName("Dependencies") val dependencies: Dependencies? = null,
-        @SerialName("PackageFamilyName") val packageFamilyName: String? = null,
-        @SerialName("ProductCode") val productCode: String? = null,
-        @SerialName("Capabilities") val capabilities: List<String>? = null,
-        @SerialName("RestrictedCapabilities") val restrictedCapabilities: List<String>? = null,
-        @SerialName("Markets") @Contextual val markets: Any? = null,
-        @SerialName("InstallerAbortsTerminal") val installerAbortsTerminal: Boolean? = null,
-        @SerialName("ReleaseDate") val releaseDate: LocalDate? = null,
-        @SerialName("InstallLocationRequired") val installLocationRequired: Boolean? = null,
-        @SerialName("RequireExplicitUpgrade") val requireExplicitUpgrade: Boolean? = null,
-        @SerialName("DisplayInstallWarnings") val displayInstallWarnings: Boolean? = null,
-        @SerialName("UnsupportedOSArchitectures")
+        val installerLocale: String? = null,
+        val platform: List<Platform>? = null,
+        val minimumOSVersion: String? = null,
+        val architecture: Architecture,
+        val installerType: InstallerType? = null,
+        val nestedInstallerType: NestedInstallerType? = null,
+        val nestedInstallerFiles: List<NestedInstallerFiles>? = null,
+        val scope: Scope? = null,
+        @Contextual val installerUrl: Url,
+        val installerSha256: String,
+        val signatureSha256: String? = null,
+        val installModes: List<InstallModes>? = null,
+        val installerSwitches: InstallerSwitches? = null,
+        val installerSuccessCodes: List<Long>? = null,
+        val expectedReturnCodes: List<ExpectedReturnCodes>? = null,
+        val upgradeBehavior: UpgradeBehavior? = null,
+        val commands: List<String>? = null,
+        val protocols: List<String>? = null,
+        val fileExtensions: List<String>? = null,
+        val dependencies: Dependencies? = null,
+        val packageFamilyName: String? = null,
+        val productCode: String? = null,
+        val capabilities: List<String>? = null,
+        val restrictedCapabilities: List<String>? = null,
+        @Contextual val markets: Any? = null,
+        val installerAbortsTerminal: Boolean? = null,
+        val releaseDate: LocalDate? = null,
+        val installLocationRequired: Boolean? = null,
+        val requireExplicitUpgrade: Boolean? = null,
+        val displayInstallWarnings: Boolean? = null,
         val unsupportedOSArchitectures: List<UnsupportedOSArchitectures>? = null,
-        @SerialName("UnsupportedArguments") val unsupportedArguments: List<UnsupportedArguments>? = null,
-        @SerialName("AppsAndFeaturesEntries") val appsAndFeaturesEntries: List<AppsAndFeaturesEntry>? = null,
-        @SerialName("ElevationRequirement") val elevationRequirement: ElevationRequirement? = null,
-        @SerialName("InstallationMetadata") val installationMetadata: InstallationMetadata? = null
+        val unsupportedArguments: List<UnsupportedArguments>? = null,
+        val appsAndFeaturesEntries: List<AppsAndFeaturesEntry>? = null,
+        val elevationRequirement: ElevationRequirement? = null,
+        val installationMetadata: InstallationMetadata? = null
     ) {
         /**
          * The installer target architecture

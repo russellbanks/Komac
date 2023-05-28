@@ -5,6 +5,7 @@ import com.charleskorn.kaml.MultiLineStringStyle
 import com.charleskorn.kaml.SingleLineStringStyle
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlConfiguration
+import com.charleskorn.kaml.YamlNamingStrategy
 import io.ktor.http.Url
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -23,14 +24,15 @@ object EncodeConfig {
             singleLineStringStyle = SingleLineStringStyle.PlainExceptAmbiguous,
             multiLineStringStyle = MultiLineStringStyle.Literal,
             breakScalarsAt = Int.MAX_VALUE,
-            ambiguousQuoteStyle = AmbiguousQuoteStyle.SingleQuoted
+            ambiguousQuoteStyle = AmbiguousQuoteStyle.SingleQuoted,
+            yamlNamingStrategy = YamlNamingStrategy.PascalCase
         )
     )
 
     @OptIn(ExperimentalSerializationApi::class)
     val jsonDefault = Json {
         namingStrategy = JsonNamingStrategy { _, _, serialName ->
-            serialName.split(Regex("[^a-zA-Z0-9]+")).joinToString("") { it.replaceFirstChar(Char::titlecaseChar) }
+            YamlNamingStrategy.PascalCase.serialNameForYaml(serialName)
         }
         isLenient = true
         ignoreUnknownKeys = true
