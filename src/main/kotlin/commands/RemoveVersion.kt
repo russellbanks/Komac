@@ -34,7 +34,7 @@ class RemoveVersion : CliktCommand(
     name = "remove"
 ) {
     private val packageIdentifierParam: String? by option(
-        "-i", "--id", "--package-identifier",
+        "-i", "--id", "--identifier", "--package-identifier",
         help = "Package identifier. Example: Publisher.Package"
     )
 

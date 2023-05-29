@@ -11,7 +11,10 @@ import kotlinx.coroutines.runBlocking
 import token.TokenStore
 
 class Remove : CliktCommand() {
-    private val skipPrompt: Boolean by option("-y", "--yes").flag(default = false)
+    private val skipPrompt: Boolean by option(
+        "-y", "--yes",
+        help = "Skips the warning prompt"
+    ).flag(default = false)
 
     override fun run() = runBlocking {
         val shouldDeleteToken = if (skipPrompt) {

@@ -10,7 +10,7 @@ import token.Token
 import token.TokenStore
 
 class Update : CliktCommand() {
-    private val tokenParameter: String? by option("-t", "--token")
+    private val tokenParameter: String? by option("-t", "--token", help = "The new token to use")
 
     override fun run(): Unit = runBlocking {
         if (TokenStore.token == null) {
