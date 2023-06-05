@@ -261,7 +261,9 @@ class QuickUpdate : CliktCommand(
                 manifestVersion = manifestOverride ?: Schemas.manifestVersion,
                 releaseNotes = allLocale?.releaseNotes ?: currentLocaleMetadata?.releaseNotes,
                 releaseNotesUrl = allLocale?.releaseNotesUrl ?: currentLocaleMetadata?.releaseNotesUrl,
-                documentations = allLocale?.documentations ?: currentLocaleMetadata?.documentations
+                documentations = allLocale?.documentations
+                    ?: currentLocaleMetadata?.documentations
+                    ?: localeManifest.documentations
             ).toString()
         }.orEmpty()
     }
