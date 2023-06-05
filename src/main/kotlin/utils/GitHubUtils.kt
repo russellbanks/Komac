@@ -133,7 +133,7 @@ object GitHubUtils {
                     ?: "[${BuildConfig.appName}](${BuildConfig.projectUrl}) v${BuildConfig.appVersion}"
             )
             append(" ")
-            append(if (Random.nextInt(30) == 0) ":${fruits.random()}:" else ":rocket:")
+            append(if (Random.nextInt(50) == 0) ":${fruits.random()}:" else ":rocket:")
         }
     }
 
