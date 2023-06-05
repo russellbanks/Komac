@@ -1,8 +1,11 @@
-package commands
+package commands.branch
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import commands.info
+import commands.success
+import commands.warning
 import data.GitHubImpl
 import org.kohsuke.github.GHIssueState
 
