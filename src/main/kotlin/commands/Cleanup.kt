@@ -11,9 +11,14 @@ class Cleanup : CliktCommand(
     name = "cleanup"
 ) {
     private val onlyMerged: Boolean by option(help = "Only delete merged branches").flag(default = false)
+    private val onlyClosed: Boolean by option(help = "Only delete closed branches").flag(default = false)
 
     override fun run() {
-        val mergeState = if (onlyMerged) "merged" else "merged or closed"
+        val mergeState = when {
+            onlyMerged && !onlyClosed -> "merged"
+            !onlyMerged && onlyClosed -> "closed"
+            else -> "merged or closed"
+        }
         info("Deleting branches with a $mergeState pull request to ${GitHubImpl.wingetPkgsFullName} from them")
         val wingetPkgsFork = GitHubImpl.getWingetPkgsFork(currentContext.terminal)
         var branchesDeleted = 0
@@ -34,7 +39,7 @@ class Cleanup : CliktCommand(
                     .first()
 
                 pullRequest?.let {
-                    if (!onlyMerged || it.isMerged) {
+                    if ((onlyMerged && it.isMerged) || (onlyClosed && !it.isMerged) || (!onlyMerged && !onlyClosed)) {
                         val branchName = branch.name
                         val action = if (it.isMerged) "merged" else "closed"
                         warning("Deleting $branchName because ${it.htmlUrl} was $action")
