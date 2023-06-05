@@ -1,7 +1,7 @@
 package detection.github
 
 import data.GitHubImpl
-import extensions.formattedReleaseNotes
+import extensions.ReleaseNotes.formattedReleaseNotes
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Url
@@ -12,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.offsetIn
 import kotlinx.datetime.toKotlinInstant
 import kotlinx.datetime.toLocalDateTime
 import network.Http

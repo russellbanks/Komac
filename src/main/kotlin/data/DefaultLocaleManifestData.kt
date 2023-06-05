@@ -2,6 +2,8 @@ package data
 
 import data.locale.Tags
 import data.shared.Locale
+import extensions.ReleaseNotes
+import extensions.ReleaseNotes.cutToCharLimitWithLines
 import io.ktor.http.Url
 import schemas.Schemas
 import schemas.manifest.DefaultLocaleManifest
@@ -51,7 +53,9 @@ object DefaultLocaleManifestData {
                 ?: gitHubDetection?.releaseNotesUrl
                 ?: parameterLocaleMetadata?.releaseNotesUrl)
                 ?.ifBlank { null },
-            releaseNotes = (gitHubDetection?.releaseNotes ?: parameterLocaleMetadata?.releaseNotes)?.trim(),
+            releaseNotes = (gitHubDetection?.releaseNotes ?: parameterLocaleMetadata?.releaseNotes)
+                ?.cutToCharLimitWithLines(ReleaseNotes.maxCharacterLimit)
+                ?.trim(),
             documentations = if (previousDefaultLocaleData?.documentations == null) {
                 listOfNotNull(
                     pageScraper?.faqUrl?.await()?.let {
