@@ -39,7 +39,7 @@ data class InstallerManifest(
     val productCode: String? = null,
     val capabilities: List<String>? = null,
     val restrictedCapabilities: List<String>? = null,
-    @Contextual val markets: Any? = null,
+    val markets: Markets? = null,
     val installerAbortsTerminal: Boolean? = null,
     val releaseDate: LocalDate? = null,
     val installLocationRequired: Boolean? = null,
@@ -197,6 +197,12 @@ data class InstallerManifest(
         )
     }
 
+    @Serializable
+    data class Markets(
+        val allowedMarkets: List<String>? = null,
+        val excludedMarkets: List<String>? = null
+    )
+
     enum class UnsupportedOSArchitectures {
         @SerialName("x86") X86,
         @SerialName("x64") X64,
@@ -313,7 +319,7 @@ data class InstallerManifest(
         val productCode: String? = null,
         val capabilities: List<String>? = null,
         val restrictedCapabilities: List<String>? = null,
-        @Contextual val markets: Any? = null,
+        val markets: Markets? = null,
         val installerAbortsTerminal: Boolean? = null,
         val releaseDate: LocalDate? = null,
         val installLocationRequired: Boolean? = null,
