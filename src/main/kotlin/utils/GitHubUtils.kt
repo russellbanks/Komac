@@ -127,11 +127,16 @@ object GitHubUtils {
             "apple", "banana", "blueberries", "cherries", "grapes", "green_apple", "kiwi_fruit", "lemon", "mango",
             "melon", "peach", "pear", "pineapple", "strawberry", "tangerine", "watermelon"
         )
+        val customTool: String? = System.getenv(Schemas.customToolEnv)
+        val customToolURL: String? = System.getenv(Schemas.customToolURLEnv)
         return buildString {
             append("### Pull request has been created with ")
             append(
-                System.getenv(Schemas.customToolEnv)
-                    ?: "[${BuildConfig.appName}](${BuildConfig.projectUrl}) v${BuildConfig.appVersion}"
+                if (customTool != null && customToolURL != null) {
+                    "[$customTool]($customToolURL)"
+                } else {
+                    customTool ?: "[${BuildConfig.appName}](${BuildConfig.projectUrl}) v${BuildConfig.appVersion}"
+                }
             )
             append(" ")
             append(if (Random.nextInt(50) == 0) ":${fruits.random()}:" else ":rocket:")
