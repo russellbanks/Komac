@@ -124,7 +124,8 @@ object GitHubUtils {
      */
     fun getPullRequestBody(): String {
         val fruits = listOf(
-            "cherries", "grapes", "green_apple", "lemon", "melon", "pineapple", "strawberry", "tangerine", "watermelon"
+            "apple", "banana", "blueberries", "cherries", "grapes", "green_apple", "kiwi_fruit", "lemon", "mango",
+            "melon", "peach", "pear", "pineapple", "strawberry", "tangerine", "watermelon"
         )
         return buildString {
             append("### Pull request has been created with ")
