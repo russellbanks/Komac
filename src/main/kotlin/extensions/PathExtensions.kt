@@ -8,7 +8,7 @@ import okio.buffer
 
 val Path.extension: String get() = name.substringAfterLast('.')
 
-fun Path.hash(fileSystem: FileSystem): String {
+fun Path.hashSha256(fileSystem: FileSystem = FileSystem.SYSTEM): String {
     sha256(blackholeSink()).use { hashingSink ->
         fileSystem.source(this).buffer().use { source ->
             source.readAll(hashingSink)

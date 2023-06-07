@@ -37,7 +37,7 @@ object InstallerManifestData {
             },
             installerUrl = installerUrl,
             installerSha256 = (gitHubDetection?.sha256 ?: installerSha256).uppercase(),
-            signatureSha256 = msix?.signatureSha256 ?: msixBundle?.signatureSha256,
+            signatureSha256 = (msix?.signatureSha256 ?: msixBundle?.signatureSha256)?.uppercase(),
             scope = scope ?: previousInstaller?.scope ?: previousInstallerManifest?.scope,
             packageFamilyName = msix?.packageFamilyName
                 ?: msixBundle?.packageFamilyName
@@ -206,7 +206,7 @@ object InstallerManifestData {
         upgradeBehavior = null
         releaseDate = null
         msi?.resetExceptShared()
-        msix?.resetExceptShared()
+        msix = null
         zip = null
         gitHubDetection?.releaseDate = null
     }

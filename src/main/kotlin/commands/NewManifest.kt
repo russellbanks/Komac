@@ -4,7 +4,6 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.validate
 import data.DefaultLocaleManifestData
 import data.GitHubImpl
 import data.InstallerManifestData
@@ -39,8 +38,8 @@ import extensions.versionStringComparator
 import input.ExitCode
 import input.FileWriter.writeFiles
 import input.ManifestResultOption
-import input.Prompts.pullRequestPrompt
 import input.Switch
+import input.menu.radioMenu
 import kotlinx.coroutines.runBlocking
 import schemas.Schema
 import schemas.Schemas
@@ -122,18 +121,24 @@ class NewManifest : CliktCommand(name = "new") {
             for (manifest in files.values) {
                 formattedManifestLinesSequence(manifest, colors).forEach(::echo)
             }
-            when (currentContext.terminal.pullRequestPrompt(packageIdentifier, packageVersion)) {
-                ManifestResultOption.PullRequest -> {
-                    GitHubImpl.commitAndPullRequest(
-                        wingetPkgsFork = GitHubImpl.getWingetPkgsFork(currentContext.terminal),
-                        files = files,
-                        packageIdentifier = packageIdentifier,
-                        packageVersion = packageVersion,
-                        updateState = updateState
-                    ).also { success("Pull request created: ${it.htmlUrl}") }
+            info("What would you like to do with $packageIdentifier $packageVersion?")
+            currentContext.terminal.radioMenu<ManifestResultOption> {
+                items = ManifestResultOption.entries
+                default = ManifestResultOption.PullRequest
+            }.prompt().also { manifestResultOption ->
+                when (manifestResultOption) {
+                    ManifestResultOption.PullRequest -> {
+                        GitHubImpl.commitAndPullRequest(
+                            wingetPkgsFork = GitHubImpl.getWingetPkgsFork(currentContext.terminal),
+                            files = files,
+                            packageIdentifier = packageIdentifier,
+                            packageVersion = packageVersion,
+                            updateState = updateState
+                        ).also { success("Pull request created: ${it.htmlUrl}") }
+                    }
+                    ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
+                    else -> return@runBlocking
                 }
-                ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
-                else -> return@runBlocking
             }
         }
     }

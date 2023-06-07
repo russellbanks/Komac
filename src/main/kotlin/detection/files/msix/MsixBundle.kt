@@ -1,71 +1,67 @@
 package detection.files.msix
 
+import extensions.extension
+import extensions.hashSha256
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
 import it.skrape.selects.attribute
-import java.io.File
 import java.util.zip.ZipFile
+import okio.BufferedSource
+import okio.FileSystem
 import okio.HashingSink.Companion.sha256
+import okio.Path
+import okio.Path.Companion.toPath
 import okio.blackholeSink
 import okio.buffer
+import okio.openZip
 import okio.source
 import schemas.manifest.InstallerManifest
-import utils.MsixUtils
 
-class MsixBundle(msixBundleFile: File) {
+class MsixBundle(msixBundleFile: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     var signatureSha256: String? = null
     var packageFamilyName: String? = null
     var packages: List<IndividualPackage>? = null
 
     init {
         require(msixBundleFile.extension.lowercase() in listOf(appxBundleConst, msixBundleConst)) {
-            "File must be an ${InstallerManifest.InstallerType.MSIX}"
+            "File must be an $msixBundleConst or $appxBundleConst"
         }
-        require(msixBundleFile.extension.lowercase() == msixBundleConst) { "File must be an $msixBundleConst" }
-        ZipFile(msixBundleFile).use { zip ->
-            zip.getEntry("$appxManifestFolder/$appxBundleManifestXml")?.let { appxManifest ->
-                packages = Doc(document = zip.getInputStream(appxManifest).use(::htmlDocument).document, relaxed = true)
-                    .also {
-                        val identity = it.findFirst("Identity")
-                        packageFamilyName = MsixUtils.getPackageFamilyName(
-                            identityName = identity.attribute("Name".lowercase()),
-                            identityPublisher = identity.attribute("Publisher".lowercase())
-                        )
-                    }
-                    .findAll("Package")
-                    .filter { it.attribute("Type".lowercase()).equals(other = "Application", ignoreCase = true) }
-                    .map { packageElement ->
-                        val targetDeviceFamily = packageElement.findAll("*|TargetDeviceFamily".lowercase())
-                        IndividualPackage(
-                            version = packageElement.attribute("Version".lowercase()).ifBlank { null },
-                            targetDeviceFamily = targetDeviceFamily
-                                .mapNotNull { targetDeviceFamilyElement ->
-                                    targetDeviceFamilyElement.attribute("Name".lowercase())
-                                        .ifBlank { null }
-                                        ?.replace(".", "")
-                                        ?.let(InstallerManifest.Platform::valueOf)
-                                }
-                                .ifEmpty { null },
-                            minVersion = targetDeviceFamily.attribute("MinVersion".lowercase()).ifBlank { null },
-                            processorArchitecture = packageElement
-                                .attribute("Architecture".lowercase())
+        val msixBundleFileSystem = fileSystem.openZip(msixBundleFile)
+        val appxManifestXml = msixBundleFileSystem
+            .source(appxManifestFolder.toPath() / appxBundleManifestXml)
+            .buffer()
+            .use(BufferedSource::readUtf8)
+        packages = Doc(htmlDocument(appxManifestXml).document, relaxed = true)
+            .also {
+                val identity = it.findFirst("Identity")
+                packageFamilyName = Msix.getPackageFamilyName(
+                    identityName = identity.attribute("Name".lowercase()),
+                    identityPublisher = identity.attribute("Publisher".lowercase())
+                )
+            }
+            .findAll("Package")
+            .filter { it.attribute("Type".lowercase()).equals(other = "Application", ignoreCase = true) }
+            .map { packageElement ->
+                val targetDeviceFamily = packageElement.findAll("*|TargetDeviceFamily".lowercase())
+                IndividualPackage(
+                    version = packageElement.attribute("Version".lowercase()).ifBlank { null },
+                    targetDeviceFamily = targetDeviceFamily
+                        .mapNotNull { targetDeviceFamilyElement ->
+                            targetDeviceFamilyElement.attribute("Name".lowercase())
                                 .ifBlank { null }
-                                ?.let { InstallerManifest.Installer.Architecture.valueOf(it.uppercase()) }
-                        )
-                    }
-                    .ifEmpty { null }
-            }
-            zip.getEntry(appxSignatureP7x)?.let { appxSignature ->
-                zip.getInputStream(appxSignature).use {
-                    sha256(blackholeSink()).use { hashingSink ->
-                        it.source().buffer().use { source ->
-                            source.readAll(hashingSink)
-                            signatureSha256 = hashingSink.hash.hex()
+                                ?.replace(".", "")
+                                ?.let(InstallerManifest.Platform::valueOf)
                         }
-                    }
-                }
+                        .ifEmpty { null },
+                    minVersion = targetDeviceFamily.attribute("MinVersion".lowercase()).ifBlank { null },
+                    processorArchitecture = packageElement
+                        .attribute("Architecture".lowercase())
+                        .ifBlank { null }
+                        ?.let { InstallerManifest.Installer.Architecture.valueOf(it.uppercase()) }
+                )
             }
-        }
+            .ifEmpty { null }
+        signatureSha256 = appxSignatureP7x.toPath().hashSha256(msixBundleFileSystem)
     }
 
     data class IndividualPackage(

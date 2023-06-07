@@ -25,18 +25,18 @@ import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
 import detection.ParameterUrls
 import detection.github.GitHubDetection
-import extensions.hash
+import extensions.hashSha256
 import extensions.versionStringComparator
 import input.FileWriter
 import input.ManifestResultOption
-import input.Prompts.pullRequestPrompt
+import input.menu.radioMenu
 import io.ktor.http.Url
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils.downloadFile
 import network.HttpUtils.getDownloadProgressBar
 import okio.FileSystem
+import okio.Path.Companion.toPath
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import schemas.AdditionalMetadata
@@ -98,8 +98,7 @@ class QuickUpdate : CliktCommand(
 
     private lateinit var microsoftWingetPkgs: GHRepository
 
-    private val fileSystem = FileSystem.SYSTEM
-
+    @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking {
         tokenParameter?.let { TokenStore.useTokenParameter(it) }
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
@@ -109,54 +108,58 @@ class QuickUpdate : CliktCommand(
         ManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
         if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
         microsoftWingetPkgs = GitHubImpl.microsoftWinGetPkgs
-        with(ManifestData) {
-            allVersions = GitHubUtils.getAllVersions(microsoftWingetPkgs, packageIdentifier)
-                ?.also { info("Found $packageIdentifier in the winget-pkgs repository") }
-                ?: throw doesNotExistError(packageIdentifier, isUpdate = true, colors = colors)
-            val latestVersion = (allVersions as List<String>).maxWith(versionStringComparator)
-            info("Found latest version: $latestVersion")
-            PreviousManifestData.init(packageIdentifier, latestVersion, microsoftWingetPkgs)
-            packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
-            GitHubImpl.promptIfPullRequestExists(
-                identifier = packageIdentifier,
-                version = packageVersion,
+        ManifestData.allVersions = GitHubUtils.getAllVersions(microsoftWingetPkgs, ManifestData.packageIdentifier)
+            ?.also { info("Found ${ManifestData.packageIdentifier} in the winget-pkgs repository") }
+            ?: throw doesNotExistError(ManifestData.packageIdentifier, isUpdate = true, colors = colors)
+        val latestVersion = (ManifestData.allVersions as List<String>).maxWith(versionStringComparator)
+        info("Found latest version: $latestVersion")
+        PreviousManifestData.init(ManifestData.packageIdentifier, latestVersion, microsoftWingetPkgs)
+        ManifestData.packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
+        GitHubImpl.promptIfPullRequestExists(
+            identifier = ManifestData.packageIdentifier,
+            version = ManifestData.packageVersion,
+            terminal = currentContext.terminal
+        )
+        ManifestData.updateState = getUpdateState(
+            ManifestData.packageIdentifier,
+            ManifestData.packageVersion, latestVersion)
+        currentContext.terminal.loopThroughInstallers(parameterUrls = urls?.toSet())
+        val files = createFiles(ManifestData.packageIdentifier, ManifestData.packageVersion, ManifestData.defaultLocale)
+        for (manifest in files.values) {
+            formattedManifestLinesSequence(manifest, colors).forEach(::echo)
+        }
+        if (submit) {
+            GitHubImpl.commitAndPullRequest(
+                GitHubImpl.getWingetPkgsFork(currentContext.terminal),
+                files = files,
+                packageIdentifier = ManifestData.packageIdentifier,
+                packageVersion = ManifestData.packageVersion,
+                updateState = ManifestData.updateState
+            ).also { success("Pull request created: ${it.htmlUrl}") }
+        } else if (!Environment.isCI) {
+            info("What would you like to do with ${ManifestData.packageIdentifier} ${ManifestData.packageVersion}?")
+            currentContext.terminal.radioMenu<ManifestResultOption> {
+                items = ManifestResultOption.entries
+                default = ManifestResultOption.PullRequest
+            }.prompt().also { manifestResultOption ->
+                when (manifestResultOption) {
+                    ManifestResultOption.PullRequest -> GitHubImpl.commitAndPullRequest(
+                        GitHubImpl.getWingetPkgsFork(currentContext.terminal),
+                        files = files,
+                        packageIdentifier = ManifestData.packageIdentifier,
+                        packageVersion = ManifestData.packageVersion,
+                        updateState = ManifestData.updateState
+                    ).also { success("Pull request created: ${it.htmlUrl}") }
+                    ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, currentContext.terminal)
+                    else -> return@also
+                }
+            }
+        } else {
+            FileWriter.writeFilesToDirectory(
+                directory = System.getProperty("user.dir").toPath() / "${ManifestData.packageIdentifier} version ${ManifestData.packageVersion}",
+                files = files,
                 terminal = currentContext.terminal
             )
-            updateState = getUpdateState(packageIdentifier, packageVersion, latestVersion)
-            currentContext.terminal.loopThroughInstallers(parameterUrls = urls?.toSet())
-            val files = createFiles(packageIdentifier, packageVersion, defaultLocale)
-            for (manifest in files.values) {
-                formattedManifestLinesSequence(manifest, colors).forEach(::echo)
-            }
-            if (submit) {
-                GitHubImpl.commitAndPullRequest(
-                    GitHubImpl.getWingetPkgsFork(currentContext.terminal),
-                    files = files,
-                    packageIdentifier = packageIdentifier,
-                    packageVersion = packageVersion,
-                    updateState = updateState
-                ).also { success("Pull request created: ${it.htmlUrl}") }
-            } else if (!Environment.isCI) {
-                currentContext.terminal.pullRequestPrompt(packageIdentifier, packageVersion).also { manifestResultOption ->
-                    when (manifestResultOption) {
-                        ManifestResultOption.PullRequest -> GitHubImpl.commitAndPullRequest(
-                            GitHubImpl.getWingetPkgsFork(currentContext.terminal),
-                            files = files,
-                            packageIdentifier = packageIdentifier,
-                            packageVersion = packageVersion,
-                            updateState = updateState
-                        ).also { success("Pull request created: ${it.htmlUrl}") }
-                        ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, currentContext.terminal)
-                        else -> return@also
-                    }
-                }
-            } else {
-                FileWriter.writeFilesToDirectory(
-                    directory = File(System.getProperty("user.dir"), "$packageIdentifier version $packageVersion"),
-                    files = files,
-                    terminal = currentContext.terminal
-                )
-            }
         }
     }
 
@@ -198,21 +201,21 @@ class QuickUpdate : CliktCommand(
             gitHubDetection = parameterUrls
                 .firstOrNull { it.host.equals(GitHubDetection.gitHubWebsite, ignoreCase = true) }
                 ?.let(::GitHubDetection)
-            val downloadedFile = Http.client.downloadFile(url, packageIdentifier, packageVersion, progressList[index], fileSystem)
-            val fileAnalyser = FileAnalyser(downloadedFile.path, fileSystem)
+            val downloadedFile = Http.client.downloadFile(url, packageIdentifier, packageVersion, progressList[index])
+            val fileAnalyser = FileAnalyser(downloadedFile.path)
             installerResults += try {
                 InstallerManifest.Installer(
                     architecture = url.findArchitecture() ?: fileAnalyser.architecture,
                     installerType = fileAnalyser.installerType,
                     scope = url.findScope(),
-                    installerSha256 = downloadedFile.path.hash(fileSystem),
+                    installerSha256 = downloadedFile.path.hashSha256(),
                     installerUrl = url,
                     upgradeBehavior = fileAnalyser.upgradeBehaviour,
                     releaseDate = gitHubDetection?.releaseDate ?: downloadedFile.lastModified
                 )
             } finally {
                 with(downloadedFile) {
-                    fileSystem.delete(path)
+                    FileSystem.SYSTEM.delete(path)
                     removeFileDeletionHook()
                 }
             }

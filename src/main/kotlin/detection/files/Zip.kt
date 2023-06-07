@@ -1,27 +1,30 @@
 package detection.files
 
 import Errors
-import com.github.ajalt.mordant.table.verticalLayout
-import com.github.ajalt.mordant.terminal.ConversionResult
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
 import detection.files.msi.Msi
 import detection.files.msix.MsixBundle
+import extensions.extension
+import input.ExitCode
 import input.Prompts
-import java.io.File
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
+import input.menu.checkMenu
+import input.menu.radioMenu
 import okio.FileSystem
-import okio.Path.Companion.toOkioPath
+import okio.Path
+import okio.Path.Companion.toPath
+import okio.buffer
+import okio.openZip
 import schemas.manifest.InstallerManifest
 
-class Zip(zip: File, terminal: Terminal) {
+class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Terminal) {
     var nestedInstallerType: InstallerManifest.NestedInstallerType? = null
     var nestedInstallerFiles: List<InstallerManifest.NestedInstallerFiles>? = null
     private var installerTypeCounts: Map<String, Int>
 
     init {
-        require(zip.extension.lowercase() == InstallerManifest.InstallerType.ZIP.toString()) {
+        require(zip.extension == InstallerManifest.InstallerType.ZIP.toString()) {
             "File must be a ${InstallerManifest.InstallerType.ZIP}"
         }
         val validExtensionsList = listOf(
@@ -33,62 +36,51 @@ class Zip(zip: File, terminal: Terminal) {
             MsixBundle.msixBundleConst,
             MsixBundle.appxBundleConst,
         )
-        ZipFile(zip).use { zipFile ->
-            val zipEntries = zipFile.entries()
-                .asSequence()
-                .toList()
-                .filter { zipEntry -> zipEntry.name.substringAfterLast('.').lowercase() in validExtensionsList }
-            installerTypeCounts = validExtensionsList.associateWith { validExtension ->
-                zipEntries.count { zipEntry ->
-                    val extension = zipEntry.name.substringAfterLast('.').lowercase()
-                    extension == validExtensionsList.find { it == validExtension }
+        val zipFileSystem = fileSystem.openZip(zip)
+        val identifiedFiles = zipFileSystem.listRecursively("".toPath())
+            .filter { zipEntry -> zipEntry.extension.lowercase() in validExtensionsList }
+            .toList()
+        installerTypeCounts = validExtensionsList.associateWith { validExtension ->
+            identifiedFiles.count { zipEntry ->
+                zipEntry.extension.lowercase() == validExtensionsList.find { it == validExtension }
+            }
+        }
+        if (installerTypeCounts.count { it.value == 1 } == 1) {
+            nestedInstallerFiles = listOf(
+                InstallerManifest.NestedInstallerFiles(relativeFilePath = identifiedFiles.first().toString())
+            )
+            nestedInstallerType = terminal.nestedInstallerTypePrompt(
+                chosenZipEntries = listOf(identifiedFiles.first()),
+                zipFileSystem = zipFileSystem
+            )
+            if (nestedInstallerType == InstallerManifest.NestedInstallerType.PORTABLE) {
+                nestedInstallerFiles = nestedInstallerFiles?.map {
+                    it.copy(portableCommandAlias = terminal.portableCommandAliasPrompt(it.relativeFilePath))
                 }
             }
-            with(terminal) {
-                if (installerTypeCounts.count { it.value == 1 } == 1) {
-                    let {
-                        nestedInstallerFiles = listOf(
-                            InstallerManifest.NestedInstallerFiles(relativeFilePath = zipEntries.first().name)
-                        )
-                        nestedInstallerType = nestedInstallerTypePrompt(
-                            chosenZipEntries = listOf(zipEntries.first()),
-                            zipFile = zipFile
-                        )
-                        if (nestedInstallerType == InstallerManifest.NestedInstallerType.PORTABLE) {
-                            nestedInstallerFiles = nestedInstallerFiles?.map { nestedInstallerFIle ->
-                                nestedInstallerFIle.copy(
-                                    portableCommandAlias = portableCommandAliasPrompt(
-                                        relativeFilePath = nestedInstallerFIle.relativeFilePath
-                                    )
-                                )
-                            }
+        } else {
+            if (installerTypeCounts.count { it.value != 0 && it.value <= 5 } == 1) {
+                terminal.zipEntrySelectionPrompt(identifiedFiles).let { chosenZipEntries ->
+                    nestedInstallerFiles = chosenZipEntries.map {
+                        InstallerManifest.NestedInstallerFiles(relativeFilePath = it.name)
+                    }
+                    nestedInstallerType = terminal.nestedInstallerTypePrompt(
+                        chosenZipEntries = chosenZipEntries,
+                        zipFileSystem = zipFileSystem
+                    )
+                    if (nestedInstallerType == InstallerManifest.NestedInstallerType.PORTABLE) {
+                        nestedInstallerFiles = nestedInstallerFiles?.map {
+                            it.copy(portableCommandAlias = terminal.portableCommandAliasPrompt(it.relativeFilePath))
                         }
                     }
-                } else {
-                    if (installerTypeCounts.count { it.value != 0 && it.value <= 5 } == 1) {
-                        zipEntrySelectionPrompt(zipEntries).let { chosenZipEntries ->
-                            nestedInstallerFiles = chosenZipEntries.map {
-                                InstallerManifest.NestedInstallerFiles(relativeFilePath = it.name)
-                            }
-                            nestedInstallerType = nestedInstallerTypePrompt(
-                                chosenZipEntries = chosenZipEntries,
-                                zipFile = zipFile
-                            )
-                            if (nestedInstallerType == InstallerManifest.NestedInstallerType.PORTABLE) {
-                                nestedInstallerFiles = nestedInstallerFiles?.map {
-                                    it.copy(portableCommandAlias = portableCommandAliasPrompt(it.relativeFilePath))
-                                }
-                            }
-                        }
-                    } else {
-                        nestedInstallersPrompt()
-                        nestedInstallerFiles?.let { nestedInstallerFiles ->
-                            nestedInstallerType = nestedInstallerTypePrompt(
-                                nestedInstallerFiles.map { zipFile.getEntry(it.relativeFilePath) },
-                                zipFile
-                            )
-                        }
-                    }
+                }
+            } else {
+                terminal.nestedInstallersPrompt()
+                nestedInstallerFiles?.let { nestedInstallerFiles ->
+                    nestedInstallerType = terminal.nestedInstallerTypePrompt(
+                        nestedInstallerFiles.map { it.relativeFilePath.toPath() },
+                        zipFileSystem
+                    )
                 }
             }
         }
@@ -104,14 +96,14 @@ class Zip(zip: File, terminal: Terminal) {
                         .replaceFirstChar(Char::titlecase)
                         .replace("([A-Z])".toRegex(), " $1")
                         .trim()
-                )
-                val error = isRelativeFilePathValid(input)?.also { danger(it) }
+                ) ?: throw ProgramResult(ExitCode.CtrlC)
+                val error = isRelativeFilePathValid(input)?.also(::danger)
                 var portableCommandAlias: String? = null
                 if (nestedInstallerType == InstallerManifest.NestedInstallerType.PORTABLE) {
                     println()
                     portableCommandAlias = portableCommandAliasPrompt()
                 }
-                if (error == null && input != null) {
+                if (error == null) {
                     nestedInstallerFiles = if (nestedInstallerFiles == null) {
                         listOf(
                             InstallerManifest.NestedInstallerFiles(
@@ -157,78 +149,54 @@ class Zip(zip: File, terminal: Terminal) {
         return portableCommandAlias.takeIf { it?.isNotBlank() == true }
     }
 
-    private fun isPortableCommandAliasValid(portableCommandAlias: String?): String? {
-        return when {
-            portableCommandAlias.isNullOrBlank() -> null
-            portableCommandAlias.length > portableCommandAliasMaxLength -> {
-                Errors.invalidLength(min = portableCommandAliasMinLength, max = portableCommandAliasMaxLength)
-            }
-            else -> null
+    private fun isPortableCommandAliasValid(portableCommandAlias: String?): String? = when {
+        portableCommandAlias.isNullOrBlank() -> null
+        portableCommandAlias.length > portableCommandAliasMaxLength -> {
+            Errors.invalidLength(min = portableCommandAliasMinLength, max = portableCommandAliasMaxLength)
         }
+        else -> null
     }
 
-    private fun isRelativeFilePathValid(relativeFilePath: String?): String? {
-        return when {
-            relativeFilePath.isNullOrBlank() -> Errors.blankInput(
-                InstallerManifest.NestedInstallerFiles::relativeFilePath.name
-                    .replaceFirstChar(Char::titlecase)
-                    .replace("([A-Z])".toRegex(), " $1")
-                    .trim()
-            )
-            relativeFilePath.length > relativeFilePathMaxLength -> {
-                Errors.invalidLength(min = relativeFilePathMinLength, max = relativeFilePathMaxLength)
-            }
-            else -> null
+    private fun isRelativeFilePathValid(relativeFilePath: String): String? = when {
+        relativeFilePath.isBlank() -> Errors.blankInput(
+            InstallerManifest.NestedInstallerFiles::relativeFilePath.name
+                .replaceFirstChar(Char::titlecase)
+                .replace("([A-Z])".toRegex(), " $1")
+                .trim()
+        )
+        relativeFilePath.length > relativeFilePathMaxLength -> {
+            Errors.invalidLength(min = relativeFilePathMinLength, max = relativeFilePathMaxLength)
         }
+        else -> null
     }
 
-    private fun Terminal.zipEntrySelectionPrompt(zipEntries: List<ZipEntry>): MutableList<ZipEntry> {
-        val chosenZipEntries: MutableList<ZipEntry> = mutableListOf()
+    private fun Terminal.zipEntrySelectionPrompt(zipPaths: List<Path>): List<Path> {
+        var chosenZipEntries: List<Path>
         do {
-            zipEntries.forEachIndexed { index, zipEntry ->
-                println(
-                    verticalLayout {
-                        cell(colors.brightGreen("${Prompts.required} Would you like to use ${zipEntry.name}?"))
-                        cell(
-                            colors.cyan(
-                                buildString {
-                                    append("Detected ")
-                                    append(zipEntry.name.substringAfterLast('.').lowercase())
-                                    append(" ")
-                                    append(index.inc())
-                                    append("/")
-                                    append(zipEntries.size)
-                                }
-                            )
-                        )
-                    }
-                )
-                YesNoPrompt(prompt = Prompts.enterChoice, terminal = this).ask()?.let {
-                    if (it) chosenZipEntries.add(zipEntry)
-                }
-            }
+            println(colors.brightGreen("${Prompts.required} Select files to use"))
+            chosenZipEntries = checkMenu<Path> {
+                items = zipPaths
+            }.prompt()
             if (chosenZipEntries.isEmpty()) {
-                val redAndBold = colors.brightRed + colors.bold
-                println(
-                    verticalLayout {
-                        cell("")
-                        cell(redAndBold("You have not chosen any nested files"))
-                        cell(redAndBold("Please select at least one nested file"))
-                    }
-                )
+                println()
+                danger("You have not chosen any nested files")
+                danger("Please select at least one nested file")
             }
             println()
         } while (chosenZipEntries.isEmpty())
         return chosenZipEntries
     }
 
+
     @OptIn(ExperimentalStdlibApi::class)
     private fun Terminal.nestedInstallerTypePrompt(
-        chosenZipEntries: List<ZipEntry>,
-        zipFile: ZipFile
+        chosenZipEntries: List<Path>,
+        zipFileSystem: FileSystem,
+        fileSystem: FileSystem = FileSystem.SYSTEM,
+        tempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY
     ): InstallerManifest.NestedInstallerType {
-        val smallestEntry = chosenZipEntries.minBy(ZipEntry::size)
-        return when (smallestEntry.name.substringAfterLast('.').lowercase()) {
+        val smallestEntry = chosenZipEntries.minBy { zipFileSystem.metadata(it).size!! }
+        return when (smallestEntry.extension.lowercase()) {
             InstallerManifest.NestedInstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
                 InstallerManifest.NestedInstallerType.MSIX
             }
@@ -239,14 +207,11 @@ class Zip(zip: File, terminal: Terminal) {
                 InstallerManifest.NestedInstallerType.ZIP
             }
             InstallerManifest.NestedInstallerType.MSI.toString() -> {
-                val tempFile = File.createTempFile(
-                    smallestEntry.name,
-                    InstallerManifest.NestedInstallerType.MSI.toString()
-                )
-                zipFile.getInputStream(smallestEntry).use { input ->
-                    tempFile.outputStream().use(input::copyTo)
+                val tempFile = tempDirectory / "${smallestEntry.name}.${InstallerManifest.NestedInstallerType.MSI}"
+                zipFileSystem.source(smallestEntry).use { source ->
+                    fileSystem.sink(tempFile, mustCreate = true).buffer().use { it.writeAll(source) }
                 }
-                if (Msi(tempFile.toOkioPath(), FileSystem.SYSTEM).isWix.also { tempFile.delete() }) {
+                if (Msi(tempFile).isWix.also { fileSystem.delete(tempFile) }) {
                     InstallerManifest.NestedInstallerType.WIX
                 } else {
                     InstallerManifest.NestedInstallerType.MSI
@@ -259,38 +224,16 @@ class Zip(zip: File, terminal: Terminal) {
                     InstallerManifest.NestedInstallerType.INNO,
                     InstallerManifest.NestedInstallerType.NULLSOFT,
                     InstallerManifest.NestedInstallerType.PORTABLE
-                ).map(InstallerManifest.NestedInstallerType::toString)
+                )
                 println(colors.brightGreen("${Prompts.required} Enter the nested installer type"))
                 info("Options: ${exeNestedTypes.joinToString()}")
-                prompt(
-                    prompt = Prompts.enterChoice,
-                    convert = { string ->
-                        if (string.lowercase() in exeNestedTypes) {
-                            ConversionResult.Valid(
-                                InstallerManifest.NestedInstallerType.valueOf(string.uppercase())
-                            )
-                        } else {
-                            ConversionResult.Invalid(Errors.invalidEnum(enum = exeNestedTypes))
-                        }
-                    }
-                ) ?: InstallerManifest.NestedInstallerType.EXE
+                radioMenu<InstallerManifest.NestedInstallerType> {
+                    items = exeNestedTypes
+                }.prompt() as InstallerManifest.NestedInstallerType
             }
-            else -> {
-                val nestedInstallerTypes = InstallerManifest.NestedInstallerType.entries
-                    .map(InstallerManifest.NestedInstallerType::toString)
-                prompt(
-                    prompt = Prompts.enterChoice,
-                    convert = { string ->
-                        if (string.lowercase() in nestedInstallerTypes) {
-                            ConversionResult.Valid(
-                                InstallerManifest.NestedInstallerType.valueOf(string.uppercase())
-                            )
-                        } else {
-                            ConversionResult.Invalid(Errors.invalidEnum(enum = nestedInstallerTypes))
-                        }
-                    }
-                ) ?: InstallerManifest.NestedInstallerType.EXE
-            }
+            else -> radioMenu<InstallerManifest.NestedInstallerType> {
+                items = InstallerManifest.NestedInstallerType.entries
+            }.prompt() as InstallerManifest.NestedInstallerType
         }.also { println() }
     }
 

@@ -28,7 +28,7 @@ object HttpUtils {
         packageIdentifier: String,
         packageVersion: String,
         progress: ProgressAnimation,
-        fileSystem: FileSystem,
+        fileSystem: FileSystem = FileSystem.SYSTEM,
         tempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY
     ): DownloadedFile {
         val path = FileUtils.createTempFile(packageIdentifier, packageVersion, url, tempDirectory)

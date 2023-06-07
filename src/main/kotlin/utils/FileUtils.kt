@@ -4,6 +4,7 @@ import io.ktor.http.Url
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import okio.FileSystem
 import okio.Path
 
 object FileUtils {
@@ -11,7 +12,7 @@ object FileUtils {
         identifier: String,
         version: String,
         url: Url,
-        tempDirectory: Path
+        tempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY
     ): Path {
         val formattedDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).run {
             "$year.$monthNumber.$dayOfMonth-$hour.$minute.$second"

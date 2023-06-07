@@ -15,7 +15,7 @@ import detection.files.msix.Msix
 import detection.files.msix.MsixBundle
 import detection.github.GitHubDetection
 import extensions.extension
-import extensions.hash
+import extensions.hashSha256
 import input.ExitCode
 import input.Prompts
 import input.menu.yesNoMenu
@@ -39,7 +39,7 @@ import utils.isRedirect
 object Url {
     suspend fun Terminal.installerDownloadPrompt(parameterUrl: Url? = null) = with(ManifestData) {
         installerUrl = parameterUrl ?: promptForInstaller()
-        downloadInstaller(FileSystem.SYSTEM)
+        downloadInstaller()
         msixBundleDetection()
     }
 
@@ -82,7 +82,7 @@ object Url {
         }
     }
 
-    private suspend fun Terminal.downloadInstaller(fileSystem: FileSystem) = with(ManifestData) {
+    private suspend fun Terminal.downloadInstaller(fileSystem: FileSystem = FileSystem.SYSTEM) = with(ManifestData) {
         if (installers.map(InstallerManifest.Installer::installerUrl).contains(installerUrl)) {
             installers += installers.first { it.installerUrl == installerUrl }
             skipAddInstaller = true
@@ -101,15 +101,15 @@ object Url {
             architecture = installerUrl.findArchitecture() ?: fileAnalyser.architecture
             scope = fileAnalyser.scope
             upgradeBehavior = fileAnalyser.upgradeBehaviour
-            installerSha256 = gitHubDetection?.sha256 ?: downloadedFile.path.hash(fileSystem)
+            installerSha256 = gitHubDetection?.sha256 ?: downloadedFile.path.hashSha256(fileSystem)
             when (downloadedFile.path.extension.lowercase()) {
                 InstallerManifest.InstallerType.MSIX.toString(),
-                InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(downloadedFile.path.toFile())
+                InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(downloadedFile.path)
                 MsixBundle.msixBundleConst,
-                MsixBundle.appxBundleConst -> msixBundle = MsixBundle(downloadedFile.path.toFile())
+                MsixBundle.appxBundleConst -> msixBundle = MsixBundle(downloadedFile.path)
                 InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(downloadedFile.path, fileSystem)
                 InstallerManifest.InstallerType.ZIP.toString() -> zip = Zip(
-                    zip = downloadedFile.path.toFile(),
+                    zip = downloadedFile.path,
                     terminal = this@downloadInstaller
                 )
             }

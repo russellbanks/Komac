@@ -17,15 +17,15 @@ import schemas.manifest.InstallerManifest.InstallerType
 import schemas.manifest.InstallerManifest.Scope
 import schemas.manifest.InstallerManifest.UpgradeBehavior
 
-class FileAnalyser(private val file: Path, private val fileSystem: FileSystem) {
+class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = FileSystem.SYSTEM) {
     init {
         ManifestData.msi = if (file.extension == InstallerType.MSI.toString()) Msi(file, fileSystem) else null
         ManifestData.msix = when (file.extension) {
-            InstallerType.MSIX.toString(), InstallerType.APPX.toString() -> Msix(file.toFile())
+            InstallerType.MSIX.toString(), InstallerType.APPX.toString() -> Msix(file)
             else -> null
         }
         ManifestData.msixBundle = when (file.extension) {
-            MsixBundle.msixBundleConst, MsixBundle.appxBundleConst -> MsixBundle(file.toFile())
+            MsixBundle.msixBundleConst, MsixBundle.appxBundleConst -> MsixBundle(file)
             else -> null
         }
     }

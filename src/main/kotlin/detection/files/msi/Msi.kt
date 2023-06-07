@@ -14,7 +14,7 @@ import okio.FileSystem
 import okio.Path
 import schemas.manifest.InstallerManifest
 
-class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
+class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSystem.SYSTEM) {
     var productCode: String? = null
     var upgradeCode: String? = null
     var productName: String? = null
@@ -27,7 +27,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem) {
     var description: String? = null
 
     init {
-        require(msiFile.extension == InstallerManifest.InstallerType.MSI.toString())
+        require(msiFile.extension.lowercase() == InstallerManifest.InstallerType.MSI.toString())
         if (Platform.isWindows()) getValuesFromDatabase() else getValuesFromBinary()
     }
 

@@ -6,7 +6,6 @@ import commands.interfaces.ValidationRules
 import data.PreviousManifestData
 
 object Publisher : TextPrompt {
-
     override val name: String = "Publisher"
 
     override val validationRules: ValidationRules = ValidationRules(
