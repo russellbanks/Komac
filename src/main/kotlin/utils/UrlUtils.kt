@@ -79,8 +79,8 @@ fun Url.getFileNameWithoutExtension(): String? = getFileName()?.removeSuffix(".$
  * Determines the installation scope of the installer manifest at this URL, if any.
  *
  * The installation scope is determined by searching the URL's full path for the strings "user" or "machine",
- * ignoring case. If "user" is found, the installation scope is [InstallerManifest.Installer.Scope.User].
- * If "machine" is found, the installation scope is [InstallerManifest.Installer.Scope.Machine].
+ * ignoring case. If "user" is found, the installation scope is [InstallerManifest.Scope.User].
+ * If "machine" is found, the installation scope is [InstallerManifest.Scope.Machine].
  * If neither string is found, null is returned.
  *
  * @return the installation scope of the installer manifest at this URL, or null if no scope can be determined

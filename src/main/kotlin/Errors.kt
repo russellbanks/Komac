@@ -53,8 +53,6 @@ object Errors {
 
     fun blankInput(promptName: String? = null) = "${promptName ?: "Input"} cannot be blank"
 
-    fun invalidEnum(enum: Iterable<String>): String = "Value must exist in the enum - ${enum.joinToString()}"
-
     fun doesNotExistError(
         packageIdentifier: String,
         packageVersion: String? = null,

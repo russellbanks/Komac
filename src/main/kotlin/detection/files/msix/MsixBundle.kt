@@ -5,16 +5,12 @@ import extensions.hashSha256
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
 import it.skrape.selects.attribute
-import java.util.zip.ZipFile
 import okio.BufferedSource
 import okio.FileSystem
-import okio.HashingSink.Companion.sha256
 import okio.Path
 import okio.Path.Companion.toPath
-import okio.blackholeSink
 import okio.buffer
 import okio.openZip
-import okio.source
 import schemas.manifest.InstallerManifest
 
 class MsixBundle(msixBundleFile: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {

@@ -21,8 +21,8 @@ import token.TokenStore
 import utils.GitHubUtils
 
 object GitHubImpl {
-    const val Microsoft = "Microsoft"
-    const val wingetpkgs = "winget-pkgs"
+    private const val Microsoft = "Microsoft"
+    private const val wingetpkgs = "winget-pkgs"
     const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
     private const val customForkOwnerEnv = "KMC_FRK_OWNER"
     val github: GitHub = GitHubBuilder().withConnector(KtorGitHubConnector()).withOAuthToken(TokenStore.token).build()

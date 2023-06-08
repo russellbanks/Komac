@@ -1,6 +1,5 @@
 package extensions
 
-import extensions.IterableExtensions.takeIfNotDistinct
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.http.URLBuilder

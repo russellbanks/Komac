@@ -11,7 +11,7 @@ interface CheckMenuPrompt<T> : Prompt<List<T>> {
 
     override suspend fun prompt(terminal: Terminal): List<T>? = with(terminal) {
         println(colors.brightYellow("${Prompts.optional} Select the ${name.lowercase()}"))
-        return checkMenu<T> {
+        return checkMenu {
             items = this@CheckMenuPrompt.items
             defaultChecked = this@CheckMenuPrompt.defaultChecked.orEmpty()
         }.prompt()

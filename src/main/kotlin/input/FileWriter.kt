@@ -3,7 +3,6 @@ package input
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import input.menu.yesNoMenu
-import okio.ByteString.Companion.encodeUtf8
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
