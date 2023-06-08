@@ -82,9 +82,11 @@ class NewManifest : CliktCommand(name = "new") {
             do {
                 currentContext.terminal.installerDownloadPrompt()
                 installerType = installerType ?: prompt(InstallerType)
-                for (switch in Switch.entries) {
-                    InstallerSwitch.installerSwitchPrompt(switch, currentContext.terminal)
+                if (installerType == InstallerManifest.InstallerType.EXE) {
+                    installerSwitches[Switch.Silent] = prompt(InstallerSwitch.Silent)
+                    installerSwitches[Switch.SilentWithProgress] = prompt(InstallerSwitch.SilentWithProgress)
                 }
+                installerSwitches[Switch.Custom] = prompt(InstallerSwitch.Custom)
                 installerLocale = msi?.productLanguage ?: prompt(Locale.Installer)
                 if (scope == null && installerType != InstallerManifest.InstallerType.PORTABLE) {
                     scope = prompt(InstallerScope)
