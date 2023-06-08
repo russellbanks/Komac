@@ -52,6 +52,16 @@ import utils.GitHubUtils
 import utils.ManifestUtils.formattedManifestLinesSequence
 
 class NewManifest : CliktCommand(name = "new") {
+    private val packageIdentifierParam: String? by option(
+        "-i", "--id", "--package-identifier",
+        help = "Package identifier. Example: Publisher.Package"
+    )
+
+    private val packageVersionParam: String? by option(
+        "-v", "--version", "--package-version",
+        help = "Package version. Example: 1.2.3"
+    )
+
     private val manifestOverride: String? by option(
         "--manifest-version", "--manifest-override",
         help = "Overrides the manifest version.",
@@ -63,7 +73,7 @@ class NewManifest : CliktCommand(name = "new") {
         with(ManifestData) {
             if (manifestOverride != null) Schemas.manifestVersion = manifestOverride as String
             if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
-            packageIdentifier = prompt(PackageIdentifier)
+            packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
             if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
             allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
             val latestVersion = allVersions?.maxWithOrNull(versionStringComparator)
@@ -72,7 +82,7 @@ class NewManifest : CliktCommand(name = "new") {
                 info("Found latest version: $latestVersion")
             }
             PreviousManifestData.init(packageIdentifier, latestVersion, GitHubImpl.microsoftWinGetPkgs)
-            packageVersion = prompt(PackageVersion)
+            packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
             GitHubImpl.promptIfPullRequestExists(
                 identifier = packageIdentifier,
                 version = packageVersion,
