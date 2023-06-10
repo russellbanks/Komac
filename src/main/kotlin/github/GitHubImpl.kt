@@ -18,16 +18,16 @@ import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
+import schemas.Schemas
 import token.TokenStore
 
 object GitHubImpl {
     private const val Microsoft = "Microsoft"
     private const val wingetpkgs = "winget-pkgs"
     const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
-    private const val customForkOwnerEnv = "KMC_FRK_OWNER"
     val github: GitHub = GitHubBuilder().withConnector(KtorGitHubConnector()).withOAuthToken(TokenStore.token).build()
     private var pullRequestBranch: GHRef? = null
-    val forkOwner: String = System.getenv(customForkOwnerEnv) ?: github.myself.login
+    val forkOwner: String = Environment.forkOverride ?: github.myself.login
 
     val microsoftWinGetPkgs: GHRepository by lazy {
         var result: GHRepository? = null
@@ -140,7 +140,14 @@ object GitHubImpl {
     ): GHPullRequest {
         commitFiles(
             wingetPkgsFork = wingetPkgsFork,
-            files = files.mapKeys { "${GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion)}/${it.key}" },
+            files = files.mapKeys {
+                "${
+                    GitHubUtils.getPackageVersionsPath(
+                        packageIdentifier,
+                        packageVersion
+                    )
+                }/${it.key}"
+            },
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             updateState = updateState
@@ -205,6 +212,27 @@ object GitHubImpl {
                     .sha
             )
             ?.create()
+            ?.also {
+                /*
+                 * If the previous manifest and the new manifest are identical, the commit will be empty.
+                 * In this case, we delete the branch and throw an error.
+                 * Else, continue with pushing the branch and creating a pull request.
+                */
+                if (it.files.isEmpty()) {
+                    branch.delete()
+                    throw CliktError(
+                        message = "Previous manifests and new manifests are identical. No changes were made.",
+                        statusCode = if (
+                            Environment.isCI &&
+                            System.getenv(Schemas.customToolEnv) != null &&
+                            System.getenv(Schemas.customToolURLEnv) != null
+                        )
+                            0
+                        else
+                            1
+                    )
+                }
+            }
             ?.also { branch.updateTo(it.shA1) }
     }
 }
