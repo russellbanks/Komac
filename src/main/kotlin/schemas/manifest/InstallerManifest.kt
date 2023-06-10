@@ -1,6 +1,6 @@
 package schemas.manifest
 
-import input.Switch
+import io.Switch
 import io.ktor.http.Url
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Contextual

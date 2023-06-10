@@ -4,7 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import commands.prompt
 import commands.success
-import input.menu.yesNoMenu
+import io.menu.yesNoMenu
 import kotlinx.coroutines.runBlocking
 import token.Token
 import token.TokenStore

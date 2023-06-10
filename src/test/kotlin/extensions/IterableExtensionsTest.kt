@@ -5,6 +5,7 @@ import io.kotest.matchers.shouldBe
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import schemas.manifest.InstallerManifest
+import utils.takeIfNotDistinct
 
 class IterableExtensionsTest : FunSpec({
     context("takeIfNotDistinct") {

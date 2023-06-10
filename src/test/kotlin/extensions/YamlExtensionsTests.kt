@@ -1,5 +1,5 @@
 package extensions
-import extensions.YamlExtensions.convertToList
+import schemas.manifest.YamlExtensions.convertToList
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 

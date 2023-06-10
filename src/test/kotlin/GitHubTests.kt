@@ -1,5 +1,5 @@
 
-import extensions.ReleaseNotes.formattedReleaseNotes
+import github.ReleaseNotesFormatter.formattedReleaseNotes
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every

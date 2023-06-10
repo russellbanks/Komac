@@ -1,11 +1,11 @@
 package data
 
-import detection.PageScraper
-import detection.files.Zip
-import detection.files.msi.Msi
-import detection.files.msix.Msix
-import detection.files.msix.MsixBundle
-import detection.github.GitHubDetection
+import network.WebPageScraper
+import utils.Zip
+import utils.msi.Msi
+import utils.msix.Msix
+import utils.msix.MsixBundle
+import github.GitHubDetection
 import io.ktor.http.Url
 import kotlinx.datetime.LocalDate
 import schemas.AdditionalMetadata
@@ -40,7 +40,7 @@ object ManifestData {
     var msi: Msi? = null
     var zip: Zip? = null
     var gitHubDetection: GitHubDetection? = null
-    var pageScraper: PageScraper? = null
+    var pageScraper: WebPageScraper? = null
     var additionalMetadata: AdditionalMetadata? = null
 
     var license: String? = null

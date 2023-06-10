@@ -1,6 +1,6 @@
 package data.installer
 
-import commands.interfaces.RadioMenuPrompt
+import io.menu.prompts.RadioMenuPrompt
 import data.ManifestData
 import data.PreviousManifestData
 import schemas.manifest.InstallerManifest

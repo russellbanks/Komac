@@ -8,13 +8,13 @@ import com.github.ajalt.mordant.rendering.OverflowWrap
 import com.github.ajalt.mordant.rendering.TextAlign
 import com.github.ajalt.mordant.rendering.Whitespace
 import com.github.ajalt.mordant.terminal.Terminal
-import commands.interfaces.CheckMenuPrompt
-import commands.interfaces.ListPrompt
-import commands.interfaces.Prompt
-import commands.interfaces.RadioMenuPrompt
-import commands.interfaces.TextPrompt
-import commands.interfaces.UrlPrompt
-import input.ExitCode
+import io.menu.prompts.CheckMenuPrompt
+import io.menu.prompts.ListPrompt
+import io.menu.prompts.Prompt
+import io.menu.prompts.RadioMenuPrompt
+import io.menu.prompts.TextPrompt
+import io.menu.prompts.UrlPrompt
+import io.ExitCode
 import io.ktor.http.Url
 
 suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, transform: (String) -> T): T {

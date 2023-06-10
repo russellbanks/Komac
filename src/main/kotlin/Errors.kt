@@ -1,7 +1,7 @@
 
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.TerminalColors
-import data.GitHubImpl
+import github.GitHubImpl
 import io.ktor.client.statement.HttpResponse
 
 object Errors {

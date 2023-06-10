@@ -5,7 +5,7 @@ import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.option
 import data.DefaultLocaleManifestData
-import data.GitHubImpl
+import github.GitHubImpl
 import data.InstallerManifestData
 import data.ManifestData
 import data.PreviousManifestData
@@ -34,12 +34,12 @@ import data.shared.PackageVersion
 import data.shared.Publisher
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
-import extensions.versionStringComparator
-import input.ExitCode
-import input.FileWriter.writeFiles
-import input.ManifestResultOption
-import input.Switch
-import input.menu.radioMenu
+import utils.versionStringComparator
+import io.ExitCode
+import io.FileWriter.writeFiles
+import io.ManifestResultOption
+import io.Switch
+import io.menu.radioMenu
 import kotlinx.coroutines.runBlocking
 import schemas.Schema
 import schemas.Schemas
@@ -48,7 +48,7 @@ import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import token.Token
 import token.TokenStore
-import utils.GitHubUtils
+import github.GitHubUtils
 import utils.ManifestUtils.formattedManifestLinesSequence
 
 class NewManifest : CliktCommand(name = "new") {

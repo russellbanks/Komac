@@ -1,7 +1,7 @@
 package data.shared
 
-import commands.interfaces.TextPrompt
-import commands.interfaces.ValidationRules
+import io.menu.prompts.TextPrompt
+import io.menu.prompts.ValidationRules
 
 object PackageVersion : TextPrompt {
     override val name: String = "Package Version"

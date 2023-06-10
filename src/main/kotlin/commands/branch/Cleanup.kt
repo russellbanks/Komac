@@ -6,7 +6,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import commands.info
 import commands.success
 import commands.warning
-import data.GitHubImpl
+import github.GitHubImpl
 import org.kohsuke.github.GHIssueState
 
 class Cleanup : CliktCommand(

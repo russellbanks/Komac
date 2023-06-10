@@ -12,7 +12,7 @@ import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
-import data.GitHubImpl
+import github.GitHubImpl
 import data.InstallerManifestData
 import data.ManifestData
 import data.PreviousManifestData
@@ -23,13 +23,13 @@ import data.shared.PackageIdentifier
 import data.shared.PackageVersion
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
-import detection.ParameterUrls
-import detection.github.GitHubDetection
-import extensions.hashSha256
-import extensions.versionStringComparator
-import input.FileWriter
-import input.ManifestResultOption
-import input.menu.radioMenu
+import utils.UrlsToInstallerMatcher
+import github.GitHubDetection
+import utils.hashSha256
+import utils.versionStringComparator
+import io.FileWriter
+import io.ManifestResultOption
+import io.menu.radioMenu
 import io.ktor.http.Url
 import kotlinx.coroutines.runBlocking
 import network.Http
@@ -47,14 +47,14 @@ import schemas.manifest.InstallerManifest
 import token.Token
 import token.TokenStore
 import utils.FileAnalyser
-import utils.GitHubUtils
+import github.GitHubUtils
 import utils.ManifestUtils.formattedManifestLinesSequence
 import utils.findArchitecture
 import utils.findScope
 
 class QuickUpdate : CliktCommand(
     help = """
-        Updates a pre-existing manifest with minimal input
+        Updates a pre-existing manifest with minimal io
         
         Example: komac update --id Package.Identifier --version 1.2.3 --urls https://www.example.com --submit
     """.trimIndent(),
@@ -103,7 +103,7 @@ class QuickUpdate : CliktCommand(
         tokenParameter?.let { TokenStore.useTokenParameter(it) }
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
         if (Environment.isCI) {
-            info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
+            info("CI environment detected! Komac will throw errors instead of prompting on invalid io")
         }
         ManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
         if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
@@ -193,8 +193,8 @@ class QuickUpdate : CliktCommand(
         val previousInstallerManifest = PreviousManifestData.installerManifest as InstallerManifest
         val previousInstallers = previousInstallerManifest.installers
         val previousUrls = previousInstallers.map(InstallerManifest.Installer::installerUrl)
-        ParameterUrls.assertUniqueUrlsCount(parameterUrls, previousUrls.toSet(), colors)
-        ParameterUrls.assertUrlsValid(parameterUrls, colors)
+        UrlsToInstallerMatcher.assertUniqueUrlsCount(parameterUrls, previousUrls.toSet(), colors)
+        UrlsToInstallerMatcher.assertUrlsValid(parameterUrls, colors)
         val installerResults = mutableListOf<InstallerManifest.Installer>()
         val progressList = parameterUrls.map { url -> getDownloadProgressBar(url).apply(ProgressAnimation::start) }
         parameterUrls.forEachIndexed { index, url ->
@@ -221,7 +221,7 @@ class QuickUpdate : CliktCommand(
             }
         }
         progressList.forEach(ProgressAnimation::clear)
-        ParameterUrls.matchInstallers(
+        UrlsToInstallerMatcher.matchInstallers(
             installerResults.sortedWith(installerSorter),
             previousInstallers
                 .sortedWith(installerSorter)

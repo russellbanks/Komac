@@ -1,8 +1,8 @@
 package data.locale
 
-import commands.interfaces.TextPrompt
-import commands.interfaces.UrlPrompt
-import commands.interfaces.ValidationRules
+import io.menu.prompts.TextPrompt
+import io.menu.prompts.UrlPrompt
+import io.menu.prompts.ValidationRules
 import data.PreviousManifestData
 
 object License : TextPrompt {

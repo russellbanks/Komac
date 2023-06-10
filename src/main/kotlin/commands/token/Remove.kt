@@ -6,7 +6,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import commands.info
 import commands.success
 import commands.warning
-import input.menu.yesNoMenu
+import io.menu.yesNoMenu
 import kotlinx.coroutines.runBlocking
 import token.TokenStore
 

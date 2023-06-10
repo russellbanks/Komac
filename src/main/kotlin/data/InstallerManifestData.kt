@@ -1,8 +1,8 @@
 package data
 
-import detection.files.msi.Msi
-import extensions.getDistinctOrNull
-import extensions.takeIfNotDistinct
+import utils.msi.Msi
+import utils.getDistinctOrNull
+import utils.takeIfNotDistinct
 import io.ktor.http.Url
 import schemas.Schemas
 import schemas.installerSorter

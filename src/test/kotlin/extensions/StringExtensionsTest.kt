@@ -1,6 +1,6 @@
 package extensions
 
-import extensions.ReleaseNotes.cutToCharLimitWithLines
+import github.ReleaseNotesFormatter.cutToCharLimitWithLines
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
