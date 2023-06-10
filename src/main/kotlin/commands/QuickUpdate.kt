@@ -103,7 +103,7 @@ class QuickUpdate : CliktCommand(
         tokenParameter?.let { TokenStore.useTokenParameter(it) }
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
         if (Environment.isCI) {
-            info("CI environment detected! Komac will throw errors instead of prompting on invalid io")
+            info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
         }
         ManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
         if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
