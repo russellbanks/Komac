@@ -204,17 +204,6 @@ object GitHubImpl {
                     .create()
                     .sha
             )
-            ?.let {
-                if (System.getenv("GIT_COMMITTER_NAME") != null && System.getenv("GIT_COMMITTER_EMAIL") != null) {
-                    it.author(
-                        System.getenv("GIT_COMMITTER_NAME"),
-                        System.getenv("GIT_COMMITTER_EMAIL"),
-                        null
-                    )
-                } else {
-                    it
-                }
-            }
             ?.create()
             ?.also { branch.updateTo(it.shA1) }
     }
