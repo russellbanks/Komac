@@ -1,4 +1,3 @@
-
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.TerminalColors
 import github.GitHubImpl
@@ -7,6 +6,10 @@ import io.ktor.client.statement.HttpResponse
 object Errors {
     const val connectionTimeout = "Connection timed out"
     const val connectionFailure = "Failed to connect"
+    val noManifestChanges = """
+        No changes were detected in previous and new manifests.
+        Please double-check if there was any changes made in the manifest, by comparing the manifest text displayed on the terminal with the manifests already present in the repository.
+    """.trimIndent()
 
     fun invalidLength(min: Number? = null, max: Number? = null, items: Iterable<String>? = null): String {
         return buildString {

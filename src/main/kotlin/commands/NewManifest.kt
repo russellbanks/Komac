@@ -145,7 +145,8 @@ class NewManifest : CliktCommand(name = "new") {
                             files = files,
                             packageIdentifier = packageIdentifier,
                             packageVersion = packageVersion,
-                            updateState = updateState
+                            updateState = updateState,
+                            terminal = currentContext.terminal
                         ).also { success("Pull request created: ${it.htmlUrl}") }
                     }
                     ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)

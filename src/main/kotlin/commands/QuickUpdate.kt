@@ -134,7 +134,8 @@ class QuickUpdate : CliktCommand(
                 files = files,
                 packageIdentifier = ManifestData.packageIdentifier,
                 packageVersion = ManifestData.packageVersion,
-                updateState = ManifestData.updateState
+                updateState = ManifestData.updateState,
+                terminal = currentContext.terminal
             ).also { success("Pull request created: ${it.htmlUrl}") }
         } else if (!Environment.isCI) {
             info("What would you like to do with ${ManifestData.packageIdentifier} ${ManifestData.packageVersion}?")
@@ -148,7 +149,8 @@ class QuickUpdate : CliktCommand(
                         files = files,
                         packageIdentifier = ManifestData.packageIdentifier,
                         packageVersion = ManifestData.packageVersion,
-                        updateState = ManifestData.updateState
+                        updateState = ManifestData.updateState,
+                        terminal = currentContext.terminal
                     ).also { success("Pull request created: ${it.htmlUrl}") }
                     ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, currentContext.terminal)
                     else -> return@also

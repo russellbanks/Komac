@@ -136,8 +136,30 @@ object GitHubImpl {
         files: Map<String, String>,
         packageIdentifier: String,
         packageVersion: String,
-        updateState: VersionUpdateState
+        updateState: VersionUpdateState,
+        terminal: Terminal
     ): GHPullRequest {
+        if (
+            data.PreviousManifestData.installerManifest?.equals(data.InstallerManifestData) == true &&
+            data.PreviousManifestData.defaultLocaleManifest?.equals(data.DefaultLocaleManifestData) == true &&
+            data.PreviousManifestData.versionManifest?.equals(data.VersionManifestData) == true
+        ) {
+            if (
+                Environment.isCI &&
+                System.getenv(Schemas.customToolEnv) != null &&
+                System.getenv(Schemas.customToolURLEnv) != null
+            )
+                throw CliktError(
+                    message = Errors.noManifestChanges,
+                    cause = null,
+                    statusCode = 0
+                )
+            else {
+                terminal.warning(Errors.noManifestChanges)
+                if (YesNoPrompt("Would you still want to continue?", terminal = terminal).ask() != true)
+                    throw ProgramResult(0)
+            }
+        }
         commitFiles(
             wingetPkgsFork = wingetPkgsFork,
             files = files.mapKeys {
@@ -212,27 +234,6 @@ object GitHubImpl {
                     .sha
             )
             ?.create()
-            ?.also {
-                /*
-                 * If the previous manifest and the new manifest are identical, the commit will be empty.
-                 * In this case, we delete the branch and throw an error.
-                 * Else, continue with pushing the branch and creating a pull request.
-                */
-                if (it.files.isEmpty()) {
-                    branch.delete()
-                    throw CliktError(
-                        message = "Previous manifests and new manifests are identical. No changes were made.",
-                        statusCode = if (
-                            Environment.isCI &&
-                            System.getenv(Schemas.customToolEnv) != null &&
-                            System.getenv(Schemas.customToolURLEnv) != null
-                        )
-                            0
-                        else
-                            1
-                    )
-                }
-            }
             ?.also { branch.updateTo(it.shA1) }
     }
 }
