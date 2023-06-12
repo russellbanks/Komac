@@ -169,22 +169,20 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Termi
         else -> null
     }
 
-    private fun Terminal.zipEntrySelectionPrompt(zipPaths: List<Path>): List<Path> {
-        var chosenZipEntries: List<Path>
-        do {
-            println(colors.brightGreen("${Prompts.required} Select files to use"))
-            chosenZipEntries = checkMenu<Path> {
-                items = zipPaths
-            }.prompt()
-            if (chosenZipEntries.isEmpty()) {
-                println()
-                danger("You have not chosen any nested files")
-                danger("Please select at least one nested file")
-            }
+    private fun Terminal.zipEntrySelectionPrompt(zipPaths: List<Path>): List<Path> = generateSequence {
+        println(colors.brightGreen("${Prompts.required} Select files to use"))
+        val chosenZipEntries = checkMenu<Path> {
+            items = zipPaths
+        }.prompt()
+
+        chosenZipEntries.ifEmpty {
             println()
-        } while (chosenZipEntries.isEmpty())
-        return chosenZipEntries
-    }
+            danger("You have not chosen any nested files")
+            danger("Please select at least one nested file")
+            println()
+            null
+        }
+    }.first()
 
 
     @OptIn(ExperimentalStdlibApi::class)
