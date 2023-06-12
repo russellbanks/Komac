@@ -194,7 +194,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Termi
         fileSystem: FileSystem = FileSystem.SYSTEM,
         tempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY
     ): InstallerManifest.NestedInstallerType {
-        val smallestEntry = chosenZipEntries.minBy { zipFileSystem.metadata(it).size!! }
+        val smallestEntry = chosenZipEntries.minBy { zipFileSystem.metadata(it).size ?: Long.MAX_VALUE }
         return when (smallestEntry.extension.lowercase()) {
             InstallerManifest.NestedInstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
                 InstallerManifest.NestedInstallerType.MSIX
