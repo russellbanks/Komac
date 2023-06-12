@@ -153,13 +153,13 @@ object GitHubImpl {
             manifests.find { it is VersionManifest } == PreviousManifestData.versionManifest &&
             manifests.filterIsInstance<LocaleManifest>() == PreviousManifestData.remoteLocaleData
         ) {
-            if (Environment.isCI)
+            if (Environment.isCI) {
                 throw CliktError(
                     message = Errors.noManifestChanges,
                     cause = null,
                     statusCode = 0 // Nothing went wrong, but we should still avoid making a pull request
                 )
-            else {
+            } else {
                 terminal.warning(Errors.noManifestChanges)
                 terminal.info("Do you want to create a pull request anyway?")
                 if (!terminal.yesNoMenu(default = false).prompt()) throw ProgramResult(0)
