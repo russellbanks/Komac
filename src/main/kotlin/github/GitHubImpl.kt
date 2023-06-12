@@ -1,25 +1,17 @@
 package github
 
 import Environment
+import Errors
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
-import data.VersionUpdateState
-import java.io.IOException
+import data.*
 import network.KtorGitHubConnector
-import org.kohsuke.github.GHContent
-import org.kohsuke.github.GHDirection
-import org.kohsuke.github.GHIssue
-import org.kohsuke.github.GHIssueSearchBuilder
-import org.kohsuke.github.GHIssueState
-import org.kohsuke.github.GHPullRequest
-import org.kohsuke.github.GHRef
-import org.kohsuke.github.GHRepository
-import org.kohsuke.github.GitHub
-import org.kohsuke.github.GitHubBuilder
+import org.kohsuke.github.*
 import schemas.Schemas
 import token.TokenStore
+import java.io.IOException
 
 object GitHubImpl {
     private const val Microsoft = "Microsoft"
@@ -140,19 +132,17 @@ object GitHubImpl {
         terminal: Terminal
     ): GHPullRequest {
         if (
-            data.PreviousManifestData.installerManifest?.equals(data.InstallerManifestData) == true &&
-            data.PreviousManifestData.defaultLocaleManifest?.equals(data.DefaultLocaleManifestData) == true &&
-            data.PreviousManifestData.versionManifest?.equals(data.VersionManifestData) == true
+            PreviousManifestData.installerManifest?.equals(InstallerManifestData) == true &&
+            PreviousManifestData.defaultLocaleManifest?.equals(DefaultLocaleManifestData) == true &&
+            PreviousManifestData.versionManifest?.equals(VersionManifestData) == true
         ) {
             if (
-                Environment.isCI &&
-                System.getenv(Schemas.customToolEnv) != null &&
-                System.getenv(Schemas.customToolURLEnv) != null
+                Environment.isCI
             )
                 throw CliktError(
                     message = Errors.noManifestChanges,
                     cause = null,
-                    statusCode = 0
+                    statusCode = if (System.getenv(Schemas.customToolURLEnv).contains("vedantmgoyal2009")) 0 else 1
                 )
             else {
                 terminal.warning(Errors.noManifestChanges)
