@@ -253,11 +253,12 @@ class QuickUpdate : CliktCommand(
     ): Map<String, Schema> {
         val allLocale = additionalMetadata?.locales?.find { it.name.equals("all", ignoreCase = true) }
         return mapOf(
-            GitHubUtils.getInstallerManifestName(packageIdentifier) to InstallerManifestData.createInstallerManifest(manifestOverride),
-            GitHubUtils.getDefaultLocaleManifestName(packageIdentifier, defaultLocale) to DefaultLocaleManifestData.createDefaultLocaleManifest(
-                manifestOverride
-            ),
-            GitHubUtils.getVersionManifestName(packageIdentifier) to VersionManifestData.createVersionManifest()
+            GitHubUtils.getInstallerManifestName(packageIdentifier)
+                    to InstallerManifestData.createInstallerManifest(manifestOverride),
+            GitHubUtils.getDefaultLocaleManifestName(packageIdentifier, defaultLocale)
+                    to DefaultLocaleManifestData.createDefaultLocaleManifest(manifestOverride),
+            GitHubUtils.getVersionManifestName(packageIdentifier)
+                    to VersionManifestData.createVersionManifest(manifestOverride)
         ) + PreviousManifestData.remoteLocaleData?.map { localeManifest ->
             val currentLocaleMetadata = additionalMetadata?.locales
                 ?.find { it.name.equals(localeManifest.packageLocale, ignoreCase = true) }

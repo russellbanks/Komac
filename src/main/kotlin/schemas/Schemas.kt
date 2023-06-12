@@ -21,15 +21,13 @@ object Schemas {
     const val customToolURLEnv = "KMC_CRTD_WITH_URL"
     const val manifestVersionRegex = "^(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])(\\.(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])){2}$"
 
-    fun buildManifestString(schema: Schema, rawString: String): String {
-        return buildString {
-            append("# Created with ")
-            System.getenv(customToolEnv)?.let { append("$it using ") }
-            appendLine("${BuildConfig.appName} v${BuildConfig.appVersion}")
-            appendLine(languageServer(schema))
-            appendLine()
-            appendLine(rawString)
-        }
+    fun buildManifestString(schema: Schema, rawString: String): String = buildString {
+        append("# Created with ")
+        System.getenv(customToolEnv)?.let { append("$it using ") }
+        appendLine("${BuildConfig.appName} v${BuildConfig.appVersion}")
+        appendLine(languageServer(schema))
+        appendLine()
+        appendLine(rawString)
     }
 
     private fun languageServer(schema: Schema): String {
