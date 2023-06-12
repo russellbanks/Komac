@@ -7,8 +7,8 @@ object Errors {
     const val connectionTimeout = "Connection timed out"
     const val connectionFailure = "Failed to connect"
     val noManifestChanges = """
-        No changes were detected in previous and new manifests.
-        Please double-check if there was any changes made in the manifest, by comparing the manifest text displayed on the terminal with the manifests already present in the repository.
+        No changes were detected between the previous and new manifests.
+        Please double-check if there were any changes made in the manifest, by comparing the manifests displayed here with the manifests already present in winget-pkgs.
     """.trimIndent()
 
     fun invalidLength(min: Number? = null, max: Number? = null, items: Iterable<String>? = null): String {
