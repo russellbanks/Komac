@@ -12,7 +12,6 @@ import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.DefaultLocaleManifestData
-import github.GitHubImpl
 import data.InstallerManifestData
 import data.ManifestData
 import data.PreviousManifestData
@@ -23,14 +22,13 @@ import data.shared.PackageIdentifier
 import data.shared.PackageVersion
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
-import utils.UrlsToInstallerMatcher
 import github.GitHubDetection
-import utils.hashSha256
-import utils.versionStringComparator
+import github.GitHubImpl
+import github.GitHubUtils
 import io.FileWriter
 import io.ManifestResultOption
-import io.menu.radioMenu
 import io.ktor.http.Url
+import io.menu.radioMenu
 import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils.downloadFile
@@ -44,13 +42,16 @@ import schemas.Schemas
 import schemas.installerSorter
 import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
+import schemas.manifest.Schema
 import token.Token
 import token.TokenStore
 import utils.FileAnalyser
-import github.GitHubUtils
 import utils.ManifestUtils.formattedManifestLinesSequence
+import utils.UrlsToInstallerMatcher
 import utils.findArchitecture
 import utils.findScope
+import utils.hashSha256
+import utils.versionStringComparator
 
 class QuickUpdate : CliktCommand(
     help = """
@@ -125,7 +126,7 @@ class QuickUpdate : CliktCommand(
             ManifestData.packageVersion, latestVersion)
         currentContext.terminal.loopThroughInstallers(parameterUrls = urls?.toSet())
         val files = createFiles(ManifestData.packageIdentifier, ManifestData.packageVersion, ManifestData.defaultLocale)
-        for (manifest in files.values) {
+        for (manifest in files.values.map(Schema::toString)) {
             formattedManifestLinesSequence(manifest, colors).forEach(::echo)
         }
         if (submit) {
@@ -249,7 +250,7 @@ class QuickUpdate : CliktCommand(
         packageIdentifier: String,
         packageVersion: String,
         defaultLocale: String?
-    ): Map<String, String> {
+    ): Map<String, Schema> {
         val allLocale = additionalMetadata?.locales?.find { it.name.equals("all", ignoreCase = true) }
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier) to InstallerManifestData.createInstallerManifest(manifestOverride),
@@ -269,7 +270,7 @@ class QuickUpdate : CliktCommand(
                 documentations = allLocale?.documentations
                     ?: currentLocaleMetadata?.documentations
                     ?: localeManifest.documentations
-            ).toString()
+            )
         }.orEmpty()
     }
 }

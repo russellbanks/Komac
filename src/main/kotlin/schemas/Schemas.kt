@@ -1,6 +1,11 @@
 package schemas
 
 import com.russellbanks.Komac.BuildConfig
+import schemas.manifest.DefaultLocaleManifest
+import schemas.manifest.InstallerManifest
+import schemas.manifest.LocaleManifest
+import schemas.manifest.Schema
+import schemas.manifest.VersionManifest
 
 object Schemas {
     var manifestVersion = "1.4.0"
@@ -29,10 +34,10 @@ object Schemas {
 
     private fun languageServer(schema: Schema): String {
         val schemaUrl = when (schema) {
-            Schema.Installer -> installerSchema
-            Schema.DefaultLocale -> defaultLocaleSchema
-            Schema.Locale -> localeSchema
-            Schema.Version -> versionSchema
+            is InstallerManifest -> installerSchema
+            is DefaultLocaleManifest -> defaultLocaleSchema
+            is LocaleManifest -> localeSchema
+            is VersionManifest -> versionSchema
         }
         return "# yaml-language-server: \$schema=$schemaUrl"
     }

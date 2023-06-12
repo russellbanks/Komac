@@ -6,9 +6,10 @@ import io.menu.yesNoMenu
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
+import schemas.manifest.Schema
 
 object FileWriter {
-    fun writeFiles(files: Map<String, String?>, terminal: Terminal) = with(terminal) {
+    fun writeFiles(files: Map<String, Schema>, terminal: Terminal) = with(terminal) {
         do {
             println()
             println(colors.brightYellow("Enter a directory to write the files to:"))
@@ -21,7 +22,7 @@ object FileWriter {
         } while (!FileSystem.SYSTEM.metadata(directory).isDirectory)
     }
 
-    private fun createDirectoryIfNecessary(directory: Path, files: Map<String, String?>, terminal: Terminal) {
+    private fun createDirectoryIfNecessary(directory: Path, files: Map<String, Schema>, terminal: Terminal) {
         with(terminal) {
             warning("The directory entered does not exist. Would you like to create it?")
             if (yesNoMenu(default = true).prompt()) {
@@ -32,19 +33,17 @@ object FileWriter {
         }
     }
 
-    fun writeFilesToDirectory(directory: Path, files: Map<String, String?>, terminal: Terminal) {
+    fun writeFilesToDirectory(directory: Path, files: Map<String, Schema>, terminal: Terminal) {
         for ((fileName, fileText) in files) {
-            if (fileText != null) {
-                val file = (directory / fileName).apply {
-                    FileSystem.SYSTEM.write(this) {
-                        use { writeUtf8(fileText.replace("\n", "\r\n")) }
-                    }
+            val file = (directory / fileName).apply {
+                FileSystem.SYSTEM.write(this) {
+                    use { writeUtf8(fileText.toString().replace("\n", "\r\n")) }
                 }
-                if (FileSystem.SYSTEM.exists(file)) {
-                    terminal.success("Successfully written ${file.name} to $directory")
-                } else {
-                    terminal.danger("Failed to write ${file.name}")
-                }
+            }
+            if (FileSystem.SYSTEM.exists(file)) {
+                terminal.success("Successfully written ${file.name} to $directory")
+            } else {
+                terminal.danger("Failed to write ${file.name}")
             }
         }
     }

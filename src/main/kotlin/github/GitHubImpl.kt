@@ -6,12 +6,26 @@ import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
-import data.*
-import network.KtorGitHubConnector
-import org.kohsuke.github.*
-import schemas.Schemas
-import token.TokenStore
+import data.PreviousManifestData
+import data.VersionUpdateState
 import java.io.IOException
+import network.KtorGitHubConnector
+import org.kohsuke.github.GHContent
+import org.kohsuke.github.GHDirection
+import org.kohsuke.github.GHIssue
+import org.kohsuke.github.GHIssueSearchBuilder
+import org.kohsuke.github.GHIssueState
+import org.kohsuke.github.GHPullRequest
+import org.kohsuke.github.GHRef
+import org.kohsuke.github.GHRepository
+import org.kohsuke.github.GitHub
+import org.kohsuke.github.GitHubBuilder
+import schemas.manifest.DefaultLocaleManifest
+import schemas.manifest.InstallerManifest
+import schemas.manifest.LocaleManifest
+import schemas.manifest.Schema
+import schemas.manifest.VersionManifest
+import token.TokenStore
 
 object GitHubImpl {
     private const val Microsoft = "Microsoft"
@@ -125,24 +139,24 @@ object GitHubImpl {
 
     fun commitAndPullRequest(
         wingetPkgsFork: GHRepository,
-        files: Map<String, String>,
+        files: Map<String, Schema>,
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState,
         terminal: Terminal
     ): GHPullRequest {
+        val manifests = files.values
         if (
-            PreviousManifestData.installerManifest?.equals(InstallerManifestData) == true &&
-            PreviousManifestData.defaultLocaleManifest?.equals(DefaultLocaleManifestData) == true &&
-            PreviousManifestData.versionManifest?.equals(VersionManifestData) == true
+            manifests.find { it is InstallerManifest } == PreviousManifestData.installerManifest &&
+            manifests.find { it is DefaultLocaleManifest } == PreviousManifestData.defaultLocaleManifest &&
+            manifests.find { it is VersionManifest } == PreviousManifestData.versionManifest &&
+            manifests.filterIsInstance<LocaleManifest>() == PreviousManifestData.remoteLocaleData
         ) {
-            if (
-                Environment.isCI
-            )
+            if (Environment.isCI)
                 throw CliktError(
                     message = Errors.noManifestChanges,
                     cause = null,
-                    statusCode = if (System.getenv(Schemas.customToolURLEnv).contains("vedantmgoyal2009")) 0 else 1
+                    statusCode = 0 // Nothing went wrong, but we should still avoid making a pull request
                 )
             else {
                 terminal.warning(Errors.noManifestChanges)
@@ -200,7 +214,7 @@ object GitHubImpl {
 
     private fun commitFiles(
         wingetPkgsFork: GHRepository,
-        files: Map<String, String?>,
+        files: Map<String, Schema?>,
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState
@@ -216,7 +230,7 @@ object GitHubImpl {
                     .apply {
                         for ((path, content) in files) {
                             if (content != null) {
-                                add(path, content.replace("\n", "\r\n"), false)
+                                add(path, content.toString().replace("\n", "\r\n"), false)
                             }
                         }
                     }
