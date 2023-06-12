@@ -46,7 +46,7 @@ interface ListPrompt<T> : Prompt<List<T>> {
             validationRules.regex?.let { regex -> items.any { !it.matches(regex) } } == true -> {
                 Errors.invalidRegex(
                     regex = validationRules.regex,
-                    items = items.filterNot { it matches validationRules.regex!! }
+                    items = items.filterNot { it matches validationRules.regex }
                 )
             }
             validationRules.additionalValidation?.invoke(transformedInput) != null -> {

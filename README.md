@@ -100,7 +100,7 @@ notably slow and lacks the advanced detection capabilities of Komac.
 | Type-safety                              |     ✅      |      ✅       |                               ❌                                |
 | Inno setup detection                     |     ✅      |      ✅       |                               ✅                                |
 | Nullsoft detection                       |     ✅      |      ✅       |                               ✅                                |
-| Burn installer detection                 |     ✅      |      ✅       | Opt-in feature (not enabled by feature, due to slow processing |
+| Burn installer detection                 |     ✅      |      ✅       | Opt-in feature (not enabled by default, due to slow processing |
 | Progress bar and ETA while downloading   |     ✅      |      ❌       |                               ❌                                |
 | Language                                 | Kotlin/JVM |      C#      |                           PowerShell                           |
 

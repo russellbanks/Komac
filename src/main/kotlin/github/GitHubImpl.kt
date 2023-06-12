@@ -99,7 +99,7 @@ object GitHubImpl {
 
     fun versionExists(identifier: String, version: String): Boolean = microsoftWinGetPkgs
         .getDirectoryContent(GitHubUtils.getPackagePath(identifier))
-        ?.map(GHContent::getName)
+        ?.map(GHContent::name)
         ?.contains(version) == true
 
     fun createBranchFromUpstreamDefaultBranch(

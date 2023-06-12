@@ -54,7 +54,7 @@ import utils.findScope
 
 class QuickUpdate : CliktCommand(
     help = """
-        Updates a pre-existing manifest with minimal io
+        Updates a pre-existing manifest with minimal input
         
         Example: komac update --id Package.Identifier --version 1.2.3 --urls https://www.example.com --submit
     """.trimIndent(),
