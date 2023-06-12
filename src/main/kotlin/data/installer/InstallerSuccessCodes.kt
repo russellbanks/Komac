@@ -1,12 +1,11 @@
 package data.installer
 
 import Errors
-import io.menu.prompts.ListPrompt
-import io.menu.prompts.ListValidationRules
 import data.ManifestData
 import data.PreviousManifestData
+import io.menu.prompts.ListPrompt
+import io.menu.prompts.ListValidationRules
 import schemas.manifest.YamlExtensions.convertToList
-import java.util.SortedSet
 
 object InstallerSuccessCodes : ListPrompt<Long> {
     override val name: String = "Installer success codes"
@@ -41,10 +40,9 @@ object InstallerSuccessCodes : ListPrompt<Long> {
         return convertToList(input).mapNotNull(String::toLongOrNull).filterNot { it == 0L }
     }
 
-    private val randomInstallerSuccessCodes: SortedSet<Int>
-        get() = (setOf(13, 87, 120, 1259, 3010) + (1601..1616) + (1618..1654))
-            .asSequence()
+    private val randomInstallerSuccessCodes: Sequence<Int>
+        get() = (sequenceOf(13, 87, 120, 1259, 3010) + (1601..1616) + (1618..1654))
             .shuffled()
             .take(3)
-            .toSortedSet()
+            .sorted()
 }
