@@ -6,10 +6,10 @@ import io.menu.yesNoMenu
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
-import schemas.manifest.Schema
+import schemas.manifest.Manifest
 
 object FileWriter {
-    fun writeFiles(files: Map<String, Schema>, terminal: Terminal) = with(terminal) {
+    fun writeFiles(files: Map<String, Manifest>, terminal: Terminal) = with(terminal) {
         do {
             println()
             println(colors.brightYellow("Enter a directory to write the files to:"))
@@ -22,7 +22,7 @@ object FileWriter {
         } while (!FileSystem.SYSTEM.metadata(directory).isDirectory)
     }
 
-    private fun createDirectoryIfNecessary(directory: Path, files: Map<String, Schema>, terminal: Terminal) {
+    private fun createDirectoryIfNecessary(directory: Path, files: Map<String, Manifest>, terminal: Terminal) {
         with(terminal) {
             warning("The directory entered does not exist. Would you like to create it?")
             if (yesNoMenu(default = true).prompt()) {
@@ -33,7 +33,7 @@ object FileWriter {
         }
     }
 
-    fun writeFilesToDirectory(directory: Path, files: Map<String, Schema>, terminal: Terminal) {
+    fun writeFilesToDirectory(directory: Path, files: Map<String, Manifest>, terminal: Terminal) {
         for ((fileName, fileText) in files) {
             val file = (directory / fileName).apply {
                 FileSystem.SYSTEM.write(this) {

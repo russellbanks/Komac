@@ -24,7 +24,7 @@ import org.kohsuke.github.GitHubBuilder
 import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
-import schemas.manifest.Schema
+import schemas.manifest.Manifest
 import schemas.manifest.VersionManifest
 import token.TokenStore
 
@@ -140,7 +140,7 @@ object GitHubImpl {
 
     fun commitAndPullRequest(
         wingetPkgsFork: GHRepository,
-        files: Map<String, Schema>,
+        files: Map<String, Manifest>,
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState,
@@ -215,7 +215,7 @@ object GitHubImpl {
 
     private fun commitFiles(
         wingetPkgsFork: GHRepository,
-        files: Map<String, Schema?>,
+        files: Map<String, Manifest?>,
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState

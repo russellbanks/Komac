@@ -43,7 +43,7 @@ import io.menu.radioMenu
 import kotlinx.coroutines.runBlocking
 import schemas.Schemas
 import schemas.manifest.InstallerManifest
-import schemas.manifest.Schema
+import schemas.manifest.Manifest
 import token.Token
 import token.TokenStore
 import utils.ManifestUtils.formattedManifestLinesSequence
@@ -128,7 +128,7 @@ class NewManifest : CliktCommand(name = "new") {
             description = prompt(Description.Long)
             releaseNotesUrl = gitHubDetection?.releaseNotesUrl ?: prompt(ReleaseNotesUrl)
             val files = createFiles()
-            for (manifest in files.values.map(Schema::toString)) {
+            for (manifest in files.values.map(Manifest::toString)) {
                 formattedManifestLinesSequence(manifest, colors).forEach(::echo)
             }
             info("What would you like to do with $packageIdentifier $packageVersion?")
@@ -154,7 +154,7 @@ class NewManifest : CliktCommand(name = "new") {
         }
     }
 
-    private suspend fun createFiles(): Map<String, Schema> = with(ManifestData) {
+    private suspend fun createFiles(): Map<String, Manifest> = with(ManifestData) {
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier)
                     to InstallerManifestData.createInstallerManifest(manifestOverride),

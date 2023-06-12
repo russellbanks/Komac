@@ -13,9 +13,9 @@ data class VersionManifest(
     val defaultLocale: String,
     val manifestType: String,
     val manifestVersion: String
-) : Schema() {
+) : Manifest() {
     override fun toString() = Schemas.buildManifestString(
-        schema = this,
+        manifest = this,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )
 }

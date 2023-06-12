@@ -4,8 +4,6 @@ import Errors
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
-import utils.msi.Msi
-import utils.msix.MsixBundle
 import io.ExitCode
 import io.Prompts
 import io.menu.checkMenu
@@ -16,6 +14,8 @@ import okio.Path.Companion.toPath
 import okio.buffer
 import okio.openZip
 import schemas.manifest.InstallerManifest
+import utils.msi.Msi
+import utils.msix.MsixBundle
 
 class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Terminal) {
     var nestedInstallerType: InstallerManifest.NestedInstallerType? = null
@@ -142,7 +142,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Termi
                     .replace("([A-Z])".toRegex(), " $1")
                     .trim()
             )?.trim()
-            val error = isPortableCommandAliasValid(portableCommandAlias)?.also { danger(it) }
+            val error = isPortableCommandAliasValid(portableCommandAlias)?.also(::danger)
             println()
         } while (error != null)
         return portableCommandAlias.takeIf { it?.isNotBlank() == true }

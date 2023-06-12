@@ -1,3 +1,3 @@
 package schemas.manifest
 
-sealed class Schema
+sealed class Manifest

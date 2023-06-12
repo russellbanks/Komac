@@ -35,7 +35,7 @@ data class LocaleManifest(
     val documentations: List<Documentation>? = null,
     val manifestType: String,
     val manifestVersion: String
-) : Schema() {
+) : Manifest() {
     @Serializable
     data class Agreement(
         val agreementLabel: String? = null,
@@ -50,7 +50,7 @@ data class LocaleManifest(
     )
 
     override fun toString() = Schemas.buildManifestString(
-        schema = this,
+        manifest = this,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )
 }

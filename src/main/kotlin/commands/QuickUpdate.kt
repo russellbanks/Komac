@@ -42,7 +42,7 @@ import schemas.Schemas
 import schemas.installerSorter
 import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
-import schemas.manifest.Schema
+import schemas.manifest.Manifest
 import token.Token
 import token.TokenStore
 import utils.FileAnalyser
@@ -126,7 +126,7 @@ class QuickUpdate : CliktCommand(
             ManifestData.packageVersion, latestVersion)
         currentContext.terminal.loopThroughInstallers(parameterUrls = urls?.toSet())
         val files = createFiles(ManifestData.packageIdentifier, ManifestData.packageVersion, ManifestData.defaultLocale)
-        for (manifest in files.values.map(Schema::toString)) {
+        for (manifest in files.values.map(Manifest::toString)) {
             formattedManifestLinesSequence(manifest, colors).forEach(::echo)
         }
         if (submit) {
@@ -250,7 +250,7 @@ class QuickUpdate : CliktCommand(
         packageIdentifier: String,
         packageVersion: String,
         defaultLocale: String?
-    ): Map<String, Schema> {
+    ): Map<String, Manifest> {
         val allLocale = additionalMetadata?.locales?.find { it.name.equals("all", ignoreCase = true) }
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier)
