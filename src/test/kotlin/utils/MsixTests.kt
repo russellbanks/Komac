@@ -1,6 +1,6 @@
 package utils
 
-import detection.files.msix.Msix
+import utils.msix.Msix
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 

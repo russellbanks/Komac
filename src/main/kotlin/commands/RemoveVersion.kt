@@ -11,19 +11,19 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
-import data.GitHubImpl
+import github.GitHubImpl
 import data.ManifestData
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
-import extensions.versionStringComparator
-import input.ExitCode
-import input.Prompts
+import utils.versionStringComparator
+import io.ExitCode
+import io.Prompts
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHContent
 import org.kohsuke.github.GitHub
 import token.Token
 import token.TokenStore
-import utils.GitHubUtils
+import github.GitHubUtils
 
 class RemoveVersion : CliktCommand(
     help = """
@@ -90,7 +90,8 @@ class RemoveVersion : CliktCommand(
             packageVersion = ManifestData.packageVersion
         ) ?: return@runBlocking
         val directoryContent: MutableList<GHContent> = forkRepository
-            .getDirectoryContent(GitHubUtils.getPackageVersionsPath(
+            .getDirectoryContent(
+                GitHubUtils.getPackageVersionsPath(
                 ManifestData.packageIdentifier,
                 ManifestData.packageVersion
             ), ref.ref)

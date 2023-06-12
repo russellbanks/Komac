@@ -1,10 +1,10 @@
 package data.installer
 
-import commands.interfaces.ListPrompt
-import commands.interfaces.ListValidationRules
+import io.menu.prompts.ListPrompt
+import io.menu.prompts.ListValidationRules
 import data.ManifestData
 import data.PreviousManifestData
-import extensions.YamlExtensions.convertToList
+import schemas.manifest.YamlExtensions.convertToList
 
 object FileExtensions : ListPrompt<String> {
     override val name: String = "File extensions"

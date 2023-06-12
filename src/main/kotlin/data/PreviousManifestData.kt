@@ -13,7 +13,7 @@ import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.VersionManifest
-import utils.GitHubUtils
+import github.GitHubUtils
 
 object PreviousManifestData {
     private val scope = CoroutineScope(Dispatchers.IO)

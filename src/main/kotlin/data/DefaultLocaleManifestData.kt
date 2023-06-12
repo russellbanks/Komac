@@ -2,14 +2,14 @@ package data
 
 import data.locale.Tags
 import data.shared.Locale
-import extensions.ReleaseNotes
-import extensions.ReleaseNotes.cutToCharLimitWithLines
+import github.ReleaseNotesFormatter
+import github.ReleaseNotesFormatter.cutToCharLimitWithLines
 import io.ktor.http.Url
 import schemas.Schemas
 import schemas.manifest.DefaultLocaleManifest
 
 object DefaultLocaleManifestData {
-    suspend fun createDefaultLocaleManifest(manifestOverride: String? = null): String = with(ManifestData) {
+    suspend fun createDefaultLocaleManifest(manifestOverride: String? = null): DefaultLocaleManifest = with(ManifestData) {
         val parameterLocaleMetadata = additionalMetadata?.locales?.find {
             it.name.equals(other = defaultLocale, ignoreCase = true)
         }
@@ -54,7 +54,7 @@ object DefaultLocaleManifestData {
                 ?: parameterLocaleMetadata?.releaseNotesUrl)
                 ?.ifBlank { null },
             releaseNotes = (gitHubDetection?.releaseNotes ?: parameterLocaleMetadata?.releaseNotes)
-                ?.cutToCharLimitWithLines(ReleaseNotes.maxCharacterLimit)
+                ?.cutToCharLimitWithLines(ReleaseNotesFormatter.maxCharacterLimit)
                 ?.trim(),
             documentations = if (previousDefaultLocaleData?.documentations == null) {
                 listOfNotNull(
@@ -67,7 +67,7 @@ object DefaultLocaleManifestData {
             }.ifEmpty { null },
             manifestType = Schemas.defaultLocaleManifestType,
             manifestVersion = manifestOverride ?: Schemas.manifestVersion
-        ).toString()
+        )
     }
 
     private inline fun Url.ifBlank(defaultValue: () -> Url?): Url? = if (this == Url("")) defaultValue() else this

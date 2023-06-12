@@ -3,7 +3,6 @@ package schemas.manifest
 import io.ktor.http.Url
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import schemas.Schema
 import schemas.Schemas
 
 /**
@@ -36,7 +35,7 @@ data class LocaleManifest(
     val documentations: List<Documentation>? = null,
     val manifestType: String,
     val manifestVersion: String
-) {
+) : Schema() {
     @Serializable
     data class Agreement(
         val agreementLabel: String? = null,
@@ -51,7 +50,7 @@ data class LocaleManifest(
     )
 
     override fun toString() = Schemas.buildManifestString(
-        schema = Schema.Locale,
+        schema = this,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )
 }

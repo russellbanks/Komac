@@ -8,17 +8,17 @@ import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import com.sun.jna.Platform
 import data.ManifestData
-import detection.PageScraper
-import detection.files.Zip
-import detection.files.msi.Msi
-import detection.files.msix.Msix
-import detection.files.msix.MsixBundle
-import detection.github.GitHubDetection
-import extensions.extension
-import extensions.hashSha256
-import input.ExitCode
-import input.Prompts
-import input.menu.yesNoMenu
+import network.WebPageScraper
+import utils.Zip
+import utils.msi.Msi
+import utils.msix.Msix
+import utils.msix.MsixBundle
+import github.GitHubDetection
+import utils.extension
+import utils.hashSha256
+import io.ExitCode
+import io.Prompts
+import io.menu.yesNoMenu
 import io.ktor.client.HttpClient
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.request.head
@@ -90,7 +90,7 @@ object Url {
             if (installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
                 gitHubDetection = GitHubDetection(installerUrl)
             } else {
-                pageScraper = PageScraper(installerUrl)
+                pageScraper = WebPageScraper(installerUrl)
             }
             val progress = getDownloadProgressBar(installerUrl).apply(ProgressAnimation::start)
             val downloadedFile = Http.client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress, fileSystem)

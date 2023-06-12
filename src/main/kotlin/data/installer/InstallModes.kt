@@ -1,6 +1,6 @@
 package data.installer
 
-import commands.interfaces.CheckMenuPrompt
+import io.menu.prompts.CheckMenuPrompt
 import data.ManifestData
 import data.PreviousManifestData
 import schemas.manifest.InstallerManifest

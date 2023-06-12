@@ -5,7 +5,7 @@ import schemas.Schemas
 import schemas.manifest.VersionManifest
 
 object VersionManifestData {
-    fun createVersionManifest(): String = with(ManifestData) {
+    fun createVersionManifest(): VersionManifest = with(ManifestData) {
         return VersionManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
@@ -14,6 +14,6 @@ object VersionManifestData {
                 ?: Locale.defaultLocale,
             manifestType = Schemas.versionManifestType,
             manifestVersion = Schemas.manifestVersion
-        ).toString()
+        )
     }
 }

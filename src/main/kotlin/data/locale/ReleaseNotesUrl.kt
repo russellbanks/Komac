@@ -1,6 +1,6 @@
 package data.locale
 
-import commands.interfaces.UrlPrompt
+import io.menu.prompts.UrlPrompt
 
 object ReleaseNotesUrl : UrlPrompt {
     override val name: String = "Release notes url"

@@ -1,6 +1,11 @@
 package schemas
 
 import com.russellbanks.Komac.BuildConfig
+import schemas.manifest.DefaultLocaleManifest
+import schemas.manifest.InstallerManifest
+import schemas.manifest.LocaleManifest
+import schemas.manifest.Schema
+import schemas.manifest.VersionManifest
 
 object Schemas {
     var manifestVersion = "1.4.0"
@@ -11,6 +16,7 @@ object Schemas {
     const val installerManifestType = "installer"
     const val defaultLocaleManifestType = "defaultLocale"
     const val versionManifestType = "version"
+    const val customForkOwnerEnv = "KMC_FRK_OWNER"
     const val customToolEnv = "KMC_CRTD_WITH"
     const val customToolURLEnv = "KMC_CRTD_WITH_URL"
     const val manifestVersionRegex = "^(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])(\\.(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])){2}$"
@@ -28,10 +34,10 @@ object Schemas {
 
     private fun languageServer(schema: Schema): String {
         val schemaUrl = when (schema) {
-            Schema.Installer -> installerSchema
-            Schema.DefaultLocale -> defaultLocaleSchema
-            Schema.Locale -> localeSchema
-            Schema.Version -> versionSchema
+            is InstallerManifest -> installerSchema
+            is DefaultLocaleManifest -> defaultLocaleSchema
+            is LocaleManifest -> localeSchema
+            is VersionManifest -> versionSchema
         }
         return "# yaml-language-server: \$schema=$schemaUrl"
     }

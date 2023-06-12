@@ -1,6 +1,7 @@
 package utils
 
 import data.VersionUpdateState
+import github.GitHubUtils
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe

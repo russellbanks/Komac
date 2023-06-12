@@ -1,6 +1,6 @@
 package data.locale
 
-import commands.interfaces.UrlPrompt
+import io.menu.prompts.UrlPrompt
 import data.PreviousManifestData
 import io.ktor.http.Url
 

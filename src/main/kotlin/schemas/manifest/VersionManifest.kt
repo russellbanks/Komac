@@ -1,7 +1,6 @@
 package schemas.manifest
 
 import kotlinx.serialization.Serializable
-import schemas.Schema
 import schemas.Schemas
 
 /**
@@ -14,9 +13,9 @@ data class VersionManifest(
     val defaultLocale: String,
     val manifestType: String,
     val manifestVersion: String
-) {
+) : Schema() {
     override fun toString() = Schemas.buildManifestString(
-        schema = Schema.Version,
+        schema = this,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )
 }

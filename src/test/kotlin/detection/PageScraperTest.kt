@@ -9,6 +9,7 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import kotlinx.coroutines.runBlocking
+import network.WebPageScraper
 
 class PageScraperTest : FunSpec({
     val testHtml = """
@@ -34,7 +35,7 @@ class PageScraperTest : FunSpec({
         }
     }
 
-    val scraper = PageScraper(Url("https://www.example.com"), mockClient)
+    val scraper = WebPageScraper(Url("https://www.example.com"), mockClient)
 
     test("support url should be found") {
         runBlocking {

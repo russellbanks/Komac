@@ -1,14 +1,14 @@
 package data
 
-import detection.files.msi.Msi
-import extensions.getDistinctOrNull
-import extensions.takeIfNotDistinct
 import io.ktor.http.Url
 import schemas.Schemas
 import schemas.installerSorter
 import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import utils.ManifestUtils.updateVersionInString
+import utils.getDistinctOrNull
+import utils.msi.Msi
+import utils.takeIfNotDistinct
 
 object InstallerManifestData {
     fun addInstaller() = with(ManifestData) {
@@ -108,7 +108,7 @@ object InstallerManifestData {
         )
     }
 
-    fun createInstallerManifest(manifestOverride: String? = null): String = with(ManifestData) {
+    fun createInstallerManifest(manifestOverride: String? = null): InstallerManifest = with(ManifestData) {
         val previousInstallerManifest = PreviousManifestData.installerManifest
         return getInstallerManifestBase(previousInstallerManifest).copy(
             packageIdentifier = packageIdentifier,
@@ -154,7 +154,7 @@ object InstallerManifestData {
             installers = installers.removeNonDistinctKeys(installers).sortedWith(installerSorter),
             manifestType = Schemas.installerManifestType,
             manifestVersion = manifestOverride ?: Schemas.manifestVersion
-        ).toString()
+        )
     }
 
     private fun getInstallerManifestBase(

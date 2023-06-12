@@ -1,8 +1,8 @@
 package data.shared
 
-import data.GitHubImpl
+import github.GitHubImpl
 import data.VersionUpdateState
-import extensions.versionStringComparator
+import utils.versionStringComparator
 
 fun getUpdateState(
     packageIdentifier: String,

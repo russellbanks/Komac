@@ -1,10 +1,9 @@
 package utils
 
 import data.ManifestData
-import detection.files.msi.Msi
-import detection.files.msix.Msix
-import detection.files.msix.MsixBundle
-import extensions.extension
+import utils.msi.Msi
+import utils.msix.Msix
+import utils.msix.MsixBundle
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8

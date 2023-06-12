@@ -1,7 +1,7 @@
 package data.installer
 
-import commands.interfaces.TextPrompt
-import commands.interfaces.ValidationRules
+import io.menu.prompts.TextPrompt
+import io.menu.prompts.ValidationRules
 import data.ManifestData
 import data.PreviousManifestData
 

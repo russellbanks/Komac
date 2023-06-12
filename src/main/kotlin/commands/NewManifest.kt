@@ -5,7 +5,6 @@ import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.option
 import data.DefaultLocaleManifestData
-import data.GitHubImpl
 import data.InstallerManifestData
 import data.ManifestData
 import data.PreviousManifestData
@@ -34,22 +33,21 @@ import data.shared.PackageVersion
 import data.shared.Publisher
 import data.shared.Url.installerDownloadPrompt
 import data.shared.getUpdateState
-import extensions.versionStringComparator
-import input.ExitCode
-import input.FileWriter.writeFiles
-import input.ManifestResultOption
-import input.Switch
-import input.menu.radioMenu
+import github.GitHubImpl
+import github.GitHubUtils
+import io.ExitCode
+import io.FileWriter.writeFiles
+import io.ManifestResultOption
+import io.Switch
+import io.menu.radioMenu
 import kotlinx.coroutines.runBlocking
-import schemas.Schema
 import schemas.Schemas
-import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
-import schemas.manifest.LocaleManifest
+import schemas.manifest.Schema
 import token.Token
 import token.TokenStore
-import utils.GitHubUtils
 import utils.ManifestUtils.formattedManifestLinesSequence
+import utils.versionStringComparator
 
 class NewManifest : CliktCommand(name = "new") {
     private val packageIdentifierParam: String? by option(
@@ -130,7 +128,7 @@ class NewManifest : CliktCommand(name = "new") {
             description = prompt(Description.Long)
             releaseNotesUrl = gitHubDetection?.releaseNotesUrl ?: prompt(ReleaseNotesUrl)
             val files = createFiles()
-            for (manifest in files.values) {
+            for (manifest in files.values.map(Schema::toString)) {
                 formattedManifestLinesSequence(manifest, colors).forEach(::echo)
             }
             info("What would you like to do with $packageIdentifier $packageVersion?")
@@ -145,7 +143,8 @@ class NewManifest : CliktCommand(name = "new") {
                             files = files,
                             packageIdentifier = packageIdentifier,
                             packageVersion = packageVersion,
-                            updateState = updateState
+                            updateState = updateState,
+                            terminal = currentContext.terminal
                         ).also { success("Pull request created: ${it.htmlUrl}") }
                     }
                     ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
@@ -155,7 +154,7 @@ class NewManifest : CliktCommand(name = "new") {
         }
     }
 
-    private suspend fun createFiles(): Map<String, String> = with(ManifestData) {
+    private suspend fun createFiles(): Map<String, Schema> = with(ManifestData) {
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier) to InstallerManifestData.createInstallerManifest(),
             GitHubUtils.getDefaultLocaleManifestName(
@@ -164,19 +163,10 @@ class NewManifest : CliktCommand(name = "new") {
             ) to DefaultLocaleManifestData.createDefaultLocaleManifest(),
             GitHubUtils.getVersionManifestName(packageIdentifier) to VersionManifestData.createVersionManifest()
         ) + PreviousManifestData.remoteLocaleData?.map { localeManifest ->
-            GitHubUtils.getLocaleManifestName(
-                packageIdentifier,
-                localeManifest.packageLocale
-            ) to Schemas.buildManifestString(
-                Schema.Locale,
-                EncodeConfig.yamlDefault.encodeToString(
-                    LocaleManifest.serializer(),
-                    localeManifest.copy(
-                        packageIdentifier = packageIdentifier,
-                        packageVersion = packageVersion,
-                        manifestVersion = Schemas.manifestVersion
-                    )
-                )
+            GitHubUtils.getLocaleManifestName(packageIdentifier, localeManifest.packageLocale) to localeManifest.copy(
+                packageIdentifier = packageIdentifier,
+                packageVersion = packageVersion,
+                manifestVersion = Schemas.manifestVersion
             )
         }.orEmpty()
     }

@@ -1,5 +1,5 @@
 
-import detection.ParameterUrls
+import utils.UrlsToInstallerMatcher
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.http.Url
@@ -31,7 +31,7 @@ class ParameterUrlTests : FunSpec({
                 installerUserX64,
                 previousInstallerMachineX64
             )
-            ParameterUrls.matchInstallers(newInstallers, previousInstallers) shouldBe mapOf(
+            UrlsToInstallerMatcher.matchInstallers(newInstallers, previousInstallers) shouldBe mapOf(
                 installerUserX86 to installerUserX86,
                 previousInstallerMachineX86 to installerX86,
                 installerUserX64 to installerUserX64,
@@ -42,7 +42,7 @@ class ParameterUrlTests : FunSpec({
         test("empty map is returned if both newInstallers and previousInstallers are empty") {
             val newInstallers = emptyList<InstallerManifest.Installer>()
             val previousInstallers = emptyList<InstallerManifest.Installer>()
-            ParameterUrls.matchInstallers(newInstallers, previousInstallers) shouldBe emptyMap()
+            UrlsToInstallerMatcher.matchInstallers(newInstallers, previousInstallers) shouldBe emptyMap()
         }
     }
 })

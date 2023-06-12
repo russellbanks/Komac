@@ -1,12 +1,11 @@
 package schemas.manifest
 
-import input.Switch
+import io.Switch
 import io.ktor.http.Url
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import schemas.Schema
 import schemas.Schemas
 
 /**
@@ -53,7 +52,7 @@ data class InstallerManifest(
     val installers: List<Installer> = emptyList(),
     val manifestType: String,
     val manifestVersion: String
-) {
+) : Schema() {
     enum class Platform {
         @SerialName("Windows.Desktop") WindowsDesktop,
         @SerialName("Windows.Universal") WindowsUniversal;
@@ -346,7 +345,7 @@ data class InstallerManifest(
     }
 
     override fun toString() = Schemas.buildManifestString(
-        schema = Schema.Installer,
+        schema = this,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )
 }
