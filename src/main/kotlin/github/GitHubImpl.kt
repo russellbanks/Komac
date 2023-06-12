@@ -8,6 +8,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import com.github.ajalt.mordant.terminal.YesNoPrompt
 import data.PreviousManifestData
 import data.VersionUpdateState
+import io.menu.yesNoMenu
 import java.io.IOException
 import network.KtorGitHubConnector
 import org.kohsuke.github.GHContent
@@ -160,8 +161,8 @@ object GitHubImpl {
                 )
             else {
                 terminal.warning(Errors.noManifestChanges)
-                if (YesNoPrompt("Would you still want to continue?", terminal = terminal).ask() != true)
-                    throw ProgramResult(0)
+                terminal.info("Do you want to create a pull request anyway?")
+                if (!terminal.yesNoMenu(default = false).prompt()) throw ProgramResult(0)
             }
         }
         commitFiles(
