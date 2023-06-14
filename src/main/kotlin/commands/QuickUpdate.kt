@@ -237,7 +237,7 @@ class QuickUpdate : CliktCommand(
         ).forEach { (_, newInstaller) ->
             architecture = newInstaller.architecture
             installerUrl = newInstaller.installerUrl
-            installerSha256 = newInstaller.installerSha256.uppercase()
+            installerSha256 = newInstaller.installerSha256
             upgradeBehavior = newInstaller.upgradeBehavior
             releaseDate = newInstaller.releaseDate
             scope = newInstaller.scope
