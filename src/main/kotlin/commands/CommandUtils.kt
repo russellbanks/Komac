@@ -41,7 +41,11 @@ suspend fun CliktCommand.prompt(textPrompt: TextPrompt, parameter: String? = nul
 }
 
 suspend fun <T> CliktCommand.prompt(listPrompt: ListPrompt<T>, parameter: String? = null): List<T> {
-    return currentContext.terminal.prompt(listPrompt, parameter, transform = { listPrompt.validationRules.transform(it) })
+    return currentContext.terminal.prompt(
+        listPrompt,
+        parameter,
+        transform = { listPrompt.validationRules.transform(it) }
+    )
 }
 
 suspend fun CliktCommand.prompt(urlPrompt: UrlPrompt, parameter: String? = null): Url {

@@ -37,7 +37,12 @@ object HttpUtils {
         fileSystem.sink(path).buffer().use { sink ->
             var lastModified: LocalDate? = null
             prepareGet(url).execute { httpResponse ->
-                lastModified = httpResponse.lastModified()?.toInstant()?.toKotlinInstant()?.toLocalDateTime(TimeZone.UTC)?.date
+                lastModified = httpResponse
+                    .lastModified()
+                    ?.toInstant()
+                    ?.toKotlinInstant()
+                    ?.toLocalDateTime(TimeZone.UTC)
+                    ?.date
                 val channel: ByteReadChannel = httpResponse.body()
                 while (!channel.isClosedForRead) {
                     val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())

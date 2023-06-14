@@ -137,7 +137,6 @@ object GitHubImpl {
         }
     }
 
-
     fun commitAndPullRequest(
         wingetPkgsFork: GHRepository,
         files: Map<String, Manifest>,
@@ -193,10 +192,10 @@ object GitHubImpl {
         while (true) {
             try {
                 return ghRepository.createPullRequest(
-                    /* title = */ GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState),
-                    /* head = */ "$forkOwner:${pullRequestBranch?.ref}",
-                    /* base = */ ghRepository.defaultBranch,
-                    /* body = */ GitHubUtils.getPullRequestBody()
+                    GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState),
+                    "$forkOwner:${pullRequestBranch?.ref}",
+                    ghRepository.defaultBranch,
+                    GitHubUtils.getPullRequestBody()
                 )
             } catch (ioException: IOException) {
                 if (++count >= maxTries) {

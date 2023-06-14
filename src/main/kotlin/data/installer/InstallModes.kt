@@ -16,5 +16,6 @@ object InstallModes : CheckMenuPrompt<InstallerManifest.InstallModes> {
             ?.let { installerManifest ->
                 installerManifest.installModes
                     ?: installerManifest.installers.getOrNull(ManifestData.installers.size)?.installModes
-            }.orEmpty()
+            }
+            .orEmpty()
 }

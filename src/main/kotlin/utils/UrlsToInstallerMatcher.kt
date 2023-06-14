@@ -48,20 +48,34 @@ object UrlsToInstallerMatcher {
 
         for (previousInstaller in previousInstallers) {
             val matchingConditions = sequenceOf<(InstallerManifest.Installer) -> Boolean>(
-                { it.architecture == previousInstaller.architecture &&
+                {
+                    it.architecture == previousInstaller.architecture &&
                         it.installerType == previousInstaller.installerType &&
-                        it.scope == previousInstaller.scope },
-                { it.architecture == previousInstaller.architecture
-                        && it.installerType == previousInstaller.installerType
-                        && it.scope == null },
-                { it.architecture == previousInstaller.architecture &&
+                        it.scope == previousInstaller.scope
+                },
+                {
+                    it.architecture == previousInstaller.architecture &&
+                        it.installerType == previousInstaller.installerType &&
+                        it.scope == null
+                },
+                {
+                    it.architecture == previousInstaller.architecture &&
                         it.installerType == null &&
-                        it.scope == previousInstaller.scope },
-                { it.architecture == previousInstaller.architecture &&
-                        it.installerType == previousInstaller.installerType },
-                { it.installerType == previousInstaller.installerType },
-                { it.architecture == previousInstaller.architecture },
-                { it.installerUrl.extension == previousInstaller.installerUrl.extension }
+                        it.scope == previousInstaller.scope
+                },
+                {
+                    it.architecture == previousInstaller.architecture &&
+                        it.installerType == previousInstaller.installerType
+                },
+                {
+                    it.installerType == previousInstaller.installerType
+                },
+                {
+                    it.architecture == previousInstaller.architecture
+                },
+                {
+                    it.installerUrl.extension == previousInstaller.installerUrl.extension
+                }
             )
 
             val newInstaller = matchingConditions

@@ -156,11 +156,11 @@ class NewManifest : CliktCommand(name = "new") {
     private suspend fun createFiles(): Map<String, Manifest> = with(ManifestData) {
         return mapOf(
             GitHubUtils.getInstallerManifestName(packageIdentifier)
-                    to InstallerManifestData.createInstallerManifest(manifestOverride),
+                to InstallerManifestData.createInstallerManifest(manifestOverride),
             GitHubUtils.getDefaultLocaleManifestName(identifier = packageIdentifier, defaultLocale = defaultLocale)
-                    to DefaultLocaleManifestData.createDefaultLocaleManifest(manifestOverride),
+                to DefaultLocaleManifestData.createDefaultLocaleManifest(manifestOverride),
             GitHubUtils.getVersionManifestName(packageIdentifier)
-                    to VersionManifestData.createVersionManifest(manifestOverride)
+                to VersionManifestData.createVersionManifest(manifestOverride)
         ) + PreviousManifestData.remoteLocaleData?.map { localeManifest ->
             GitHubUtils.getLocaleManifestName(packageIdentifier, localeManifest.packageLocale) to localeManifest.copy(
                 packageIdentifier = packageIdentifier,

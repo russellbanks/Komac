@@ -77,7 +77,9 @@ class RemoveVersion : CliktCommand(
             ?.find { it.name == ManifestData.packageVersion }
             ?: throw doesNotExistError(ManifestData.packageIdentifier, ManifestData.packageVersion, colors = colors)
         val deletionReason = deletionReasonParam ?: currentContext.terminal.promptForDeletionReason()
-        val shouldRemoveManifest = if (submit || Environment.isCI) true else {
+        val shouldRemoveManifest = if (submit || Environment.isCI) {
+            true
+        } else {
             confirm("Would you like to make a pull request to remove ${ManifestData.packageIdentifier} ${ManifestData.packageVersion}?")
                 ?: throw ProgramResult(ExitCode.CtrlC)
         }
@@ -91,10 +93,9 @@ class RemoveVersion : CliktCommand(
         ) ?: return@runBlocking
         val directoryContent: MutableList<GHContent> = forkRepository
             .getDirectoryContent(
-                GitHubUtils.getPackageVersionsPath(
-                ManifestData.packageIdentifier,
-                ManifestData.packageVersion
-            ), ref.ref)
+                GitHubUtils.getPackageVersionsPath(ManifestData.packageIdentifier, ManifestData.packageVersion),
+                ref.ref
+            )
         val progress = currentContext.terminal.progressAnimation {
             text("Deleting files")
             percentage()

@@ -184,7 +184,6 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Termi
         }
     }.first()
 
-
     @OptIn(ExperimentalStdlibApi::class)
     private fun Terminal.nestedInstallerTypePrompt(
         chosenZipEntries: List<Path>,

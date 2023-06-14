@@ -58,7 +58,7 @@ object Url {
     private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url): Url {
         val redirectedUrl = installerUrl.getRedirectedUrl()
         val shouldUseRedirectedUrl = redirectedUrl != installerUrl &&
-                !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
+            !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
         return if (shouldUseRedirectedUrl) {
             println(colors.brightYellow(redirectFound))
             println(colors.cyan("Discovered URL: $redirectedUrl"))
@@ -107,7 +107,9 @@ object Url {
                 InstallerManifest.InstallerType.APPX.toString() -> msix = Msix(downloadedFile.path)
                 MsixBundle.msixBundleConst,
                 MsixBundle.appxBundleConst -> msixBundle = MsixBundle(downloadedFile.path)
-                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) msi = Msi(downloadedFile.path, fileSystem)
+                InstallerManifest.InstallerType.MSI.toString() -> if (Platform.isWindows()) {
+                    msi = Msi(downloadedFile.path, fileSystem)
+                }
                 InstallerManifest.InstallerType.ZIP.toString() -> zip = Zip(
                     zip = downloadedFile.path,
                     terminal = this@downloadInstaller
@@ -144,7 +146,7 @@ object Url {
                                     if (value.size > 1) newText = "${text}s"
                                     newValue = value.joinToString()
                                 }
-                                cell(colors.brightWhite("${" ".repeat(Prompts.optionIndent)} $newText: $newValue"))
+                                cell(colors.brightWhite("${" ".repeat(3)} $newText: $newValue"))
                             }
                         }
                     }

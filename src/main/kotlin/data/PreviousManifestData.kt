@@ -68,7 +68,12 @@ object PreviousManifestData {
             remoteLocaleDataDeferred = scope.async {
                 directoryPath
                     ?.filter { it.name matches "${Regex.escape(packageIdentifier)}.locale\\..*\\.yaml".toRegex() }
-                    ?.filterNot { ghContent -> previousVersionDataDeferred.await()?.defaultLocale?.let(ghContent.name::contains) == true }
+                    ?.filterNot { ghContent ->
+                        previousVersionDataDeferred
+                            .await()
+                            ?.defaultLocale
+                            ?.let(ghContent.name::contains) == true
+                    }
                     ?.mapNotNull { ghContent ->
                         microsoftWinGetPkgs.getFileContent(ghContent.path)
                             ?.read()

@@ -1,5 +1,6 @@
 package github
 
+import Environment
 import com.russellbanks.Komac.BuildConfig
 import data.PreviousManifestData
 import data.VersionUpdateState
@@ -10,7 +11,6 @@ import kotlinx.datetime.Clock
 import okio.ByteString.Companion.encodeUtf8
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GHTreeEntry
-import schemas.Schemas
 
 object GitHubUtils {
     /**
@@ -127,15 +127,13 @@ object GitHubUtils {
             "apple", "banana", "blueberries", "cherries", "grapes", "green_apple", "kiwi_fruit", "lemon", "mango",
             "melon", "peach", "pear", "pineapple", "strawberry", "tangerine", "watermelon"
         )
-        val customTool: String? = System.getenv(Schemas.customToolEnv)
-        val customToolURL: String? = System.getenv(Schemas.customToolURLEnv)
         return buildString {
             append("### Pull request has been created with ")
             append(
-                if (customTool != null && customToolURL != null) {
-                    "[$customTool]($customToolURL)"
+                if (Environment.customToolName != null && Environment.customToolURL != null) {
+                    "[${Environment.customToolName}](${Environment.customToolURL})"
                 } else {
-                    customTool ?: "[${BuildConfig.appName}](${BuildConfig.projectUrl}) v${BuildConfig.appVersion}"
+                    Environment.customToolName ?: "[${BuildConfig.appName}](${BuildConfig.projectUrl}) v${BuildConfig.appVersion}"
                 }
             )
             append(" ")

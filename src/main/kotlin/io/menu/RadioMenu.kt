@@ -62,7 +62,6 @@ class RadioMenuBuilder<T> {
     }
 }
 
-
 fun <T> Terminal.radioMenu(block: RadioMenuBuilder<T>.() -> Unit): RadioMenu<T> {
     val builder = RadioMenuBuilder<T>().apply(block)
     val items = builder.buildMenuItems()
