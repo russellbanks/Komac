@@ -17,6 +17,6 @@ object FileUtils {
         val formattedDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).run {
             "$year.$monthNumber.$dayOfMonth-$hour.$minute.$second"
         }
-        return tempDirectory / "$identifier v$version - $formattedDate.${url.extension}"
+        return tempDirectory / "$identifier $version - $formattedDate.${url.extension}"
     }
 }

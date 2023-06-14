@@ -6,24 +6,25 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
-import data.DefaultLocaleManifestData
 import data.InstallerManifestData
-import data.ManifestData
 import data.PreviousManifestData
-import data.VersionManifestData
+import data.VersionUpdateState
 import data.installer.InstallerScope
 import data.installer.InstallerType
+import data.shared.InstallerUrl
+import data.shared.InstallerUrl.downloadInstaller
+import data.shared.InstallerUrl.msixBundleDetection
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
-import data.shared.Url.installerDownloadPrompt
-import data.shared.getUpdateState
 import github.GitHubDetection
 import github.GitHubImpl
+import github.GitHubImpl.promptIfPullRequestExists
 import github.GitHubUtils
 import io.FileWriter
 import io.ManifestResultOption
@@ -33,9 +34,9 @@ import kotlinx.coroutines.runBlocking
 import network.Http
 import network.HttpUtils.downloadFile
 import network.HttpUtils.getDownloadProgressBar
+import network.WebPageScraper
 import okio.FileSystem
 import okio.Path.Companion.toPath
-import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import schemas.AdditionalMetadata
 import schemas.Schemas
@@ -63,12 +64,14 @@ class QuickUpdate : CliktCommand(
 ) {
     private val packageIdentifierParam: String? by option(
         "-i", "--id", "--package-identifier",
-        help = "Package identifier. Example: Publisher.Package"
+        help = "Package identifier. Example: Publisher.Package",
+        envvar = "PACKAGE_IDENTIFIER",
     )
 
     private val packageVersionParam: String? by option(
         "-v", "--version", "--package-version",
-        help = "Package version. Example: 1.2.3"
+        help = "Package version. Example: 1.2.3",
+        envvar = "PACKAGE_VERSION"
     )
 
     private val urls: List<Url>? by option(
@@ -76,11 +79,11 @@ class QuickUpdate : CliktCommand(
         help = "List of new installer URLs. Multiple URLs are delimited by a comma (,)"
     ).convert { Url(it) }.split(",")
 
-    private val manifestOverride: String? by option(
+    private val manifestOverride: String by option(
         "-mv", "--manifest-version", "--manifest-override",
         help = "Overrides the manifest version.",
         envvar = "MANIFEST_VERSION"
-    ).check { Regex(Schemas.manifestVersionRegex) matches it }
+    ).default(Schemas.manifestVersion).check { Regex(Schemas.manifestVersionRegex) matches it }
 
     private val submit: Boolean by option(
         "-s", "--submit",
@@ -97,7 +100,14 @@ class QuickUpdate : CliktCommand(
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
     }
 
-    private lateinit var microsoftWingetPkgs: GHRepository
+    private var defaultLocale: String? = null
+    private var installers = emptyList<InstallerManifest.Installer>()
+    private var gitHubDetection: GitHubDetection? = null
+    private var pageScraper: WebPageScraper? = null
+    private lateinit var packageIdentifier: String
+    private lateinit var packageVersion: String
+    private lateinit var updateState: VersionUpdateState
+    private lateinit var installerUrl: Url
 
     @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking {
@@ -106,26 +116,39 @@ class QuickUpdate : CliktCommand(
         if (Environment.isCI) {
             info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
         }
-        ManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
+        packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
         if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
-        microsoftWingetPkgs = GitHubImpl.microsoftWinGetPkgs
-        ManifestData.allVersions = GitHubUtils.getAllVersions(microsoftWingetPkgs, ManifestData.packageIdentifier)
-            ?.also { info("Found ${ManifestData.packageIdentifier} in the winget-pkgs repository") }
-            ?: throw doesNotExistError(ManifestData.packageIdentifier, isUpdate = true, colors = colors)
-        val latestVersion = (ManifestData.allVersions as List<String>).maxWith(versionStringComparator)
-        info("Found latest version: $latestVersion")
-        PreviousManifestData.init(ManifestData.packageIdentifier, latestVersion, microsoftWingetPkgs)
-        ManifestData.packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
-        GitHubImpl.promptIfPullRequestExists(
-            identifier = ManifestData.packageIdentifier,
-            version = ManifestData.packageVersion,
-            terminal = currentContext.terminal
+        val allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
+            ?: throw doesNotExistError(packageIdentifier, isUpdate = true, colors = colors)
+        val latestVersion = allVersions.maxWith(versionStringComparator)
+        val previousManifestData = PreviousManifestData(packageIdentifier, latestVersion, GitHubImpl.microsoftWinGetPkgs)
+        info("Latest version of $packageIdentifier: $latestVersion")
+        packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
+        currentContext.terminal.promptIfPullRequestExists(identifier = packageIdentifier, version = packageVersion)
+        updateState = when (packageVersion) {
+            in allVersions -> VersionUpdateState.UpdateVersion
+            maxOf(packageVersion, latestVersion, versionStringComparator) -> VersionUpdateState.NewVersion
+            else -> VersionUpdateState.AddVersion
+        }
+        currentContext.terminal.loopThroughInstallers(
+            parameterUrls = urls?.toSet(),
+            previousManifestData = previousManifestData
         )
-        ManifestData.updateState = getUpdateState(
-            ManifestData.packageIdentifier,
-            ManifestData.packageVersion, latestVersion)
-        currentContext.terminal.loopThroughInstallers(parameterUrls = urls?.toSet())
-        val files = createFiles(ManifestData.packageIdentifier, ManifestData.packageVersion, ManifestData.defaultLocale)
+        val files = Manifest.createFiles(
+            packageIdentifier = packageIdentifier,
+            packageVersion = packageVersion,
+            defaultLocale = defaultLocale,
+            manifestOverride = manifestOverride,
+            additionalMetadata = additionalMetadata,
+            license = previousManifestData.defaultLocaleManifest!!.license,
+            publisher = previousManifestData.defaultLocaleManifest!!.publisher,
+            shortDescription = previousManifestData.defaultLocaleManifest!!.shortDescription,
+            packageName = previousManifestData.defaultLocaleManifest!!.packageName,
+            installers = installers,
+            gitHubDetection = gitHubDetection,
+            pageScraper = pageScraper,
+            previousManifestData = previousManifestData
+        )
         for (manifest in files.values.map(Manifest::toString)) {
             formattedManifestLinesSequence(manifest, colors).forEach(::echo)
         }
@@ -133,13 +156,14 @@ class QuickUpdate : CliktCommand(
             GitHubImpl.commitAndPullRequest(
                 GitHubImpl.getWingetPkgsFork(currentContext.terminal),
                 files = files,
-                packageIdentifier = ManifestData.packageIdentifier,
-                packageVersion = ManifestData.packageVersion,
-                updateState = ManifestData.updateState,
+                packageIdentifier = packageIdentifier,
+                packageVersion = packageVersion,
+                updateState = updateState,
+                previousManifestData = previousManifestData,
                 terminal = currentContext.terminal
             ).also { success("Pull request created: ${it.htmlUrl}") }
         } else if (!Environment.isCI) {
-            info("What would you like to do with ${ManifestData.packageIdentifier} ${ManifestData.packageVersion}?")
+            info("What would you like to do with $packageIdentifier $packageVersion?")
             currentContext.terminal.radioMenu<ManifestResultOption> {
                 items = ManifestResultOption.entries
                 default = ManifestResultOption.PullRequest
@@ -148,9 +172,10 @@ class QuickUpdate : CliktCommand(
                     ManifestResultOption.PullRequest -> GitHubImpl.commitAndPullRequest(
                         GitHubImpl.getWingetPkgsFork(currentContext.terminal),
                         files = files,
-                        packageIdentifier = ManifestData.packageIdentifier,
-                        packageVersion = ManifestData.packageVersion,
-                        updateState = ManifestData.updateState,
+                        packageIdentifier = packageIdentifier,
+                        packageVersion = packageVersion,
+                        updateState = updateState,
+                        previousManifestData = previousManifestData,
                         terminal = currentContext.terminal
                     ).also { success("Pull request created: ${it.htmlUrl}") }
                     ManifestResultOption.WriteToFiles -> FileWriter.writeFiles(files, currentContext.terminal)
@@ -159,21 +184,24 @@ class QuickUpdate : CliktCommand(
             }
         } else {
             FileWriter.writeFilesToDirectory(
-                directory = System.getProperty("user.dir").toPath() / "${ManifestData.packageIdentifier} version ${ManifestData.packageVersion}",
+                directory = System.getProperty("user.dir").toPath() / "$packageIdentifier version $packageVersion",
                 files = files,
                 terminal = currentContext.terminal
             )
         }
     }
 
-    private suspend fun Terminal.loopThroughInstallers(parameterUrls: Set<Url>? = null) = with(ManifestData) {
+    private suspend fun Terminal.loopThroughInstallers(
+        parameterUrls: Set<Url>? = null,
+        previousManifestData: PreviousManifestData,
+    ) {
         if (parameterUrls != null) {
-            loopParameterUrls(parameterUrls)
+            loopParameterUrls(parameterUrls, previousManifestData)
         } else if (Environment.isCI) {
             throw CliktError(colors.danger("No installers have been provided"), statusCode = 1)
         } else {
-            val previousInstallerManifest = PreviousManifestData.installerManifest
-            previousInstallerManifest?.installers?.sortedWith(installerSorter)?.forEachIndexed { index, installer ->
+            val previousInstallerManifest = previousManifestData.installerManifest.await()!!
+            previousInstallerManifest.installers.sortedWith(installerSorter).forEachIndexed { index, installer ->
                 info("Installer Entry ${index.inc()}/${previousInstallerManifest.installers.size}")
                 listOf(
                     "Architecture" to installer.architecture,
@@ -186,24 +214,54 @@ class QuickUpdate : CliktCommand(
                     }
                 }
                 echo()
-                installerDownloadPrompt()
-                if (!skipAddInstaller) InstallerManifestData.addInstaller() else skipAddInstaller = false
+                installerUrl = prompt(InstallerUrl)
+                val installerResult = downloadInstaller(packageIdentifier, packageVersion, installerUrl)
+                if (installers.map(InstallerManifest.Installer::installerUrl).contains(installerUrl)) {
+                    installers += installers.first { it.installerUrl == installerUrl }
+                } else {
+                    if (gitHubDetection == null && installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
+                        gitHubDetection = GitHubDetection(installerUrl)
+                    }
+                    if (pageScraper == null && !installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
+                        pageScraper = WebPageScraper(installerUrl)
+                    }
+                    msixBundleDetection(installerResult.msixBundle)
+                    InstallerManifestData.addInstaller(
+                        packageVersion = packageVersion,
+                        installerUrl = installerUrl,
+                        installerSha256 = installerResult.installerSha256,
+                        installers = installers,
+                        additionalMetadata = additionalMetadata,
+                        architecture = installer.architecture,
+                        msix = installerResult.msix,
+                        msi = installerResult.msi,
+                        msixBundle = installerResult.msixBundle,
+                        gitHubDetection = gitHubDetection,
+                        zip = installerResult.zip,
+                        previousManifestData = previousManifestData
+                    ) {
+                        installers += it
+                    }
+                }
             }
         }
     }
 
-    private suspend fun Terminal.loopParameterUrls(parameterUrls: Set<Url>) = with(ManifestData) {
-        val previousInstallerManifest = PreviousManifestData.installerManifest as InstallerManifest
+    private suspend fun Terminal.loopParameterUrls(
+        parameterUrls: Set<Url>,
+        previousManifestData: PreviousManifestData
+    ) {
+        val previousInstallerManifest = previousManifestData.installerManifest.await()!!
         val previousInstallers = previousInstallerManifest.installers
         val previousUrls = previousInstallers.map(InstallerManifest.Installer::installerUrl)
         UrlsToInstallerMatcher.assertUniqueUrlsCount(parameterUrls, previousUrls.toSet(), colors)
         UrlsToInstallerMatcher.assertUrlsValid(parameterUrls, colors)
         val installerResults = mutableListOf<InstallerManifest.Installer>()
         val progressList = parameterUrls.map { url -> getDownloadProgressBar(url).apply(ProgressAnimation::start) }
+        gitHubDetection = parameterUrls
+            .firstOrNull { it.host.equals(GitHubDetection.gitHubWebsite, ignoreCase = true) }
+            ?.let(::GitHubDetection)
         parameterUrls.forEachIndexed { index, url ->
-            gitHubDetection = parameterUrls
-                .firstOrNull { it.host.equals(GitHubDetection.gitHubWebsite, ignoreCase = true) }
-                ?.let(::GitHubDetection)
             val downloadedFile = Http.client.downloadFile(url, packageIdentifier, packageVersion, progressList[index])
             val fileAnalyser = FileAnalyser(downloadedFile.path)
             installerResults += try {
@@ -235,43 +293,25 @@ class QuickUpdate : CliktCommand(
                     )
                 }
         ).forEach { (_, newInstaller) ->
-            architecture = newInstaller.architecture
-            installerUrl = newInstaller.installerUrl
-            installerSha256 = newInstaller.installerSha256
-            upgradeBehavior = newInstaller.upgradeBehavior
-            releaseDate = newInstaller.releaseDate
-            scope = newInstaller.scope
-            installerType = newInstaller.installerType
-            InstallerManifestData.addInstaller()
-        }
-    }
-
-    private suspend fun createFiles(
-        packageIdentifier: String,
-        packageVersion: String,
-        defaultLocale: String?
-    ): Map<String, Manifest> {
-        val allLocale = additionalMetadata?.locales?.find { it.name.equals("all", ignoreCase = true) }
-        return mapOf(
-            GitHubUtils.getInstallerManifestName(packageIdentifier)
-                to InstallerManifestData.createInstallerManifest(manifestOverride),
-            GitHubUtils.getDefaultLocaleManifestName(packageIdentifier, defaultLocale)
-                to DefaultLocaleManifestData.createDefaultLocaleManifest(manifestOverride),
-            GitHubUtils.getVersionManifestName(packageIdentifier)
-                to VersionManifestData.createVersionManifest(manifestOverride)
-        ) + PreviousManifestData.remoteLocaleData?.map { localeManifest ->
-            val currentLocaleMetadata = additionalMetadata?.locales
-                ?.find { it.name.equals(localeManifest.packageLocale, ignoreCase = true) }
-            GitHubUtils.getLocaleManifestName(packageIdentifier, localeManifest.packageLocale) to localeManifest.copy(
-                packageIdentifier = packageIdentifier,
+            InstallerManifestData.addInstaller(
                 packageVersion = packageVersion,
-                manifestVersion = manifestOverride ?: Schemas.manifestVersion,
-                releaseNotes = allLocale?.releaseNotes ?: currentLocaleMetadata?.releaseNotes,
-                releaseNotesUrl = allLocale?.releaseNotesUrl ?: currentLocaleMetadata?.releaseNotesUrl,
-                documentations = allLocale?.documentations
-                    ?: currentLocaleMetadata?.documentations
-                    ?: localeManifest.documentations
-            )
-        }.orEmpty()
+                installerUrl = newInstaller.installerUrl,
+                installerSha256 = newInstaller.installerSha256,
+                installerType = newInstaller.installerType,
+                scope = newInstaller.scope,
+                releaseDate = newInstaller.releaseDate,
+                upgradeBehavior = newInstaller.upgradeBehavior,
+                installers = installers,
+                architecture = newInstaller.architecture,
+                msix = null,
+                msi = null,
+                zip = null,
+                msixBundle = null,
+                gitHubDetection = null,
+                previousManifestData = previousManifestData
+            ) {
+                installers += it
+            }
+        }
     }
 }

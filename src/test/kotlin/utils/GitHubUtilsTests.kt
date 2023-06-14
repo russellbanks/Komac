@@ -16,6 +16,10 @@ import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GHTree
 import org.kohsuke.github.GHTreeEntry
 import java.io.IOException
+import schemas.manifest.DefaultLocaleManifest
+import schemas.manifest.InstallerManifest
+import schemas.manifest.LocaleManifest
+import schemas.manifest.VersionManifest
 
 class GitHubUtilsTests : FunSpec({
     context("get all versions tests") {
@@ -98,11 +102,11 @@ class GitHubUtilsTests : FunSpec({
 
     context("get manifest names") {
         test("get installer manifest name") {
-            GitHubUtils.getInstallerManifestName("Package.Identifier") shouldBe "Package.Identifier.installer.yaml"
+            InstallerManifest.getFileName("Package.Identifier") shouldBe "Package.Identifier.installer.yaml"
         }
 
         test("get default locale manifest name") {
-            GitHubUtils.getDefaultLocaleManifestName(
+            DefaultLocaleManifest.getFileName(
                 identifier = "Package.Identifier",
                 defaultLocale = "en-US",
                 previousDefaultLocale = "en-US"
@@ -110,14 +114,14 @@ class GitHubUtilsTests : FunSpec({
         }
 
         test("get locale manifest name") {
-            GitHubUtils.getLocaleManifestName(
+            LocaleManifest.getFileName(
                 identifier = "Package.Identifier",
                 locale = "en-CA"
             ) shouldBe "Package.Identifier.locale.en-CA.yaml"
         }
 
         test("get version manifest name") {
-            GitHubUtils.getVersionManifestName("Package.Identifier") shouldBe "Package.Identifier.yaml"
+            VersionManifest.getFileName("Package.Identifier") shouldBe "Package.Identifier.yaml"
         }
     }
 

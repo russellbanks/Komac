@@ -3,47 +3,55 @@ package utils
 import Errors
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
-import com.github.ajalt.mordant.terminal.YesNoPrompt
 import io.ExitCode
 import io.Prompts
 import io.menu.checkMenu
 import io.menu.radioMenu
+import io.menu.yesNoMenu
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
 import okio.openZip
 import schemas.manifest.InstallerManifest
-import utils.msi.Msi
 import utils.msix.MsixBundle
 
-class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Terminal) {
-    var nestedInstallerType: InstallerManifest.NestedInstallerType? = null
+class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
+    var nestedInstallerType: InstallerManifest.InstallerType? = null
     var nestedInstallerFiles: List<InstallerManifest.NestedInstallerFiles>? = null
-    private var installerTypeCounts: Map<String, Int>
+
+    private val validExtensionsList = listOf(
+        InstallerManifest.InstallerType.MSIX.toString(),
+        InstallerManifest.InstallerType.APPX.toString(),
+        InstallerManifest.InstallerType.MSI.toString(),
+        InstallerManifest.InstallerType.EXE.toString(),
+        InstallerManifest.InstallerType.ZIP.toString(),
+        MsixBundle.msixBundleConst,
+        MsixBundle.appxBundleConst,
+    )
+
+    private val zipFileSystem = fileSystem.openZip(zip)
+
+    private val identifiedFiles = zipFileSystem.listRecursively("/".toPath())
+        .filter { zipEntry -> zipEntry.extension.lowercase() in validExtensionsList }
+        .toList()
+
+    private val installerTypeCounts = validExtensionsList.associateWith { validExtension ->
+        identifiedFiles.count { zipEntry ->
+            zipEntry.extension.lowercase() == validExtensionsList.find { it == validExtension }
+        }
+    }
 
     init {
-        require(zip.extension == InstallerManifest.InstallerType.ZIP.toString()) {
+        require(zip.extension.lowercase() == InstallerManifest.InstallerType.ZIP.toString()) {
             "File must be a ${InstallerManifest.InstallerType.ZIP}"
         }
-        val validExtensionsList = listOf(
-            InstallerManifest.NestedInstallerType.MSIX.toString(),
-            InstallerManifest.NestedInstallerType.APPX.toString(),
-            InstallerManifest.NestedInstallerType.MSI.toString(),
-            InstallerManifest.NestedInstallerType.EXE.toString(),
-            InstallerManifest.NestedInstallerType.ZIP.toString(),
-            MsixBundle.msixBundleConst,
-            MsixBundle.appxBundleConst,
-        )
-        val zipFileSystem = fileSystem.openZip(zip)
-        val identifiedFiles = zipFileSystem.listRecursively("".toPath())
-            .filter { zipEntry -> zipEntry.extension.lowercase() in validExtensionsList }
-            .toList()
-        installerTypeCounts = validExtensionsList.associateWith { validExtension ->
-            identifiedFiles.count { zipEntry ->
-                zipEntry.extension.lowercase() == validExtensionsList.find { it == validExtension }
-            }
-        }
+    }
+
+    fun prompt(terminal: Terminal): Unit = with(terminal) {
         if (installerTypeCounts.count { it.value == 1 } == 1) {
             nestedInstallerFiles = listOf(
                 InstallerManifest.NestedInstallerFiles(relativeFilePath = identifiedFiles.first().toString())
@@ -52,31 +60,30 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Termi
                 chosenZipEntries = listOf(identifiedFiles.first()),
                 zipFileSystem = zipFileSystem
             )
-            if (nestedInstallerType == InstallerManifest.NestedInstallerType.PORTABLE) {
+            if (nestedInstallerType == InstallerManifest.InstallerType.PORTABLE) {
                 nestedInstallerFiles = nestedInstallerFiles?.map {
                     it.copy(portableCommandAlias = terminal.portableCommandAliasPrompt(it.relativeFilePath))
                 }
             }
         } else {
-            if (installerTypeCounts.count { it.value != 0 && it.value <= 5 } == 1) {
-                terminal.zipEntrySelectionPrompt(identifiedFiles).let { chosenZipEntries ->
-                    nestedInstallerFiles = chosenZipEntries.map {
-                        InstallerManifest.NestedInstallerFiles(relativeFilePath = it.name)
-                    }
-                    nestedInstallerType = terminal.nestedInstallerTypePrompt(
-                        chosenZipEntries = chosenZipEntries,
-                        zipFileSystem = zipFileSystem
-                    )
-                    if (nestedInstallerType == InstallerManifest.NestedInstallerType.PORTABLE) {
-                        nestedInstallerFiles = nestedInstallerFiles?.map {
-                            it.copy(portableCommandAlias = terminal.portableCommandAliasPrompt(it.relativeFilePath))
-                        }
+            if (installerTypeCounts.count { it.value != 0 && it.value <= 20 } == 1) {
+                val chosenZipEntries = zipEntrySelectionPrompt(identifiedFiles)
+                nestedInstallerFiles = chosenZipEntries.map {
+                    InstallerManifest.NestedInstallerFiles(relativeFilePath = it.name)
+                }
+                nestedInstallerType = nestedInstallerTypePrompt(
+                    chosenZipEntries = chosenZipEntries,
+                    zipFileSystem = zipFileSystem
+                )
+                if (nestedInstallerType == InstallerManifest.InstallerType.PORTABLE) {
+                    nestedInstallerFiles = nestedInstallerFiles?.map {
+                        it.copy(portableCommandAlias = portableCommandAliasPrompt(it.relativeFilePath))
                     }
                 }
             } else {
-                terminal.nestedInstallersPrompt()
+                nestedInstallersPrompt()
                 nestedInstallerFiles?.let { nestedInstallerFiles ->
-                    nestedInstallerType = terminal.nestedInstallerTypePrompt(
+                    nestedInstallerType = nestedInstallerTypePrompt(
                         nestedInstallerFiles.map { it.relativeFilePath.toPath() },
                         zipFileSystem
                     )
@@ -98,7 +105,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Termi
                 ) ?: throw ProgramResult(ExitCode.CtrlC)
                 val error = isRelativeFilePathValid(input)?.also(::danger)
                 var portableCommandAlias: String? = null
-                if (nestedInstallerType == InstallerManifest.NestedInstallerType.PORTABLE) {
+                if (nestedInstallerType == InstallerManifest.InstallerType.PORTABLE) {
                     println()
                     portableCommandAlias = portableCommandAliasPrompt()
                 }
@@ -120,11 +127,9 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Termi
                     }
                 }
             } while (error != null)
-            val shouldLoop = YesNoPrompt(
-                prompt = "${Prompts.optional} Would you like to add another nested installer?",
-                terminal = this
-            ).ask()
-        } while (shouldLoop == true)
+            info("Would you like to add another nested installer?")
+            val shouldLoop = yesNoMenu(default = false).prompt()
+        } while (shouldLoop)
     }
 
     private fun Terminal.portableCommandAliasPrompt(relativeFilePath: String? = null): String? {
@@ -184,53 +189,35 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM, terminal: Termi
         }
     }.first()
 
-    @OptIn(ExperimentalStdlibApi::class)
     private fun Terminal.nestedInstallerTypePrompt(
         chosenZipEntries: List<Path>,
         zipFileSystem: FileSystem,
         fileSystem: FileSystem = FileSystem.SYSTEM,
         tempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY
-    ): InstallerManifest.NestedInstallerType {
+    ): InstallerManifest.InstallerType {
         val smallestEntry = chosenZipEntries.minBy { zipFileSystem.metadata(it).size ?: Long.MAX_VALUE }
-        return when (smallestEntry.extension.lowercase()) {
-            InstallerManifest.NestedInstallerType.MSIX.toString(), MsixBundle.msixBundleConst -> {
-                InstallerManifest.NestedInstallerType.MSIX
+        val formattedDate = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).run {
+            "$year.$monthNumber.$dayOfMonth-$hour.$minute.$second"
+        }
+        val tempFile = tempDirectory / "${smallestEntry.name.removeSuffix(".${smallestEntry.extension}")} - $formattedDate.${smallestEntry.extension}"
+        zipFileSystem.source(smallestEntry).use { source ->
+            fileSystem.sink(tempFile, mustCreate = true).buffer().use { bufferedSink ->
+                bufferedSink.writeAll(source)
             }
-            InstallerManifest.NestedInstallerType.APPX.toString(), MsixBundle.appxBundleConst -> {
-                InstallerManifest.NestedInstallerType.APPX
-            }
-            InstallerManifest.NestedInstallerType.ZIP.toString() -> {
-                InstallerManifest.NestedInstallerType.ZIP
-            }
-            InstallerManifest.NestedInstallerType.MSI.toString() -> {
-                val tempFile = tempDirectory / "${smallestEntry.name}.${InstallerManifest.NestedInstallerType.MSI}"
-                zipFileSystem.source(smallestEntry).use { source ->
-                    fileSystem.sink(tempFile, mustCreate = true).buffer().use { it.writeAll(source) }
-                }
-                if (Msi(tempFile).isWix.also { fileSystem.delete(tempFile) }) {
-                    InstallerManifest.NestedInstallerType.WIX
-                } else {
-                    InstallerManifest.NestedInstallerType.MSI
-                }
-            }
-            InstallerManifest.NestedInstallerType.EXE.toString() -> {
-                val exeNestedTypes = listOf(
-                    InstallerManifest.NestedInstallerType.EXE,
-                    InstallerManifest.NestedInstallerType.BURN,
-                    InstallerManifest.NestedInstallerType.INNO,
-                    InstallerManifest.NestedInstallerType.NULLSOFT,
-                    InstallerManifest.NestedInstallerType.PORTABLE
+        }
+        val installerType = FileAnalyser(tempFile).installerType
+        fileSystem.delete(tempFile)
+        return if (installerType == null) {
+            println(colors.brightGreen("${Prompts.required} Select the nested installer type"))
+            radioMenu {
+                items = listOf(
+                    InstallerManifest.InstallerType.EXE,
+                    InstallerManifest.InstallerType.PORTABLE
                 )
-                println(colors.brightGreen("${Prompts.required} Enter the nested installer type"))
-                info("Options: ${exeNestedTypes.joinToString()}")
-                radioMenu<InstallerManifest.NestedInstallerType> {
-                    items = exeNestedTypes
-                }.prompt() as InstallerManifest.NestedInstallerType
-            }
-            else -> radioMenu<InstallerManifest.NestedInstallerType> {
-                items = InstallerManifest.NestedInstallerType.entries
-            }.prompt() as InstallerManifest.NestedInstallerType
-        }.also { println() }
+            }.prompt() as InstallerManifest.InstallerType
+        } else {
+            installerType
+        }
     }
 
     companion object {

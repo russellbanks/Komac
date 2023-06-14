@@ -1,5 +1,6 @@
 package data
 
+import github.GitHubUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -13,29 +14,32 @@ import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.VersionManifest
-import github.GitHubUtils
 
-object PreviousManifestData {
+class PreviousManifestData(
+    private val packageIdentifier: String,
+    latestVersion: String?,
+    private val microsoftWinGetPkgs: GHRepository
+) {
     private val scope = CoroutineScope(Dispatchers.IO)
-    private lateinit var packageIdentifier: String
-    private var latestVersion: String? = null
-    private lateinit var microsoftWinGetPkgs: GHRepository
-    private var directoryPath: List<GHContent>? = null
+    private var directoryPath: List<GHContent>? = latestVersion?.let {
+        microsoftWinGetPkgs.getDirectoryContent("${GitHubUtils.getPackagePath(packageIdentifier)}/$it")
+    }
 
     private lateinit var previousVersionDataDeferred: Deferred<VersionManifest?>
-    private lateinit var remoteInstallerDataDeferred: Deferred<InstallerManifest?>
+    var installerManifest: Deferred<InstallerManifest?> = scope.async {
+        directoryPath?.let { nonNullDirectoryPath ->
+            microsoftWinGetPkgs.getFileContent(
+                nonNullDirectoryPath.first { it.name == InstallerManifest.getFileName(packageIdentifier) }.path
+            )?.read()?.use {
+                EncodeConfig.yamlDefault.decodeFromStream(InstallerManifest.serializer(), it)
+            }
+        }
+    }
     private lateinit var remoteDefaultLocaleDataDeferred: Deferred<DefaultLocaleManifest?>
     private lateinit var remoteLocaleDataDeferred: Deferred<List<LocaleManifest>?>
 
-    fun init(packageIdentifier: String, latestVersion: String?, microsoftWinGetPkgs: GHRepository) {
-        this.packageIdentifier = packageIdentifier
-        this.latestVersion = latestVersion
-        this.microsoftWinGetPkgs = microsoftWinGetPkgs
-
+    init {
         scope.launch {
-            directoryPath = latestVersion?.let {
-                microsoftWinGetPkgs.getDirectoryContent("${GitHubUtils.getPackagePath(packageIdentifier)}/$it")
-            }
             previousVersionDataDeferred = scope.async {
                 directoryPath?.let { nonNullDirectoryPath ->
                     microsoftWinGetPkgs
@@ -44,20 +48,11 @@ object PreviousManifestData {
                         ?.use { EncodeConfig.yamlDefault.decodeFromStream(VersionManifest.serializer(), it) }
                 }
             }
-            remoteInstallerDataDeferred = scope.async {
-                directoryPath?.let { nonNullDirectoryPath ->
-                    microsoftWinGetPkgs.getFileContent(
-                        nonNullDirectoryPath.first { it.name == GitHubUtils.getInstallerManifestName(packageIdentifier) }.path
-                    )?.read()?.use {
-                        EncodeConfig.yamlDefault.decodeFromStream(InstallerManifest.serializer(), it)
-                    }
-                }
-            }
             remoteDefaultLocaleDataDeferred = scope.async {
                 directoryPath?.let { nonNullDirectoryPath ->
                     microsoftWinGetPkgs.getFileContent(
                         nonNullDirectoryPath.first {
-                            it.name == GitHubUtils.getDefaultLocaleManifestName(
+                            it.name == DefaultLocaleManifest.getFileName(
                                 identifier = packageIdentifier,
                                 previousDefaultLocale = versionManifest?.defaultLocale
                             )
@@ -84,7 +79,6 @@ object PreviousManifestData {
     }
 
     val versionManifest by lazy { runBlocking { previousVersionDataDeferred.await() } }
-    val installerManifest by lazy { runBlocking { remoteInstallerDataDeferred.await() } }
     val defaultLocaleManifest by lazy { runBlocking { remoteDefaultLocaleDataDeferred.await() } }
-    val remoteLocaleData by lazy { runBlocking { remoteLocaleDataDeferred.await() } }
+    val localeManifests by lazy { runBlocking { remoteLocaleDataDeferred.await() } }
 }

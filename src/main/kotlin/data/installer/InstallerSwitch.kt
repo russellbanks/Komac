@@ -2,11 +2,10 @@ package data.installer
 
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.ValidationRules
-import data.ManifestData
-import data.PreviousManifestData
+import schemas.manifest.InstallerManifest
 
 sealed class InstallerSwitch {
-    object Silent : TextPrompt {
+    class Silent(currentInstallerIndex: Int, previousInstallerManifest: InstallerManifest?) : TextPrompt {
         override val name: String = "Silent installer switch"
         override val extraText: String = "Example: /S, -verysilent, /qn, --silent, /exenoui"
         override val validationRules: ValidationRules = ValidationRules(
@@ -14,12 +13,12 @@ sealed class InstallerSwitch {
             minLength = 1,
             isRequired = true
         )
-        override val default: String? = PreviousManifestData.installerManifest?.run {
-            installerSwitches?.silent ?: installers.getOrNull(ManifestData.installers.size)?.installerSwitches?.silent
+        override val default: String? = previousInstallerManifest?.run {
+            installerSwitches?.silent ?: installers.getOrNull(currentInstallerIndex)?.installerSwitches?.silent
         }
     }
 
-    object SilentWithProgress : TextPrompt {
+    class SilentWithProgress(currentInstallerIndex: Int, previousInstallerManifest: InstallerManifest?) : TextPrompt {
         override val name: String = "Silent with progress installer switch"
         override val extraText: String = "Example: /S, -silent, /qb, /exebasicui"
         override val validationRules: ValidationRules = ValidationRules(
@@ -27,13 +26,13 @@ sealed class InstallerSwitch {
             minLength = 1,
             isRequired = true
         )
-        override val default: String? = PreviousManifestData.installerManifest?.run {
+        override val default: String? = previousInstallerManifest?.run {
             installerSwitches?.silentWithProgress
-                ?: installers.getOrNull(ManifestData.installers.size)?.installerSwitches?.silentWithProgress
+                ?: installers.getOrNull(currentInstallerIndex)?.installerSwitches?.silentWithProgress
         }
     }
 
-    object Custom : TextPrompt {
+    class Custom(currentInstallerIndex: Int, previousInstallerManifest: InstallerManifest?) : TextPrompt {
         override val name: String = "Custom installer switch"
         override val extraText: String = "Example: /norestart, -norestart"
         override val validationRules: ValidationRules = ValidationRules(
@@ -41,8 +40,8 @@ sealed class InstallerSwitch {
             minLength = 1,
             isRequired = false
         )
-        override val default: String? = PreviousManifestData.installerManifest?.run {
-            installerSwitches?.custom ?: installers.getOrNull(ManifestData.installers.size)?.installerSwitches?.custom
+        override val default: String? = previousInstallerManifest?.run {
+            installerSwitches?.custom ?: installers.getOrNull(currentInstallerIndex)?.installerSwitches?.custom
         }
     }
 }

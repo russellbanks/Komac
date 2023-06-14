@@ -2,11 +2,13 @@ package data.installer
 
 import io.menu.prompts.ListPrompt
 import io.menu.prompts.ListValidationRules
-import data.ManifestData
-import data.PreviousManifestData
+import schemas.manifest.InstallerManifest
 import schemas.manifest.YamlExtensions.convertToList
 
-object Protocols : ListPrompt<String> {
+class Protocols(
+    private val installersSize: Int,
+    private val previousInstallerManifest: InstallerManifest?
+) : ListPrompt<String> {
     override val name: String = "Protocols"
 
     override val validationRules: ListValidationRules<String> = ListValidationRules(
@@ -19,7 +21,7 @@ object Protocols : ListPrompt<String> {
 
     override val extraText: String? = null
 
-    override val default: List<String>? get() = PreviousManifestData.installerManifest?.run {
-        protocols ?: installers.getOrNull(ManifestData.installers.size)?.protocols
+    override val default: List<String>? get() = previousInstallerManifest?.run {
+        protocols ?: installers.getOrNull(installersSize)?.protocols
     }
 }

@@ -2,9 +2,7 @@ package github
 
 import Environment
 import com.russellbanks.Komac.BuildConfig
-import data.PreviousManifestData
 import data.VersionUpdateState
-import data.shared.Locale
 import java.io.IOException
 import kotlin.random.Random
 import kotlinx.datetime.Clock
@@ -13,49 +11,6 @@ import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GHTreeEntry
 
 object GitHubUtils {
-    /**
-     * Returns the name of the YAML file containing the installer manifest for the given package identifier.
-     *
-     * @param identifier the package identifier to get the installer manifest name for
-     * @return a string representing the name of the YAML file containing the installer manifest for the given
-     * identifier
-     */
-    fun getInstallerManifestName(identifier: String) = "$identifier.installer.yaml"
-
-    /**
-     * Returns the name of the YAML file containing the localized manifest for the given package identifier and default
-     * locale.
-     *
-     * @param identifier the package identifier to get the manifest name for
-     * @param defaultLocale the default locale to get the manifest name for, if available
-     * @param previousDefaultLocale the previously set default locale, if any
-     * @return a string representing the name of the YAML file containing the localized manifest for the given
-     * identifier and default locale
-     */
-    fun getDefaultLocaleManifestName(
-        identifier: String,
-        defaultLocale: String? = null,
-        previousDefaultLocale: String? = PreviousManifestData.defaultLocaleManifest?.packageLocale
-    ) = "$identifier.locale.${defaultLocale ?: previousDefaultLocale ?: Locale.defaultLocale}.yaml"
-
-    /**
-     * Returns the name of the YAML file containing the localized manifest for the given package identifier and locale.
-     *
-     * @param identifier the package identifier to get the manifest name for
-     * @param locale the locale to get the manifest name for
-     * @return a string representing the name of the YAML file containing the localized manifest for the given
-     * identifier and locale
-     */
-    fun getLocaleManifestName(identifier: String, locale: String) = "$identifier.locale.$locale.yaml"
-
-    /**
-     * Returns the name of the YAML file containing the manifest for the given package identifier and version.
-     *
-     * @param identifier the package identifier to get the manifest name for
-     * @return a string representing the name of the YAML file containing the manifest for the given identifier
-     */
-    fun getVersionManifestName(identifier: String) = "$identifier.yaml"
-
     /**
      * Returns the path to the directory containing the package manifest file for the given package identifier.
      *

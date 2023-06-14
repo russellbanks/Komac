@@ -1,13 +1,15 @@
 package data.installer
 
 import Errors
-import data.ManifestData
-import data.PreviousManifestData
 import io.menu.prompts.ListPrompt
 import io.menu.prompts.ListValidationRules
+import schemas.manifest.InstallerManifest
 import schemas.manifest.YamlExtensions.convertToList
 
-object InstallerSuccessCodes : ListPrompt<Long> {
+class InstallerSuccessCodes(
+    private val currentInstallerIndex: Int,
+    private val previousInstallerManifest: InstallerManifest?
+) : ListPrompt<Long> {
     override val name: String = "Installer success codes"
 
     override val description: String =
@@ -15,8 +17,8 @@ object InstallerSuccessCodes : ListPrompt<Long> {
 
     override val extraText: String = "Example: ${randomInstallerSuccessCodes.joinToString()}"
 
-    override val default: List<Long>? get() = PreviousManifestData.installerManifest?.run {
-        installerSuccessCodes ?: installers.getOrNull(ManifestData.installers.size)?.installerSuccessCodes
+    override val default: List<Long>? get() = previousInstallerManifest?.run {
+        installerSuccessCodes ?: installers.getOrNull(currentInstallerIndex)?.installerSuccessCodes
     }
 
     override val validationRules: ListValidationRules<Long> = ListValidationRules(

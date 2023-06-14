@@ -3,9 +3,9 @@ package data.shared
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.UrlPrompt
 import io.menu.prompts.ValidationRules
-import data.PreviousManifestData
+import schemas.manifest.DefaultLocaleManifest
 
-object Publisher : TextPrompt {
+class Publisher(private val defaultLocaleManifest: DefaultLocaleManifest?) : TextPrompt {
     override val name: String = "Publisher"
 
     override val validationRules: ValidationRules = ValidationRules(
@@ -14,14 +14,14 @@ object Publisher : TextPrompt {
         isRequired = true
     )
 
-    override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.publisher
+    override val default: String? get() = defaultLocaleManifest?.publisher
 
     override val extraText: String = "Example: Microsoft Corporation"
 
-    object Url : UrlPrompt {
+    class Url(defaultLocaleManifest: DefaultLocaleManifest?) : UrlPrompt {
         override val name: String = "Publisher url"
 
-        override val previousUrl = PreviousManifestData.defaultLocaleManifest?.publisherUrl
+        override val previousUrl = defaultLocaleManifest?.publisherUrl
 
         override val description: String = "publisher home page"
     }

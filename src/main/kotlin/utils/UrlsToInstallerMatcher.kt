@@ -2,8 +2,8 @@ package utils
 
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.mordant.terminal.TerminalColors
+import data.shared.InstallerUrl
 import io.ktor.http.Url
-import network.Http
 import schemas.manifest.InstallerManifest
 
 object UrlsToInstallerMatcher {
@@ -30,7 +30,7 @@ object UrlsToInstallerMatcher {
 
     suspend fun assertUrlsValid(parameterUrls: Set<Url>, colors: TerminalColors) {
         val errorList = parameterUrls.mapNotNull { url ->
-            data.shared.Url.isUrlValid(url, false, Http.client)?.let { error -> url to error }
+            InstallerUrl.getError(url.toString())?.let { error -> url to error }
         }
         if (errorList.isNotEmpty()) {
             throw CliktError(

@@ -2,11 +2,13 @@ package data.installer
 
 import io.menu.prompts.ListPrompt
 import io.menu.prompts.ListValidationRules
-import data.ManifestData
-import data.PreviousManifestData
+import schemas.manifest.InstallerManifest
 import schemas.manifest.YamlExtensions.convertToList
 
-object FileExtensions : ListPrompt<String> {
+class FileExtensions(
+    private val currentInstallerIndex: Int,
+    private val previousInstallerManifest: InstallerManifest?
+) : ListPrompt<String> {
     override val name: String = "File extensions"
 
     override val description: String = "List of file extensions the package could support"
@@ -21,7 +23,7 @@ object FileExtensions : ListPrompt<String> {
         regex = Regex("^[^\\\\/:*?\"<>|\\x01-\\x1f]+$")
     )
 
-    override val default: List<String>? get() = PreviousManifestData.installerManifest?.run {
-        fileExtensions ?: installers.getOrNull(ManifestData.installers.size)?.fileExtensions
+    override val default: List<String>? get() = previousInstallerManifest?.run {
+        fileExtensions ?: installers.getOrNull(currentInstallerIndex)?.fileExtensions
     }
 }

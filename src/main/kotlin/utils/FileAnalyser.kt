@@ -1,9 +1,5 @@
 package utils
 
-import data.ManifestData
-import utils.msi.Msi
-import utils.msix.Msix
-import utils.msix.MsixBundle
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
@@ -15,23 +11,26 @@ import schemas.manifest.InstallerManifest.Installer.Architecture
 import schemas.manifest.InstallerManifest.InstallerType
 import schemas.manifest.InstallerManifest.Scope
 import schemas.manifest.InstallerManifest.UpgradeBehavior
+import utils.msi.Msi
+import utils.msix.Msix
+import utils.msix.MsixBundle
 
 class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = FileSystem.SYSTEM) {
-    init {
-        ManifestData.msi = if (file.extension == InstallerType.MSI.toString()) Msi(file, fileSystem) else null
-        ManifestData.msix = when (file.extension) {
-            InstallerType.MSIX.toString(), InstallerType.APPX.toString() -> Msix(file)
-            else -> null
-        }
-        ManifestData.msixBundle = when (file.extension) {
-            MsixBundle.msixBundleConst, MsixBundle.appxBundleConst -> MsixBundle(file)
-            else -> null
-        }
+    val msix = when (file.extension) {
+        InstallerType.MSIX.toString(), InstallerType.APPX.toString() -> Msix(file)
+        else -> null
+    }
+
+    val msi = if (file.extension == InstallerType.MSI.toString()) Msi(file) else null
+
+    val msixBundle = when (file.extension) {
+        MsixBundle.msixBundleConst, MsixBundle.appxBundleConst -> MsixBundle(file)
+        else -> null
     }
 
     val installerType: InstallerType?
         get() = when (file.extension) {
-            InstallerType.MSI.toString() -> if (ManifestData.msi?.isWix == true) InstallerType.WIX else InstallerType.MSI
+            InstallerType.MSI.toString() -> if (msi?.isWix == true) InstallerType.WIX else InstallerType.MSI
             InstallerType.ZIP.toString() -> InstallerType.ZIP
             InstallerType.APPX.toString() -> InstallerType.APPX
             InstallerType.MSIX.toString() -> InstallerType.MSIX
@@ -47,9 +46,10 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
 
     val architecture: Architecture
         get() = when (file.extension) {
-            InstallerType.MSI.toString() -> ManifestData.msi?.architecture
-            InstallerType.MSIX.toString() -> ManifestData.msix?.processorArchitecture
-                ?: ManifestData.msixBundle?.packages?.first()?.processorArchitecture
+            InstallerType.MSI.toString() -> msi?.architecture
+            InstallerType.MSIX.toString() -> {
+                msix?.processorArchitecture ?: msixBundle?.packages?.first()?.processorArchitecture
+            }
             else -> when (peArchitectureValue) {
                 "8664" -> Architecture.X64
                 "14c" -> Architecture.X86
@@ -72,10 +72,12 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
 
     val scope: Scope?
         get() = when {
-            ManifestData.msi?.allUsers != null -> ManifestData.msi?.allUsers?.toInstallerScope()
-            ManifestData.msix != null || ManifestData.msixBundle != null -> Scope.User
+            msi?.allUsers != null -> msi.allUsers?.toInstallerScope()
+            msix != null || msixBundle != null -> Scope.User
             else -> null
         }
+
+    val publisherDisplayName: String? = msi?.manufacturer ?: msix?.publisherDisplayName
 
     /**
      * Returns `true` if the [FileHandle] has been made with the Nullsoft Scriptable Install System.

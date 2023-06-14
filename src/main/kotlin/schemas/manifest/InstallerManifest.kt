@@ -21,7 +21,7 @@ data class InstallerManifest(
     val platform: List<Platform>? = null,
     val minimumOSVersion: String? = null,
     val installerType: InstallerType? = null,
-    val nestedInstallerType: NestedInstallerType? = null,
+    val nestedInstallerType: InstallerType? = null,
     val nestedInstallerFiles: List<NestedInstallerFiles>? = null,
     val scope: Scope? = null,
     val installModes: List<InstallModes>? = null,
@@ -74,24 +74,6 @@ data class InstallerManifest(
         @SerialName("wix") WIX,
         @SerialName("burn") BURN,
         @SerialName("pwa") PWA,
-        @SerialName("portable") PORTABLE;
-
-        override fun toString() = name.lowercase()
-    }
-
-    /**
-     * Enumeration of supported nested installer types contained inside an archive file
-     */
-    enum class NestedInstallerType {
-        @SerialName("msix") MSIX,
-        @SerialName("msi") MSI,
-        @SerialName("appx") APPX,
-        @SerialName("exe") EXE,
-        @SerialName("zip") ZIP,
-        @SerialName("inno") INNO,
-        @SerialName("nullsoft") NULLSOFT,
-        @SerialName("wix") WIX,
-        @SerialName("burn") BURN,
         @SerialName("portable") PORTABLE;
 
         override fun toString() = name.lowercase()
@@ -316,7 +298,7 @@ data class InstallerManifest(
         val minimumOSVersion: String? = null,
         val architecture: Architecture,
         val installerType: InstallerType? = null,
-        val nestedInstallerType: NestedInstallerType? = null,
+        val nestedInstallerType: InstallerType? = null,
         val nestedInstallerFiles: List<NestedInstallerFiles>? = null,
         val scope: Scope? = null,
         @Contextual val installerUrl: Url,
@@ -365,4 +347,32 @@ data class InstallerManifest(
         manifest = this,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )
+
+    companion object {
+        /**
+         * Returns the name of the YAML file containing the installer manifest for the given package identifier.
+         *
+         * @param identifier the package identifier to get the installer manifest name for
+         * @return a string representing the name of the YAML file containing the installer manifest for the given
+         * identifier
+         */
+        fun getFileName(identifier: String) = "$identifier.installer.yaml"
+
+        fun getBase(
+            previousManifest: InstallerManifest?,
+            packageIdentifier: String,
+            packageVersion: String
+        ): InstallerManifest = previousManifest ?: InstallerManifest(
+            packageIdentifier = packageIdentifier,
+            packageVersion = packageVersion,
+            manifestType = Schemas.installerManifestType,
+            manifestVersion = Schemas.manifestVersion
+        )
+
+        fun getInstallerBase(previousInstaller: Installer?): Installer = previousInstaller ?: Installer(
+            architecture = Installer.Architecture.NEUTRAL,
+            installerSha256 = "",
+            installerUrl = Url("")
+        )
+    }
 }

@@ -5,13 +5,11 @@ import Errors
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
-import com.github.ajalt.mordant.terminal.YesNoPrompt
 import data.PreviousManifestData
 import data.VersionUpdateState
 import io.menu.yesNoMenu
 import java.io.IOException
 import network.KtorGitHubConnector
-import org.kohsuke.github.GHContent
 import org.kohsuke.github.GHDirection
 import org.kohsuke.github.GHIssue
 import org.kohsuke.github.GHIssueSearchBuilder
@@ -87,7 +85,7 @@ object GitHubImpl {
         .withPageSize(1)
         .firstOrNull()
 
-    fun promptIfPullRequestExists(identifier: String, version: String, terminal: Terminal) = with(terminal) {
+    fun Terminal.promptIfPullRequestExists(identifier: String, version: String) {
         val existingPullRequest = getExistingPullRequest(identifier, version) ?: return
         val isOpen = existingPullRequest.state == GHIssueState.OPEN
         warning(
@@ -99,15 +97,11 @@ object GitHubImpl {
         if (Environment.isCI) {
             if (isOpen) throw ProgramResult(0)
         } else {
-            if (YesNoPrompt("Would you like to proceed?", terminal = this).ask() != true) throw ProgramResult(0)
+            info("Would you like to proceed?")
+            if (!yesNoMenu(default = false).prompt()) throw ProgramResult(0)
         }
         println()
     }
-
-    fun versionExists(identifier: String, version: String): Boolean = microsoftWinGetPkgs
-        .getDirectoryContent(GitHubUtils.getPackagePath(identifier))
-        ?.map(GHContent::name)
-        ?.contains(version) == true
 
     fun createBranchFromUpstreamDefaultBranch(
         winGetPkgsFork: GHRepository,
@@ -143,14 +137,15 @@ object GitHubImpl {
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState,
+        previousManifestData: PreviousManifestData,
         terminal: Terminal
     ): GHPullRequest {
         val manifests = files.values
         if (
-            manifests.find { it is InstallerManifest } == PreviousManifestData.installerManifest &&
-            manifests.find { it is DefaultLocaleManifest } == PreviousManifestData.defaultLocaleManifest &&
-            manifests.find { it is VersionManifest } == PreviousManifestData.versionManifest &&
-            manifests.filterIsInstance<LocaleManifest>() == PreviousManifestData.remoteLocaleData
+            manifests.find { it is InstallerManifest } == previousManifestData.installerManifest &&
+            manifests.find { it is DefaultLocaleManifest } == previousManifestData.defaultLocaleManifest &&
+            manifests.find { it is VersionManifest } == previousManifestData.versionManifest &&
+            manifests.filterIsInstance<LocaleManifest>() == previousManifestData.localeManifests
         ) {
             if (Environment.isCI) {
                 throw CliktError(

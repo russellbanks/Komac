@@ -1,13 +1,13 @@
 package data.locale
 
-import io.menu.prompts.UrlPrompt
-import data.PreviousManifestData
 import io.ktor.http.Url
+import io.menu.prompts.UrlPrompt
+import schemas.manifest.DefaultLocaleManifest
 
-object PackageUrl : UrlPrompt {
+class PackageUrl(private val defaultLocaleManifest: DefaultLocaleManifest?) : UrlPrompt {
     override val name: String = "Package url"
 
-    override val previousUrl: Url? get() = PreviousManifestData.defaultLocaleManifest?.packageUrl
+    override val previousUrl: Url? get() = defaultLocaleManifest?.packageUrl
 
     override val description: String = "package home page"
 }
