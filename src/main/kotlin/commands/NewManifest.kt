@@ -38,7 +38,6 @@ import github.GitHubUtils
 import io.ExitCode
 import io.FileWriter.writeFiles
 import io.ManifestResultOption
-import io.Switch
 import io.menu.radioMenu
 import kotlinx.coroutines.runBlocking
 import schemas.Schemas
@@ -91,10 +90,10 @@ class NewManifest : CliktCommand(name = "new") {
                 currentContext.terminal.installerDownloadPrompt()
                 installerType = installerType ?: prompt(InstallerType)
                 if (installerType == InstallerManifest.InstallerType.EXE) {
-                    installerSwitches[Switch.Silent] = prompt(InstallerSwitch.Silent)
-                    installerSwitches[Switch.SilentWithProgress] = prompt(InstallerSwitch.SilentWithProgress)
+                    installerSwitches[InstallerManifest.InstallerSwitches.Key.Silent] = prompt(InstallerSwitch.Silent)
+                    installerSwitches[InstallerManifest.InstallerSwitches.Key.SilentWithProgress] = prompt(InstallerSwitch.SilentWithProgress)
                 }
-                installerSwitches[Switch.Custom] = prompt(InstallerSwitch.Custom)
+                installerSwitches[InstallerManifest.InstallerSwitches.Key.Custom] = prompt(InstallerSwitch.Custom)
                 installerLocale = msi?.productLanguage ?: prompt(Locale.Installer)
                 if (scope == null && installerType != InstallerManifest.InstallerType.PORTABLE) {
                     scope = prompt(InstallerScope)

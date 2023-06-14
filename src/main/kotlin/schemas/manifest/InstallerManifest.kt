@@ -1,6 +1,5 @@
 package schemas.manifest
 
-import io.Switch
 import io.ktor.http.Url
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Contextual
@@ -121,28 +120,46 @@ data class InstallerManifest(
         @SerialName("silentWithProgress") SilentWithProgress
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     @Serializable
     data class InstallerSwitches(
         var silent: String? = null,
         var silentWithProgress: String? = null,
-        val interactive: String? = null,
-        val installLocation: String? = null,
-        val log: String? = null,
-        val upgrade: String? = null,
+        var interactive: String? = null,
+        var installLocation: String? = null,
+        var log: String? = null,
+        var upgrade: String? = null,
         var custom: String? = null
     ) {
-        private val listOfAll = listOf(silent, silentWithProgress, interactive, installLocation, log, upgrade, custom)
-        fun areAllNull(): Boolean = listOfAll.all { it == null }
+        enum class Key {
+            Silent, SilentWithProgress, Interactive, InstallLocation, Log, Upgrade, Custom
+        }
 
-        fun areAllNullOrBlank(): Boolean = listOfAll.all(String?::isNullOrBlank)
+        operator fun get(key: Key): String? = when (key) {
+            Key.Silent -> silent
+            Key.SilentWithProgress -> silentWithProgress
+            Key.Interactive -> interactive
+            Key.InstallLocation -> installLocation
+            Key.Log -> log
+            Key.Upgrade -> upgrade
+            Key.Custom -> custom
+        }
 
-        operator fun set(aSwitch: Switch, value: String?) {
-            when (aSwitch) {
-                Switch.Silent -> silent = value
-                Switch.SilentWithProgress -> silentWithProgress = value
-                Switch.Custom -> custom = value
+        operator fun set(key: Key, value: String) {
+            when (key) {
+                Key.Silent -> silent = value
+                Key.SilentWithProgress -> silentWithProgress = value
+                Key.Interactive -> interactive = value
+                Key.InstallLocation -> installLocation = value
+                Key.Log -> log = value
+                Key.Upgrade -> upgrade = value
+                Key.Custom -> custom = value
             }
         }
+
+        fun areAllNull(): Boolean = Key.entries.all { get(it) == null }
+
+        fun areAllNullOrBlank(): Boolean = Key.entries.all { get(it).isNullOrBlank() }
     }
 
     @Serializable
