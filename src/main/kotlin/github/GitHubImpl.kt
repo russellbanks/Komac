@@ -76,16 +76,15 @@ object GitHubImpl {
         }
     }
 
-    private fun getDraftPullRequest(): GHPullRequest? = github.searchIssues()
+    private fun getDraftPullRequest(): GHIssue? = github.searchIssues()
         .q("repo:$Microsoft/$wingetpkgs")
-        .q("is:pr")
+        .q("is:pull-request")
         .q("draft:true")
         .q("author:${github.myself.login}")
         .isOpen()
         .list()
         .withPageSize(1)
         .firstOrNull()
-        ?.let { microsoftWinGetPkgs.getPullRequest(it.number) }
 
     private fun updateExistingBranchToUpstreamDefaultBranch(
         wingetPkgsFork: GHRepository, branchName: String
