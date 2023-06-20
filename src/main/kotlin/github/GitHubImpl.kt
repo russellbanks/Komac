@@ -78,7 +78,7 @@ object GitHubImpl {
 
     private fun getDraftPullRequest(): GHIssue? = github.searchIssues()
         .q("repo:$Microsoft/$wingetpkgs")
-        .q("is:pull-request")
+        .q("is:pr")
         .q("draft:true")
         .q("author:${github.myself.login}")
         .isOpen()
@@ -91,8 +91,8 @@ object GitHubImpl {
     ): GHRef {
         val branch = wingetPkgsFork.getRef("heads/$branchName")
         val upstreamDefaultBranch = microsoftWinGetPkgs.getBranch(microsoftWinGetPkgs.defaultBranch)
-        branch.updateTo(upstreamDefaultBranch.shA1)
-        return branch
+        branch.updateTo(upstreamDefaultBranch.shA1, true)
+        return wingetPkgsFork.getRef("heads/$branchName")
     }
 
     private fun getExistingPullRequest(identifier: String, version: String): GHIssue? = github.searchIssues()
@@ -189,7 +189,8 @@ object GitHubImpl {
             }, packageIdentifier = packageIdentifier, packageVersion = packageVersion, updateState = updateState
         )
         if (Environment.forcePushOnDraftPR && draftPullRequest != null) {
-            Http.client.patch("https://api.github.com/repos/$Microsoft/$wingetpkgs/pulls/${draftPullRequest.number}") {
+            val ghRepository = microsoftWinGetPkgs
+            Http.client.patch(draftPullRequest.url) {
                 setBody(
                     """
                         {
@@ -204,8 +205,8 @@ object GitHubImpl {
                     append(HttpHeaders.Accept, "application/vnd.github.v3+json")
                 }
             }
-            terminal.info("Updated existing draft pull request")
-            terminal.info(draftPullRequest.htmlUrl)
+            terminal.info("Used draft PR -> ${draftPullRequest.title}")
+            return ghRepository.getPullRequest(draftPullRequest.number)
         }
         return createPullRequest(packageIdentifier, packageVersion, updateState)
     }
