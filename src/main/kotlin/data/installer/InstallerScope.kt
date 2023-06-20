@@ -1,17 +1,22 @@
 package data.installer
 
 import io.menu.prompts.RadioMenuPrompt
-import data.ManifestData
-import data.PreviousManifestData
 import schemas.manifest.InstallerManifest
 
-object InstallerScope : RadioMenuPrompt<InstallerManifest.Scope> {
-    override val name: String = "Installer scope"
+class InstallerScope(
+    private val currentInstallerIndex: Int,
+    private val previousInstallerManifest: InstallerManifest?
+) : RadioMenuPrompt<InstallerManifest.Scope> {
+    override val name: String = InstallerScope.name
 
     @OptIn(ExperimentalStdlibApi::class)
     override val items: List<InstallerManifest.Scope> = InstallerManifest.Scope.entries
 
-    override val default: InstallerManifest.Scope? get() = PreviousManifestData.installerManifest?.let {
-        it.scope ?: it.installers.getOrNull(ManifestData.installers.size)?.scope
+    override val default: InstallerManifest.Scope? get() = previousInstallerManifest?.let {
+        it.scope ?: it.installers.getOrNull(currentInstallerIndex)?.scope
+    }
+
+    companion object {
+        const val name: String = "Installer scope"
     }
 }

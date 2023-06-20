@@ -2,9 +2,9 @@ package data.shared
 
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.ValidationRules
-import data.ManifestData
-import data.PreviousManifestData
 import java.util.Locale
+import schemas.manifest.DefaultLocaleManifest
+import schemas.manifest.InstallerManifest
 
 object Locale {
     private const val pattern = "^([a-zA-Z]{2,3}|[iI]-[a-zA-Z]+|[xX]-[a-zA-Z]{1,8})(-[a-zA-Z]{1,8})*$"
@@ -12,7 +12,10 @@ object Locale {
 
     val example: String get() = "Example: ${Locale.getISOLanguages().random()}-${Locale.getISOCountries().random()}"
 
-    object Installer : TextPrompt {
+    class Installer(
+        private val currentInstallerIndex: Int,
+        private val previousInstallerManifest: InstallerManifest?
+    ) : TextPrompt {
         override val name: String = "Installer locale"
 
         override val validationRules: ValidationRules = ValidationRules(
@@ -22,14 +25,14 @@ object Locale {
             isRequired = false
         )
 
-        override val default: String? get() = PreviousManifestData.installerManifest?.run {
-            installerLocale ?: installers[ManifestData.installers.size].installerLocale
+        override val default: String? get() = previousInstallerManifest?.run {
+            installerLocale ?: installers[currentInstallerIndex].installerLocale
         }
 
         override val extraText: String = example
     }
 
-    object Package : TextPrompt {
+    class Package(private val previousDefaultLocaleManifest: DefaultLocaleManifest?) : TextPrompt {
         override val name: String = "Package locale"
 
         override val validationRules: ValidationRules = ValidationRules(
@@ -41,6 +44,6 @@ object Locale {
 
         override val extraText: String = example
 
-        override val default: String get() = PreviousManifestData.defaultLocaleManifest?.packageLocale ?: defaultLocale
+        override val default: String get() = previousDefaultLocaleManifest?.packageLocale ?: defaultLocale
     }
 }

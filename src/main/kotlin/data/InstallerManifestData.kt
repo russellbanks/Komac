@@ -1,21 +1,48 @@
 package data
 
+import github.GitHubDetection
 import io.ktor.http.Url
+import kotlinx.datetime.LocalDate
+import schemas.AdditionalMetadata
 import schemas.Schemas
 import schemas.installerSorter
 import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import utils.ManifestUtils.updateVersionInString
+import utils.Zip
 import utils.getDistinctOrNull
 import utils.msi.Msi
+import utils.msix.Msix
+import utils.msix.MsixBundle
 import utils.takeIfNotDistinct
 
 object InstallerManifestData {
-    fun addInstaller() = with(ManifestData) {
-        val previousInstallerManifest = PreviousManifestData.installerManifest
-        val previousDefaultLocaleManifest = PreviousManifestData.defaultLocaleManifest
+    suspend fun addInstaller(
+        packageVersion: String,
+        installerUrl: Url,
+        installerSha256: String,
+        installerType: InstallerManifest.InstallerType? = null,
+        installerLocale: String? = null,
+        scope: InstallerManifest.Scope? = null,
+        releaseDate: LocalDate? = null,
+        packageName: String? = null,
+        installerSwitches: InstallerManifest.InstallerSwitches = InstallerManifest.InstallerSwitches(),
+        allVersions: List<String>? = null,
+        upgradeBehavior: InstallerManifest.UpgradeBehavior? = null,
+        installers: List<InstallerManifest.Installer>,
+        architecture: InstallerManifest.Installer.Architecture,
+        additionalMetadata: AdditionalMetadata? = null,
+        msix: Msix?,
+        msixBundle: MsixBundle?,
+        msi: Msi?,
+        zip: Zip?,
+        gitHubDetection: GitHubDetection?,
+        previousManifestData: PreviousManifestData?,
+        onAddInstaller: (InstallerManifest.Installer) -> Unit
+    ) {
+        val previousInstallerManifest = previousManifestData?.installerManifest?.await()
         val previousInstaller = previousInstallerManifest?.installers?.getOrNull(installers.size)
-        val installer = getInstallerBase(previousInstaller).copy(
+        val installer = InstallerManifest.getInstallerBase(previousInstaller).copy(
             installerLocale = msi?.productLanguage
                 ?: installerLocale?.ifBlank { null }
                 ?: previousInstaller?.installerLocale,
@@ -57,31 +84,32 @@ object InstallerManifestData {
             appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                     appsAndFeaturesEntry.fillARPEntry(
-                        packageName, packageVersion, allVersions, msi, previousDefaultLocaleManifest
+                        packageName, packageVersion, allVersions, msi, previousManifestData?.defaultLocaleManifest
                     )
                 } ?: previousInstallerManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                 appsAndFeaturesEntry.fillARPEntry(
-                    packageName, packageVersion, allVersions, msi, previousDefaultLocaleManifest
+                    packageName, packageVersion, allVersions, msi, previousManifestData?.defaultLocaleManifest
                 )
             } ?: listOfNotNull(
                 InstallerManifest.AppsAndFeaturesEntry()
-                    .fillARPEntry(packageName, packageVersion, allVersions, msi, previousDefaultLocaleManifest)
+                    .fillARPEntry(packageName, packageVersion, allVersions, msi, previousManifestData?.defaultLocaleManifest)
                     .takeUnless(InstallerManifest.AppsAndFeaturesEntry::areAllNull)
             ).ifEmpty { null },
         )
         if (msixBundle == null) {
-            installers += installer
+            onAddInstaller(installer)
         } else {
-            msixBundle?.packages?.forEach { individualPackage ->
+            msixBundle.packages?.forEach { individualPackage ->
                 individualPackage.processorArchitecture?.let { architecture ->
-                    installers += installer.copy(
-                        architecture = architecture,
-                        platform = individualPackage.targetDeviceFamily,
+                    onAddInstaller(
+                        installer.copy(
+                            architecture = architecture,
+                            platform = individualPackage.targetDeviceFamily,
+                        )
                     )
                 }
             }
         }
-        resetValues(ManifestData)
     }
 
     private fun InstallerManifest.AppsAndFeaturesEntry.fillARPEntry(
@@ -108,9 +136,20 @@ object InstallerManifestData {
         )
     }
 
-    fun createInstallerManifest(manifestOverride: String? = null): InstallerManifest = with(ManifestData) {
-        val previousInstallerManifest = PreviousManifestData.installerManifest
-        return getInstallerManifestBase(previousInstallerManifest).copy(
+    fun createInstallerManifest(
+        packageIdentifier: String,
+        packageVersion: String,
+        commands: List<String>? = null,
+        fileExtensions: List<String>? = null,
+        protocols: List<String>? = null,
+        installerSuccessCodes: List<Long>? = null,
+        installModes: List<InstallerManifest.InstallModes>? = null,
+        allVersions: List<String>?,
+        installers: List<InstallerManifest.Installer>,
+        previousInstallerManifest: InstallerManifest?,
+        manifestOverride: String
+    ): InstallerManifest {
+        return InstallerManifest.getBase(previousInstallerManifest, packageIdentifier, packageVersion).copy(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
             installerLocale = installers.getDistinctOrNull(InstallerManifest.Installer::installerLocale)
@@ -153,18 +192,7 @@ object InstallerManifestData {
             },
             installers = installers.removeNonDistinctKeys(installers).sortedWith(installerSorter),
             manifestType = Schemas.installerManifestType,
-            manifestVersion = manifestOverride ?: Schemas.manifestVersion
-        )
-    }
-
-    private fun getInstallerManifestBase(
-        previousManifestData: InstallerManifest?
-    ): InstallerManifest = with(ManifestData) {
-        return previousManifestData ?: InstallerManifest(
-            packageIdentifier = packageIdentifier,
-            packageVersion = packageVersion,
-            manifestType = Schemas.installerManifestType,
-            manifestVersion = Schemas.manifestVersion
+            manifestVersion = manifestOverride
         )
     }
 
@@ -189,25 +217,5 @@ object InstallerManifestData {
                     .takeIfNotDistinct(installer.appsAndFeaturesEntries) { it.appsAndFeaturesEntries }
             )
         }
-    }
-
-    private fun getInstallerBase(previousInstaller: InstallerManifest.Installer?): InstallerManifest.Installer {
-        return previousInstaller ?: InstallerManifest.Installer(
-            architecture = InstallerManifest.Installer.Architecture.NEUTRAL,
-            installerSha256 = "",
-            installerUrl = Url("")
-        )
-    }
-
-    private fun resetValues(allManifestData: ManifestData) = with(allManifestData) {
-        installerLocale = null
-        scope = null
-        installerSwitches = InstallerManifest.InstallerSwitches()
-        upgradeBehavior = null
-        releaseDate = null
-        msi?.resetExceptShared()
-        msix = null
-        zip = null
-        gitHubDetection?.releaseDate = null
     }
 }

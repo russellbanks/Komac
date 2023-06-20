@@ -3,9 +3,9 @@ package data.locale
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.UrlPrompt
 import io.menu.prompts.ValidationRules
-import data.PreviousManifestData
+import schemas.manifest.DefaultLocaleManifest
 
-object Copyright : TextPrompt {
+class Copyright(private val previousDefaultLocaleManifest: DefaultLocaleManifest?) : TextPrompt {
     override val name: String = "Copyright"
 
     override val validationRules: ValidationRules = ValidationRules(
@@ -14,14 +14,14 @@ object Copyright : TextPrompt {
         isRequired = false
     )
 
-    override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.copyright
+    override val default: String? get() = previousDefaultLocaleManifest?.copyright
 
     override val extraText: String = "Example: Copyright (c) Microsoft Corporation"
 
-    object Url : UrlPrompt {
+    class Url(private val previousDefaultLocaleManifest: DefaultLocaleManifest?) : UrlPrompt {
         override val name: String = "Copyright url"
 
-        override val previousUrl: io.ktor.http.Url? get() = PreviousManifestData.defaultLocaleManifest?.copyrightUrl
+        override val previousUrl: io.ktor.http.Url? get() = previousDefaultLocaleManifest?.copyrightUrl
 
         override val description: String = "package's copyright url"
     }

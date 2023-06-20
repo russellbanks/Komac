@@ -2,10 +2,10 @@ package data.shared
 
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.ValidationRules
-import data.ManifestData
-import data.PreviousManifestData
+import schemas.manifest.DefaultLocaleManifest
+import utils.msi.Msi
 
-object PackageName : TextPrompt {
+class PackageName(private val msi: Msi?, private val defaultLocaleManifest: DefaultLocaleManifest?) : TextPrompt {
     override val name: String = "Package name"
 
     override val validationRules: ValidationRules = ValidationRules(
@@ -16,8 +16,8 @@ object PackageName : TextPrompt {
 
     override val extraText: String = buildString {
         append("Example: Microsoft Teams")
-        ManifestData.msi?.productName?.let { appendLine("Detected from MSI: $it") }
+        msi?.productName?.let { appendLine("Detected from MSI: $it") }
     }
 
-    override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.packageName
+    override val default: String? get() = defaultLocaleManifest?.packageName
 }

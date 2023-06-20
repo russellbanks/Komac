@@ -13,9 +13,8 @@ object Errors {
 
     fun invalidLength(min: Number? = null, max: Number? = null, items: Iterable<String>? = null): String {
         return buildString {
-            append("Invalid Length")
             if (min != null || max != null) {
-                append(" -${items?.let { "Item" }.orEmpty()} ${items?.let { "Length" } ?: "length"} must be ")
+                append("${items?.let { "Item " }.orEmpty()}Length must be ")
             }
             when {
                 min != null && max != null -> append("between $min and $max")

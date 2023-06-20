@@ -2,9 +2,9 @@ package data.locale
 
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.ValidationRules
-import data.PreviousManifestData
+import schemas.manifest.DefaultLocaleManifest
 
-object Author : TextPrompt {
+class Author(private val previousDefaultLocaleManifest: DefaultLocaleManifest?) : TextPrompt {
     override val name: String = "Author"
 
     override val validationRules: ValidationRules = ValidationRules(
@@ -13,5 +13,5 @@ object Author : TextPrompt {
         isRequired = false
     )
 
-    override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.author
+    override val default: String? get() = previousDefaultLocaleManifest?.author
 }

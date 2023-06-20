@@ -9,7 +9,7 @@ import schemas.manifest.Manifest
 import schemas.manifest.VersionManifest
 
 object Schemas {
-    var manifestVersion = "1.4.0"
+    const val manifestVersion = "1.4.0"
     private val installerSchema get() = "https://aka.ms/winget-manifest.installer.$manifestVersion.schema.json"
     private val defaultLocaleSchema get() = "https://aka.ms/winget-manifest.defaultLocale.$manifestVersion.schema.json"
     private val localeSchema get() = "https://aka.ms/winget-manifest.locale.$manifestVersion.schema.json"

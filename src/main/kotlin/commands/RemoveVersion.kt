@@ -11,19 +11,19 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
-import github.GitHubImpl
-import data.ManifestData
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
-import utils.versionStringComparator
+import github.GitHubImpl
+import github.GitHubUtils
 import io.ExitCode
 import io.Prompts
+import io.menu.yesNoMenu
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHContent
 import org.kohsuke.github.GitHub
 import token.Token
 import token.TokenStore
-import github.GitHubUtils
+import utils.versionStringComparator
 
 class RemoveVersion : CliktCommand(
     help = """
@@ -59,43 +59,43 @@ class RemoveVersion : CliktCommand(
         envvar = "GITHUB_TOKEN"
     ).check("The token is invalid or has expired") { GitHub.connectUsingOAuth(it).isCredentialValid }
 
+    private lateinit var packageIdentifier: String
+    private lateinit var packageVersion: String
+
     override fun run(): Unit = runBlocking {
         token?.let { TokenStore.useTokenParameter(it) }
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
         warning("Packages should only be removed when necessary.")
         echo()
-        ManifestData.packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
+        packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
         if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
-        ManifestData.allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, ManifestData.packageIdentifier)?.also {
-            info("Found ${ManifestData.packageIdentifier} in the winget-pkgs repository")
+        val allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)?.also {
+            info("Found $packageIdentifier in the winget-pkgs repository")
             it.maxWithOrNull(versionStringComparator)?.let { latestVersion ->
                 info("Found latest version: $latestVersion")
             }
         }
-        ManifestData.packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
-        GitHubImpl.microsoftWinGetPkgs.getDirectoryContent(GitHubUtils.getPackagePath(ManifestData.packageIdentifier))
-            ?.find { it.name == ManifestData.packageVersion }
-            ?: throw doesNotExistError(ManifestData.packageIdentifier, ManifestData.packageVersion, colors = colors)
+        packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
+        GitHubImpl.microsoftWinGetPkgs.getDirectoryContent(GitHubUtils.getPackagePath(packageIdentifier))
+            ?.find { it.name == packageVersion }
+            ?: throw doesNotExistError(packageIdentifier, packageVersion, colors = colors)
         val deletionReason = deletionReasonParam ?: currentContext.terminal.promptForDeletionReason()
         val shouldRemoveManifest = if (submit || Environment.isCI) {
             true
         } else {
-            confirm("Would you like to make a pull request to remove ${ManifestData.packageIdentifier} ${ManifestData.packageVersion}?")
-                ?: throw ProgramResult(ExitCode.CtrlC)
+            info("Would you like to make a pull request to remove $packageIdentifier $packageVersion?")
+            currentContext.terminal.yesNoMenu(default = true).prompt()
         }
         if (!shouldRemoveManifest) return@runBlocking
         echo()
         val forkRepository = GitHubImpl.getWingetPkgsFork(currentContext.terminal)
         val ref = GitHubImpl.createBranchFromUpstreamDefaultBranch(
             winGetPkgsFork = forkRepository,
-            packageIdentifier = ManifestData.packageIdentifier,
-            packageVersion = ManifestData.packageVersion
+            packageIdentifier = packageIdentifier,
+            packageVersion = packageVersion
         ) ?: return@runBlocking
         val directoryContent: MutableList<GHContent> = forkRepository
-            .getDirectoryContent(
-                GitHubUtils.getPackageVersionsPath(ManifestData.packageIdentifier, ManifestData.packageVersion),
-                ref.ref
-            )
+            .getDirectoryContent(GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion), ref.ref)
         val progress = currentContext.terminal.progressAnimation {
             text("Deleting files")
             percentage()
@@ -109,7 +109,7 @@ class RemoveVersion : CliktCommand(
         }
         progress.clear()
         GitHubImpl.microsoftWinGetPkgs.createPullRequest(
-            "Remove: ${ManifestData.packageIdentifier} version ${ManifestData.packageVersion}",
+            "Remove: $packageIdentifier version $packageVersion",
             "${GitHubImpl.forkOwner}:${ref.ref}",
             GitHubImpl.microsoftWinGetPkgs.defaultBranch,
             "## $deletionReason"

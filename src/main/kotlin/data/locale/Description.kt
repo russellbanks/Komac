@@ -2,11 +2,11 @@ package data.locale
 
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.ValidationRules
-import data.ManifestData
-import data.PreviousManifestData
+import schemas.manifest.DefaultLocaleManifest
+import utils.msix.Msix
 
 object Description {
-    object Short : TextPrompt {
+    class Short(private val msix: Msix?) : TextPrompt {
         override val name: String = "Short description"
 
         override val validationRules: ValidationRules = ValidationRules(
@@ -15,12 +15,12 @@ object Description {
             isRequired = true
         )
 
-        override val extraText: String? get() = ManifestData.msix?.description?.let {
+        override val extraText: String? get() = msix?.description?.let {
             "Description from installer: $it"
         }
     }
 
-    object Long : TextPrompt {
+    class Long(private val defaultLocaleManifest: DefaultLocaleManifest?) : TextPrompt {
         override val name: String = "Description"
 
         override val validationRules: ValidationRules = ValidationRules(
@@ -29,6 +29,6 @@ object Description {
             isRequired = false
         )
 
-        override val default: String? get() = PreviousManifestData.defaultLocaleManifest?.description
+        override val default: String? get() = defaultLocaleManifest?.description
     }
 }

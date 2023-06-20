@@ -1,7 +1,5 @@
 package utils.msix
 
-import utils.extension
-import utils.hashSha256
 import it.skrape.core.htmlDocument
 import it.skrape.selects.Doc
 import it.skrape.selects.attribute
@@ -12,6 +10,8 @@ import okio.Path.Companion.toPath
 import okio.buffer
 import okio.openZip
 import schemas.manifest.InstallerManifest
+import utils.extension
+import utils.hashSha256
 
 class MsixBundle(msixBundleFile: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     var signatureSha256: String? = null

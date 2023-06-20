@@ -1,16 +1,19 @@
 package data.installer
 
+import io.ktor.http.Url
 import io.menu.prompts.RadioMenuPrompt
-import data.ManifestData
-import data.PreviousManifestData
 import schemas.manifest.InstallerManifest
 import utils.extension
 
-object InstallerType : RadioMenuPrompt<InstallerManifest.InstallerType> {
-    override val name: String = "Installer type"
+class InstallerType(
+    private val installerUrl: Url,
+    private val allInstallers: List<InstallerManifest.Installer>,
+    private val previousInstallerManifest: InstallerManifest?
+) : RadioMenuPrompt<InstallerManifest.InstallerType> {
+    override val name: String = InstallerType.name
 
     @OptIn(ExperimentalStdlibApi::class)
-    override val items get() = if (ManifestData.installerUrl.extension.equals("exe", ignoreCase = true)) {
+    override val items get() = if (installerUrl.extension.equals("exe", ignoreCase = true)) {
         listOf(
             InstallerManifest.InstallerType.BURN,
             InstallerManifest.InstallerType.EXE,
@@ -20,7 +23,11 @@ object InstallerType : RadioMenuPrompt<InstallerManifest.InstallerType> {
         InstallerManifest.InstallerType.entries
     }
 
-    override val default: InstallerManifest.InstallerType? get() = PreviousManifestData.installerManifest?.run {
-        installerType ?: installers.getOrNull(ManifestData.installers.size)?.installerType
+    override val default: InstallerManifest.InstallerType? get() = previousInstallerManifest?.run {
+        installerType ?: installers.getOrNull(allInstallers.size)?.installerType
+    }
+
+    companion object {
+        const val name = "Installer type"
     }
 }

@@ -3,9 +3,9 @@ package token
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import io.ExitCode
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.ValidationRules
-import io.ExitCode
 import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GitHub

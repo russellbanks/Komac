@@ -53,4 +53,16 @@ data class LocaleManifest(
         manifest = this,
         rawString = EncodeConfig.yamlDefault.encodeToString(serializer = serializer(), value = this)
     )
+
+    companion object {
+        /**
+         * Returns the name of the YAML file containing the localized manifest for the given package identifier and locale.
+         *
+         * @param identifier the package identifier to get the manifest name for
+         * @param locale the locale to get the manifest name for
+         * @return a string representing the name of the YAML file containing the localized manifest for the given
+         * identifier and locale
+         */
+        fun getFileName(identifier: String, locale: String) = "$identifier.locale.$locale.yaml"
+    }
 }

@@ -6,13 +6,13 @@ import com.sun.jna.WString
 import com.sun.jna.platform.win32.WinBase.FILETIME
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import utils.extension
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
 import okio.FileSystem
 import okio.Path
 import schemas.manifest.InstallerManifest
+import utils.extension
 
 class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSystem.SYSTEM) {
     var productCode: String? = null
@@ -202,15 +202,6 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
 
         val result = MsiRecordGetString(phRecord.value, field, szBuf, pcchBuf)
         return if (result == 0) Native.toString(szBuf) else null
-    }
-
-    fun resetExceptShared() {
-        productVersion = null
-        productCode = null
-        upgradeCode = null
-        productLanguage = null
-        allUsers = null
-        isWix = false
     }
 
     enum class AllUsers(val code: String) {
