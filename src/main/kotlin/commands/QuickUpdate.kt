@@ -283,9 +283,8 @@ class QuickUpdate : CliktCommand(
         }
         progressList.forEach(ProgressAnimation::clear)
         UrlsToInstallerMatcher.matchInstallers(
-            installerResults.sortedWith(installerSorter),
+            installerResults,
             previousInstallers
-                .sortedWith(installerSorter)
                 .map {
                     it.copy(
                         installerType = previousInstallerManifest.installerType ?: it.installerType,
