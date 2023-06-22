@@ -1,5 +1,5 @@
 [versions]
-buildconfig = "4.0.4"
+buildconfig = "4.1.1"
 clikt = "4.0.0.221-SNAPSHOT"
 coroutines = "1.7.1"
 detekt = "1.23.0"
