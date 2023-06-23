@@ -18,8 +18,8 @@ import schemas.manifest.InstallerManifest
  */
 fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
     val architectures = listOf(
-        "x86_64", "x86", "x32", "x64", "i386", "i486", "i586", "i686", "386", "486", "586", "686", "arm64", "arm",
-        "aarch64", "aarch", "amd64", "neutral"
+        "x86_64", "x64", "win64", "x86", "x32", "win32", "i386", "i486", "i586", "i686", "386", "486", "586", "686",
+        "arm64", "arm", "aarch64", "aarch", "amd64", "neutral"
     )
     val delimiter = "[,\\._-]"
     val archInUrl = "(?:\\b$delimiter)(${architectures.joinToString("|")})(?:$delimiter\\b)"
@@ -32,8 +32,8 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
         when {
             arch.startsWith("aarch") -> InstallerManifest.Installer.Architecture.ARM.takeIf { arch == "aarch" }
                 ?: InstallerManifest.Installer.Architecture.ARM64
-            arch == "x86_64" || arch == "amd64" -> InstallerManifest.Installer.Architecture.X64
-            arch matches Regex("i?[3-6]86") || arch == "x32" -> InstallerManifest.Installer.Architecture.X86
+            arch == "x86_64" || arch == "win64" || arch == "amd64" -> InstallerManifest.Installer.Architecture.X64
+            arch matches Regex("i?[3-6]86") || arch == "x32" || arch == "win32" -> InstallerManifest.Installer.Architecture.X86
             else -> try {
                 InstallerManifest.Installer.Architecture.valueOf(arch.uppercase())
             } catch (_: IllegalArgumentException) {
