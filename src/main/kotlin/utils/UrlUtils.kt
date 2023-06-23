@@ -22,7 +22,7 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
         "aarch64", "aarch", "amd64", "neutral"
     )
     val delimiter = "[,\\._-]"
-    val archInUrl = "(?:\\b$delimiter)?(${architectures.joinToString("|")})(?:$delimiter\\b)?"
+    val archInUrl = "(?:\\b$delimiter)(${architectures.joinToString("|")})(?:$delimiter\\b)"
         .toRegex(RegexOption.IGNORE_CASE)
         .find(fullPath)
         ?.run { groupValues[1] }
