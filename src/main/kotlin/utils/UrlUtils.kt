@@ -17,10 +17,15 @@ import schemas.manifest.InstallerManifest
  * @return an [InstallerManifest.Installer.Architecture] enum value if an architecture can be found, otherwise null
  */
 fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
-    val archInUrl = "([.\\-])(x86_64|i?[3-6]86|x\\d+|arm(?:64)?|aarch(?:64)?|amd64?)(\\.)"
+    val architectures = listOf(
+        "x86_64", "x86", "x32", "x64", "i386", "i486", "i586", "i686", "386", "486", "586", "686", "arm64", "arm",
+        "aarch64", "aarch", "amd64", "neutral"
+    )
+    val delimiter = "[,\\._-]"
+    val archInUrl = "(?:\\b$delimiter)?(${architectures.joinToString("|")})(?:$delimiter\\b)?"
         .toRegex(RegexOption.IGNORE_CASE)
         .find(fullPath)
-        ?.run { groupValues[2] }
+        ?.run { groupValues[1] }
         ?.lowercase()
 
     return archInUrl?.let { arch ->
