@@ -340,6 +340,14 @@ data class InstallerManifest(
             @SerialName("neutral") NEUTRAL;
 
             override fun toString() = name.lowercase()
+
+            companion object {
+                fun valueOfOrNull(value: String): Architecture? = try {
+                    valueOf(value)
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+            }
         }
     }
 

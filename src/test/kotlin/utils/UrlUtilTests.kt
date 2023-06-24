@@ -13,7 +13,9 @@ import schemas.manifest.InstallerManifest.Installer.Architecture
 
 class UrlUtilTests : FunSpec({
     context("get architecture from url") {
-        fun architectureUrl(architecture: String) = Url("file-$architecture.extension")
+        fun architectureUrl(architecture: String, delimiter: String = "-"): Url {
+            return Url("https://www.example.com/file$delimiter$architecture${delimiter}extension")
+        }
 
         context("x86 tests") {
             withData("x86", "x32", "Win32", "i386", "386", "i486", "486", "i586", "586", "i686", "686") {
@@ -37,6 +39,10 @@ class UrlUtilTests : FunSpec({
             withData("arm64", "aarch64") {
                 architectureUrl(it).findArchitecture() shouldBe Architecture.ARM64
             }
+        }
+
+        test("architectures with no delimiters are not found") {
+            architectureUrl(architecture = "armInstaller", delimiter = "").findArchitecture() shouldBe null
         }
     }
 

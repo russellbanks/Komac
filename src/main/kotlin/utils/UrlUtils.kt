@@ -11,12 +11,13 @@ import network.Http
 import schemas.manifest.InstallerManifest
 
 /**
- * Tries to extract the architecture from the URL string and returns it as an
- * [InstallerManifest.Installer.Architecture] enum value.
+ * Tries to extract the architecture from a URL and returns it as an [InstallerManifest.Installer.Architecture] enum
+ * value.
  *
  * @return an [InstallerManifest.Installer.Architecture] enum value if an architecture can be found, otherwise null
  */
 fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
+    // Architectures higher up in the list have a greater priority. For example, we should check for x86_64 before x86.
     val architectures = listOf(
         "x86_64", "x64", "win64", "x86", "x32", "win32", "i386", "i486", "i586", "i686", "386", "486", "586", "686",
         "arm64", "arm", "aarch64", "aarch", "amd64", "neutral"
@@ -34,11 +35,7 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
                 ?: InstallerManifest.Installer.Architecture.ARM64
             arch == "x86_64" || arch == "win64" || arch == "amd64" -> InstallerManifest.Installer.Architecture.X64
             arch matches Regex("i?[3-6]86") || arch == "x32" || arch == "win32" -> InstallerManifest.Installer.Architecture.X86
-            else -> try {
-                InstallerManifest.Installer.Architecture.valueOf(arch.uppercase())
-            } catch (_: IllegalArgumentException) {
-                null
-            }
+            else -> InstallerManifest.Installer.Architecture.valueOfOrNull(arch.uppercase())
         }
     }
 }
