@@ -16,28 +16,37 @@ class UrlUtilTests : FunSpec({
         fun architectureUrl(architecture: String, delimiter: String = "-"): Url {
             return Url("https://www.example.com/file$delimiter$architecture${delimiter}extension")
         }
+        val delimiters = listOf(",", ".", "_", "-")
 
         context("x86 tests") {
             withData("x86", "x32", "Win32", "i386", "386", "i486", "486", "i586", "586", "i686", "686") {
-                architectureUrl(it).findArchitecture() shouldBe Architecture.X86
+                withData(delimiters) { delimiter ->
+                    architectureUrl(it, delimiter).findArchitecture() shouldBe Architecture.X86
+                }
             }
         }
 
         context("x64 tests") {
             withData("x64", "x86_64", "Win64", "amd64") {
-                architectureUrl(it).findArchitecture() shouldBe Architecture.X64
+                withData(delimiters) { delimiter ->
+                    architectureUrl(it, delimiter).findArchitecture() shouldBe Architecture.X64
+                }
             }
         }
 
         context("arm tests") {
             withData("arm", "aarch") {
-                architectureUrl(it).findArchitecture() shouldBe Architecture.ARM
+                withData(delimiters) { delimiter ->
+                    architectureUrl(it, delimiter).findArchitecture() shouldBe Architecture.ARM
+                }
             }
         }
 
         context("arm64 tests") {
             withData("arm64", "aarch64") {
-                architectureUrl(it).findArchitecture() shouldBe Architecture.ARM64
+                withData(delimiters) { delimiter ->
+                    architectureUrl(it, delimiter).findArchitecture() shouldBe Architecture.ARM64
+                }
             }
         }
 
