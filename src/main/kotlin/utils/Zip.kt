@@ -25,14 +25,14 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     var nestedInstallerFiles: List<InstallerManifest.NestedInstallerFiles>? = null
 
     private val validExtensionsList = listOf(
-        InstallerManifest.InstallerType.MSIX.toString(),
-        InstallerManifest.InstallerType.APPX.toString(),
-        InstallerManifest.InstallerType.MSI.toString(),
-        InstallerManifest.InstallerType.EXE.toString(),
-        InstallerManifest.InstallerType.ZIP.toString(),
+        InstallerManifest.InstallerType.MSIX.name,
+        InstallerManifest.InstallerType.APPX.name,
+        InstallerManifest.InstallerType.MSI.name,
+        InstallerManifest.InstallerType.EXE.name,
+        InstallerManifest.InstallerType.ZIP.name,
         MsixBundle.msixBundleConst,
         MsixBundle.appxBundleConst,
-    )
+    ).map(String::lowercase)
 
     private val zipFileSystem = fileSystem.openZip(zip)
 
@@ -42,13 +42,13 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
 
     private val installerTypeCounts = validExtensionsList.associateWith { validExtension ->
         identifiedFiles.count { zipEntry ->
-            zipEntry.extension.lowercase() == validExtensionsList.find { it == validExtension }
+            zipEntry.extension.equals(validExtensionsList.find { it == validExtension }, ignoreCase = true)
         }
     }
 
     init {
-        require(zip.extension.lowercase() == InstallerManifest.InstallerType.ZIP.toString()) {
-            "File must be a ${InstallerManifest.InstallerType.ZIP}"
+        require(zip.extension.equals(InstallerManifest.InstallerType.ZIP.name, ignoreCase = true)) {
+            "File must be a ${InstallerManifest.InstallerType.ZIP.name.lowercase()}"
         }
     }
 

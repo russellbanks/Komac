@@ -19,19 +19,20 @@ import schemas.manifest.InstallerManifest
 fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
     // Map of potential names for architectures to their corresponding enum values
     val architectureMap = mapOf(
-        InstallerManifest.Installer.Architecture.X64 to listOf("x86_64", "x64", "64bit", "win64", "amd64"),
+        InstallerManifest.Installer.Architecture.X64 to listOf("x86_64", "x64", "64-bit", "64bit", "win64", "ia64", "amd64"),
         InstallerManifest.Installer.Architecture.X86 to listOf(
-            "x86", "x32", "32bit", "win32", "i386", "i486", "i586", "i686", "386", "486", "586", "686"
+            "x86", "x32", "32-bit", "32bit", "win32", "ia32", "i386", "i486", "i586", "i686", "386", "486", "586", "686"
         ),
         InstallerManifest.Installer.Architecture.ARM64 to listOf("arm64", "aarch64"),
-        InstallerManifest.Installer.Architecture.ARM to listOf("arm", "aarch"),
+        InstallerManifest.Installer.Architecture.ARM to listOf("arm", "armv7", "aarch"),
         InstallerManifest.Installer.Architecture.NEUTRAL to listOf("neutral")
     )
     val archPatterns = architectureMap.flatMap { it.value }
-    val delimiter = "[,\\._-]"
+    val delimiter = "[,/\\._-]"
     val archInUrl = "(?<=$delimiter)(${archPatterns.joinToString("|")})(?=$delimiter)"
         .toRegex(RegexOption.IGNORE_CASE)
-        .find(fullPath)
+        .findAll(fullPath)
+        .lastOrNull()
         ?.value
         ?.lowercase()
 

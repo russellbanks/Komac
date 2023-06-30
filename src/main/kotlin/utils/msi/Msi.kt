@@ -28,7 +28,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
     var description: String? = null
 
     init {
-        require(msiFile.extension.lowercase() == InstallerManifest.InstallerType.MSI.toString())
+        require(msiFile.extension.equals(InstallerManifest.InstallerType.MSI.name, ignoreCase = true))
         if (Platform.isWindows()) getValuesFromDatabase() else getValuesFromBinary()
     }
 

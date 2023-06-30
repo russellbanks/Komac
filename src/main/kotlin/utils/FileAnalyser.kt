@@ -34,7 +34,7 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
         else -> null
     }
 
-    val msi = if (file.extension.lowercase() == InstallerType.MSI.toString()) Msi(file) else null
+    val msi = if (file.extension.equals(InstallerType.MSI.name, ignoreCase = true)) Msi(file) else null
 
     val msixBundle = when {
         file.extension.equals(MsixBundle.msixBundleConst, ignoreCase = true) ||
@@ -131,11 +131,11 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
     val upgradeBehaviour: UpgradeBehavior?
         get() {
             val validExtensions = listOf(
-                InstallerType.APPX.toString(),
-                InstallerType.MSIX.toString(),
+                InstallerType.APPX.name,
+                InstallerType.MSIX.name,
                 MsixBundle.appxBundleConst,
                 MsixBundle.msixBundleConst
-            )
+            ).map(String::lowercase)
             return if (file.extension.lowercase() in validExtensions) UpgradeBehavior.Install else null
         }
 
