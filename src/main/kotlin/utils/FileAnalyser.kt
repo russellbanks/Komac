@@ -1,5 +1,8 @@
 package utils
 
+import com.sun.jna.Native
+import com.sun.jna.Platform
+import com.sun.jna.platform.win32.Kernel32Util
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
@@ -11,43 +14,108 @@ import schemas.manifest.InstallerManifest.Installer.Architecture
 import schemas.manifest.InstallerManifest.InstallerType
 import schemas.manifest.InstallerManifest.Scope
 import schemas.manifest.InstallerManifest.UpgradeBehavior
+import utils.jna.Kernel32
 import utils.msi.Msi
 import utils.msix.Msix
 import utils.msix.MsixBundle
 
 class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = FileSystem.SYSTEM) {
-    val msix = when (file.extension) {
-        InstallerType.MSIX.toString(), InstallerType.APPX.toString() -> Msix(file)
+    private val resourceNamesMap: Map<String, List<String>>? by lazy {
+        if (Platform.isWindows()) {
+            runCatching { Kernel32Util.getResourceNames(file.toString()) }.getOrNull()
+        } else {
+            null
+        }
+    }
+
+    val msix = when {
+        file.extension.equals(InstallerType.MSIX.name, ignoreCase = true) ||
+            file.extension.equals(InstallerType.APPX.name, ignoreCase = true) -> Msix(file)
         else -> null
     }
 
-    val msi = if (file.extension == InstallerType.MSI.toString()) Msi(file) else null
+    val msi = if (file.extension.lowercase() == InstallerType.MSI.toString()) Msi(file) else null
 
-    val msixBundle = when (file.extension) {
-        MsixBundle.msixBundleConst, MsixBundle.appxBundleConst -> MsixBundle(file)
+    val msixBundle = when {
+        file.extension.equals(MsixBundle.msixBundleConst, ignoreCase = true) ||
+            file.extension.equals(MsixBundle.appxBundleConst, ignoreCase = true) -> MsixBundle(file)
         else -> null
     }
 
-    val installerType: InstallerType?
-        get() = when (file.extension) {
-            InstallerType.MSI.toString() -> if (msi?.isWix == true) InstallerType.WIX else InstallerType.MSI
-            InstallerType.ZIP.toString() -> InstallerType.ZIP
-            InstallerType.APPX.toString() -> InstallerType.APPX
-            InstallerType.MSIX.toString() -> InstallerType.MSIX
+    private val manifest: String? by lazy {
+        if (Platform.isWindows()) {
+            if (resourceNamesMap?.get(Kernel32.RT_MANIFEST)?.contains(Kernel32.MANIFEST_RESOURCE) == true) {
+                val manifestBytes = Kernel32Util.getResource(file.toString(), Kernel32.RT_MANIFEST, Kernel32.MANIFEST_RESOURCE)
+                Native.toString(manifestBytes)
+            } else {
+                null
+            }
+        } else {
+            val startTag = "<assembly"
+            val endTag = "</assembly>"
+            var record = false
+            buildString {
+                fileSystem.source(file).buffer().use { buffer ->
+                    while (!buffer.exhausted()) {
+                        val line = buffer.readUtf8Line() ?: break
+                        if (line.contains(startTag)) {
+                            val startIndex = line.indexOf(startTag)
+                            appendLine(line.substring(startIndex))
+                            record = true
+                        } else if (record) {
+                            if (line.contains(endTag)) {
+                                val endIndex = line.indexOf(endTag) + endTag.length
+                                append(line.substring(0, endIndex))
+                                record = false
+                            } else {
+                                appendLine(line)
+                            }
+                        }
+                    }
+                }
+            }.ifBlank { null }
+        }
+    }
+
+    val installerType: InstallerType? by lazy {
+        when {
+            file.extension.equals(InstallerType.MSI.name, ignoreCase = true) -> {
+                if (msi?.isWix == true) InstallerType.WIX else InstallerType.MSI
+            }
+            file.extension.equals(InstallerType.ZIP.name, ignoreCase = true) -> InstallerType.ZIP
+            file.extension.equals(InstallerType.APPX.name, ignoreCase = true) -> InstallerType.APPX
+            file.extension.equals(InstallerType.MSIX.name, ignoreCase = true) -> InstallerType.MSIX
             else -> fileSystem.openReadOnly(file).use {
                 when {
                     it.isNullsoft -> InstallerType.NULLSOFT
                     it.isInno -> InstallerType.INNO
-                    it.isBurn -> InstallerType.BURN
+                    resourceNamesMap?.get(Kernel32.RT_RCDATA)?.contains(Kernel32.MSI_RESOURCE) == true ||
+                        it.hasBurnHeader -> InstallerType.BURN
                     else -> null
                 }
             }
         }
+    }
 
-    val architecture: Architecture
-        get() = when (file.extension) {
-            InstallerType.MSI.toString() -> msi?.architecture
-            InstallerType.MSIX.toString() -> {
+    val productCode: String? by lazy {
+        if (file.extension.equals(InstallerType.MSI.name, ignoreCase = true)) {
+            msi?.productCode
+        } else if (Platform.isWindows() && file.extension.equals(InstallerType.EXE.name, ignoreCase = true)) {
+            if (resourceNamesMap?.get(Kernel32.RT_RCDATA)?.contains(Kernel32.PRODUCT_CODE_RESOURCE) == true) {
+                val productCodeBytes = Kernel32Util.getResource(file.toString(), Kernel32.RT_RCDATA, Kernel32.PRODUCT_CODE_RESOURCE)
+                Native.toString(productCodeBytes)
+            } else {
+                null
+            }
+        } else {
+            null
+        }
+    }
+
+    val architecture: Architecture by lazy {
+        when {
+            file.extension.equals(InstallerType.MSI.name, ignoreCase = true) -> msi?.architecture
+            file.extension.equals(InstallerType.MSIX.name, ignoreCase = true) -> {
                 msix?.processorArchitecture ?: msixBundle?.packages?.first()?.processorArchitecture
             }
             else -> when (peArchitectureValue) {
@@ -58,6 +126,7 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
                 else -> null
             }
         } ?: Architecture.X64
+    }
 
     val upgradeBehaviour: UpgradeBehavior?
         get() {
@@ -67,7 +136,7 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
                 MsixBundle.appxBundleConst,
                 MsixBundle.msixBundleConst
             )
-            return if (file.extension in validExtensions) UpgradeBehavior.Install else null
+            return if (file.extension.lowercase() in validExtensions) UpgradeBehavior.Install else null
         }
 
     val scope: Scope?
@@ -87,7 +156,10 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
      * @return `true` if the [FileHandle] has been made with NSIS, `false` otherwise.
      */
     private val FileHandle.isNullsoft: Boolean
-        get() = Buffer().also { read(0L, it, nullsoftBytes.size.toLong()) }.rangeEquals(0L, nullsoftBytes)
+        get() = Buffer().use {
+            read(0L, it, nullsoftBytes.size.toLong())
+            it.rangeEquals(0L, nullsoftBytes)
+        }
 
     /**
      * Returns `true` if the [FileHandle] has been made with Inno Setup.
@@ -97,7 +169,10 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
      * @return `true` if the [FileHandle] has been made with Inno Setup, `false` otherwise.
      */
     private val FileHandle.isInno: Boolean
-        get() = Buffer().also { read(0L, it, innoBytes.size.toLong()) }.rangeEquals(0L, innoBytes)
+        get() = Buffer().use {
+            read(0L, it, innoBytes.size.toLong())
+            it.rangeEquals(0L, innoBytes)
+        }
 
     /**
      * Returns `true` if the [FileHandle] has been made with WiX's burn installer type.
@@ -107,7 +182,7 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
      * See [GetWixburnSectionInfo](https://github.com/AnalogJ/Wix3.6Toolset/blob/master/RC0-source/wix36-sources/src/wix/BurnCommon.cs#L252) in WiX Toolset v3.
      * @return `true` if the [FileHandle] has been made with WiX's burn installer type, `false` otherwise.
      */
-    private val FileHandle.isBurn: Boolean
+    private val FileHandle.hasBurnHeader: Boolean
         get() {
             source().buffer().use { bufferedSource ->
                 val sink = Buffer()

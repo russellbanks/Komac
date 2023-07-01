@@ -32,6 +32,7 @@ object InstallerManifestData {
         installers: List<InstallerManifest.Installer>,
         architecture: InstallerManifest.Installer.Architecture,
         additionalMetadata: AdditionalMetadata? = null,
+        productCode: String? = null,
         msix: Msix?,
         msixBundle: MsixBundle?,
         msi: Msi?,
@@ -76,7 +77,7 @@ object InstallerManifestData {
             upgradeBehavior = upgradeBehavior
                 ?: previousInstaller?.upgradeBehavior
                 ?: previousInstallerManifest?.upgradeBehavior,
-            productCode = msi?.productCode
+            productCode = productCode
                 ?: additionalMetadata?.productCode?.ifBlank { null }
                 ?: (previousInstallerManifest?.productCode ?: previousInstaller?.productCode)
                     ?.updateVersionInString(allVersions, packageVersion),
@@ -173,6 +174,7 @@ object InstallerManifestData {
                 ?: previousInstallerManifest?.scope,
             packageFamilyName = installers.getDistinctOrNull(InstallerManifest.Installer::packageFamilyName)
                 ?: previousInstallerManifest?.packageFamilyName,
+            productCode = installers.getDistinctOrNull(InstallerManifest.Installer::productCode),
             installModes = installModes?.ifEmpty { null }
                 ?: previousInstallerManifest?.installModes,
             installerSwitches = installers.getDistinctOrNull(InstallerManifest.Installer::installerSwitches)
@@ -210,6 +212,7 @@ object InstallerManifestData {
                     .takeIfNotDistinct(installer.nestedInstallerFiles) { it.nestedInstallerFiles },
                 scope = installers.takeIfNotDistinct(installer.scope) { it.scope },
                 packageFamilyName = installers.takeIfNotDistinct(installer.packageFamilyName) { it.packageFamilyName },
+                productCode = installers.takeIfNotDistinct(installer.productCode) { it.productCode },
                 releaseDate = installers.takeIfNotDistinct(installer.releaseDate) { it.releaseDate },
                 upgradeBehavior = installers.takeIfNotDistinct(installer.upgradeBehavior) { it.upgradeBehavior },
                 installerSwitches = installers.takeIfNotDistinct(installer.installerSwitches) { it.installerSwitches },
