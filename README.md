@@ -1,4 +1,4 @@
-<h1> Another WinGet Manifest Creator <img src="https://user-images.githubusercontent.com/74878137/217098245-7aa8957b-b34e-4cba-b822-ca7a2448c3b7.svg" align="left"  height="39" alt="Komac banner"></h1>
+<h1><img src="https://github.com/russellbanks/Komac/raw/main/assets/logo.svg" align="left" height="39" alt="Komac logo"> Komac - Another WinGet Manifest Creator <img src="https://user-images.githubusercontent.com/74878137/217098245-7aa8957b-b34e-4cba-b822-ca7a2448c3b7.svg" align="right" height="39" alt="Komac banner"></h1>
 
 ![GitHub release (release name instead of tag name)](https://img.shields.io/github/v/release/russellbanks/komac)
 ![GitHub Repo stars](https://img.shields.io/github/stars/russellbanks/komac)
