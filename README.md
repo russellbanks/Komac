@@ -1,11 +1,11 @@
-<img src="https://user-images.githubusercontent.com/74878137/217098245-7aa8957b-b34e-4cba-b822-ca7a2448c3b7.svg" alt="Komac banner" height="60" />
+<h1> Another WinGet Manifest Creator <img src="https://user-images.githubusercontent.com/74878137/217098245-7aa8957b-b34e-4cba-b822-ca7a2448c3b7.svg" align="left"  height="39" alt="Komac banner"></h1>
 
-# Komac: The Kotlin Manifest Creator for [winget-pkgs](https://github.com/microsoft/winget-pkgs)
-
+![GitHub release (release name instead of tag name)](https://img.shields.io/github/v/release/russellbanks/komac)
+![GitHub Repo stars](https://img.shields.io/github/stars/russellbanks/komac)
 ![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
 ![License](https://img.shields.io/github/license/russellbanks/Komac)
 
-Komac is an advanced CLI designed to create manifests for [winget-pkgs](https://github.com/microsoft/winget-pkgs).
+Komac is an advanced CLI designed to create manifests for [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
 
 ## Installation
 
@@ -28,18 +28,19 @@ winget install komac
 scoop install komac
 ```
 
-### Linux
+### Linux & macOS
 
-A deb file for Linux is available from the [releases](https://github.com/russellbanks/Komac/releases).
+It is recommended to use the cross-platform JAR for Linux and macOS. The installers are although available for these, but don't work correctly, hence I encourage you to use the JAR by using the following command:
 
-### macOS
+```bash
+# Think like to prefix "java -jar" to the normal command 😉
+java -jar komac.jar
+```
 
-A dmg file for macOS is available from the [releases](https://github.com/russellbanks/Komac/releases).
-
-## Usage
+## Commands
 
 | Command        | Description                                                                   | Usage                                      |
-|----------------|-------------------------------------------------------------------------------|--------------------------------------------|
+| -------------- | ----------------------------------------------------------------------------- | ------------------------------------------ |
 | New            | Create a package from scratch                                                 | `new`                                      |
 | Update         | Update a pre-existing package in winget-pkgs                                  | `update` `up`                              |
 | Remove         | Remove a version from winget-pkgs                                             | `remove` `rm`                              |
@@ -47,76 +48,69 @@ A dmg file for macOS is available from the [releases](https://github.com/russell
 | Token update   | Update stored GitHub OAuth token                                              | `token update`, `token up`                 |
 | Token remove   | Delete stored GitHub OAuth token                                              | `token remove`, `token rm`, `token delete` |
 
-```bash
-komac [OPTIONS] COMMAND [ARGS]
-```
-
 ### Update an existing package with a new version
 
-#### Without prompts
-
 ```bash
+# Without user interaction
 komac update --id Package.Identifier --version 1.2.3 --urls https://www.firstUrl.com,https://www.secondUrl.com --submit
-```
 
-| Parameter                            | Usage                          | Notes                                                      |
-|--------------------------------------|--------------------------------|------------------------------------------------------------|
-| Package Identifier                   | `--id`, `--package-identifier` |                                                            |
-| Version                              | `--version`                    |                                                            |
-| URLs                                 | `--urls`                       | URLs are delimited by a comma (`,`)                        |
-| Automatically submit                 | `--submit`                     |                                                            |
-| Token (if one is not already stored) | `--token`                      | Komac will check for a `GITHUB_TOKEN` environment variable |
-
-#### With prompts
-
-```bash
+# With user interaction
 komac update
 ```
+
+| Parameter                            | Usage       | Notes                                                      |
+| ------------------------------------ | ----------- | ---------------------------------------------------------- |
+| Package Identifier                   | `--id`      |                                                            |
+| Version                              | `--version` |                                                            |
+| URLs                                 | `--urls`    | URLs are delimited by a comma (`,`)                        |
+| Automatically submit                 | `--submit`  |                                                            |
+| Token (if one is not already stored) | `--token`   | Komac will check for a `GITHUB_TOKEN` environment variable |
 
 ## Komac in Action 🎥
 
 ![Komac-demo](https://user-images.githubusercontent.com/74878137/216784291-de2d5dc8-d6f9-4bde-a059-7a1382c3940b.gif)
 
-## Komac vs other tools 🏆
+## Komac vs. other tools 🏆
 
 While other manifest creation tools have made remarkable strides in the winget-pkgs community, their development pace is
-notably slow and lacks the advanced detection capabilities of Komac.
+notably slow and lacks the advanced detection capabilities that comes with Komac.
 
-|                                          |   Komac    | WinGetCreate |                           YamlCreate                           |
-|------------------------------------------|:----------:|:------------:|:--------------------------------------------------------------:|
-| Parameters                               |     ✅      |      ✅       |                               ❌                                |
-| Works without Git                        |     ✅      |      ✅       |                               ❌                                |
-| Optimised manifest ordering*             |     ✅      |      ❌       |                               ✅                                |
-| Fully cross-platform                     |     ✅      |      ❌       |                            Limited                             |
-| Full MSI value retrieval                 |     ✅      |   Partial    |                            Partial                             |
-| Linux and macOS MSI support              |     ✅      |      ❌       |                               ❌                                |
-| Full MSIX value retrieval                |     ✅      |   Partial    |   Limited - https://github.com/Trenly/winget-pkgs/issues/180   |
-| GitHub value retrieval                   |     ✅      |      ❌       |                               ❌                                |
-| Formatted GitHub release notes retrieval |     ✅      |      ❌       |                               ❌                                |
-| Release date identification              |     ✅      |      ❌       |                               ❌                                |
-| Webpage metadata scraping                |     ✅      |      ❌       |                               ❌                                |
-| Fully standalone (w/o winget-pkgs clone) |     ✅      |      ✅       |                               ❌                                |
-| No telemetry                             |     ✅      |      ❌       |                               ✅                                |
-| Type-safety                              |     ✅      |      ✅       |                               ❌                                |
-| Inno setup detection                     |     ✅      |      ✅       |                               ✅                                |
-| Nullsoft detection                       |     ✅      |      ✅       |                               ✅                                |
-| Burn installer detection                 |     ✅      |      ✅       | Opt-in feature (not enabled by default, due to slow processing |
-| Progress bar and ETA while downloading   |     ✅      |      ❌       |                               ❌                                |
-| Language                                 | Kotlin/JVM |      C#      |                           PowerShell                           |
+|                                          |   Komac    | WinGetCreate |                              YamlCreate                              |
+| ---------------------------------------- | :--------: | :----------: | :------------------------------------------------------------------: |
+| Parameters                               |     ✅     |      ✅      |                                  ❌                                  |
+| Works without Git                        |     ✅     |      ✅      |                                  ❌                                  |
+| Optimised manifest ordering [^1]         |     ✅     |      ❌      |                                  ✅                                  |
+| Fully cross-platform                     |     ✅     |      ❌      |                               Limited                                |
+| Full MSI value retrieval                 |     ✅     |   Partial    |                               Partial                                |
+| Linux & macOS MSI support                |     ✅     |      ❌      |                                  ❌                                  |
+| Full MSIX value retrieval                |     ✅     |   Partial    |      Limited - https://github.com/Trenly/winget-pkgs/issues/180      |
+| Get information from GitHub              |     ✅     |      ❌      |                                  ❌                                  |
+| Formatted GitHub release notes retrieval |     ✅     |      ❌      |                                  ❌                                  |
+| Release date identification              |     ✅     |      ❌      |                                  ❌                                  |
+| Webpage metadata scraping                |     ✅     |      ❌      |                                  ❌                                  |
+| Fully standalone (w/o winget-pkgs clone) |     ✅     |      ✅      |                                  ❌                                  |
+| No telemetry                             |     ✅     |      ❌      |                                  ✅                                  |
+| Type-safety                              |     ✅     |      ✅      |                                  ❌                                  |
+| Inno setup detection                     |     ✅     |      ✅      |                               ✅ [^2]                                |
+| Nullsoft detection                       |     ✅     |      ✅      |                               ✅ [^2]                                |
+| Burn installer detection                 |     ✅     |      ✅      | Opt-in feature [^2] (not enabled by default, due to slow processing) |
+| Progress bar & ETA while downloading     |     ✅     |      ❌      |                                  ❌                                  |
+| Language                                 | Kotlin/JVM |      C#      |                              PowerShell                              |
 
-*If all installers have the same value, it is put at the root of the manifest to reduce redundancy.
-
-## Powering Major Repositories: Komac & WinGet Releaser 🌟
-
-Komac isn't just a tool – it's an integral part of a larger ecosystem, playing a pivotal role in projects
-like [WinGet Releaser](https://github.com/vedantmgoyal2009/winget-releaser). WinGet Releaser is a GitHub action that
-retrieves URLs from your releases and passes them directly to Komac.
+[^1]: If all installers have the same value, it is put at the root of the manifest to reduce redundancy.
+[^2]: The logic for this was contributed by me :) Check [issues](https://github.com/Trenly/winget-pkgs/issues?q%253Dauthor%253Arussellbanks) that I've opened to request this feature for YamlCreate.
 
 ## How can I support Komac? ❤️
 
+- 🤝 Sponsor this project through [GitHub Sponsors](https://github.com/sponsors/russellbanks)
 - ⭐ Star this project! :)
-- 🧑‍💻 Use Komac and [create an issue](https://github.com/russellbanks/Komac/issues/new) if you run into any bugs or
-  inconsistencies
+- 🧑‍💻 Use Komac and [create an issue](https://github.com/russellbanks/Komac/issues/new) for feature requests or bugs.
+
+## Powering GitHub Action: WinGet Releaser 🌟
+
+I'm happy to say that WinGet Releaser is powered by Komac, due to its advanced detection capabilities and its ability to work cross-platform. The action is available on the [GitHub Marketplace](https://github.com/marketplace/actions/winget-releaser).
+
+It can be used in CI/CD workflows to automatically create & publish WinGet manifests for your releases. Just make sure to add first version of your manifest manually, and the action will take care of the future versions. More information to set it up can be found on the action's repository [here](https://github.com/vedantmgoyal2009/winget-releaser).
 
 ## License
 
