@@ -108,6 +108,7 @@ class QuickUpdate : CliktCommand(
     private lateinit var packageVersion: String
     private lateinit var updateState: VersionUpdateState
     private lateinit var installerUrl: Url
+    private lateinit var allVersions: List<String>
 
     @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking {
@@ -118,7 +119,7 @@ class QuickUpdate : CliktCommand(
         }
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
         if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
-        val allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
+        allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
             ?: throw doesNotExistError(packageIdentifier, isUpdate = true, colors = colors)
         val latestVersion = allVersions.maxWith(versionStringComparator)
         val previousManifestData = PreviousManifestData(packageIdentifier, latestVersion, GitHubImpl.microsoftWinGetPkgs)
@@ -232,6 +233,7 @@ class QuickUpdate : CliktCommand(
                         installerSha256 = installerResult.installerSha256,
                         installers = installers,
                         additionalMetadata = additionalMetadata,
+                        allVersions = allVersions,
                         architecture = installer.architecture,
                         msix = installerResult.msix,
                         msi = installerResult.msi,
@@ -297,6 +299,7 @@ class QuickUpdate : CliktCommand(
                 installerUrl = newInstaller.installerUrl,
                 installerSha256 = newInstaller.installerSha256,
                 installerType = newInstaller.installerType,
+                allVersions = allVersions,
                 scope = newInstaller.scope,
                 releaseDate = newInstaller.releaseDate,
                 upgradeBehavior = newInstaller.upgradeBehavior,

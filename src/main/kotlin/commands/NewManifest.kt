@@ -158,6 +158,7 @@ class NewManifest : CliktCommand(name = "new") {
                     installers = installers,
                     scope = scope,
                     architecture = downloadResult.architecture,
+                    allVersions = allVersions,
                     msix = downloadResult.msix,
                     msi = downloadResult.msi,
                     zip = downloadResult.zip,
