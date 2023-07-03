@@ -160,7 +160,7 @@ object GitHubImpl {
     ): GHPullRequest {
         val manifests = files.values
         if (
-            manifests.find { it is InstallerManifest } == previousManifestData.installerManifest &&
+            manifests.find { it is InstallerManifest } == previousManifestData.installerManifest.await() &&
             manifests.find { it is DefaultLocaleManifest } == previousManifestData.defaultLocaleManifest &&
             manifests.find { it is VersionManifest } == previousManifestData.versionManifest &&
             manifests.filterIsInstance<LocaleManifest>() == previousManifestData.localeManifests
