@@ -16,6 +16,7 @@ import java.io.IOException
 import network.Http
 import network.KtorGitHubConnector
 import org.kohsuke.github.GHDirection
+import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.GHIssue
 import org.kohsuke.github.GHIssueSearchBuilder
 import org.kohsuke.github.GHIssueState
@@ -66,22 +67,36 @@ object GitHubImpl {
     }
 
     fun getWingetPkgsFork(terminal: Terminal): GHRepository = with(terminal) {
-        return try {
-            github.getRepository("$forkOwner/$wingetpkgs")
-        } catch (_: IOException) {
-            info("Fork of $wingetpkgs not found. Forking...")
+        var result: GHRepository? = null
+        var count = 0
+        val maxTries = 3
+        while (result == null) {
             try {
-                github.getRepository("$Microsoft/$wingetpkgs").fork().also {
-                    success("Forked $wingetpkgs repository: ${it.fullName}")
+                result = github.getRepository("$forkOwner/$wingetpkgs")
+            } catch (exception: GHFileNotFoundException) {
+                info("Fork of $wingetpkgs not found. Forking...")
+                try {
+                    github.getRepository("$Microsoft/$wingetpkgs").fork().also {
+                        success("Forked $wingetpkgs repository: ${it.fullName}")
+                    }
+                } catch (ioException: IOException) {
+                    throw CliktError(
+                        message = colors.danger("Failed to fork $wingetpkgs. Please try again or fork it manually"),
+                        cause = ioException,
+                        statusCode = 1
+                    )
                 }
             } catch (ioException: IOException) {
-                throw CliktError(
-                    message = colors.danger("Failed to fork $wingetpkgs. Please try again or fork it manually"),
-                    cause = ioException,
-                    statusCode = 1
-                )
+                if (++count == maxTries) {
+                    throw CliktError(
+                        message = "Failed to get $forkOwner/$wingetpkgs",
+                        cause = ioException,
+                        statusCode = 1
+                    )
+                }
             }
         }
+        result
     }
 
     private fun updateExistingBranchToUpstreamDefaultBranch(wingetPkgsFork: GHRepository, branchName: String): GHRef {
