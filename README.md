@@ -5,7 +5,7 @@
 ![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
 ![License](https://img.shields.io/github/license/russellbanks/Komac)
 
-Komac is an advanced CLI designed to create manifests for [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
+Komac is an advanced CLI designed to create manifests for the [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
 
 ## Installation
 
@@ -30,10 +30,9 @@ scoop install komac
 
 ### Linux & macOS
 
-It is recommended to use the cross-platform JAR for Linux and macOS. The installers are although available for these, but don't work correctly, hence I encourage you to use the JAR by using the following command:
+It is recommended to use the cross-platform JAR for Linux and macOS. Installers are although available for these platforms but there's no guarantee on their working state. The JAR can be used with the following command:
 
 ```bash
-# Think like to prefix "java -jar" to the normal command 😉
 java -jar komac.jar
 ```
 
@@ -70,7 +69,7 @@ komac update
 
 ![Komac-demo](https://user-images.githubusercontent.com/74878137/216784291-de2d5dc8-d6f9-4bde-a059-7a1382c3940b.gif)
 
-## Komac vs. other tools 🏆
+## Komac vs other tools 🏆
 
 While other manifest creation tools have made remarkable strides in the winget-pkgs community, their development pace is
 notably slow and lacks the advanced detection capabilities that comes with Komac.
@@ -97,8 +96,8 @@ notably slow and lacks the advanced detection capabilities that comes with Komac
 | Progress bar & ETA while downloading     |     ✅     |      ❌      |                                  ❌                                  |
 | Language                                 | Kotlin/JVM |      C#      |                              PowerShell                              |
 
-[^1]: If all installers have the same value, it is put at the root of the manifest to reduce redundancy.
-[^2]: The logic for this was contributed by me :) Check [issues](https://github.com/Trenly/winget-pkgs/issues?q%253Dauthor%253Arussellbanks) that I've opened to request this feature for YamlCreate.
+[^1]: If all installers have the same value, that value is put at the root of the manifest to reduce redundancy.
+[^2]: The logic for this was contributed by me :) Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request this feature for YamlCreate.
 
 ## How can I support Komac? ❤️
 
@@ -106,9 +105,9 @@ notably slow and lacks the advanced detection capabilities that comes with Komac
 - ⭐ Star this project! :)
 - 🧑‍💻 Use Komac and [create an issue](https://github.com/russellbanks/Komac/issues/new) for feature requests or bugs.
 
-## Powering GitHub Action: WinGet Releaser 🌟
+## Powering GitHub Actions: [WinGet Releaser](https://github.com/vedantmgoyal2009/winget-releaser) 🌟
 
-I'm happy to say that WinGet Releaser is powered by Komac, due to its advanced detection capabilities and its ability to work cross-platform. The action is available on the [GitHub Marketplace](https://github.com/marketplace/actions/winget-releaser).
+I'm happy to say that WinGet Releaser is powered by Komac, due to its advanced detection capabilities and ability to work cross-platform. The action is available on the [GitHub Marketplace](https://github.com/marketplace/actions/winget-releaser).
 
 It can be used in CI/CD workflows to automatically create & publish WinGet manifests for your releases. Just make sure to add first version of your manifest manually, and the action will take care of the future versions. More information to set it up can be found on the action's repository [here](https://github.com/vedantmgoyal2009/winget-releaser).
 
