@@ -26,12 +26,5 @@ inline fun <T, R> Iterable<T>.takeIfNotDistinct(default: R, selector: (T) -> R):
  * after applying the [selector].
  */
 inline fun <T, R> Iterable<T>.getDistinctOrNull(selector: (T) -> R?): R? {
-    val distinctValues = HashSet<R>()
-    for (item in this) {
-        val value = selector(item) ?: continue
-        if (!distinctValues.add(value)) {
-            return null
-        }
-    }
-    return distinctValues.singleOrNull()
+    return mapNotNull(selector).toSet().singleOrNull()
 }
