@@ -1,32 +1,31 @@
 package utils
 
-import com.github.ajalt.mordant.terminal.TerminalColors
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.rendering.Theme
 
 object ManifestUtils {
     /**
-     * Takes a raw manifest string and a [TerminalColors] instance, and returns a sequence of formatted lines for the
-     * manifest.
+     * Takes a raw manifest string and returns a sequence of formatted lines for the manifest.
      * The function processes each line of the raw manifest string and formats it based on the first character of the
      * line:
-     * - If the line starts with "#" character, the line is formatted in green color using the [TerminalColors.green]
-     * function.
+     * - If the line starts with "#" character, the line is formatted in green.
      * - If the first character of the line is a letter, the line is split into two parts based on the first colon
      * character (":"),
-     *   and the first part is formatted using the [TerminalColors.info] function and the second part (if any) is left
+     *   and the first part is formatted using the info colour and the second part (if any) is left
      *   unformatted.
      * - Otherwise, the line is left unchanged.
      *
      * @param rawString the raw manifest string to be formatted.
-     * @param colors the [TerminalColors] instance to use for formatting the manifest.
+     * @param theme the [Theme] instance to use for formatting the manifest.
      * @return a sequence of formatted lines for the manifest.
      */
-    fun formattedManifestLinesSequence(rawString: String, colors: TerminalColors): Sequence<String> {
+    fun formattedManifestLinesSequence(rawString: String, theme: Theme): Sequence<String> {
         return rawString.lineSequence().map { line ->
             when {
-                line.startsWith('#') -> colors.green(line)
+                line.startsWith('#') -> TextColors.green(line)
                 line.firstOrNull()?.isLetter() == true -> {
                     val (key, value) = line.split(':', limit = 2)
-                    "${colors.info(key)}:$value"
+                    "${theme.info(key)}:$value"
                 }
                 else -> line
             }

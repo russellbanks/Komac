@@ -1,5 +1,5 @@
 import com.github.ajalt.clikt.core.CliktError
-import com.github.ajalt.mordant.terminal.TerminalColors
+import com.github.ajalt.mordant.rendering.Theme
 import github.GitHubImpl
 import io.ktor.client.statement.HttpResponse
 
@@ -59,9 +59,9 @@ object Errors {
         packageIdentifier: String,
         packageVersion: String? = null,
         isUpdate: Boolean = false,
-        colors: TerminalColors
+        theme: Theme
     ): CliktError = CliktError(
-        message = colors.warning(
+        message = theme.warning(
             buildString {
                 append("$packageIdentifier ")
                 if (packageVersion != null) append("$packageVersion ")

@@ -1,16 +1,16 @@
 package utils
 
 import com.github.ajalt.clikt.core.CliktError
-import com.github.ajalt.mordant.terminal.TerminalColors
+import com.github.ajalt.mordant.rendering.Theme
 import data.shared.InstallerUrl
 import io.ktor.http.Url
 import schemas.manifest.InstallerManifest
 
 object UrlsToInstallerMatcher {
-    fun assertUniqueUrlsCount(parameterUrls: Set<Url>, previousUrls: Set<Url>, colors: TerminalColors) {
+    fun assertUniqueUrlsCount(parameterUrls: Set<Url>, previousUrls: Set<Url>, theme: Theme) {
         if (parameterUrls.size != previousUrls.size) {
             throw CliktError(
-                colors.danger(
+                theme.danger(
                     buildString {
                         append("The number of unique installer urls ")
                         append(
@@ -28,13 +28,13 @@ object UrlsToInstallerMatcher {
         }
     }
 
-    suspend fun assertUrlsValid(parameterUrls: Set<Url>, colors: TerminalColors) {
+    suspend fun assertUrlsValid(parameterUrls: Set<Url>, theme: Theme) {
         val errorList = parameterUrls.mapNotNull { url ->
             InstallerUrl.getError(url.toString())?.let { error -> url to error }
         }
         if (errorList.isNotEmpty()) {
             throw CliktError(
-                colors.danger(errorList.joinToString(System.lineSeparator()) { (url, error) -> "$error on $url" }),
+                theme.danger(errorList.joinToString(System.lineSeparator()) { (url, error) -> "$error on $url" }),
                 statusCode = 1
             )
         }

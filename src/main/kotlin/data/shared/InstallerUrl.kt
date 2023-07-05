@@ -1,6 +1,8 @@
 package data.shared
 
 import com.github.ajalt.mordant.animation.ProgressAnimation
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.rendering.TextStyles
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
 import io.ktor.http.Url
@@ -84,12 +86,12 @@ object InstallerUrl : UrlPrompt {
             println(
                 verticalLayout {
                     cell(
-                        (colors.brightGreen + colors.bold)(
+                        (TextColors.brightGreen + TextStyles.bold)(
                             "${msixBundle.packages?.size} packages have been detected inside the MSIX Bundle:"
                         )
                     )
                     msixBundle.packages?.forEachIndexed { index, individualPackage ->
-                        cell(colors.brightGreen("Package ${index.inc()}/${msixBundle.packages?.size}"))
+                        cell(TextColors.brightGreen("Package ${index.inc()}/${msixBundle.packages?.size}"))
                         listOf(
                             "Architecture" to individualPackage.processorArchitecture,
                             "Version" to individualPackage.version,
@@ -103,7 +105,7 @@ object InstallerUrl : UrlPrompt {
                                     if (value.size > 1) newText = "${text}s"
                                     newValue = value.joinToString()
                                 }
-                                cell(colors.brightWhite("${" ".repeat(3)} $newText: $newValue"))
+                                cell(TextColors.brightWhite("${" ".repeat(3)} $newText: $newValue"))
                             }
                         }
                     }

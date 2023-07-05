@@ -25,11 +25,11 @@ suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, tr
             println()
             prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC)
         } else {
-            throw CliktError(colors.danger(error), statusCode = 1)
+            throw CliktError(theme.danger(error), statusCode = 1)
         }
         parameter != null -> transform(parameter)
         Environment.isCI -> throw CliktError(
-            message = colors.danger("${prompt.name} was not provided"),
+            message = theme.danger("${prompt.name} was not provided"),
             statusCode = 1
         )
         else -> prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC)
@@ -84,4 +84,4 @@ fun CliktCommand.warning(
     width: Int? = null
 ) = currentContext.terminal.warning(message, whitespace, align, overflowWrap, width)
 
-val CliktCommand.colors get() = currentContext.terminal.colors
+val CliktCommand.theme get() = currentContext.terminal.theme

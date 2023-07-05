@@ -78,7 +78,7 @@ class RemoveVersion : CliktCommand(
         packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
         GitHubImpl.microsoftWinGetPkgs.getDirectoryContent(GitHubUtils.getPackagePath(packageIdentifier))
             ?.find { it.name == packageVersion }
-            ?: throw doesNotExistError(packageIdentifier, packageVersion, colors = colors)
+            ?: throw doesNotExistError(packageIdentifier, packageVersion, theme = theme)
         val deletionReason = deletionReasonParam ?: currentContext.terminal.promptForDeletionReason()
         val shouldRemoveManifest = if (submit || Environment.isCI) {
             true

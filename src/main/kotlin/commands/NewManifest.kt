@@ -226,7 +226,7 @@ class NewManifest : CliktCommand(name = "new") {
             previousManifestData = previousManifestData
         )
         for (manifest in files.values.map(Manifest::toString)) {
-            formattedManifestLinesSequence(manifest, colors).forEach(::echo)
+            formattedManifestLinesSequence(manifest, theme).forEach(::echo)
         }
         info("What would you like to do with $packageIdentifier $packageVersion?")
         currentContext.terminal.radioMenu<ManifestResultOption> {

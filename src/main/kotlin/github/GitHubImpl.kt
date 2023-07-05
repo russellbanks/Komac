@@ -81,7 +81,7 @@ object GitHubImpl {
                     }
                 } catch (ioException: IOException) {
                     throw CliktError(
-                        message = colors.danger("Failed to fork $wingetpkgs. Please try again or fork it manually"),
+                        message = theme.danger("Failed to fork $wingetpkgs. Please try again or fork it manually"),
                         cause = ioException,
                         statusCode = 1
                     )

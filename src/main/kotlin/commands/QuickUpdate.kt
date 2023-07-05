@@ -120,7 +120,7 @@ class QuickUpdate : CliktCommand(
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
         if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
         allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
-            ?: throw doesNotExistError(packageIdentifier, isUpdate = true, colors = colors)
+            ?: throw doesNotExistError(packageIdentifier, isUpdate = true, theme = theme)
         val latestVersion = allVersions.maxWith(versionStringComparator)
         val previousManifestData = PreviousManifestData(packageIdentifier, latestVersion, GitHubImpl.microsoftWinGetPkgs)
         info("Latest version of $packageIdentifier: $latestVersion")
@@ -151,7 +151,7 @@ class QuickUpdate : CliktCommand(
             previousManifestData = previousManifestData
         )
         for (manifest in files.values.map(Manifest::toString)) {
-            formattedManifestLinesSequence(manifest, colors).forEach(::echo)
+            formattedManifestLinesSequence(manifest, theme).forEach(::echo)
         }
         if (submit) {
             GitHubImpl.commitAndPullRequest(
@@ -199,7 +199,7 @@ class QuickUpdate : CliktCommand(
         if (parameterUrls != null) {
             loopParameterUrls(parameterUrls, previousManifestData)
         } else if (Environment.isCI) {
-            throw CliktError(colors.danger("No installers have been provided"), statusCode = 1)
+            throw CliktError(theme.danger("No installers have been provided"), statusCode = 1)
         } else {
             val previousInstallerManifest = previousManifestData.installerManifest.await()!!
             previousInstallerManifest.installers.sortedWith(installerSorter).forEachIndexed { index, installer ->
@@ -211,7 +211,7 @@ class QuickUpdate : CliktCommand(
                     "Installer Locale" to (installer.installerLocale ?: previousInstallerManifest.installerLocale)
                 ).forEach { (promptType, value) ->
                     value?.let {
-                        echo("  $promptType: ${colors.info(it.toString())}")
+                        echo("  $promptType: ${theme.info(it.toString())}")
                     }
                 }
                 echo()
@@ -256,8 +256,8 @@ class QuickUpdate : CliktCommand(
         val previousInstallerManifest = previousManifestData.installerManifest.await()!!
         val previousInstallers = previousInstallerManifest.installers
         val previousUrls = previousInstallers.map(InstallerManifest.Installer::installerUrl)
-        UrlsToInstallerMatcher.assertUniqueUrlsCount(parameterUrls, previousUrls.toSet(), colors)
-        UrlsToInstallerMatcher.assertUrlsValid(parameterUrls, colors)
+        UrlsToInstallerMatcher.assertUniqueUrlsCount(parameterUrls, previousUrls.toSet(), theme)
+        UrlsToInstallerMatcher.assertUrlsValid(parameterUrls, theme)
         val installerResults = mutableListOf<InstallerManifest.Installer>()
         val progressList = parameterUrls.map { url -> getDownloadProgressBar(url).apply(ProgressAnimation::start) }
         gitHubDetection = parameterUrls
