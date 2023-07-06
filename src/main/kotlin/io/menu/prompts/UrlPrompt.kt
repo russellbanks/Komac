@@ -2,6 +2,7 @@ package io.menu.prompts
 
 import Errors
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import github.GitHubDetection
@@ -27,7 +28,7 @@ interface UrlPrompt : Prompt<Url> {
     val validationRules: UrlValidationRules get() = UrlValidationRules()
 
     override suspend fun prompt(terminal: Terminal): Url = with(terminal) {
-        val textColour = if (validationRules.isRequired) colors.brightGreen else colors.brightYellow
+        val textColour = if (validationRules.isRequired) TextColors.brightGreen else TextColors.brightYellow
         val requiredText = if (validationRules.isRequired) Prompts.required else Prompts.optional
         println(textColour("$requiredText Enter the $description"))
         return prompt(
@@ -53,8 +54,8 @@ interface UrlPrompt : Prompt<Url> {
                 !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
         val error = getError(redirectedUrl.toString())
         return if (shouldUseRedirectedUrl && error == null) {
-            println(colors.brightYellow("The URL is redirected. Would you like to use the destination URL instead?"))
-            println(colors.cyan("Discovered URL: $redirectedUrl"))
+            println(TextColors.brightYellow("The URL is redirected. Would you like to use the destination URL instead?"))
+            println(TextColors.cyan("Discovered URL: $redirectedUrl"))
             if (yesNoMenu(default = true).prompt()) {
                 success("URL changed to $redirectedUrl")
                 println()

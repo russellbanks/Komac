@@ -1,6 +1,7 @@
 package token
 
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import io.ExitCode
@@ -17,7 +18,7 @@ object Token : TextPrompt {
 
     override suspend fun prompt(terminal: Terminal): String {
         return terminal.prompt(
-            prompt = terminal.colors.brightGreen("Please enter your GitHub personal access token"),
+            prompt = TextColors.brightGreen("Please enter your GitHub personal access token"),
             hideInput = true
         ) { input ->
             runBlocking {

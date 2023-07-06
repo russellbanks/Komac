@@ -1,6 +1,7 @@
 package io.menu
 
 import com.github.ajalt.mordant.animation.animation
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.Widget
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
@@ -22,19 +23,12 @@ class CheckMenu<T>(
             items.forEachIndexed { index, item ->
                 val isHighlighted = index == selectedIndex
                 val isSelected = index in selectedIndices
-                val highlightedColour = if (isHighlighted) terminal.colors.brightMagenta else terminal.colors.plain
-                cell(
-                    "${highlightedColour("[")}${highlightedColour(if (isSelected) "x" else " ")}${highlightedColour("]")} ${
-                        nameConvert(item)
-                    }"
-                )
+                val checkbox = if (isSelected) "[x]" else "[ ]"
+                val color = if (isHighlighted) TextColors.brightMagenta(checkbox) else checkbox
+                cell("$color ${nameConvert(item)}")
             }
-            val confirmSelectedColour = if (selectedIndex == items.size) {
-                terminal.colors.brightMagenta
-            } else {
-                terminal.colors.plain
-            }
-            cell(confirmSelectedColour("[Confirm]"))
+            val confirmHighlighted = if (selectedIndex == items.size) TextColors.brightMagenta(confirm) else confirm
+            cell(confirmHighlighted)
         }
 
     private val confirmPressed get() = selectedIndex == items.size
@@ -71,6 +65,10 @@ class CheckMenu<T>(
     override fun updateAnimation() = animation.update(selectedIndex)
 
     override fun clearAnimation() = animation.clear()
+
+    companion object {
+        private const val confirm = "[Confirm]"
+    }
 }
 
 class CheckMenuBuilder<T> {

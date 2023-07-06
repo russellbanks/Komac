@@ -2,6 +2,7 @@ package utils
 
 import Errors
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.Terminal
 import io.ExitCode
 import io.Prompts
@@ -95,7 +96,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     private fun Terminal.nestedInstallersPrompt() {
         do {
             do {
-                println(colors.brightGreen("${Prompts.required} Enter the relative nested installer path"))
+                println(TextColors.brightGreen("${Prompts.required} Enter the relative nested installer path"))
                 info("Example: dart-sdk\\bin\\dart.exe")
                 val input = prompt(
                     InstallerManifest.NestedInstallerFiles::relativeFilePath.name
@@ -136,7 +137,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
         var portableCommandAlias: String?
         do {
             println(
-                colors.brightYellow(
+                TextColors.brightYellow(
                     "${Prompts.optional} Enter the command line alias to be used for calling the package"
                 )
             )
@@ -175,7 +176,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     }
 
     private fun Terminal.zipEntrySelectionPrompt(zipPaths: List<Path>): List<Path> = generateSequence {
-        println(colors.brightGreen("${Prompts.required} Select files to use"))
+        println(TextColors.brightGreen("${Prompts.required} Select files to use"))
         val chosenZipEntries = checkMenu<Path> {
             items = zipPaths
         }.prompt()
@@ -208,7 +209,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
         val installerType = FileAnalyser(tempFile).installerType
         fileSystem.delete(tempFile)
         return if (installerType == null) {
-            println(colors.brightGreen("${Prompts.required} Select the nested installer type"))
+            println(TextColors.brightGreen("${Prompts.required} Select the nested installer type"))
             radioMenu {
                 items = listOf(
                     InstallerManifest.InstallerType.EXE,

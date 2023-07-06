@@ -1,5 +1,6 @@
 package io.menu.prompts
 
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.Terminal
 import io.Prompts
 import io.menu.checkMenu
@@ -10,7 +11,7 @@ interface CheckMenuPrompt<T> : Prompt<List<T>> {
     val items: List<T>
 
     override suspend fun prompt(terminal: Terminal): List<T>? = with(terminal) {
-        println(colors.brightYellow("${Prompts.optional} Select the ${name.lowercase()}"))
+        println(TextColors.brightYellow("${Prompts.optional} Select the ${name.lowercase()}"))
         return checkMenu<T> {
             items = this@CheckMenuPrompt.items
             defaultChecked = this@CheckMenuPrompt.defaultChecked

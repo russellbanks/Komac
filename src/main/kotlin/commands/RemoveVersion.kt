@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.mordant.animation.progressAnimation
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import data.shared.PackageIdentifier
@@ -117,7 +118,7 @@ class RemoveVersion : CliktCommand(
     }
 
     private fun Terminal.promptForDeletionReason(): String {
-        echo(colors.brightGreen("${Prompts.required} Give a reason for removing this manifest"))
+        echo(TextColors.brightGreen("${Prompts.required} Give a reason for removing this manifest"))
         return prompt("Reason") {
             if (it.length < minimumReasonLength || it.length > maximumReasonLength) {
                 ConversionResult.Invalid(Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength))

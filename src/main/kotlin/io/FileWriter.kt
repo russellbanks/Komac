@@ -1,6 +1,7 @@
 package io
 
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.Terminal
 import io.menu.yesNoMenu
 import okio.FileSystem
@@ -12,7 +13,7 @@ object FileWriter {
     fun writeFiles(files: Map<String, Manifest>, terminal: Terminal) = with(terminal) {
         do {
             println()
-            println(colors.brightYellow("Enter a directory to write the files to:"))
+            println(TextColors.brightYellow("Enter a directory to write the files to:"))
             val directory = prompt("Directory")?.toPath() ?: throw ProgramResult(ExitCode.CtrlC)
             if (FileSystem.SYSTEM.metadata(directory).isDirectory) {
                 writeFilesToDirectory(directory, files, terminal)

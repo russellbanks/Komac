@@ -1,6 +1,8 @@
 package io.menu
 
 import com.github.ajalt.mordant.animation.animation
+import com.github.ajalt.mordant.rendering.TextColors
+import com.github.ajalt.mordant.rendering.TextStyles
 import com.github.ajalt.mordant.rendering.Widget
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
@@ -17,8 +19,8 @@ open class RadioMenu<T>(
         get() = verticalLayout {
             items.forEachIndexed { index, item ->
                 val isSelected = index == selectedIndex
-                val selectedColour = if (isSelected) terminal.colors.brightMagenta else terminal.colors.plain
-                cell("${selectedColour("[${if (isSelected) "x" else " "}]")} ${nameConvert(item)}")
+                val checkbox = if (isSelected) TextColors.brightMagenta("[x]") else "[ ]"
+                cell("$checkbox ${nameConvert(item)}")
             }
         }
 
