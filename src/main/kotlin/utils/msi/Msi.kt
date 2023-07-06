@@ -168,7 +168,6 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
         return result
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     private fun MsiLibrary.fetchRecords(phView: PointerByReference) {
         val phRecord = PointerByReference()
         while (true) {

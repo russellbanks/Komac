@@ -102,7 +102,6 @@ data class InstallerManifest(
         @SerialName("silentWithProgress") SilentWithProgress
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     @Serializable
     data class InstallerSwitches(
         var silent: String? = null,

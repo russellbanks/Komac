@@ -16,7 +16,7 @@ val versionStringComparator: Comparator<String> = Comparator { version1, version
 
 private fun compareVersionParts(parts1: List<VersionPart>, parts2: List<VersionPart>): Int {
     val minLength = minOf(parts1.size, parts2.size)
-    val comparisonResult = (0 until minLength).firstNotNullOfOrNull { index ->
+    val comparisonResult = (0..<minLength).firstNotNullOfOrNull { index ->
         compareValuesBy(parts1[index], parts2[index], VersionPart::value, VersionPart::supplement).takeIf { it != 0 }
     }
     return comparisonResult ?: parts1.size.compareTo(parts2.size)

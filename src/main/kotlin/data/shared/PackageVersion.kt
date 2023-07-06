@@ -22,9 +22,9 @@ object PackageVersion : TextPrompt {
      */
     private val randomVersion: String
         get() {
-            val major = (1 until 10).random()
-            val minor = (0 until 100).random()
-            val patch = (0 until 10).random()
+            val major = (1..<10).random()
+            val minor = (0..<100).random()
+            val patch = (0..<10).random()
             return "$major.$minor.$patch"
         }
 }

@@ -11,7 +11,6 @@ class UpgradeBehaviour(
 
     override val default: InstallerManifest.UpgradeBehavior = previousValue ?: InstallerManifest.UpgradeBehavior.Install
 
-    @OptIn(ExperimentalStdlibApi::class)
     override val items = InstallerManifest.UpgradeBehavior.entries
 
     private val previousValue: InstallerManifest.UpgradeBehavior?

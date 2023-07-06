@@ -110,7 +110,6 @@ class QuickUpdate : CliktCommand(
     private lateinit var installerUrl: Url
     private lateinit var allVersions: List<String>
 
-    @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking {
         tokenParameter?.let { TokenStore.useTokenParameter(it) }
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }

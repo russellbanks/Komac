@@ -98,7 +98,6 @@ class NewManifest : CliktCommand(name = "new") {
     private lateinit var publisher: String
     private lateinit var packageName: String
 
-    @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking {
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)

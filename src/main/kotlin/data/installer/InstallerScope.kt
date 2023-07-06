@@ -9,7 +9,6 @@ class InstallerScope(
 ) : RadioMenuPrompt<InstallerManifest.Scope> {
     override val name: String = InstallerScope.name
 
-    @OptIn(ExperimentalStdlibApi::class)
     override val items: List<InstallerManifest.Scope> = InstallerManifest.Scope.entries
 
     override val default: InstallerManifest.Scope? get() = previousInstallerManifest?.let {
