@@ -17,26 +17,27 @@ import schemas.manifest.InstallerManifest
  * @return an [InstallerManifest.Installer.Architecture] enum value if an architecture can be found, otherwise null
  */
 fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
-    // Architectures higher up in the list have a greater priority. For example, we should check for x86_64 before x86.
-    val architectures = listOf(
-        "x86_64", "x64", "win64", "x86", "x32", "win32", "i386", "i486", "i586", "i686", "386", "486", "586", "686",
-        "arm64", "arm", "aarch64", "aarch", "amd64", "neutral"
+    // Map of potential names for architectures to their corresponding enum values
+    val architectureMap = mapOf(
+        InstallerManifest.Installer.Architecture.X64 to listOf("x86_64", "x64", "64bit", "win64", "amd64"),
+        InstallerManifest.Installer.Architecture.X86 to listOf(
+            "x86", "x32", "32bit", "win32", "i386", "i486", "i586", "i686", "386", "486", "586", "686"
+        ),
+        InstallerManifest.Installer.Architecture.ARM64 to listOf("arm64", "aarch64"),
+        InstallerManifest.Installer.Architecture.ARM to listOf("arm", "aarch"),
+        InstallerManifest.Installer.Architecture.NEUTRAL to listOf("neutral")
     )
+    val archPatterns = architectureMap.flatMap { it.value }
     val delimiter = "[,\\._-]"
-    val archInUrl = "(?<=$delimiter)(${architectures.joinToString("|")})(?=$delimiter)"
+    val archInUrl = "(?<=$delimiter)(${archPatterns.joinToString("|")})(?=$delimiter)"
         .toRegex(RegexOption.IGNORE_CASE)
         .find(fullPath)
         ?.value
         ?.lowercase()
 
     return archInUrl?.let { arch ->
-        when {
-            arch.startsWith("aarch") -> InstallerManifest.Installer.Architecture.ARM.takeIf { arch == "aarch" }
-                ?: InstallerManifest.Installer.Architecture.ARM64
-            arch == "x86_64" || arch == "win64" || arch == "amd64" -> InstallerManifest.Installer.Architecture.X64
-            arch matches Regex("i?[3-6]86") || arch == "x32" || arch == "win32" -> InstallerManifest.Installer.Architecture.X86
-            else -> InstallerManifest.Installer.Architecture.valueOfOrNull(arch.uppercase())
-        }
+        architectureMap.entries.find { arch in it.value }?.key
+            ?: InstallerManifest.Installer.Architecture.valueOfOrNull(arch.uppercase())
     }
 }
 

@@ -1,4 +1,5 @@
 package utils
+
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
@@ -19,7 +20,7 @@ class UrlUtilTests : FunSpec({
         val delimiters = listOf(",", ".", "_", "-")
 
         context("x86 tests") {
-            withData("x86", "x32", "Win32", "i386", "386", "i486", "486", "i586", "586", "i686", "686") {
+            withData("x86", "x32", "32bit", "Win32", "i386", "386", "i486", "486", "i586", "586", "i686", "686") {
                 withData(delimiters) { delimiter ->
                     architectureUrl(it, delimiter).findArchitecture() shouldBe Architecture.X86
                 }
@@ -27,7 +28,7 @@ class UrlUtilTests : FunSpec({
         }
 
         context("x64 tests") {
-            withData("x64", "x86_64", "Win64", "amd64") {
+            withData("x64", "x86_64", "64bit", "Win64", "amd64") {
                 withData(delimiters) { delimiter ->
                     architectureUrl(it, delimiter).findArchitecture() shouldBe Architecture.X64
                 }
