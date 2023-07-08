@@ -40,7 +40,7 @@ jobs:
           PER_USER_INSTALL: true
 
       - name: Rename assets to Komac-nightly
-        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main'
+        if: (github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac'
         shell: pwsh
         run: |
           Get-ChildItem -Recurse -Filter "Komac*" -Include "*-all.jar","*.dmg","*.exe","*.deb" | ForEach-Object {
@@ -52,7 +52,7 @@ jobs:
           }
 
       - name: Release nightly JAR
-        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main' && matrix.os == 'ubuntu-latest'
+        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v1
         with:
           name: ${{env.RELEASE_NAME}}
@@ -61,7 +61,7 @@ jobs:
           files: build/libs/Komac-nightly.jar
 
       - name: Release nightly binaries
-        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main'
+        if: (github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac'
         uses: softprops/action-gh-release@v1
         with:
           name: ${{env.RELEASE_NAME}}
@@ -73,17 +73,17 @@ jobs:
             build/distributions/Komac-nightly.dmg
 
       - name: Clean build directory
-        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main' && matrix.os == 'windows-latest'
+        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'windows-latest'
         run: ./gradlew clean
 
       - name: Build machine scope exe on Windows
-        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main' && matrix.os == 'windows-latest'
+        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'windows-latest'
         run: ./gradlew jpackage
         env:
           PER_USER_INSTALL: false
 
       - name: Rename exe to KomacMachineSetup-nightly
-        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main' && matrix.os == 'windows-latest'
+        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           Get-ChildItem -Recurse -Filter "*.exe" | ForEach-Object {
@@ -93,7 +93,7 @@ jobs:
           }
 
       - name: Release machine scope exe
-        if: github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main' && matrix.os == 'windows-latest'
+        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'windows-latest'
         uses: softprops/action-gh-release@v1
         with:
           name: ${{env.RELEASE_NAME}}

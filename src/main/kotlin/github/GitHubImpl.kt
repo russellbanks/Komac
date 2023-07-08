@@ -8,7 +8,7 @@ import com.github.ajalt.mordant.terminal.Terminal
 import data.PreviousManifestData
 import data.VersionUpdateState
 import io.ktor.client.request.headers
-import io.ktor.client.request.patch
+import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.HttpHeaders
 import io.menu.yesNoMenu
@@ -31,6 +31,9 @@ import schemas.manifest.LocaleManifest
 import schemas.manifest.Manifest
 import schemas.manifest.VersionManifest
 import token.TokenStore
+import kotlinx.serialization.json.Json
+import schemas.GHGraphQLRequestBody
+import schemas.manifest.EncodeConfig
 
 object GitHubImpl {
     private const val Microsoft = "Microsoft"
@@ -203,23 +206,26 @@ object GitHubImpl {
         )
         if (Environment.forcePushOnDraftPR && draftPullRequest != null) {
             val ghRepository = microsoftWinGetPkgs
-            Http.client.patch(draftPullRequest!!.url) {
-                setBody(
-                    """
-                        {
-                            "title": "${GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState)}",
-                            "body": "${GitHubUtils.getPullRequestBody()}",
-                            "draft": false
-                        }
-                    """.trimIndent()
-                )
+            val draftPR = draftPullRequest
+            val graphQlRequestBody = GHGraphQLRequestBody(
+                """
+                    mutation {
+                        updatePullRequest(input: {pullRequestId: "${draftPR!!.getNodeId()}", body: "${GitHubUtils.getPullRequestBody()}", title: "${GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState)}", state: OPEN}) { pullRequest { id } }
+                        markPullRequestReadyForReview(input: {pullRequestId: "${draftPR!!.getNodeId()}"}) { pullRequest { id } }
+                    }
+                """.trimIndent()
+            )
+            Http.client.post("https://api.github.com/graphql") {
+                setBody(Json.encodeToString(GHGraphQLRequestBody.serializer(), graphQlRequestBody))
                 headers {
-                    append(HttpHeaders.Authorization, "token ${TokenStore.token}")
-                    append(HttpHeaders.Accept, "application/vnd.github.v3+json")
+                    append(HttpHeaders.Authorization, "Bearer ${TokenStore.token}")
+                    append(HttpHeaders.Accept, "application/vnd.github.shadow-cat-preview+json")
                 }
             }
             terminal.info("Used draft PR -> ${draftPullRequest!!.title}")
-            return ghRepository.getPullRequest(draftPullRequest!!.number)
+            val pullRequestUpdated = ghRepository.getPullRequest(draftPullRequest!!.number)
+            terminal.info("New title: ${pullRequestUpdated!!.title}")
+            return pullRequestUpdated
         }
         return createPullRequest(packageIdentifier, packageVersion, updateState)
     }
