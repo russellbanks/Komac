@@ -80,7 +80,7 @@ object InstallerManifestData {
                 ?: additionalMetadata?.productCode?.ifBlank { null }
                 ?: (previousInstallerManifest?.productCode ?: previousInstaller?.productCode)
                     ?.updateVersionInString(allVersions, packageVersion),
-            releaseDate = gitHubDetection?.releaseDate ?: additionalMetadata?.releaseDate ?: releaseDate,
+            releaseDate = additionalMetadata?.releaseDate ?: gitHubDetection?.releaseDate ?: releaseDate,
             appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                     appsAndFeaturesEntry.fillARPEntry(
