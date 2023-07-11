@@ -1,6 +1,6 @@
 [versions]
 buildconfig = "4.1.1"
-clikt = "4.0.0-RC"
+clikt = "4.0.0"
 coroutines = "1.7.2"
 detekt = "1.23.0"
 github-api = "1.315"

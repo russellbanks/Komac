@@ -2,6 +2,7 @@ package io.menu.prompts
 
 import Errors
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import io.ExitCode
@@ -16,7 +17,7 @@ interface TextPrompt : Prompt<String> {
     val default: String? get() = null
 
     override suspend fun prompt(terminal: Terminal): String = with(terminal) {
-        val textColour = if (validationRules.isRequired) colors.brightGreen else colors.brightYellow
+        val textColour = if (validationRules.isRequired) TextColors.brightGreen else TextColors.brightYellow
         val requiredText = if (validationRules.isRequired) Prompts.required else Prompts.optional
         println(textColour("$requiredText Enter the ${name.lowercase()}"))
         extraText?.let(::info)

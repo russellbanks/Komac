@@ -2,6 +2,7 @@ package io.menu.prompts
 
 import Errors
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
 import io.Prompts
@@ -17,7 +18,7 @@ interface ListPrompt<T> : Prompt<List<T>> {
     val description: String
 
     override suspend fun prompt(terminal: Terminal): List<T> = with(terminal) {
-        println(colors.brightYellow("${Prompts.optional} Enter the $name (Max ${validationRules.maxItems})"))
+        println(TextColors.brightYellow("${Prompts.optional} Enter the $name (Max ${validationRules.maxItems})"))
         if (extraText != null) info(extraText)
         return prompt(
             prompt = name,
