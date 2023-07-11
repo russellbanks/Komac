@@ -13,6 +13,7 @@ import okio.FileSystem
 import okio.Path
 import schemas.manifest.InstallerManifest
 import utils.extension
+import utils.jna.MsiLibrary
 
 class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSystem.SYSTEM) {
     var productCode: String? = null

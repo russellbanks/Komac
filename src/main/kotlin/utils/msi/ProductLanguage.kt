@@ -2,6 +2,7 @@ package utils.msi
 
 import com.sun.jna.Native
 import com.sun.jna.Platform
+import utils.jna.Kernel32
 
 class ProductLanguage(languageCode: Int) {
     val locale = languageCode.toLanguageTag()

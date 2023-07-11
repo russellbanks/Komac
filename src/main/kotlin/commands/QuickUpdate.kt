@@ -231,6 +231,7 @@ class QuickUpdate : CliktCommand(
                         installerUrl = installerUrl,
                         installerSha256 = installerResult.installerSha256,
                         installers = installers,
+                        productCode = installerResult.productCode,
                         additionalMetadata = additionalMetadata,
                         allVersions = allVersions,
                         architecture = installer.architecture,
@@ -269,6 +270,7 @@ class QuickUpdate : CliktCommand(
                 InstallerManifest.Installer(
                     architecture = url.findArchitecture() ?: fileAnalyser.architecture,
                     installerType = fileAnalyser.installerType,
+                    productCode = fileAnalyser.productCode,
                     scope = url.findScope(),
                     installerSha256 = downloadedFile.path.hashSha256(),
                     installerUrl = url,
@@ -304,6 +306,7 @@ class QuickUpdate : CliktCommand(
                 upgradeBehavior = newInstaller.upgradeBehavior,
                 installers = installers,
                 architecture = newInstaller.architecture,
+                productCode = newInstaller.productCode,
                 msix = null,
                 msi = null,
                 zip = null,
