@@ -17,7 +17,7 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: Do you have any workable ways?
+      label: Do you have any workable/viable ways?
       description: Try to give some examples to make it easy to resolve!
       placeholder: Tell us your idea!
     validations:
