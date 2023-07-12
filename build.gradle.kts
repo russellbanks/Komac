@@ -16,7 +16,7 @@ plugins {
 }
 
 group = "com.russellbanks"
-version = "1.8.2"
+version = "1.9.0"
 
 repositories {
     mavenCentral()
