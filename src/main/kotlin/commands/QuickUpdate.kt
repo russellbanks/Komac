@@ -255,8 +255,6 @@ class QuickUpdate : CliktCommand(
     ) {
         val previousInstallerManifest = previousManifestData.installerManifest.await()!!
         val previousInstallers = previousInstallerManifest.installers
-        val previousUrls = previousInstallers.map(InstallerManifest.Installer::installerUrl)
-        UrlsToInstallerMatcher.assertUniqueUrlsCount(parameterUrls, previousUrls.toSet(), theme)
         UrlsToInstallerMatcher.assertUrlsValid(parameterUrls, theme)
         val installerResults = mutableListOf<InstallerManifest.Installer>()
         val progressList = parameterUrls.map { url -> getDownloadProgressBar(url).apply(ProgressAnimation::start) }

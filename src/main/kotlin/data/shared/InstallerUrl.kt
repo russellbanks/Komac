@@ -46,7 +46,7 @@ object InstallerUrl : UrlPrompt {
         downloadedFile = Http.client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress, fileSystem)
         progress.clear()
         fileAnalyser = FileAnalyser(downloadedFile.path)
-        if (downloadedFile.path.extension.lowercase() == InstallerManifest.InstallerType.ZIP.toString()) {
+        if (downloadedFile.path.extension.equals(InstallerManifest.InstallerType.ZIP.name, ignoreCase = true)) {
             zip = Zip(zip = downloadedFile.path).also { it.prompt(this) }
         }
         return DownloadResult(

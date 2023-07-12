@@ -26,7 +26,7 @@ class Msix(msixFile: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
 
     init {
         val validExtensions = listOf(InstallerManifest.InstallerType.APPX, InstallerManifest.InstallerType.MSIX)
-            .map(InstallerManifest.InstallerType::toString)
+            .map { it.name.lowercase() }
         require(msixFile.extension.lowercase() in validExtensions) {
             "File extension must be one of the following: ${validExtensions.joinToString()}"
         }

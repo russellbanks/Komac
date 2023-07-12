@@ -74,9 +74,7 @@ data class InstallerManifest(
         @SerialName("wix") WIX,
         @SerialName("burn") BURN,
         @SerialName("pwa") PWA,
-        @SerialName("portable") PORTABLE;
-
-        override fun toString() = name.lowercase()
+        @SerialName("portable") PORTABLE
     }
 
     /**

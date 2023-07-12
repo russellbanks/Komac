@@ -7,27 +7,6 @@ import io.ktor.http.Url
 import schemas.manifest.InstallerManifest
 
 object UrlsToInstallerMatcher {
-    fun assertUniqueUrlsCount(parameterUrls: Set<Url>, previousUrls: Set<Url>, theme: Theme) {
-        if (parameterUrls.size != previousUrls.size) {
-            throw CliktError(
-                theme.danger(
-                    buildString {
-                        append("The number of unique installer urls ")
-                        append(
-                            when {
-                                parameterUrls.size > previousUrls.size -> "is greater than"
-                                parameterUrls.size < previousUrls.size -> "is less than"
-                                else -> "does not match"
-                            }
-                        )
-                        append(" the number of previous manifest urls")
-                    }
-                ),
-                statusCode = 1
-            )
-        }
-    }
-
     suspend fun assertUrlsValid(parameterUrls: Set<Url>, theme: Theme) {
         val errorList = parameterUrls.mapNotNull { url ->
             InstallerUrl.getError(url.toString())?.let { error -> url to error }
@@ -44,47 +23,28 @@ object UrlsToInstallerMatcher {
         newInstallers: List<InstallerManifest.Installer>,
         previousInstallers: List<InstallerManifest.Installer>
     ): Map<InstallerManifest.Installer, InstallerManifest.Installer> {
-        val result = mutableMapOf<InstallerManifest.Installer, InstallerManifest.Installer>()
-
-        for (previousInstaller in previousInstallers) {
-            val matchingConditions = sequenceOf<(InstallerManifest.Installer) -> Boolean>(
-                {
-                    it.architecture == previousInstaller.architecture &&
-                        it.installerType == previousInstaller.installerType &&
-                        it.scope == previousInstaller.scope
-                },
-                {
-                    it.architecture == previousInstaller.architecture &&
-                        it.installerType == previousInstaller.installerType &&
-                        it.scope == null
-                },
-                {
-                    it.architecture == previousInstaller.architecture &&
-                        it.installerType == null &&
-                        it.scope == previousInstaller.scope
-                },
-                {
-                    it.architecture == previousInstaller.architecture &&
-                        it.installerType == previousInstaller.installerType
-                },
-                {
-                    it.installerType == previousInstaller.installerType
-                },
-                {
-                    it.architecture == previousInstaller.architecture
-                },
-                {
-                    it.installerUrl.extension == previousInstaller.installerUrl.extension
+        val foundArchitectures = newInstallers.mapNotNull { installer ->
+            installer.installerUrl.findArchitecture()?.let { architecture ->
+                installer.installerUrl to architecture
+            }
+        }.toMap()
+        return previousInstallers.associateWith { previousInstaller ->
+            var maxScore = 0
+            lateinit var bestMatch: InstallerManifest.Installer
+            for (newInstaller in newInstallers) {
+                var score = 0
+                if (newInstaller.architecture == previousInstaller.architecture) score++
+                if (foundArchitectures[newInstaller.installerUrl] == previousInstaller.architecture) score++
+                if (newInstaller.installerUrl == previousInstaller.installerUrl) score++
+                if (newInstaller.installerType == previousInstaller.installerType) score++
+                if (newInstaller.scope == previousInstaller.scope) score++
+                if (newInstaller.scope == null && previousInstaller.scope != null) score++
+                if (score > maxScore || (score == maxScore && foundArchitectures[newInstaller.installerUrl] !in foundArchitectures.values)) {
+                    maxScore = score
+                    bestMatch = newInstaller
                 }
-            )
-
-            val newInstaller = matchingConditions
-                .mapNotNull(newInstallers::firstOrNull)
-                .firstOrNull()
-
-            newInstaller?.let { result[previousInstaller] = it }
+            }
+            bestMatch
         }
-
-        return result
     }
 }
