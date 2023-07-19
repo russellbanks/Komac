@@ -22,12 +22,24 @@ class ParameterUrlTests : FunSpec({
                 architecture = InstallerManifest.Installer.Architecture.X86,
                 installerUrl = architectureUrl(InstallerManifest.Installer.Architecture.X86)
             )
-            val installerUserX86 = installerX86.copy(scope = InstallerManifest.Scope.User)
+            val installerUserX86 = installerX86.copy(
+                scope = InstallerManifest.Scope.User,
+                installerUrl = architectureUrl(
+                    architecture = InstallerManifest.Installer.Architecture.X86,
+                    scope = InstallerManifest.Scope.User
+                )
+            )
             val installerX64 = baseInstaller.copy(
                 architecture = InstallerManifest.Installer.Architecture.X64,
                 installerUrl = architectureUrl(InstallerManifest.Installer.Architecture.X64)
             )
-            val installerUserX64 = installerX64.copy(scope = InstallerManifest.Scope.User)
+            val installerUserX64 = installerX64.copy(
+                scope = InstallerManifest.Scope.User,
+                installerUrl = architectureUrl(
+                    architecture = InstallerManifest.Installer.Architecture.X64,
+                    scope = InstallerManifest.Scope.User
+                )
+            )
             val previousInstallerMachineX86 = installerX86.copy(scope = InstallerManifest.Scope.Machine)
             val previousInstallerMachineX64 = installerX64.copy(scope = InstallerManifest.Scope.Machine)
             val newInstallers = listOf(
