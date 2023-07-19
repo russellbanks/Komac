@@ -59,7 +59,7 @@ class GitHubDetection(url: Url) {
         it.browserDownloadUrl.decodeURLPart() == url.toString().decodeURLPart()
     }
 
-    private fun findPublisherUrl(): Url? = repository.owner.getHtmlUrl()
+    private fun findPublisherUrl(): Url? = repository.owner.htmlUrl?.toURI()?.let(::Url)
 
     private fun findPublisherSupportUrl(): Url? = if (repository.hasIssues()) {
         Url("https://github.com/${repository.fullName}/issues")
