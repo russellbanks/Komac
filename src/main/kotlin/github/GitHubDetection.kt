@@ -63,7 +63,11 @@ class GitHubDetection(url: Url) {
         if (repository.owner.type == "Organization") {
             repository.owner.blog?.let(::Url)
         } else {
-            repository.owner.htmlUrl?.toURI()?.let(::Url) 
+            if (repository.homepage != null) {
+                repository.homepage?.let(::Url)	
+            } else {
+                repository.owner.htmlUrl?.toURI()?.let(::Url) 
+            }
         }
     }.getOrNull()
 
