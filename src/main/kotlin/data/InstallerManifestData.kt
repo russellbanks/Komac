@@ -132,7 +132,7 @@ object InstallerManifestData {
                 null
             },
             publisher = if (arpPublisher != publisher) arpPublisher else null,
-            displayVersion = if (displayVersion != packageVersion) displayVersion else null,
+            displayVersion = if (displayVersion != packageVersion) packageVersion else null,
             upgradeCode = msi?.upgradeCode ?: upgradeCode
         )
     }
