@@ -152,6 +152,7 @@ class NewManifest : CliktCommand(name = "new") {
                 InstallerManifestData.addInstaller(
                     packageVersion = packageVersion,
                     installerUrl = installerUrl,
+                    installerType = installerType,
                     installerSha256 = downloadResult.installerSha256,
                     installerLocale = installerLocale,
                     installers = installers,

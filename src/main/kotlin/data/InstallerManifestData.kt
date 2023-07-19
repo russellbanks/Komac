@@ -21,7 +21,7 @@ object InstallerManifestData {
         packageVersion: String,
         installerUrl: Url,
         installerSha256: String,
-        installerType: InstallerManifest.InstallerType? = null,
+        installerType: InstallerManifest.InstallerType?,
         installerLocale: String? = null,
         scope: InstallerManifest.Scope? = null,
         releaseDate: LocalDate? = null,

@@ -230,6 +230,7 @@ class QuickUpdate : CliktCommand(
                         packageVersion = packageVersion,
                         installerUrl = installerUrl,
                         installerSha256 = installerResult.installerSha256,
+                        installerType = installerResult.installerType,
                         installers = installers,
                         productCode = installerResult.productCode,
                         additionalMetadata = additionalMetadata,
