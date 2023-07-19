@@ -60,10 +60,10 @@ class GitHubDetection(url: Url) {
     }
 
     private fun findPublisherUrl(): Url? = runCatching {
-        if (repository.homepage != null) {
-            repository.homepage?.let(::Url)
-        } else {
+        if (repository.owner.type == "Organization") {
             repository.owner.blog?.let(::Url)
+        } else {
+            repository.owner.htmlUrl?.toURI()?.let(::Url) 
         }
     }.getOrNull()
 
