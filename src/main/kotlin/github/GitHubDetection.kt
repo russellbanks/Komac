@@ -93,7 +93,7 @@ class GitHubDetection(url: Url) {
     private fun findPrivacyUrl(): Url? = runCatching {
         repository
             .getDirectoryContent("")
-            .find { it.name.lowercase().contains("privacy", ignoreCase = true) }
+            .find { it.name.contains("privacy", ignoreCase = true) }
             ?.htmlUrl
             ?.let(::Url)
     }.getOrNull()
