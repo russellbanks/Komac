@@ -86,11 +86,11 @@ object InstallerManifestData {
             appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                     appsAndFeaturesEntry.fillARPEntry(
-                        packageName, packageVersion, allVersions, msi, previousManifestData?.defaultLocaleManifest
+                        packageName, packageVersion, allVersions, msi, previousManifestData.defaultLocaleManifest
                     )
                 } ?: previousInstallerManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                 appsAndFeaturesEntry.fillARPEntry(
-                    packageName, packageVersion, allVersions, msi, previousManifestData?.defaultLocaleManifest
+                    packageName, packageVersion, allVersions, msi, previousManifestData.defaultLocaleManifest
                 )
             } ?: listOfNotNull(
                 InstallerManifest.AppsAndFeaturesEntry()
@@ -133,7 +133,11 @@ object InstallerManifestData {
                 null
             },
             publisher = if (arpPublisher != publisher) arpPublisher else null,
-            displayVersion = if (displayVersion != packageVersion) displayVersion else null,
+            displayVersion = if (displayVersion != packageVersion) {
+                displayVersion?.updateVersionInString(allVersions, packageVersion)
+            } else {
+                null
+            },
             upgradeCode = msi?.upgradeCode ?: upgradeCode
         )
     }
