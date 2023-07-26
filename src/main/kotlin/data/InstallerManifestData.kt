@@ -61,7 +61,8 @@ object InstallerManifestData {
                     ?: previousInstaller?.nestedInstallerFiles
                     ?: previousInstallerManifest?.nestedInstallerFiles
                 )?.map {
-                    it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString(allVersions, packageVersion))
+                    it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString(allVersions, packageVersion)
+                        .trimStart('/', '\\', '.'))
                 },
             installerUrl = installerUrl,
             installerSha256 = (gitHubDetection?.sha256 ?: installerSha256).uppercase(),
