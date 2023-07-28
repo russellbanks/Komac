@@ -2,8 +2,6 @@ package utils.msi
 
 import com.sun.jna.Native
 import com.sun.jna.Platform
-import com.sun.jna.WString
-import com.sun.jna.platform.win32.WinBase.FILETIME
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import okio.Buffer
@@ -13,7 +11,10 @@ import okio.FileSystem
 import okio.Path
 import schemas.manifest.InstallerManifest
 import utils.extension
-import utils.jna.MsiLibrary
+import utils.jna.GObject
+import utils.jna.LibMsi
+import utils.jna.WinMsi
+import utils.msi.MsiArch.Companion.toArchitecture
 
 class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSystem.SYSTEM) {
     var productCode: String? = null
@@ -27,26 +28,69 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
     var architecture: InstallerManifest.Installer.Architecture? = null
     var description: String? = null
 
-    init {
-        require(msiFile.extension.equals(InstallerManifest.InstallerType.MSI.name, ignoreCase = true))
-        if (Platform.isWindows()) getValuesFromDatabase() else getValuesFromBinary()
+    private val sql = sqlQuery {
+        select(property, value)
+        from(property)
+        where(property, values)
     }
 
-    private fun getValuesFromDatabase() {
-        val msiLibrary = MsiLibrary.INSTANCE
-        val phDatabase = msiLibrary.openDatabase() ?: return
-
-        architecture = msiLibrary.getArchitecture(phDatabase)
-
-        val phView = msiLibrary.openView(phDatabase)
-
-        if (phView != null) {
-            if (msiLibrary.executeView(phView) == 0) {
-                msiLibrary.fetchRecords(phView)
-            }
-            msiLibrary.MsiCloseHandle(phView.value)
+    init {
+        require(msiFile.extension.equals(InstallerManifest.InstallerType.MSI.name, ignoreCase = true))
+        if (Platform.isWindows()) {
+            getValuesWindows()
+        } else if (Platform.isLinux()) {
+            getValuesLinux()
+        } else {
+            getValuesFromBinary()
         }
-        msiLibrary.MsiCloseHandle(phDatabase.value)
+    }
+
+    private fun getValuesLinux() {
+        val libMsi = LibMsi.INSTANCE
+        val gObject = GObject.INSTANCE
+        val error = PointerByReference()
+
+        val database = libMsi.libmsiDatabaseNew(msiFile.toString(), LibMsi.DB_FLAGS_READONLY, null, error)
+        architecture = MsiArch(database).architecture
+
+        val query = libMsi.libmsiQueryNew(database, sql, error)
+        libMsi.libmsiQueryExecute(query, null, error)
+
+        var rec = libMsi.libmsiQueryFetch(query, error)
+        while (rec != null) {
+            val property = libMsi.libmsiRecordGetString(rec, 1) ?: continue
+
+            val value = libMsi.libmsiRecordGetString(rec, 2) ?: continue
+
+            setValue(property, value)
+
+            gObject.gObjectUnref(rec)
+            rec = libMsi.libmsiQueryFetch(query, error)
+        }
+        if (error.value != null) {
+            gObject.gClearError(error.pointer)
+        }
+        with(gObject) {
+            gObjectUnref(query)
+            gObjectUnref(database)
+        }
+    }
+
+    private fun getValuesWindows() {
+        val winMsi = WinMsi.INSTANCE
+        val database = winMsi.openDatabase() ?: return
+
+        architecture = MsiArch(database.value).architecture
+
+        val view = winMsi.openView(database)
+
+        if (view != null) {
+            if (winMsi.executeView(view) == WinMsi.Errors.ERROR_SUCCESS) {
+                winMsi.fetchRecords(view)
+            }
+            winMsi.MsiCloseHandle(view.value)
+        }
+        winMsi.MsiCloseHandle(database.value)
     }
 
     private fun getValuesFromBinary() {
@@ -104,104 +148,71 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
         }
     }
 
-    private fun MsiLibrary.getArchitecture(phDatabase: PointerByReference): InstallerManifest.Installer.Architecture? {
-        val phSummaryInfo = PointerByReference()
-        var result = MsiGetSummaryInformation(phDatabase.value, null, 0, phSummaryInfo)
-        return if (result == 0) {
-            val pcchBuf = IntByReference()
-            val szBuf = CharArray(16)
-            pcchBuf.value = 16
-            result = MsiSummaryInfoGetProperty(
-                hSummaryInfo = phSummaryInfo.value,
-                uiProperty = architecturePropertyOrdinal,
-                puiDataType = IntByReference(),
-                piValue = IntByReference(),
-                pftValue = FILETIME(),
-                szValueBuf = szBuf,
-                pcchValueBuf = pcchBuf
-            )
-            MsiCloseHandle(phSummaryInfo.value)
-            if (result == 0) {
-                Native.toString(szBuf).split(';').first().toArchitecture()
-            } else {
-                null
-            }
-        } else {
-            null
-        }
-    }
-
-    private fun MsiLibrary.openDatabase(): PointerByReference? {
+    private fun WinMsi.openDatabase(): PointerByReference? {
         val phDatabase = PointerByReference()
-        val result = MsiOpenDatabase(WString(msiFile.toString()), WString(msiDbOpenReadOnly), phDatabase)
-        if (result != 0) {
+        val result = MsiOpenDatabase(msiFile.toString(), WinMsi.MSI_DB_OPEN_READ_ONLY, phDatabase)
+        if (result != WinMsi.Errors.ERROR_SUCCESS) {
             println("Error opening database: $result")
             return null
         }
         return phDatabase
     }
 
-    private fun MsiLibrary.openView(phDatabase: PointerByReference): PointerByReference? {
+    private fun WinMsi.openView(phDatabase: PointerByReference): PointerByReference? {
         val phView = PointerByReference()
-        val result = MsiDatabaseOpenView(
-            phDatabase.value,
-            WString(
-                sqlQuery {
-                    select(property, value)
-                    from(property)
-                    where(property, values)
-                }
-            ),
-            phView
-        )
-        if (result != 0) {
+        val result = MsiDatabaseOpenView(phDatabase.value, sql, phView)
+        if (result != WinMsi.Errors.ERROR_SUCCESS) {
             println("Error executing query: $result")
             return null
         }
         return phView
     }
 
-    private fun MsiLibrary.executeView(phView: PointerByReference): Int {
+    private fun WinMsi.executeView(phView: PointerByReference): Int {
         val result = MsiViewExecute(phView.value, null)
-        if (result != 0) {
+        if (result != WinMsi.Errors.ERROR_SUCCESS) {
             println("Error executing view: $result")
         }
         return result
     }
 
-    private fun MsiLibrary.fetchRecords(phView: PointerByReference) {
+    private fun WinMsi.fetchRecords(phView: PointerByReference) {
         val phRecord = PointerByReference()
         while (true) {
             val result = MsiViewFetch(phView.value, phRecord)
-            if (result != 0) {
+            if (result != WinMsi.Errors.ERROR_SUCCESS) {
                 break
             }
 
             val property = extractString(phRecord = phRecord, field = 1, bufferSize = propertyBufferSize)
             val value = extractString(phRecord = phRecord, field = 2, bufferSize = valueBufferSize)
 
-            when (property) {
-                upgradeCodeConst -> upgradeCode = value
-                productCodeConst -> productCode = value
-                productNameConst -> productName = value
-                productVersionConst -> productVersion = value
-                manufacturerConst -> manufacturer = value
-                productLanguageConst -> productLanguage = value?.toIntOrNull()?.let { ProductLanguage(it).locale }
-                wixUiModeConst -> isWix = true
-                allUsersConst -> allUsers = AllUsers.entries.find { it.code == value }
-            }
+            setValue(property, value)
 
             MsiCloseHandle(phRecord.value)
         }
     }
 
-    private fun MsiLibrary.extractString(phRecord: PointerByReference, field: Int, bufferSize: Int): String? {
+    private fun WinMsi.extractString(phRecord: PointerByReference, field: Int, bufferSize: Int): String? {
         val pcchBuf = IntByReference()
         val szBuf = CharArray(bufferSize)
         pcchBuf.value = bufferSize
 
         val result = MsiRecordGetString(phRecord.value, field, szBuf, pcchBuf)
-        return if (result == 0) Native.toString(szBuf) else null
+        return if (result == WinMsi.Errors.ERROR_SUCCESS) Native.toString(szBuf) else null
+    }
+
+    fun setValue(property: String?, value: String?) {
+        when (property) {
+            upgradeCodeConst -> upgradeCode = value
+            productCodeConst -> productCode = value
+            productNameConst -> productName = value
+            productVersionConst -> productVersion = value
+            manufacturerConst -> manufacturer = value
+            productLanguageConst -> productLanguage = value?.toIntOrNull()?.let { ProductLanguage(it).locale }
+            wixUiModeConst -> isWix = true
+            allUsersConst -> allUsers = AllUsers.entries.find { it.code == value }
+        }
     }
 
     enum class AllUsers(val code: String) {
@@ -216,14 +227,6 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
         }
     }
 
-    private fun String.toArchitecture(): InstallerManifest.Installer.Architecture? {
-        return when (this) {
-            "x64", "Intel64", "AMD64" -> InstallerManifest.Installer.Architecture.X64
-            "Intel" -> InstallerManifest.Installer.Architecture.X86
-            else -> null
-        }
-    }
-
     companion object {
         private const val property = "Property"
         private const val value = "Value"
@@ -235,10 +238,8 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
         private const val productLanguageConst = "ProductLanguage"
         private const val wixUiModeConst = "WixUI_Mode"
         private const val allUsersConst = "ALLUSERS"
-        private const val msiDbOpenReadOnly = "MSIDBOPEN_READONLY"
         private const val propertyBufferSize = 64
         private const val valueBufferSize = 1024
-        private const val architecturePropertyOrdinal = 7
         val values = listOf(
             upgradeCodeConst,
             productCodeConst,
