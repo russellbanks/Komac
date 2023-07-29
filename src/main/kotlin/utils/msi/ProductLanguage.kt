@@ -12,11 +12,11 @@ class ProductLanguage(languageCode: Int) {
     private fun Int.getLanguageTagWindows(): String? {
         val kernel32 = Kernel32.INSTANCE
 
-        val lpLanguage = CharArray(localeBufferSize)
+        val lpLanguage = CharArray(LOCALE_BUFFER_SIZE)
         var result = kernel32.GetLocaleInfo(this, LOCALE_SISO639LANGNAME, lpLanguage, lpLanguage.size)
         if (result > 0) {
             val language = Native.toString(lpLanguage)
-            val lpCountry = CharArray(localeBufferSize)
+            val lpCountry = CharArray(LOCALE_BUFFER_SIZE)
             result = kernel32.GetLocaleInfo(this, LOCALE_SISO3166CTRYNAME, lpCountry, lpCountry.size)
             if (result > 0) {
                 val country = Native.toString(lpCountry)
@@ -27,7 +27,7 @@ class ProductLanguage(languageCode: Int) {
     }
 
     companion object {
-        private const val localeBufferSize = 4 // 3 Characters (e.g. USA) + null terminator
+        private const val LOCALE_BUFFER_SIZE = 4 // 3 Characters (e.g. USA) + null terminator
         private const val LOCALE_SISO639LANGNAME = 0x0059
         private const val LOCALE_SISO3166CTRYNAME = 0x005A
         private val lcidMap = hashMapOf(
