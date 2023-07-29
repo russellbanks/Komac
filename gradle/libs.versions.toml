@@ -2,7 +2,7 @@
 buildconfig = "4.1.2"
 clikt = "4.1.0"
 coroutines = "1.7.3"
-detekt = "1.23.0"
+detekt = "1.23.1"
 github-api = "1.315"
 jline = "3.23.0"
 jna = "5.13.0"
