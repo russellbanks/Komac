@@ -4,19 +4,14 @@ import com.sun.jna.Native
 import com.sun.jna.Platform
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import okio.Buffer
-import okio.ByteString
-import okio.ByteString.Companion.encodeUtf8
-import okio.FileSystem
 import okio.Path
 import schemas.manifest.InstallerManifest
 import utils.extension
 import utils.jna.GObject
 import utils.jna.LibMsi
 import utils.jna.WinMsi
-import utils.msi.MsiArch.Companion.toArchitecture
 
-class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSystem.SYSTEM) {
+class Msi(private val msiFile: Path) {
     var productCode: String? = null
     var upgradeCode: String? = null
     var productName: String? = null
@@ -29,23 +24,17 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
     var description: String? = null
 
     private val sql = sqlQuery {
-        select(property, value)
-        from(property)
-        where(property, values)
+        select(PROPERTY, VALUE)
+        from(PROPERTY)
+        where(PROPERTY, values)
     }
 
     init {
         require(msiFile.extension.equals(InstallerManifest.InstallerType.MSI.name, ignoreCase = true))
-        if (Platform.isWindows()) {
-            getValuesWindows()
-        } else if (Platform.isLinux()) {
-            getValuesLinux()
-        } else {
-            getValuesFromBinary()
-        }
+        if (Platform.isWindows()) getValuesMsiDll() else getValuesLibMsi()
     }
 
-    private fun getValuesLinux() {
+    private fun getValuesLibMsi() {
         val libMsi = LibMsi.INSTANCE
         val gObject = GObject.INSTANCE
         val error = PointerByReference()
@@ -76,7 +65,7 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
         }
     }
 
-    private fun getValuesWindows() {
+    private fun getValuesMsiDll() {
         val winMsi = WinMsi.INSTANCE
         val database = winMsi.openDatabase() ?: return
 
@@ -91,61 +80,6 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
             winMsi.MsiCloseHandle(view.value)
         }
         winMsi.MsiCloseHandle(database.value)
-    }
-
-    private fun getValuesFromBinary() {
-        fileSystem.source(msiFile).use { source ->
-            Buffer().use { buffer ->
-                while (source.read(buffer, DEFAULT_BUFFER_SIZE.toLong()) != -1L) {
-                    val byteString = buffer.readByteString()
-                    val byteStringUtf8 = byteString.utf8()
-                    if (byteStringUtf8.contains(installationDatabase)) {
-                        val zeroByteString = ByteString.of(0)
-                        val databaseBytes = installationDatabase.encodeUtf8()
-                        val descriptionIndex = byteString.indexOf(databaseBytes) + databaseBytes.size + 11
-                        val descriptionBytes = byteString
-                            .substring(descriptionIndex, byteString.indexOf(zeroByteString, descriptionIndex))
-                        description = descriptionBytes.utf8()
-                        val manufacturerIndex = descriptionIndex + descriptionBytes.size + 9
-                        manufacturer = byteString
-                            .substring(manufacturerIndex, byteString.indexOf(zeroByteString, manufacturerIndex))
-                            .utf8()
-                        val semicolonIndex = byteString.indexOf(ByteString.of(';'.code.toByte()), manufacturerIndex)
-                        var indexPointer = semicolonIndex
-                        while (byteString[indexPointer.dec()] != 0.toByte()) indexPointer--
-                        architecture = byteString.substring(indexPointer, semicolonIndex).utf8().toArchitecture()
-                        indexPointer = semicolonIndex
-                        while (byteString[indexPointer] != 0.toByte()) indexPointer++
-                        if (productLanguage == null) {
-                            productLanguage = byteString
-                                .substring(semicolonIndex.inc(), indexPointer)
-                                .utf8()
-                                .toIntOrNull()
-                                .takeIf { it != 0 }
-                                ?.let(::ProductLanguage)
-                                ?.locale
-                        }
-                    }
-                    if (byteStringUtf8.contains(fullRegex)) {
-                        if (byteStringUtf8.contains(other = wix, ignoreCase = true)) isWix = true
-                        val groupValues = fullRegex.find(byteStringUtf8)?.groupValues?.map { it.ifBlank { null } }
-                        if (manufacturer == null) manufacturer = groupValues?.getOrNull(1)
-                        productCode = groupValues?.getOrNull(2)
-                        if (productLanguage == null) {
-                            productLanguage = groupValues
-                                ?.getOrNull(3)
-                                ?.toIntOrNull()
-                                ?.let(::ProductLanguage)
-                                ?.locale
-                        }
-                        productName = groupValues?.getOrNull(4)
-                        productVersion = groupValues?.getOrNull(5)
-                        upgradeCode = groupValues?.getOrNull(6)
-                        return
-                    }
-                }
-            }
-        }
     }
 
     private fun WinMsi.openDatabase(): PointerByReference? {
@@ -184,8 +118,8 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
                 break
             }
 
-            val property = extractString(phRecord = phRecord, field = 1, bufferSize = propertyBufferSize)
-            val value = extractString(phRecord = phRecord, field = 2, bufferSize = valueBufferSize)
+            val property = extractString(phRecord = phRecord, field = 1, bufferSize = PROPERTY_BUFFER_SIZE)
+            val value = extractString(phRecord = phRecord, field = 2, bufferSize = VALUE_BUFFER_SIZE)
 
             setValue(property, value)
 
@@ -204,14 +138,14 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
 
     fun setValue(property: String?, value: String?) {
         when (property) {
-            upgradeCodeConst -> upgradeCode = value
-            productCodeConst -> productCode = value
-            productNameConst -> productName = value
-            productVersionConst -> productVersion = value
-            manufacturerConst -> manufacturer = value
-            productLanguageConst -> productLanguage = value?.toIntOrNull()?.let { ProductLanguage(it).locale }
-            wixUiModeConst -> isWix = true
-            allUsersConst -> allUsers = AllUsers.entries.find { it.code == value }
+            UPGRADE_CODE -> upgradeCode = value
+            PRODUCT_CODE -> productCode = value
+            PRODUCT_NAME -> productName = value
+            PRODUCT_VERSION -> productVersion = value
+            MANUFACTURER -> manufacturer = value
+            PRODUCT_LANGUAGE -> productLanguage = value?.toIntOrNull()?.let { ProductLanguage(it).locale }
+            WIXUI_MODE -> isWix = true
+            ALL_USERS -> allUsers = AllUsers.entries.find { it.code == value }
         }
     }
 
@@ -228,45 +162,27 @@ class Msi(private val msiFile: Path, private val fileSystem: FileSystem = FileSy
     }
 
     companion object {
-        private const val property = "Property"
-        private const val value = "Value"
-        private const val upgradeCodeConst = "UpgradeCode"
-        private const val productCodeConst = "ProductCode"
-        private const val productNameConst = "ProductName"
-        private const val productVersionConst = "ProductVersion"
-        private const val manufacturerConst = "Manufacturer"
-        private const val productLanguageConst = "ProductLanguage"
-        private const val wixUiModeConst = "WixUI_Mode"
-        private const val allUsersConst = "ALLUSERS"
-        private const val propertyBufferSize = 64
-        private const val valueBufferSize = 1024
+        private const val PROPERTY = "Property"
+        private const val VALUE = "Value"
+        private const val UPGRADE_CODE = "UpgradeCode"
+        private const val PRODUCT_CODE = "ProductCode"
+        private const val PRODUCT_NAME = "ProductName"
+        private const val PRODUCT_VERSION = "ProductVersion"
+        private const val MANUFACTURER = "Manufacturer"
+        private const val PRODUCT_LANGUAGE = "ProductLanguage"
+        private const val WIXUI_MODE = "WixUI_Mode"
+        private const val ALL_USERS = "ALLUSERS"
+        private const val PROPERTY_BUFFER_SIZE = 64
+        private const val VALUE_BUFFER_SIZE = 1024
         val values = listOf(
-            upgradeCodeConst,
-            productCodeConst,
-            productNameConst,
-            productVersionConst,
-            manufacturerConst,
-            productLanguageConst,
-            wixUiModeConst,
-            allUsersConst
+            UPGRADE_CODE,
+            PRODUCT_CODE,
+            PRODUCT_NAME,
+            PRODUCT_VERSION,
+            MANUFACTURER,
+            PRODUCT_LANGUAGE,
+            WIXUI_MODE,
+            ALL_USERS
         )
-
-        private const val wix = "Wix"
-        private const val productCodeRegex =
-            "\\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\}"
-        private val fullRegex = buildString {
-            append(manufacturerConst)
-            append("(.*?)")
-            append(productCodeConst)
-            append("($productCodeRegex)")
-            append(productLanguageConst)
-            append("(\\d{0,6})")
-            append(productNameConst)
-            append("(.*?)")
-            append(productVersionConst)
-            append("(.*?)")
-            append("($productCodeRegex)")
-        }.toRegex()
-        private const val installationDatabase = "Installation Database"
     }
 }
