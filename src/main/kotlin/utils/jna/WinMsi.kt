@@ -32,20 +32,6 @@ interface WinMsi : Library {
         pcchValueBuf: IntByReference
     ): Int
 
-    /**
-     * https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
-     */
-    object Errors {
-        /**
-         * The operation completed successfully.
-         */
-        const val ERROR_SUCCESS = 0
-        /**
-         * More data is available.
-         */
-        const val ERROR_MORE_DATA = 234
-    }
-
     companion object {
         private const val MSI = "msi"
         const val MSI_DB_OPEN_READ_ONLY = "MSIDBOPEN_READONLY"
