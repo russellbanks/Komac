@@ -89,9 +89,7 @@ sealed class Manifest {
                         manifestVersion = manifestOverride,
                         releaseNotes = allLocale?.releaseNotes ?: currentLocaleMetadata?.releaseNotes,
                         releaseNotesUrl = allLocale?.releaseNotesUrl ?: currentLocaleMetadata?.releaseNotesUrl,
-                        documentations = allLocale?.documentations
-                            ?: currentLocaleMetadata?.documentations
-                            ?: localeManifest.documentations
+                        documentations = currentLocaleMetadata?.documentations ?: localeManifest.documentations
                     )
                 } else {
                     localeManifest.copy(
