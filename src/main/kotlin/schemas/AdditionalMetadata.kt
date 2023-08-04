@@ -17,7 +17,6 @@ data class AdditionalMetadata(
     @Serializable
     data class Locale(
         val name: String,
-        val documentations: List<LocaleManifest.Documentation>? = null,
         val releaseNotes: String? = null,
         @Contextual val releaseNotesUrl: Url? = null
     )
