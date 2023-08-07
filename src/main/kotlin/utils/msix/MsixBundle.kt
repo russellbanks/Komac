@@ -19,8 +19,12 @@ class MsixBundle(msixBundleFile: Path, fileSystem: FileSystem = FileSystem.SYSTE
     var packages: List<IndividualPackage>? = null
 
     init {
-        require(msixBundleFile.extension.lowercase() in listOf(appxBundleConst, msixBundleConst)) {
-            "File must be an $msixBundleConst or $appxBundleConst"
+        val validExtensions = listOf(
+            InstallerManifest.InstallerType.APPXBUNDLE,
+            InstallerManifest.InstallerType.MSIXBUNDLE
+        )
+        require(msixBundleFile.extension.lowercase() in validExtensions) {
+            "File must be an ${validExtensions.joinToString(" or ")}"
         }
         val msixBundleFileSystem = fileSystem.openZip(msixBundleFile)
         val appxManifestXml = msixBundleFileSystem
@@ -71,7 +75,5 @@ class MsixBundle(msixBundleFile: Path, fileSystem: FileSystem = FileSystem.SYSTE
         const val appxManifestFolder = "AppxMetadata"
         const val appxBundleManifestXml = "AppxBundleManifest.xml"
         const val appxSignatureP7x = "AppxSignature.p7x"
-        const val msixBundleConst = "msixbundle"
-        const val appxBundleConst = "appxbundle"
     }
 }
