@@ -5,14 +5,13 @@ import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import schemas.manifest.InstallerManifest
-import schemas.manifest.LocaleManifest
 
 @Serializable
 data class AdditionalMetadata(
     val locales: List<Locale>? = null,
     val productCode: String? = null,
     val releaseDate: LocalDate? = null,
-    val appsAndFeaturesEntries: List<InstallerManifest.AppsAndFeaturesEntry>? = null
+    val appsAndFeaturesEntries: InstallerManifest.AppsAndFeaturesEntry? = null
 ) {
     @Serializable
     data class Locale(

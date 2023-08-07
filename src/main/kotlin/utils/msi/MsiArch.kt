@@ -4,6 +4,7 @@ import com.sun.jna.Native
 import com.sun.jna.Platform
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.WinBase.FILETIME
+import com.sun.jna.platform.win32.WinError
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import schemas.manifest.InstallerManifest
@@ -25,7 +26,7 @@ class MsiArch(private val database: Pointer) {
         val winMsi = WinMsi.INSTANCE
         val phSummaryInfo = PointerByReference()
         var result = winMsi.MsiGetSummaryInformation(database, null, UI_UPDATE_COUNT, phSummaryInfo)
-        if (result != WinMsi.Errors.ERROR_SUCCESS) return null
+        if (result != WinError.ERROR_SUCCESS) return null
 
         val pcchBuf = IntByReference()
         var szBuf: CharArray
@@ -42,9 +43,9 @@ class MsiArch(private val database: Pointer) {
                 szValueBuf = szBuf,
                 pcchValueBuf = pcchBuf
             )
-        } while (result == WinMsi.Errors.ERROR_MORE_DATA)
+        } while (result == WinError.ERROR_MORE_DATA)
         winMsi.MsiCloseHandle(phSummaryInfo.value)
-        return if (result == WinMsi.Errors.ERROR_SUCCESS) Native.toString(szBuf) else null
+        return if (result == WinError.ERROR_SUCCESS) Native.toString(szBuf) else null
     }
 
     private fun getLinuxArchitecture(): String {

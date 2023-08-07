@@ -83,18 +83,18 @@ object InstallerManifestData {
                 ?: (previousInstallerManifest?.productCode ?: previousInstaller?.productCode)
                     ?.updateVersionInString(allVersions, packageVersion),
             releaseDate = additionalMetadata?.releaseDate ?: gitHubDetection?.releaseDate ?: releaseDate,
-            appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries
+            appsAndFeaturesEntries = additionalMetadata?.appsAndFeaturesEntries?.let(::listOf)
                 ?: previousInstaller?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                     appsAndFeaturesEntry.fillARPEntry(
-                        packageName, packageVersion, allVersions, msi, previousManifestData.defaultLocaleManifest
+                        packageName, packageVersion, allVersions, msi, previousManifestData.defaultLocaleManifest, additionalMetadata
                     )
                 } ?: previousInstallerManifest?.appsAndFeaturesEntries?.map { appsAndFeaturesEntry ->
                 appsAndFeaturesEntry.fillARPEntry(
-                    packageName, packageVersion, allVersions, msi, previousManifestData.defaultLocaleManifest
+                    packageName, packageVersion, allVersions, msi, previousManifestData.defaultLocaleManifest, additionalMetadata
                 )
             } ?: listOfNotNull(
                 InstallerManifest.AppsAndFeaturesEntry()
-                    .fillARPEntry(packageName, packageVersion, allVersions, msi, previousManifestData?.defaultLocaleManifest)
+                    .fillARPEntry(packageName, packageVersion, allVersions, msi, previousManifestData?.defaultLocaleManifest, additionalMetadata)
                     .takeUnless(InstallerManifest.AppsAndFeaturesEntry::areAllNull)
             ).ifEmpty { null },
         )
@@ -119,13 +119,16 @@ object InstallerManifestData {
         packageVersion: String,
         allVersions: List<String>?,
         msi: Msi?,
-        previousDefaultLocaleData: DefaultLocaleManifest?
+        previousDefaultLocaleData: DefaultLocaleManifest?,
+        additionalMetadata: AdditionalMetadata?
     ): InstallerManifest.AppsAndFeaturesEntry {
-        val arpDisplayName = msi?.productName ?: displayName
+        val arpDisplayName = additionalMetadata?.appsAndFeaturesEntries?.displayName ?: msi?.productName ?: displayName
         val name = packageName ?: previousDefaultLocaleData?.packageName
-        val arpPublisher = msi?.manufacturer ?: publisher
+        val arpPublisher = additionalMetadata?.appsAndFeaturesEntries?.publisher ?: msi?.manufacturer ?: publisher
         val publisher = publisher ?: previousDefaultLocaleData?.publisher
-        val displayVersion = msi?.productVersion ?: displayVersion
+        val displayVersion = additionalMetadata?.appsAndFeaturesEntries?.displayVersion
+            ?: msi?.productVersion
+            ?: displayVersion
         return copy(
             displayName = if (arpDisplayName != name) {
                 arpDisplayName?.updateVersionInString(allVersions, packageVersion)
@@ -138,7 +141,7 @@ object InstallerManifestData {
             } else {
                 null
             },
-            upgradeCode = msi?.upgradeCode ?: upgradeCode
+            upgradeCode = additionalMetadata?.appsAndFeaturesEntries?.upgradeCode ?: msi?.upgradeCode ?: upgradeCode
         )
     }
 

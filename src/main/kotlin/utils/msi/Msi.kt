@@ -2,6 +2,7 @@ package utils.msi
 
 import com.sun.jna.Native
 import com.sun.jna.Platform
+import com.sun.jna.platform.win32.WinError
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import okio.Path
@@ -74,7 +75,7 @@ class Msi(private val msiFile: Path) {
         val view = winMsi.openView(database)
 
         if (view != null) {
-            if (winMsi.executeView(view) == WinMsi.Errors.ERROR_SUCCESS) {
+            if (winMsi.executeView(view) == WinError.ERROR_SUCCESS) {
                 winMsi.fetchRecords(view)
             }
             winMsi.MsiCloseHandle(view.value)
@@ -85,7 +86,7 @@ class Msi(private val msiFile: Path) {
     private fun WinMsi.openDatabase(): PointerByReference? {
         val phDatabase = PointerByReference()
         val result = MsiOpenDatabase(msiFile.toString(), WinMsi.MSI_DB_OPEN_READ_ONLY, phDatabase)
-        if (result != WinMsi.Errors.ERROR_SUCCESS) {
+        if (result != WinError.ERROR_SUCCESS) {
             println("Error opening database: $result")
             return null
         }
@@ -95,7 +96,7 @@ class Msi(private val msiFile: Path) {
     private fun WinMsi.openView(phDatabase: PointerByReference): PointerByReference? {
         val phView = PointerByReference()
         val result = MsiDatabaseOpenView(phDatabase.value, sql, phView)
-        if (result != WinMsi.Errors.ERROR_SUCCESS) {
+        if (result != WinError.ERROR_SUCCESS) {
             println("Error executing query: $result")
             return null
         }
@@ -104,7 +105,7 @@ class Msi(private val msiFile: Path) {
 
     private fun WinMsi.executeView(phView: PointerByReference): Int {
         val result = MsiViewExecute(phView.value, null)
-        if (result != WinMsi.Errors.ERROR_SUCCESS) {
+        if (result != WinError.ERROR_SUCCESS) {
             println("Error executing view: $result")
         }
         return result
@@ -114,7 +115,7 @@ class Msi(private val msiFile: Path) {
         val phRecord = PointerByReference()
         while (true) {
             val result = MsiViewFetch(phView.value, phRecord)
-            if (result != WinMsi.Errors.ERROR_SUCCESS) {
+            if (result != WinError.ERROR_SUCCESS) {
                 break
             }
 
@@ -133,7 +134,7 @@ class Msi(private val msiFile: Path) {
         pcchBuf.value = bufferSize
 
         val result = MsiRecordGetString(phRecord.value, field, szBuf, pcchBuf)
-        return if (result == WinMsi.Errors.ERROR_SUCCESS) Native.toString(szBuf) else null
+        return if (result == WinError.ERROR_SUCCESS) Native.toString(szBuf) else null
     }
 
     fun setValue(property: String?, value: String?) {
