@@ -52,6 +52,14 @@ class UrlUtilTests : FunSpec({
         test("architectures with no delimiters are not found") {
             architectureUrl(architecture = "armInstaller", delimiter = "").findArchitecture() shouldBe null
         }
+
+        test("architecture at end of URL with extension") {
+            architectureUrl(
+                architecture = Architecture.ARM64,
+                delimiterBefore = "",
+                delimiterAfter = "."
+            ).findArchitecture() shouldBe Architecture.ARM64
+        }
     }
 
     context("get extension from url") {

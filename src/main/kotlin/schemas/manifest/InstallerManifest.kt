@@ -74,7 +74,14 @@ data class InstallerManifest(
         @SerialName("wix") WIX,
         @SerialName("burn") BURN,
         @SerialName("pwa") PWA,
-        @SerialName("portable") PORTABLE
+        @SerialName("portable") PORTABLE;
+
+        companion object {
+            const val MSIXBUNDLE = "msixbundle"
+            const val APPXBUNDLE = "appxbundle"
+            fun fileExtensions() = listOf(MSIX.name, MSI.name, APPX.name, EXE.name, ZIP.name, MSIXBUNDLE, APPXBUNDLE)
+                .map(String::lowercase)
+        }
     }
 
     /**
