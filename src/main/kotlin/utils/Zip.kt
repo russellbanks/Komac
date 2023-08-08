@@ -18,7 +18,6 @@ import okio.Path.Companion.toPath
 import okio.buffer
 import okio.openZip
 import schemas.manifest.InstallerManifest
-import utils.msix.MsixBundle
 
 class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     var nestedInstallerType: InstallerManifest.InstallerType? = null
@@ -89,14 +88,14 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     private fun Terminal.nestedInstallersPrompt() {
         do {
             do {
-                println(TextColors.brightGreen("${Prompts.required} Enter the relative nested installer path"))
+                println(TextColors.brightGreen("${Prompts.REQUIRED} Enter the relative nested installer path"))
                 info("Example: dart-sdk\\bin\\dart.exe")
                 val input = prompt(
                     InstallerManifest.NestedInstallerFiles::relativeFilePath.name
                         .replaceFirstChar(Char::titlecase)
                         .replace("([A-Z])".toRegex(), " $1")
                         .trim()
-                ) ?: throw ProgramResult(ExitCode.CtrlC)
+                ) ?: throw ProgramResult(ExitCode.CTRLC)
                 val error = isRelativeFilePathValid(input)?.also(::danger)
                 var portableCommandAlias: String? = null
                 if (nestedInstallerType == InstallerManifest.InstallerType.PORTABLE) {
@@ -131,7 +130,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
         do {
             println(
                 TextColors.brightYellow(
-                    "${Prompts.optional} Enter the command line alias to be used for calling the package"
+                    "${Prompts.OPTIONAL} Enter the command line alias to be used for calling the package"
                 )
             )
             info(if (relativeFilePath != null) "Installer: $relativeFilePath" else "Example: dart")
@@ -149,8 +148,8 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
 
     private fun isPortableCommandAliasValid(portableCommandAlias: String?): String? = when {
         portableCommandAlias.isNullOrBlank() -> null
-        portableCommandAlias.length > portableCommandAliasMaxLength -> {
-            Errors.invalidLength(min = portableCommandAliasMinLength, max = portableCommandAliasMaxLength)
+        portableCommandAlias.length > PORTABLE_COMMAND_ALIAS_MAX_LENGTH -> {
+            Errors.invalidLength(min = PORTABLE_COMMAND_ALIAS_MIN_LENGTH, max = PORTABLE_COMMAND_ALIAS_MAX_LENGTH)
         }
         else -> null
     }
@@ -162,14 +161,14 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
                 .replace("([A-Z])".toRegex(), " $1")
                 .trim()
         )
-        relativeFilePath.length > relativeFilePathMaxLength -> {
-            Errors.invalidLength(min = relativeFilePathMinLength, max = relativeFilePathMaxLength)
+        relativeFilePath.length > RELATIVE_FILE_PATH_MAX_LENGTH -> {
+            Errors.invalidLength(min = RELATIVE_FILE_PATH_MIN_LENGTH, max = RELATIVE_FILE_PATH_MAX_LENGTH)
         }
         else -> null
     }
 
     private fun Terminal.zipEntrySelectionPrompt(zipPaths: List<Path>): List<Path> = generateSequence {
-        println(TextColors.brightGreen("${Prompts.required} Select files to use"))
+        println(TextColors.brightGreen("${Prompts.REQUIRED} Select files to use"))
         val chosenZipEntries = checkMenu<Path> {
             items = zipPaths
         }.prompt()
@@ -202,7 +201,7 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
         val installerType = FileAnalyser(tempFile).installerType
         fileSystem.delete(tempFile)
         return if (installerType == null) {
-            println(TextColors.brightGreen("${Prompts.required} Select the nested installer type"))
+            println(TextColors.brightGreen("${Prompts.REQUIRED} Select the nested installer type"))
             radioMenu {
                 items = listOf(
                     InstallerManifest.InstallerType.EXE,
@@ -215,9 +214,9 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     }
 
     companion object {
-        private const val relativeFilePathMinLength = 1
-        private const val relativeFilePathMaxLength = 512
-        private const val portableCommandAliasMinLength = 1
-        private const val portableCommandAliasMaxLength = 40
+        private const val RELATIVE_FILE_PATH_MIN_LENGTH = 1
+        private const val RELATIVE_FILE_PATH_MAX_LENGTH = 512
+        private const val PORTABLE_COMMAND_ALIAS_MIN_LENGTH = 1
+        private const val PORTABLE_COMMAND_ALIAS_MAX_LENGTH = 40
     }
 }

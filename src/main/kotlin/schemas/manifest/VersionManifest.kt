@@ -32,9 +32,9 @@ data class VersionManifest(
             packageVersion = packageVersion,
             defaultLocale = defaultLocale
                 ?: previousDefaultLocale
-                ?: Locale.defaultLocale,
-            manifestType = Schemas.versionManifestType,
-            manifestVersion = manifestOverride ?: Schemas.manifestVersion
+                ?: Locale.DEFAULT_LOCALE,
+            manifestType = Schemas.VERSION_MANIFEST_TYPE,
+            manifestVersion = manifestOverride ?: Schemas.MANIFEST_VERSION
         )
 
         /**

@@ -5,6 +5,7 @@ import Errors
 import Errors.doesNotExistError
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
@@ -45,8 +46,8 @@ class RemoveVersion : CliktCommand(
     )
 
     private val deletionReasonParam: String? by option("--reason", "--reason-for-deletion", "--deletion-reason")
-        .check(Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength)) {
-            it.length in minimumReasonLength..maximumReasonLength
+        .check(Errors.invalidLength(min = REASON_MIN_LENGTH, max = REASON_MAX_LENGTH)) {
+            it.length in REASON_MIN_LENGTH..REASON_MAX_LENGTH
         }
 
     private val submit: Boolean by option(
@@ -69,7 +70,7 @@ class RemoveVersion : CliktCommand(
         warning("Packages should only be removed when necessary.")
         echo()
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
-        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
+        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
         val allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)?.also {
             info("Found $packageIdentifier in the winget-pkgs repository")
             it.maxWithOrNull(versionStringComparator)?.let { latestVersion ->
@@ -80,16 +81,16 @@ class RemoveVersion : CliktCommand(
         GitHubImpl.microsoftWinGetPkgs.getDirectoryContent(GitHubUtils.getPackagePath(packageIdentifier))
             ?.find { it.name == packageVersion }
             ?: throw doesNotExistError(packageIdentifier, packageVersion, theme = theme)
-        val deletionReason = deletionReasonParam ?: currentContext.terminal.promptForDeletionReason()
+        val deletionReason = deletionReasonParam ?: terminal.promptForDeletionReason()
         val shouldRemoveManifest = if (submit || Environment.isCI) {
             true
         } else {
             info("Would you like to make a pull request to remove $packageIdentifier $packageVersion?")
-            currentContext.terminal.yesNoMenu(default = true).prompt()
+            terminal.yesNoMenu(default = true).prompt()
         }
         if (!shouldRemoveManifest) return@runBlocking
         echo()
-        val forkRepository = GitHubImpl.getWingetPkgsFork(currentContext.terminal)
+        val forkRepository = GitHubImpl.getWingetPkgsFork(terminal)
         val ref = GitHubImpl.createBranchFromUpstreamDefaultBranch(
             winGetPkgsFork = forkRepository,
             packageIdentifier = packageIdentifier,
@@ -97,7 +98,7 @@ class RemoveVersion : CliktCommand(
         ) ?: return@runBlocking
         val directoryContent: MutableList<GHContent> = forkRepository
             .getDirectoryContent(GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion), ref.ref)
-        val progress = currentContext.terminal.progressAnimation {
+        val progress = terminal.progressAnimation {
             text("Deleting files")
             percentage()
             progressBar()
@@ -118,18 +119,18 @@ class RemoveVersion : CliktCommand(
     }
 
     private fun Terminal.promptForDeletionReason(): String {
-        echo(TextColors.brightGreen("${Prompts.required} Give a reason for removing this manifest"))
+        echo(TextColors.brightGreen("${Prompts.REQUIRED} Give a reason for removing this manifest"))
         return prompt("Reason") {
-            if (it.length < minimumReasonLength || it.length > maximumReasonLength) {
-                ConversionResult.Invalid(Errors.invalidLength(min = minimumReasonLength, max = maximumReasonLength))
+            if (it.length < REASON_MIN_LENGTH || it.length > REASON_MAX_LENGTH) {
+                ConversionResult.Invalid(Errors.invalidLength(min = REASON_MIN_LENGTH, max = REASON_MAX_LENGTH))
             } else {
                 ConversionResult.Valid(it)
             }
-        } ?: throw ProgramResult(ExitCode.CtrlC)
+        } ?: throw ProgramResult(ExitCode.CTRLC)
     }
 
     companion object {
-        const val minimumReasonLength = 4
-        const val maximumReasonLength = 1000
+        const val REASON_MIN_LENGTH = 4
+        const val REASON_MAX_LENGTH = 1000
     }
 }

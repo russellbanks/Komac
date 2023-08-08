@@ -13,6 +13,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.HttpHeaders
 import io.menu.yesNoMenu
 import java.io.IOException
+import kotlinx.serialization.json.Json
 import network.Http
 import network.KtorGitHubConnector
 import org.kohsuke.github.GHDirection
@@ -25,26 +26,24 @@ import org.kohsuke.github.GHRef
 import org.kohsuke.github.GHRepository
 import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
+import schemas.GHGraphQLRequestBody
 import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import schemas.manifest.LocaleManifest
 import schemas.manifest.Manifest
 import schemas.manifest.VersionManifest
 import token.TokenStore
-import kotlinx.serialization.json.Json
-import schemas.GHGraphQLRequestBody
-import schemas.manifest.EncodeConfig
 
 object GitHubImpl {
-    private const val Microsoft = "Microsoft"
-    private const val wingetpkgs = "winget-pkgs"
-    const val wingetPkgsFullName = "$Microsoft/$wingetpkgs"
+    private const val MICROSOFT = "Microsoft"
+    private const val WINGET_PKGS = "winget-pkgs"
+    const val WINGET_PKGS_FULL_NAME = "$MICROSOFT/$WINGET_PKGS"
     val github: GitHub = GitHubBuilder().withConnector(KtorGitHubConnector()).withOAuthToken(TokenStore.token).build()
     private var pullRequestBranch: GHRef? = null
     val forkOwner: String = Environment.forkOverride ?: github.myself.login
     private val draftPullRequest by lazy {
         github.searchIssues()
-            .q("repo:$Microsoft/$wingetpkgs")
+            .q("repo:$MICROSOFT/$WINGET_PKGS")
             .q("is:pull-request")
             .q("draft:true")
             .q("author:${github.myself.login}")
@@ -59,10 +58,14 @@ object GitHubImpl {
         val maxTries = 3
         while (result == null) {
             try {
-                result = github.getRepository("$Microsoft/$wingetpkgs")
+                result = github.getRepository(WINGET_PKGS_FULL_NAME)
             } catch (ioException: IOException) {
                 if (++count == maxTries) {
-                    throw CliktError(message = "Failed to get $wingetPkgsFullName", cause = ioException, statusCode = 1)
+                    throw CliktError(
+                        message = "Failed to get $WINGET_PKGS_FULL_NAME",
+                        cause = ioException,
+                        statusCode = 1
+                    )
                 }
             }
         }
@@ -75,16 +78,16 @@ object GitHubImpl {
         val maxTries = 3
         while (result == null) {
             try {
-                result = github.getRepository("$forkOwner/$wingetpkgs")
+                result = github.getRepository("$forkOwner/$WINGET_PKGS")
             } catch (exception: GHFileNotFoundException) {
-                info("Fork of $wingetpkgs not found. Forking...")
+                info("Fork of $WINGET_PKGS not found. Forking...")
                 try {
-                    github.getRepository("$Microsoft/$wingetpkgs").fork().also {
-                        success("Forked $wingetpkgs repository: ${it.fullName}")
+                    github.getRepository("$MICROSOFT/$WINGET_PKGS").fork().also {
+                        success("Forked $WINGET_PKGS repository: ${it.fullName}")
                     }
                 } catch (ioException: IOException) {
                     throw CliktError(
-                        message = theme.danger("Failed to fork $wingetpkgs. Please try again or fork it manually"),
+                        message = theme.danger("Failed to fork $WINGET_PKGS. Please try again or fork it manually"),
                         cause = ioException,
                         statusCode = 1
                     )
@@ -92,7 +95,7 @@ object GitHubImpl {
             } catch (ioException: IOException) {
                 if (++count == maxTries) {
                     throw CliktError(
-                        message = "Failed to get $forkOwner/$wingetpkgs",
+                        message = "Failed to get $forkOwner/$WINGET_PKGS",
                         cause = ioException,
                         statusCode = 1
                     )
@@ -110,7 +113,7 @@ object GitHubImpl {
     }
 
     private fun getExistingPullRequest(identifier: String, version: String): GHIssue? = github.searchIssues()
-        .q("repo:$Microsoft/$wingetpkgs")
+        .q("repo:$MICROSOFT/$WINGET_PKGS")
         .q("is:pull-request")
         .q("in:title")
         .q(identifier)
@@ -210,8 +213,8 @@ object GitHubImpl {
             val graphQlRequestBody = GHGraphQLRequestBody(
                 """
                     mutation {
-                        updatePullRequest(input: {pullRequestId: "${draftPR!!.getNodeId()}", body: "${GitHubUtils.getPullRequestBody()}", title: "${GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState)}", state: OPEN}) { pullRequest { id } }
-                        markPullRequestReadyForReview(input: {pullRequestId: "${draftPR!!.getNodeId()}"}) { pullRequest { id } }
+                        updatePullRequest(input: {pullRequestId: "${draftPR!!.nodeId}", body: "${GitHubUtils.getPullRequestBody()}", title: "${GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState)}", state: OPEN}) { pullRequest { id } }
+                        markPullRequestReadyForReview(input: {pullRequestId: "${draftPR.nodeId}"}) { pullRequest { id } }
                     }
                 """.trimIndent()
             )

@@ -14,7 +14,7 @@ object FileWriter {
         do {
             println()
             println(TextColors.brightYellow("Enter a directory to write the files to:"))
-            val directory = prompt("Directory")?.toPath() ?: throw ProgramResult(ExitCode.CtrlC)
+            val directory = prompt("Directory")?.toPath() ?: throw ProgramResult(ExitCode.CTRLC)
             if (FileSystem.SYSTEM.metadata(directory).isDirectory) {
                 writeFilesToDirectory(directory, files, terminal)
             } else {

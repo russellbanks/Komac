@@ -187,11 +187,11 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
             source().buffer().use { bufferedSource ->
                 val sink = Buffer()
                 var offset = 0L
-                val wixBurnHeaderBytes = wixBurnHeader.encodeUtf8()
+                val wixBurnHeaderBytes = WIX_BURN_HEADER.encodeUtf8()
                 repeat(UShort.MAX_VALUE.toInt()) {
-                    bufferedSource.read(sink, burnBufferSize)
+                    bufferedSource.read(sink, BURN_BUFFER_SIZE)
                     if (sink.rangeEquals(offset, wixBurnHeaderBytes)) return true
-                    offset += burnBufferSize
+                    offset += BURN_BUFFER_SIZE
                 }
                 return false
             }
@@ -213,25 +213,25 @@ class FileAnalyser(private val file: Path, private val fileSystem: FileSystem = 
             return runCatching {
                 fileSystem.source(file).buffer().use { source ->
                     // Skip DOS header
-                    source.skip(peHeaderLocation)
+                    source.skip(PE_HEADER_LOCATION)
                     val peOffset = source.readIntLe()
 
                     // Skip PE signature
-                    source.skip(peOffset - peHeaderLocation)
+                    source.skip(peOffset - PE_HEADER_LOCATION)
 
                     // Read machine value from PE header
                     val machine = source.readShortLe() // Machine is stored as a 2-byte little-endian value
 
-                    machine.toInt().and(UShort.MAX_VALUE.toInt()).toString(hexBase16)
+                    machine.toInt().and(UShort.MAX_VALUE.toInt()).toString(BASE_16)
                 }
             }.getOrNull()
         }
 
     companion object {
-        const val burnBufferSize: Long = 8
-        const val wixBurnHeader = ".wixburn"
-        const val peHeaderLocation: Long = 0x3C
-        private const val hexBase16 = 16
+        const val BURN_BUFFER_SIZE: Long = 8
+        const val WIX_BURN_HEADER = ".wixburn"
+        const val PE_HEADER_LOCATION: Long = 0x3C
+        private const val BASE_16 = 16
 
         /**
          * The first 224 bytes of an exe made with NSIS are the same

@@ -16,7 +16,7 @@ interface Kernel32 : Library {
         const val RT_MANIFEST = "24"
         const val MANIFEST_RESOURCE = "1"
 
-        private const val kernel32 = "kernel32"
-        val INSTANCE: Kernel32 = Native.load(kernel32, Kernel32::class.java, W32APIOptions.UNICODE_OPTIONS)
+        private const val KERNEL32 = "kernel32"
+        val INSTANCE: Kernel32 = Native.load(KERNEL32, Kernel32::class.java, W32APIOptions.UNICODE_OPTIONS)
     }
 }

@@ -1,6 +1,7 @@
 package commands.token
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.option
 import commands.prompt
 import commands.success
@@ -18,7 +19,7 @@ class Update : CliktCommand() {
             success("Token set successfully")
         } else {
             val confirmed = if (tokenParameter == null) {
-                currentContext.terminal.yesNoMenu(default = true).prompt()
+                terminal.yesNoMenu(default = true).prompt()
             } else {
                 true
             }

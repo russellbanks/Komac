@@ -1,6 +1,6 @@
 package io
 
 object Prompts {
-    const val required = "[Required]"
-    const val optional = "[Optional]"
+    const val REQUIRED = "[Required]"
+    const val OPTIONAL = "[Optional]"
 }

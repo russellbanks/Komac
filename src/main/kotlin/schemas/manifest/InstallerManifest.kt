@@ -377,8 +377,8 @@ data class InstallerManifest(
         ): InstallerManifest = previousManifest ?: InstallerManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            manifestType = Schemas.installerManifestType,
-            manifestVersion = Schemas.manifestVersion
+            manifestType = Schemas.INSTALLER_MANIFEST_TYPE,
+            manifestVersion = Schemas.MANIFEST_VERSION
         )
 
         fun getInstallerBase(previousInstaller: Installer?): Installer = previousInstaller ?: Installer(

@@ -60,7 +60,7 @@ class FileAnalyserTests : FunSpec({
             val file = directory / "burn.exe"
             fileSystem.write(file) {
                 repeat(64) { writeByte(0) }
-                writeString(FileAnalyser.wixBurnHeader, Charsets.UTF_8)
+                writeString(FileAnalyser.WIX_BURN_HEADER, Charsets.UTF_8)
             }
             FileAnalyser(file, fileSystem).installerType shouldBe InstallerType.BURN
         }
@@ -68,8 +68,8 @@ class FileAnalyserTests : FunSpec({
         test("exe contains burn header in wrong place") {
             val file = directory / "burn.exe"
             fileSystem.write(file) {
-                repeat(UShort.MAX_VALUE.toInt() * FileAnalyser.burnBufferSize.toInt()) { writeByte(0) }
-                writeString(FileAnalyser.wixBurnHeader, Charsets.UTF_8)
+                repeat(UShort.MAX_VALUE.toInt() * FileAnalyser.BURN_BUFFER_SIZE.toInt()) { writeByte(0) }
+                writeString(FileAnalyser.WIX_BURN_HEADER, Charsets.UTF_8)
             }
             FileAnalyser(file, fileSystem).installerType shouldBe null
         }
@@ -80,9 +80,9 @@ class FileAnalyserTests : FunSpec({
             val peHeaderSize = 0x108
             fileSystem.write(this) {
                 writeUtf8("MZ")
-                repeat(FileAnalyser.peHeaderLocation.toInt() - 2) { writeByte(0) }
+                repeat(FileAnalyser.PE_HEADER_LOCATION.toInt() - 2) { writeByte(0) }
                 writeIntLe(peHeaderSize)
-                repeat(peHeaderSize - FileAnalyser.peHeaderLocation.toInt()) { writeByte(0) }
+                repeat(peHeaderSize - FileAnalyser.PE_HEADER_LOCATION.toInt()) { writeByte(0) }
                 writeShortLe(machine)
             }
         }

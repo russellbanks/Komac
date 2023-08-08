@@ -78,7 +78,7 @@ data class DefaultLocaleManifest(
             identifier: String,
             defaultLocale: String? = null,
             previousDefaultLocale: String?
-        ) = "$identifier.locale.${defaultLocale ?: previousDefaultLocale ?: Locale.defaultLocale}.yaml"
+        ) = "$identifier.locale.${defaultLocale ?: previousDefaultLocale ?: Locale.DEFAULT_LOCALE}.yaml"
 
         private fun getBase(
             packageIdentifier: String,
@@ -91,13 +91,13 @@ data class DefaultLocaleManifest(
         ): DefaultLocaleManifest = previousDefaultLocaleManifest ?: DefaultLocaleManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            packageLocale = Locale.defaultLocale,
+            packageLocale = Locale.DEFAULT_LOCALE,
             publisher = publisher,
             packageName = packageName,
             license = license,
             shortDescription = shortDescription,
-            manifestType = Schemas.defaultLocaleManifestType,
-            manifestVersion = Schemas.manifestVersion
+            manifestType = Schemas.DEFAULT_LOCALE_MANIFEST_TYPE,
+            manifestVersion = Schemas.MANIFEST_VERSION
         )
 
         suspend fun create(
@@ -133,7 +133,7 @@ data class DefaultLocaleManifest(
                 packageVersion = packageVersion,
                 packageLocale = defaultLocale
                     ?: previousManifestData?.versionManifest?.defaultLocale
-                    ?: Locale.defaultLocale,
+                    ?: Locale.DEFAULT_LOCALE,
                 publisher = publisher,
                 publisherUrl = (publisherUrl
                     ?: previousDefaultLocaleManifest?.publisherUrl
@@ -169,7 +169,7 @@ data class DefaultLocaleManifest(
                     ?: parameterLocaleMetadata?.releaseNotesUrl)
                     ?.ifBlank { null },
                 releaseNotes = (gitHubDetection?.releaseNotes ?: parameterLocaleMetadata?.releaseNotes)
-                    ?.cutToCharLimitWithLines(ReleaseNotesFormatter.maxCharacterLimit)
+                    ?.cutToCharLimitWithLines(ReleaseNotesFormatter.MAX_CHARACTERS)
                     ?.trim(),
                 documentations = if (previousDefaultLocaleManifest?.documentations == null) {
                     listOfNotNull(
@@ -180,8 +180,8 @@ data class DefaultLocaleManifest(
                 } else {
                     previousDefaultLocaleManifest.documentations
                 }.ifEmpty { null },
-                manifestType = Schemas.defaultLocaleManifestType,
-                manifestVersion = manifestOverride ?: Schemas.manifestVersion
+                manifestType = Schemas.DEFAULT_LOCALE_MANIFEST_TYPE,
+                manifestVersion = manifestOverride ?: Schemas.MANIFEST_VERSION
             )
         }
 

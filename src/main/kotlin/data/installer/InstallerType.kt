@@ -10,7 +10,7 @@ class InstallerType(
     private val allInstallers: List<InstallerManifest.Installer>,
     private val previousInstallerManifest: InstallerManifest?
 ) : RadioMenuPrompt<InstallerManifest.InstallerType> {
-    override val name: String = InstallerType.name
+    override val name: String = NAME
 
     override val items get() = if (installerUrl.extension.equals("exe", ignoreCase = true)) {
         listOf(
@@ -27,6 +27,6 @@ class InstallerType(
     }
 
     companion object {
-        const val name = "Installer type"
+        const val NAME = "Installer type"
     }
 }

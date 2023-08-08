@@ -1,5 +1,5 @@
 package io
 
 object ExitCode {
-    const val CtrlC = 130
+    const val CTRLC = 130
 }

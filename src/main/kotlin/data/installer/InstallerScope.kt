@@ -7,7 +7,7 @@ class InstallerScope(
     private val currentInstallerIndex: Int,
     private val previousInstallerManifest: InstallerManifest?
 ) : RadioMenuPrompt<InstallerManifest.Scope> {
-    override val name: String = InstallerScope.name
+    override val name: String = NAME
 
     override val items: List<InstallerManifest.Scope> = InstallerManifest.Scope.entries
 
@@ -16,6 +16,6 @@ class InstallerScope(
     }
 
     companion object {
-        const val name: String = "Installer scope"
+        const val NAME: String = "Installer scope"
     }
 }

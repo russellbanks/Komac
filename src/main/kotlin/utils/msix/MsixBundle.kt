@@ -28,7 +28,7 @@ class MsixBundle(msixBundleFile: Path, fileSystem: FileSystem = FileSystem.SYSTE
         }
         val msixBundleFileSystem = fileSystem.openZip(msixBundleFile)
         val appxManifestXml = msixBundleFileSystem
-            .source(appxManifestFolder.toPath() / appxBundleManifestXml)
+            .source(APPX_MANIFEST_FOLDER.toPath() / APPX_BUNDLE_MANIFEST_XML)
             .buffer()
             .use(BufferedSource::readUtf8)
         packages = Doc(htmlDocument(appxManifestXml).document, relaxed = true)
@@ -61,7 +61,7 @@ class MsixBundle(msixBundleFile: Path, fileSystem: FileSystem = FileSystem.SYSTE
                 )
             }
             .ifEmpty { null }
-        signatureSha256 = appxSignatureP7x.toPath().hashSha256(msixBundleFileSystem)
+        signatureSha256 = APPX_SIGNATURE_P7X.toPath().hashSha256(msixBundleFileSystem)
     }
 
     data class IndividualPackage(
@@ -72,8 +72,8 @@ class MsixBundle(msixBundleFile: Path, fileSystem: FileSystem = FileSystem.SYSTE
     )
 
     companion object {
-        const val appxManifestFolder = "AppxMetadata"
-        const val appxBundleManifestXml = "AppxBundleManifest.xml"
-        const val appxSignatureP7x = "AppxSignature.p7x"
+        const val APPX_MANIFEST_FOLDER = "AppxMetadata"
+        const val APPX_BUNDLE_MANIFEST_XML = "AppxBundleManifest.xml"
+        const val APPX_SIGNATURE_P7X = "AppxSignature.p7x"
     }
 }

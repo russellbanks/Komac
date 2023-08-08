@@ -1,6 +1,7 @@
 package commands
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
@@ -68,7 +69,7 @@ class NewManifest : CliktCommand(name = "new") {
         "--manifest-version", "--manifest-override",
         help = "Overrides the manifest version.",
         envvar = "MANIFEST_VERSION"
-    ).default(Schemas.manifestVersion).check { Regex(Schemas.manifestVersionRegex) matches it }
+    ).default(Schemas.MANIFEST_VERSION).check { Regex(Schemas.MANIFEST_VERSION_REGEX) matches it }
 
     private var defaultLocale: String? = null
     private var license: String? = null
@@ -101,7 +102,7 @@ class NewManifest : CliktCommand(name = "new") {
     override fun run(): Unit = runBlocking {
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
-        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
+        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
         val allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
         val latestVersion = allVersions?.maxWithOrNull(versionStringComparator)
         if (latestVersion != null) {
@@ -110,7 +111,7 @@ class NewManifest : CliktCommand(name = "new") {
         }
         val previousManifestData = PreviousManifestData(packageIdentifier, latestVersion, GitHubImpl.microsoftWinGetPkgs)
         packageVersion = prompt(PackageVersion, parameter = packageVersionParam)
-        currentContext.terminal.promptIfPullRequestExists(identifier = packageIdentifier, version = packageVersion)
+        terminal.promptIfPullRequestExists(identifier = packageIdentifier, version = packageVersion)
         val updateState = when {
             allVersions == null -> VersionUpdateState.NewPackage
             packageVersion in allVersions -> VersionUpdateState.UpdateVersion
@@ -129,12 +130,8 @@ class NewManifest : CliktCommand(name = "new") {
             if (installers.map(InstallerManifest.Installer::installerUrl).contains(installerUrl)) {
                 installers += installers.first { it.installerUrl == installerUrl }
             } else {
-                downloadResult = currentContext.terminal.downloadInstaller(
-                    packageIdentifier,
-                    packageVersion,
-                    installerUrl
-                )
-                currentContext.terminal.msixBundleDetection(downloadResult.msixBundle)
+                downloadResult = terminal.downloadInstaller(packageIdentifier, packageVersion, installerUrl)
+                terminal.msixBundleDetection(downloadResult.msixBundle)
                 installerType = downloadResult.installerType ?: prompt(InstallerType(installerUrl, installers, previousInstallerManifest))
                 if (installerType == InstallerManifest.InstallerType.EXE) {
                     installerSwitches[InstallerManifest.InstallerSwitches.Key.Silent] = prompt(InstallerSwitch.Silent(installers.size, previousInstallerManifest))
@@ -146,7 +143,7 @@ class NewManifest : CliktCommand(name = "new") {
                     scope = prompt(InstallerScope(installers.size, previousInstallerManifest))
                 }
                 upgradeBehavior = prompt(UpgradeBehaviour(installers.size, previousInstallerManifest))
-                if (gitHubDetection == null && installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
+                if (gitHubDetection == null && installerUrl.host.equals(GitHubDetection.GITHUB_URL, true)) {
                     gitHubDetection = GitHubDetection(installerUrl)
                 }
                 InstallerManifestData.addInstaller(
@@ -170,12 +167,12 @@ class NewManifest : CliktCommand(name = "new") {
                     onAddInstaller = { installers += it }
                 )
             }
-            info(additionalInstallerPrompt)
-            val loop = currentContext.terminal.yesNoMenu(
+            info(ADDITIONAL_INSTALLERS_PROMPT)
+            val loop = terminal.yesNoMenu(
                 default = installers.size < (previousInstallerManifest?.installers?.size ?: 0)
             ).prompt()
         } while (loop)
-        val pageScraper = if (!installerUrl.host.equals(GitHubDetection.gitHubWebsite, true)) {
+        val pageScraper = if (!installerUrl.host.equals(GitHubDetection.GITHUB_URL, true)) {
             WebPageScraper(installerUrl)
         } else {
             null
@@ -230,29 +227,29 @@ class NewManifest : CliktCommand(name = "new") {
             formattedManifestLinesSequence(manifest, theme).forEach(::echo)
         }
         info("What would you like to do with $packageIdentifier $packageVersion?")
-        currentContext.terminal.radioMenu<ManifestResultOption> {
+        terminal.radioMenu<ManifestResultOption> {
             items = ManifestResultOption.entries
             default = ManifestResultOption.PullRequest
         }.prompt().also { manifestResultOption ->
             when (manifestResultOption) {
                 ManifestResultOption.PullRequest -> {
                     GitHubImpl.commitAndPullRequest(
-                        wingetPkgsFork = GitHubImpl.getWingetPkgsFork(currentContext.terminal),
+                        wingetPkgsFork = GitHubImpl.getWingetPkgsFork(terminal),
                         files = files,
                         packageIdentifier = packageIdentifier,
                         packageVersion = packageVersion,
                         updateState = updateState,
                         previousManifestData = previousManifestData,
-                        terminal = currentContext.terminal
+                        terminal = terminal
                     ).also { success("Pull request created: ${it.htmlUrl}") }
                 }
-                ManifestResultOption.WriteToFiles -> writeFiles(files, currentContext.terminal)
+                ManifestResultOption.WriteToFiles -> writeFiles(files, terminal)
                 else -> return@runBlocking
             }
         }
     }
 
     companion object {
-        private const val additionalInstallerPrompt = "Do you want to create another installer?"
+        private const val ADDITIONAL_INSTALLERS_PROMPT = "Do you want to create another installer?"
     }
 }

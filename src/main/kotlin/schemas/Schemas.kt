@@ -9,15 +9,15 @@ import schemas.manifest.Manifest
 import schemas.manifest.VersionManifest
 
 object Schemas {
-    const val manifestVersion = "1.4.0"
-    private val installerSchema get() = "https://aka.ms/winget-manifest.installer.$manifestVersion.schema.json"
-    private val defaultLocaleSchema get() = "https://aka.ms/winget-manifest.defaultLocale.$manifestVersion.schema.json"
-    private val localeSchema get() = "https://aka.ms/winget-manifest.locale.$manifestVersion.schema.json"
-    private val versionSchema get() = "https://aka.ms/winget-manifest.version.$manifestVersion.schema.json"
-    const val installerManifestType = "installer"
-    const val defaultLocaleManifestType = "defaultLocale"
-    const val versionManifestType = "version"
-    const val manifestVersionRegex = "^(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])(\\.(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])){2}$"
+    const val MANIFEST_VERSION = "1.4.0"
+    private val installerSchema get() = "https://aka.ms/winget-manifest.installer.$MANIFEST_VERSION.schema.json"
+    private val defaultLocaleSchema get() = "https://aka.ms/winget-manifest.defaultLocale.$MANIFEST_VERSION.schema.json"
+    private val localeSchema get() = "https://aka.ms/winget-manifest.locale.$MANIFEST_VERSION.schema.json"
+    private val versionSchema get() = "https://aka.ms/winget-manifest.version.$MANIFEST_VERSION.schema.json"
+    const val INSTALLER_MANIFEST_TYPE = "installer"
+    const val DEFAULT_LOCALE_MANIFEST_TYPE = "defaultLocale"
+    const val VERSION_MANIFEST_TYPE = "version"
+    const val MANIFEST_VERSION_REGEX = "^(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])(\\.(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])){2}$"
 
     fun buildManifestString(manifest: Manifest, rawString: String): String = buildString {
         append("# Created with ")

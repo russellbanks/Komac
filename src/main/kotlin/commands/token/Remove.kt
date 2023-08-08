@@ -1,6 +1,7 @@
 package commands.token
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import commands.info
@@ -21,7 +22,7 @@ class Remove : CliktCommand() {
             true
         } else {
             warning("Would you like to remove the currently stored token?")
-            currentContext.terminal.yesNoMenu(default = false).prompt()
+            terminal.yesNoMenu(default = false).prompt()
         }
         if (shouldDeleteToken) {
             TokenStore.deleteToken()

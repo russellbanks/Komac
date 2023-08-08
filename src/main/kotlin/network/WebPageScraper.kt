@@ -29,9 +29,9 @@ class WebPageScraper(url: Url, private val client: HttpClient = Http.client) {
     private val linksMap: Deferred<Map<String, String>?> = scope.async {
         runCatching { parseLinks(client.get(urlRoot).bodyAsText()).getOrDefault(HashMap()) }.getOrNull()
     }
-    val supportUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(support, help) }
-    val faqUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(faq) }
-    val privacyUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(privacy) }
+    val supportUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(SUPPORT, HELP) }
+    val faqUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(FAQ) }
+    val privacyUrl: Deferred<Url?> = scope.async { getUrlForSearchValue(PRIVACY) }
 
     /**
      * Parses an HTML document into a map of link text to href values.
@@ -89,13 +89,13 @@ class WebPageScraper(url: Url, private val client: HttpClient = Http.client) {
 
     companion object {
         // Support
-        private const val support = "Support"
-        private const val help = "Help"
+        private const val SUPPORT = "Support"
+        private const val HELP = "Help"
 
         // Privacy
-        private const val privacy = "Privacy"
+        private const val PRIVACY = "Privacy"
 
         // FAQ
-        private const val faq = "FAQ"
+        private const val FAQ = "FAQ"
     }
 }

@@ -4,7 +4,7 @@ import org.kohsuke.github.GHRelease
 import utils.EmojisUnicodeMapper
 
 object ReleaseNotesFormatter {
-    const val maxCharacterLimit = 10_000
+    const val MAX_CHARACTERS = 10_000
 
     /**
      * Extracts formatted release notes from a given release.

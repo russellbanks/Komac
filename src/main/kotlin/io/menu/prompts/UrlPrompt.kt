@@ -29,7 +29,7 @@ interface UrlPrompt : Prompt<Url> {
 
     override suspend fun prompt(terminal: Terminal): Url = with(terminal) {
         val textColour = if (validationRules.isRequired) TextColors.brightGreen else TextColors.brightYellow
-        val requiredText = if (validationRules.isRequired) Prompts.required else Prompts.optional
+        val requiredText = if (validationRules.isRequired) Prompts.REQUIRED else Prompts.OPTIONAL
         println(textColour("$requiredText Enter the $description"))
         return prompt(
             prompt = name,
@@ -45,13 +45,13 @@ interface UrlPrompt : Prompt<Url> {
             } else {
                 it
             }
-        } ?: throw ProgramResult(ExitCode.CtrlC)
+        } ?: throw ProgramResult(ExitCode.CTRLC)
     }
 
     private suspend fun Terminal.promptIfRedirectedUrl(installerUrl: Url): Url {
         val redirectedUrl = installerUrl.getRedirectedUrl()
         val shouldUseRedirectedUrl = redirectedUrl != installerUrl &&
-                !installerUrl.host.equals(other = GitHubDetection.gitHubWebsite, ignoreCase = true)
+                !installerUrl.host.equals(other = GitHubDetection.GITHUB_URL, ignoreCase = true)
         val error = getError(redirectedUrl.toString())
         return if (shouldUseRedirectedUrl && error == null) {
             println(TextColors.brightYellow("The URL is redirected. Would you like to use the destination URL instead?"))
@@ -74,7 +74,7 @@ interface UrlPrompt : Prompt<Url> {
         return when {
             url == Url("") && !validationRules.isRequired -> null
             url == Url("") -> Errors.blankInput(name)
-            url.toString().length > maxLength -> Errors.invalidLength(max = maxLength)
+            url.toString().length > MAX_LENGTH -> Errors.invalidLength(max = MAX_LENGTH)
             !url.toString().matches(regex) -> Errors.invalidRegex(regex)
             else -> Http.client.checkUrlResponse(url)
         }
@@ -96,8 +96,8 @@ interface UrlPrompt : Prompt<Url> {
     }
 
     companion object {
-        private const val maxLength = 2048
-        private const val pattern = "^([Hh][Tt][Tt][Pp][Ss]?)://.+$"
-        val regex = Regex(pattern)
+        private const val MAX_LENGTH = 2048
+        private const val PATTERN = "^([Hh][Tt][Tt][Pp][Ss]?)://.+$"
+        val regex = Regex(PATTERN)
     }
 }

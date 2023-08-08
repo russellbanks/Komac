@@ -1,6 +1,7 @@
 package commands.branch
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
@@ -30,14 +31,14 @@ class Cleanup : CliktCommand(
     override fun run() = runBlocking {
         tokenParameter?.let { TokenStore.useTokenParameter(it) }
         if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
-        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(currentContext.terminal)
+        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
         val mergeState = when {
             onlyMerged && !onlyClosed -> "merged"
             !onlyMerged && onlyClosed -> "closed"
             else -> "merged or closed"
         }
-        info("Deleting branches with a $mergeState pull request to ${GitHubImpl.wingetPkgsFullName} from them")
-        val wingetPkgsFork = GitHubImpl.getWingetPkgsFork(currentContext.terminal)
+        info("Deleting branches with a $mergeState pull request to ${GitHubImpl.WINGET_PKGS_FULL_NAME} from them")
+        val wingetPkgsFork = GitHubImpl.getWingetPkgsFork(terminal)
         var branchesDeleted = 0
 
         val branches = wingetPkgsFork.branches.values.filterNot {

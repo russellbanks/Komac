@@ -31,7 +31,7 @@ class Msix(msixFile: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
             "File extension must be one of the following: ${validExtensions.joinToString()}"
         }
         val msixFileSystem = fileSystem.openZip(msixFile)
-        val appxManifestXML = msixFileSystem.source(appxManifest.toPath()).buffer().use(BufferedSource::readUtf8)
+        val appxManifestXML = msixFileSystem.source(APPX_MANIFEST_XML.toPath()).buffer().use(BufferedSource::readUtf8)
         val document = Doc(htmlDocument(appxManifestXML).document, relaxed = true)
         val properties = document.findFirst("Properties")
         val targetDeviceFamilyAttribute = document.findFirst("TargetDeviceFamily")
@@ -54,16 +54,16 @@ class Msix(msixFile: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
             identityName = identity.attribute("Name".lowercase()),
             identityPublisher = identity.attribute("Publisher".lowercase())
         )
-        signatureSha256 = appxSignatureP7x.toPath().hashSha256(msixFileSystem)
+        signatureSha256 = APPX_SIGNATURE_P7X.toPath().hashSha256(msixFileSystem)
     }
 
     companion object {
-        const val appxManifest = "AppxManifest.xml"
-        const val appxSignatureP7x = "AppxSignature.p7x"
-        private const val hex255 = 0xFF
-        private const val binaryRadix = 2
-        private const val bitGroupsSize = 5
-        private const val padLength = 8
+        const val APPX_MANIFEST_XML = "AppxManifest.xml"
+        const val APPX_SIGNATURE_P7X = "AppxSignature.p7x"
+        private const val HEX_255 = 0xFF
+        private const val BASE_2 = 2
+        private const val BIT_GROUPS_SIZE = 5
+        private const val PAD_LENGTH = 8
 
         /**
          * Generates the package family name for a given identity name and identity publisher.
@@ -87,11 +87,11 @@ class Msix(msixFile: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
                 .sha256()
                 .substring(0, 8)
                 .toByteArray()
-                .map { it.toInt() and hex255 }
-                .joinToString("") { it.toString(binaryRadix).padStart(padLength, '0') }
+                .map { it.toInt() and HEX_255 }
+                .joinToString("") { it.toString(BASE_2).padStart(PAD_LENGTH, '0') }
                 .plus('0')
-                .chunked(bitGroupsSize)
-                .map { "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[it.toInt(binaryRadix)] }
+                .chunked(BIT_GROUPS_SIZE)
+                .map { "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[it.toInt(BASE_2)] }
                 .joinToString("")
                 .lowercase()
             return "${identityName}_$hashPart"

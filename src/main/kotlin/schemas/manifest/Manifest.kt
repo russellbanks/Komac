@@ -96,7 +96,7 @@ sealed class Manifest {
                     localeManifest.copy(
                         packageIdentifier = packageIdentifier,
                         packageVersion = packageVersion,
-                        manifestVersion = Schemas.manifestVersion
+                        manifestVersion = Schemas.MANIFEST_VERSION
                     )
                 }
             }.orEmpty()

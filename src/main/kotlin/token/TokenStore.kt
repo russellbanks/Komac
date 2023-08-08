@@ -9,15 +9,15 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
 object TokenStore {
-    private const val credentialKey = "komac/github-access-token"
+    private const val CREDENTIAL_KEY = "komac/github-access-token"
     private val credentialStore = StorageProvider.getTokenStorage()
-    private var storedToken = credentialStore?.get(credentialKey)
+    private var storedToken = credentialStore?.get(CREDENTIAL_KEY)
     val token: String?
         get() = storedToken?.value
     var isTokenValid: Deferred<Boolean> = CoroutineScope(Dispatchers.IO).async { Token.isTokenValid(token) }
 
     suspend fun putToken(tokenString: String) = coroutineScope {
-        credentialStore?.add(credentialKey, TokenData(tokenString))
+        credentialStore?.add(CREDENTIAL_KEY, TokenData(tokenString))
         storedToken = TokenData(tokenString)
         isTokenValid = async { true }
     }
@@ -28,7 +28,7 @@ object TokenStore {
         return isTokenValid.await()
     }
 
-    fun deleteToken() = credentialStore?.delete(credentialKey)
+    fun deleteToken() = credentialStore?.delete(CREDENTIAL_KEY)
 
     suspend fun invalidTokenPrompt(terminal: Terminal) = with(terminal) {
         warning("Token is invalid. Please enter a new token.")

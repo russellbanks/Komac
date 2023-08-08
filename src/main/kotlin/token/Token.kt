@@ -26,7 +26,7 @@ object Token : TextPrompt {
                     ?.let { ConversionResult.Invalid(it) }
                     ?: ConversionResult.Valid(input.trim())
             }
-        } ?: throw ProgramResult(ExitCode.CtrlC)
+        } ?: throw ProgramResult(ExitCode.CTRLC)
     }
 
     override suspend fun getError(input: String): String? {

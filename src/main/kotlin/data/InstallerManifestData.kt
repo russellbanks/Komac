@@ -201,7 +201,7 @@ object InstallerManifestData {
                 else -> null
             },
             installers = installers.removeNonDistinctKeys(installers).sortedWith(installerSorter),
-            manifestType = Schemas.installerManifestType,
+            manifestType = Schemas.INSTALLER_MANIFEST_TYPE,
             manifestVersion = manifestOverride
         )
     }

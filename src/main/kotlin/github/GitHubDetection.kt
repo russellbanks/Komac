@@ -44,7 +44,7 @@ class GitHubDetection(url: Url) {
     var topics: List<String>? = findTopics()
 
     init {
-        require(url.host.equals(gitHubWebsite, ignoreCase = true)) { "Url must be a GitHub Url" }
+        require(url.host.equals(GITHUB_URL, ignoreCase = true)) { "Url must be a GitHub Url" }
         CoroutineScope(Dispatchers.IO).launch { sha256 = findSha256(url, assets) }
     }
 
@@ -123,6 +123,6 @@ class GitHubDetection(url: Url) {
     }
 
     companion object {
-        const val gitHubWebsite = "github.com"
+        const val GITHUB_URL = "github.com"
     }
 }

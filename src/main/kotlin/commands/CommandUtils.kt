@@ -4,6 +4,7 @@ import Environment
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.ProgramResult
+import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.mordant.rendering.OverflowWrap
 import com.github.ajalt.mordant.rendering.TextAlign
 import com.github.ajalt.mordant.rendering.Whitespace
@@ -23,7 +24,7 @@ suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, tr
         error != null -> if (!Environment.isCI) {
             danger(error)
             println()
-            prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC)
+            prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CTRLC)
         } else {
             throw CliktError(theme.danger(error), statusCode = 1)
         }
@@ -32,16 +33,16 @@ suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, tr
             message = theme.danger("${prompt.name} was not provided"),
             statusCode = 1
         )
-        else -> prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CtrlC)
+        else -> prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CTRLC)
     }
 }
 
 suspend fun CliktCommand.prompt(textPrompt: TextPrompt, parameter: String? = null): String {
-    return currentContext.terminal.prompt(textPrompt, parameter, transform = { it })
+    return terminal.prompt(textPrompt, parameter, transform = { it })
 }
 
 suspend fun <T> CliktCommand.prompt(listPrompt: ListPrompt<T>, parameter: String? = null): List<T> {
-    return currentContext.terminal.prompt(
+    return terminal.prompt(
         listPrompt,
         parameter,
         transform = { listPrompt.validationRules.transform(it) }
@@ -49,15 +50,15 @@ suspend fun <T> CliktCommand.prompt(listPrompt: ListPrompt<T>, parameter: String
 }
 
 suspend fun CliktCommand.prompt(urlPrompt: UrlPrompt, parameter: String? = null): Url {
-    return currentContext.terminal.prompt(urlPrompt, parameter, transform = { urlPrompt.validationRules.transform(it) })
+    return terminal.prompt(urlPrompt, parameter, transform = { urlPrompt.validationRules.transform(it) })
 }
 
 suspend fun <T> CliktCommand.prompt(radioMenuPrompt: RadioMenuPrompt<T>, parameter: String? = null): T {
-    return currentContext.terminal.prompt(radioMenuPrompt, parameter, transform = { it as T })
+    return terminal.prompt(radioMenuPrompt, parameter, transform = { it as T })
 }
 
 suspend fun <T> CliktCommand.prompt(checkMenuPrompt: CheckMenuPrompt<T>, parameter: String? = null): List<T> {
-    return currentContext.terminal.prompt(checkMenuPrompt, parameter, transform = { it as List<T> })
+    return terminal.prompt(checkMenuPrompt, parameter, transform = { it as List<T> })
 }
 
 fun CliktCommand.info(
@@ -66,7 +67,7 @@ fun CliktCommand.info(
     align: TextAlign = TextAlign.NONE,
     overflowWrap: OverflowWrap = OverflowWrap.NORMAL,
     width: Int? = null
-) = currentContext.terminal.info(message, whitespace, align, overflowWrap, width)
+) = terminal.info(message, whitespace, align, overflowWrap, width)
 
 fun CliktCommand.success(
     message: Any?,
@@ -74,7 +75,7 @@ fun CliktCommand.success(
     align: TextAlign = TextAlign.NONE,
     overflowWrap: OverflowWrap = OverflowWrap.NORMAL,
     width: Int? = null
-) = currentContext.terminal.success(message, whitespace, align, overflowWrap, width)
+) = terminal.success(message, whitespace, align, overflowWrap, width)
 
 fun CliktCommand.warning(
     message: Any?,
@@ -82,6 +83,6 @@ fun CliktCommand.warning(
     align: TextAlign = TextAlign.NONE,
     overflowWrap: OverflowWrap = OverflowWrap.NORMAL,
     width: Int? = null
-) = currentContext.terminal.warning(message, whitespace, align, overflowWrap, width)
+) = terminal.warning(message, whitespace, align, overflowWrap, width)
 
-val CliktCommand.theme get() = currentContext.terminal.theme
+val CliktCommand.theme get() = terminal.theme

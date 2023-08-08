@@ -65,7 +65,7 @@ object Errors {
             buildString {
                 append("$packageIdentifier ")
                 if (packageVersion != null) append("$packageVersion ")
-                appendLine("does not exist in ${GitHubImpl.wingetPkgsFullName}")
+                appendLine("does not exist in ${GitHubImpl.WINGET_PKGS_FULL_NAME}")
                 if (isUpdate) appendLine("Please use the 'new' command to create a new manifest.")
             }
         ),

@@ -18,7 +18,7 @@ interface ListPrompt<T> : Prompt<List<T>> {
     val description: String
 
     override suspend fun prompt(terminal: Terminal): List<T> = with(terminal) {
-        println(TextColors.brightYellow("${Prompts.optional} Enter the $name (Max ${validationRules.maxItems})"))
+        println(TextColors.brightYellow("${Prompts.OPTIONAL} Enter the $name (Max ${validationRules.maxItems})"))
         if (extraText != null) info(extraText)
         return prompt(
             prompt = name,

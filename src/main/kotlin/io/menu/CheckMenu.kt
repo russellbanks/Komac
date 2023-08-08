@@ -27,7 +27,7 @@ class CheckMenu<T>(
                 val color = if (isHighlighted) TextColors.brightMagenta(checkbox) else checkbox
                 cell("$color ${nameConvert(item)}")
             }
-            val confirmHighlighted = if (selectedIndex == items.size) TextColors.brightMagenta(confirm) else confirm
+            val confirmHighlighted = if (selectedIndex == items.size) TextColors.brightMagenta(CONFIRM) else CONFIRM
             cell(confirmHighlighted)
         }
 
@@ -67,7 +67,7 @@ class CheckMenu<T>(
     override fun clearAnimation() = animation.clear()
 
     companion object {
-        private const val confirm = "[Confirm]"
+        private const val CONFIRM = "[Confirm]"
     }
 }
 

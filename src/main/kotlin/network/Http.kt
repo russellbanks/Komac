@@ -19,13 +19,13 @@ object Http {
             pipelining = true
         }
         install(UserAgent) {
-            agent = userAgent
+            agent = DELIVERY_OPTIMIZATION_USER_AGENT
         }
         install(HttpTimeout) {
-            connectTimeoutMillis = timeoutMillis
+            connectTimeoutMillis = TIMEOUT_MILLIS
         }
     }
 
-    private const val timeoutMillis = 1500L
-    private const val userAgent = "Microsoft-Delivery-Optimization/10.1"
+    private const val TIMEOUT_MILLIS = 1500L
+    private const val DELIVERY_OPTIMIZATION_USER_AGENT = "Microsoft-Delivery-Optimization/10.1"
 }
