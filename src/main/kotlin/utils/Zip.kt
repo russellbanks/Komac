@@ -24,25 +24,18 @@ class Zip(zip: Path, fileSystem: FileSystem = FileSystem.SYSTEM) {
     var nestedInstallerType: InstallerManifest.InstallerType? = null
     var nestedInstallerFiles: List<InstallerManifest.NestedInstallerFiles>? = null
 
-    private val validExtensionsList = listOf(
-        InstallerManifest.InstallerType.MSIX.name,
-        InstallerManifest.InstallerType.APPX.name,
-        InstallerManifest.InstallerType.MSI.name,
-        InstallerManifest.InstallerType.EXE.name,
-        InstallerManifest.InstallerType.ZIP.name,
-        MsixBundle.msixBundleConst,
-        MsixBundle.appxBundleConst,
-    ).map(String::lowercase)
-
     private val zipFileSystem = fileSystem.openZip(zip)
 
     private val identifiedFiles = zipFileSystem.listRecursively("/".toPath())
-        .filter { zipEntry -> zipEntry.extension.lowercase() in validExtensionsList }
+        .filter { zipEntry -> zipEntry.extension.lowercase() in InstallerManifest.InstallerType.fileExtensions() }
         .toList()
 
-    private val installerTypeCounts = validExtensionsList.associateWith { validExtension ->
+    private val installerTypeCounts = InstallerManifest.InstallerType.fileExtensions().associateWith { validExtension ->
         identifiedFiles.count { zipEntry ->
-            zipEntry.extension.equals(validExtensionsList.find { it == validExtension }, ignoreCase = true)
+            zipEntry.extension.equals(
+                InstallerManifest.InstallerType.fileExtensions().find { it == validExtension },
+                ignoreCase = true
+            )
         }
     }
 

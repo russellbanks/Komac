@@ -27,9 +27,12 @@ fun Url.findArchitecture(): InstallerManifest.Installer.Architecture? {
         InstallerManifest.Installer.Architecture.ARM to listOf("arm", "armv7", "aarch"),
         InstallerManifest.Installer.Architecture.NEUTRAL to listOf("neutral")
     )
-    val archPatterns = architectureMap.flatMap { it.value }
+    val archPatterns = architectureMap
+        .flatMap(Map.Entry<InstallerManifest.Installer.Architecture, List<String>>::value)
+        .joinToString("|")
     val delimiter = "[,/\\._-]"
-    val archInUrl = "(?<=$delimiter)(${archPatterns.joinToString("|")})(?=$delimiter)"
+    val validExtensions = InstallerManifest.InstallerType.fileExtensions().joinToString("|")
+    val archInUrl = "(?<=$delimiter)($archPatterns)(?=$delimiter)|($archPatterns)(?=\\.($validExtensions))"
         .toRegex(RegexOption.IGNORE_CASE)
         .findAll(fullPath)
         .lastOrNull()
