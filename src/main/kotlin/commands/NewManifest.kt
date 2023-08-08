@@ -216,6 +216,7 @@ class NewManifest : CliktCommand(name = "new") {
             copyright = copyright,
             copyrightUrl = copyrightUrl,
             shortDescription = shortDescription ?: previousManifestData.defaultLocaleManifest!!.license,
+            description = description,
             moniker = moniker,
             installers = installers,
             packageName = packageName,
