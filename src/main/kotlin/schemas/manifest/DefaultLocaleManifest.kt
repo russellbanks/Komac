@@ -135,21 +135,29 @@ data class DefaultLocaleManifest(
                     ?: previousManifestData?.versionManifest?.defaultLocale
                     ?: Locale.defaultLocale,
                 publisher = publisher,
-                publisherUrl = (publisherUrl ?: previousDefaultLocaleManifest?.publisherUrl ?: gitHubDetection?.publisherUrl)
+                publisherUrl = (publisherUrl
+                    ?: previousDefaultLocaleManifest?.publisherUrl
+                    ?: gitHubDetection?.publisherUrl)
                     ?.ifBlank { null },
-                publisherSupportUrl = previousDefaultLocaleManifest?.publisherSupportUrl
+                publisherSupportUrl = (previousDefaultLocaleManifest?.publisherSupportUrl
                     ?: gitHubDetection?.publisherSupportUrl
-                    ?: pageScraper?.supportUrl?.await(),
+                    ?: pageScraper?.supportUrl?.await())
+                    ?.ifBlank { null },
                 privacyUrl = (previousDefaultLocaleManifest?.privacyUrl
                     ?: gitHubDetection?.privacyUrl
                     ?: pageScraper?.privacyUrl?.await())
                     ?.ifBlank { null },
                 author = (author ?: previousDefaultLocaleManifest?.author)?.ifBlank { null },
                 packageName = packageName,
-                packageUrl = packageUrl ?: previousDefaultLocaleManifest?.packageUrl ?: gitHubDetection?.packageUrl,
+                packageUrl = (packageUrl
+                    ?: previousDefaultLocaleManifest?.packageUrl
+                    ?: gitHubDetection?.packageUrl)
+                    ?.ifBlank { null },
                 license = license,
-                licenseUrl = (licenseUrl ?: previousDefaultLocaleManifest?.licenseUrl)?.ifBlank { null }
-                    ?: gitHubDetection?.licenseUrl,
+                licenseUrl = (licenseUrl
+                    ?: previousDefaultLocaleManifest?.licenseUrl
+                    ?: gitHubDetection?.licenseUrl)
+                    ?.ifBlank { null },
                 copyright = (copyright ?: previousDefaultLocaleManifest?.copyright)?.ifBlank { null },
                 copyrightUrl = (copyrightUrl ?: previousDefaultLocaleManifest?.copyrightUrl)?.ifBlank { null },
                 shortDescription = shortDescription,
