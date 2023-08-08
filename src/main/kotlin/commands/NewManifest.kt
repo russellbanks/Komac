@@ -200,7 +200,7 @@ class NewManifest : CliktCommand(name = "new") {
         shortDescription = if (gitHubDetection?.shortDescription != null && previousManifestData.defaultLocaleManifest?.shortDescription != null) {
             gitHubDetection.shortDescription
         } else {
-            prompt(Description.Short(previousManifestData.defaultLocaleManifest))
+            prompt(Description.Short(downloadResult.msix))
         }
         description = prompt(Description.Long(previousManifestData.defaultLocaleManifest))
         releaseNotesUrl = gitHubDetection?.releaseNotesUrl ?: prompt(ReleaseNotesUrl)
