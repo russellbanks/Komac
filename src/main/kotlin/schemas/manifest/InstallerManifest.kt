@@ -5,10 +5,11 @@ import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import schemas.SchemaType
 import schemas.Schemas
 
 /**
- * A representation of a single-file manifest representing an app installers in the OWC. v1.4.0
+ * A representation of a single-file manifest representing an app installers in the OWC. v1.5.0
  */
 
 @Suppress("unused")
@@ -49,8 +50,8 @@ data class InstallerManifest(
     val elevationRequirement: ElevationRequirement? = null,
     val installationMetadata: InstallationMetadata? = null,
     val installers: List<Installer> = emptyList(),
-    val manifestType: String,
-    val manifestVersion: String
+    val manifestType: String = SchemaType.INSTALLER,
+    val manifestVersion: String = Schemas.MANIFEST_VERSION
 ) : Manifest() {
     enum class Platform {
         @SerialName("Windows.Desktop") WindowsDesktop,
@@ -377,7 +378,7 @@ data class InstallerManifest(
         ): InstallerManifest = previousManifest ?: InstallerManifest(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            manifestType = Schemas.INSTALLER_MANIFEST_TYPE,
+            manifestType = SchemaType.INSTALLER,
             manifestVersion = Schemas.MANIFEST_VERSION
         )
 
