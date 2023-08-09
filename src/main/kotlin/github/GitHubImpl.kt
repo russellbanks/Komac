@@ -39,7 +39,6 @@ object GitHubImpl {
     private const val WINGET_PKGS = "winget-pkgs"
     const val WINGET_PKGS_FULL_NAME = "$MICROSOFT/$WINGET_PKGS"
     val github: GitHub = GitHubBuilder().withConnector(KtorGitHubConnector()).withOAuthToken(TokenStore.token).build()
-    private var pullRequestBranch: GHRef? = null
     val forkOwner: String = Environment.forkOverride ?: github.myself.login
     private val draftPullRequest by lazy {
         github.searchIssues()
@@ -146,18 +145,16 @@ object GitHubImpl {
         winGetPkgsFork: GHRepository,
         packageIdentifier: String,
         packageVersion: String
-    ): GHRef? {
+    ): GHRef {
         require(winGetPkgsFork.isFork)
         var count = 0
         val maxTries = 3
         while (true) {
             try {
-                return winGetPkgsFork.source?.let { upstreamRepository ->
-                    winGetPkgsFork.createRef(
-                        "refs/heads/${GitHubUtils.getBranchName(packageIdentifier, packageVersion)}",
-                        upstreamRepository.getBranch(upstreamRepository.defaultBranch).shA1
-                    ).also { pullRequestBranch = it }
-                }
+                return winGetPkgsFork.createRef(
+                    "refs/heads/${GitHubUtils.getBranchName(packageIdentifier, packageVersion)}",
+                    microsoftWinGetPkgs.getBranch(microsoftWinGetPkgs.defaultBranch).shA1
+                )
             } catch (ioException: IOException) {
                 if (++count >= maxTries) {
                     throw CliktError(
@@ -189,7 +186,6 @@ object GitHubImpl {
             if (Environment.isCI) {
                 throw CliktError(
                     message = Errors.noManifestChanges,
-                    cause = null,
                     statusCode = 0 // Nothing went wrong, but we should still avoid making a pull request
                 )
             } else {
@@ -198,8 +194,16 @@ object GitHubImpl {
                 if (!terminal.yesNoMenu(default = false).prompt()) throw ProgramResult(0)
             }
         }
+        val branch = if (Environment.forcePushOnDraftPR && draftPullRequest != null) {
+            updateExistingBranchToUpstreamDefaultBranch(
+                wingetPkgsFork, microsoftWinGetPkgs.getPullRequest(draftPullRequest!!.number).head.ref
+            )
+        } else {
+            createBranchFromUpstreamDefaultBranch(wingetPkgsFork, packageIdentifier, packageVersion)
+        }
         commitFiles(
             wingetPkgsFork = wingetPkgsFork,
+            pullRequestBranch = branch,
             files = files.mapKeys {
                 "${GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion)}/${it.key}"
             },
@@ -208,13 +212,11 @@ object GitHubImpl {
             updateState = updateState
         )
         if (Environment.forcePushOnDraftPR && draftPullRequest != null) {
-            val ghRepository = microsoftWinGetPkgs
-            val draftPR = draftPullRequest
             val graphQlRequestBody = GHGraphQLRequestBody(
                 """
                     mutation {
-                        updatePullRequest(input: {pullRequestId: "${draftPR!!.nodeId}", body: "${GitHubUtils.getPullRequestBody()}", title: "${GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState)}", state: OPEN}) { pullRequest { id } }
-                        markPullRequestReadyForReview(input: {pullRequestId: "${draftPR.nodeId}"}) { pullRequest { id } }
+                        updatePullRequest(input: {pullRequestId: "${draftPullRequest!!.nodeId}", body: "${GitHubUtils.getPullRequestBody()}", title: "${GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState)}", state: OPEN}) { pullRequest { id } }
+                        markPullRequestReadyForReview(input: {pullRequestId: "${draftPullRequest!!.nodeId}"}) { pullRequest { id } }
                     }
                 """.trimIndent()
             )
@@ -226,17 +228,18 @@ object GitHubImpl {
                 }
             }
             terminal.info("Used draft PR -> ${draftPullRequest!!.title}")
-            val pullRequestUpdated = ghRepository.getPullRequest(draftPullRequest!!.number)
+            val pullRequestUpdated = microsoftWinGetPkgs.getPullRequest(draftPullRequest!!.number)
             terminal.info("New title: ${pullRequestUpdated!!.title}")
             return pullRequestUpdated
         }
-        return createPullRequest(packageIdentifier, packageVersion, updateState)
+        return createPullRequest(packageIdentifier, packageVersion, updateState, branch)
     }
 
     private fun createPullRequest(
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState,
+        pullRequestBranch: GHRef
     ): GHPullRequest {
         val ghRepository = microsoftWinGetPkgs
         var count = 0
@@ -245,7 +248,7 @@ object GitHubImpl {
             try {
                 return ghRepository.createPullRequest(
                     GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState),
-                    "$forkOwner:${pullRequestBranch?.ref}",
+                    "$forkOwner:${pullRequestBranch.ref}",
                     ghRepository.defaultBranch,
                     GitHubUtils.getPullRequestBody()
                 )
@@ -266,24 +269,18 @@ object GitHubImpl {
 
     private fun commitFiles(
         wingetPkgsFork: GHRepository,
+        pullRequestBranch: GHRef,
         files: Map<String, Manifest?>,
         packageIdentifier: String,
         packageVersion: String,
         updateState: VersionUpdateState
     ) {
-        val branch = if (Environment.forcePushOnDraftPR && draftPullRequest != null) {
-            updateExistingBranchToUpstreamDefaultBranch(
-                wingetPkgsFork, microsoftWinGetPkgs.getPullRequest(draftPullRequest!!.number).head.ref
-            )
-        } else {
-            createBranchFromUpstreamDefaultBranch(wingetPkgsFork, packageIdentifier, packageVersion) ?: return
-        }
         wingetPkgsFork.createCommit()
             ?.message(GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, updateState))
-            ?.parent(branch.getObject()?.sha)
+            ?.parent(pullRequestBranch.getObject()?.sha)
             ?.tree(
                 wingetPkgsFork.createTree()
-                    .baseTree(wingetPkgsFork.getBranch(branch.ref).shA1)
+                    .baseTree(wingetPkgsFork.getBranch(pullRequestBranch.ref).shA1)
                     .apply {
                         for ((path, content) in files) {
                             if (content != null) {
@@ -295,6 +292,6 @@ object GitHubImpl {
                     .sha
             )
             ?.create()
-            ?.also { branch.updateTo(it.shA1) }
+            ?.also { pullRequestBranch.updateTo(it.shA1) }
     }
 }

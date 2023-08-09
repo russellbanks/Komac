@@ -26,7 +26,6 @@ import data.locale.PackageUrl
 import data.locale.ReleaseNotesUrl
 import data.locale.Tags
 import data.shared.InstallerUrl
-import data.shared.InstallerUrl.downloadInstaller
 import data.shared.InstallerUrl.msixBundleDetection
 import data.shared.Locale
 import data.shared.PackageIdentifier
@@ -43,6 +42,8 @@ import io.ktor.http.Url
 import io.menu.radioMenu
 import io.menu.yesNoMenu
 import kotlinx.coroutines.runBlocking
+import network.DownloadResult
+import network.Downloader
 import network.WebPageScraper
 import schemas.Schemas
 import schemas.manifest.InstallerManifest
@@ -120,7 +121,7 @@ class NewManifest : CliktCommand(name = "new") {
             ) -> VersionUpdateState.NewVersion
             else -> VersionUpdateState.AddVersion
         }
-        lateinit var downloadResult: InstallerUrl.DownloadResult
+        lateinit var downloadResult: DownloadResult
         lateinit var installerUrl: Url
         val previousInstallerManifest = previousManifestData.installerManifest.await()
         var gitHubDetection: GitHubDetection? = null
@@ -130,7 +131,7 @@ class NewManifest : CliktCommand(name = "new") {
             if (installers.map(InstallerManifest.Installer::installerUrl).contains(installerUrl)) {
                 installers += installers.first { it.installerUrl == installerUrl }
             } else {
-                downloadResult = terminal.downloadInstaller(packageIdentifier, packageVersion, installerUrl)
+                downloadResult = Downloader.download(packageIdentifier, packageVersion, installerUrl, terminal)
                 terminal.msixBundleDetection(downloadResult.msixBundle)
                 installerType = downloadResult.installerType ?: prompt(InstallerType(installerUrl, installers, previousInstallerManifest))
                 if (installerType == InstallerManifest.InstallerType.EXE) {
