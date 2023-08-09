@@ -2,10 +2,11 @@ package schemas.manifest
 
 import data.shared.Locale
 import kotlinx.serialization.Serializable
+import schemas.SchemaType
 import schemas.Schemas
 
 /**
- * A representation of a multi-file manifest representing an app version in the OWC. v1.4.0
+ * A representation of a multi-file manifest representing an app version in the OWC. v1.5.0
  */
 @Serializable
 data class VersionManifest(
@@ -33,7 +34,7 @@ data class VersionManifest(
             defaultLocale = defaultLocale
                 ?: previousDefaultLocale
                 ?: Locale.DEFAULT_LOCALE,
-            manifestType = Schemas.VERSION_MANIFEST_TYPE,
+            manifestType = SchemaType.VERSION,
             manifestVersion = manifestOverride ?: Schemas.MANIFEST_VERSION
         )
 

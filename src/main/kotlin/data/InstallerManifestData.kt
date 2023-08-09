@@ -4,7 +4,7 @@ import github.GitHubDetection
 import io.ktor.http.Url
 import kotlinx.datetime.LocalDate
 import schemas.AdditionalMetadata
-import schemas.Schemas
+import schemas.SchemaType
 import schemas.installerSorter
 import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
@@ -201,7 +201,7 @@ object InstallerManifestData {
                 else -> null
             },
             installers = installers.removeNonDistinctKeys(installers).sortedWith(installerSorter),
-            manifestType = Schemas.INSTALLER_MANIFEST_TYPE,
+            manifestType = SchemaType.INSTALLER,
             manifestVersion = manifestOverride
         )
     }
