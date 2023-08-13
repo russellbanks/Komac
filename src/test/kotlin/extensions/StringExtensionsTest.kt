@@ -20,7 +20,7 @@ class StringExtensionsTest : FunSpec({
             Hello
             world!
         """.trimIndent()
-        testString.cutToCharLimitWithLines(12) shouldBe expected
+        testString.cutToCharLimitWithLines(13) shouldBe expected
     }
 
     test("limitLinesToCharLimit returns empty string when limit is 0") {

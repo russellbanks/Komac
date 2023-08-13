@@ -68,7 +68,7 @@ object ReleaseNotesFormatter {
             var currentSize = 0
 
             for (line in this@cutToCharLimitWithLines.lineSequence()) {
-                val prospectiveSize = currentSize + line.length
+                val prospectiveSize = currentSize + line.length + 1
                 if (prospectiveSize > charLimit) break
                 appendLine(line)
                 currentSize = prospectiveSize
