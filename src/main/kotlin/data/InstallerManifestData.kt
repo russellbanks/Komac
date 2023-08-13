@@ -50,7 +50,9 @@ object InstallerManifestData {
             platform = msix?.targetDeviceFamily?.let(::listOf)
                 ?: previousInstaller?.platform
                 ?: previousInstallerManifest?.platform,
-            minimumOSVersion = msix?.minVersion,
+            minimumOSVersion = msix?.minVersion
+                ?: (previousInstaller?.minimumOSVersion ?: previousInstallerManifest?.minimumOSVersion)
+                    .takeUnless { it == "10.0.0.0" },
             architecture = previousInstaller?.architecture ?: architecture,
             installerType = installerType ?: previousInstaller?.installerType,
             nestedInstallerType = zip?.nestedInstallerType
