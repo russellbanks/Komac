@@ -11,7 +11,6 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
-import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
 import data.InstallerManifestData
 import data.PreviousManifestData
@@ -19,7 +18,6 @@ import data.VersionUpdateState
 import data.installer.InstallerScope
 import data.installer.InstallerType
 import data.shared.InstallerUrl
-import data.shared.InstallerUrl.downloadInstaller
 import data.shared.InstallerUrl.msixBundleDetection
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
@@ -32,11 +30,8 @@ import io.ManifestResultOption
 import io.ktor.http.Url
 import io.menu.radioMenu
 import kotlinx.coroutines.runBlocking
-import network.Http
-import network.HttpUtils.downloadFile
-import network.HttpUtils.getDownloadProgressBar
+import network.Downloader
 import network.WebPageScraper
-import okio.FileSystem
 import okio.Path.Companion.toPath
 import org.kohsuke.github.GitHub
 import schemas.AdditionalMetadata
@@ -47,12 +42,10 @@ import schemas.manifest.InstallerManifest
 import schemas.manifest.Manifest
 import token.Token
 import token.TokenStore
-import utils.FileAnalyser
 import utils.ManifestUtils.formattedManifestLinesSequence
 import utils.UrlsToInstallerMatcher
 import utils.findArchitecture
 import utils.findScope
-import utils.hashSha256
 import utils.versionStringComparator
 
 class QuickUpdate : CliktCommand(
@@ -213,7 +206,7 @@ class QuickUpdate : CliktCommand(
                 }
                 echo()
                 installerUrl = prompt(InstallerUrl)
-                val installerResult = downloadInstaller(packageIdentifier, packageVersion, installerUrl)
+                val installerResult = Downloader.download(packageIdentifier, packageVersion, installerUrl, terminal)
                 if (installers.map(InstallerManifest.Installer::installerUrl).contains(installerUrl)) {
                     installers += installers.first { it.installerUrl == installerUrl }
                 } else {
@@ -255,33 +248,24 @@ class QuickUpdate : CliktCommand(
         val previousInstallerManifest = previousManifestData.installerManifest.await()!!
         val previousInstallers = previousInstallerManifest.installers
         UrlsToInstallerMatcher.assertUrlsValid(parameterUrls, theme)
-        val installerResults = mutableListOf<InstallerManifest.Installer>()
-        val progressList = parameterUrls.map { url -> getDownloadProgressBar(url).apply(ProgressAnimation::start) }
         gitHubDetection = parameterUrls
             .firstOrNull { it.host.equals(GitHubDetection.GITHUB_URL, ignoreCase = true) }
             ?.let(::GitHubDetection)
-        parameterUrls.forEachIndexed { index, url ->
-            val downloadedFile = Http.client.downloadFile(url, packageIdentifier, packageVersion, progressList[index])
-            val fileAnalyser = FileAnalyser(downloadedFile.path)
-            installerResults += try {
-                InstallerManifest.Installer(
-                    architecture = url.findArchitecture() ?: fileAnalyser.architecture,
-                    installerType = fileAnalyser.installerType,
-                    productCode = fileAnalyser.productCode,
-                    scope = url.findScope(),
-                    installerSha256 = downloadedFile.path.hashSha256(),
-                    installerUrl = url,
-                    upgradeBehavior = fileAnalyser.upgradeBehaviour,
-                    releaseDate = gitHubDetection?.releaseDate ?: downloadedFile.lastModified
-                )
-            } finally {
-                with(downloadedFile) {
-                    FileSystem.SYSTEM.delete(path)
-                    removeFileDeletionHook()
-                }
-            }
+        val downloads = parameterUrls.associateWith { url ->
+            Downloader.download(packageIdentifier, packageVersion, url, terminal)
         }
-        progressList.forEach(ProgressAnimation::clear)
+        val installerResults = downloads.map { (url, downloadResult) ->
+            InstallerManifest.Installer(
+                architecture = url.findArchitecture() ?: downloadResult.architecture,
+                installerType = downloadResult.installerType,
+                productCode = downloadResult.productCode,
+                scope = url.findScope(),
+                installerSha256 = downloadResult.installerSha256,
+                installerUrl = url,
+                upgradeBehavior = downloadResult.upgradeBehaviour,
+                releaseDate = gitHubDetection?.releaseDate ?: downloadResult.releaseDate
+            )
+        }
         UrlsToInstallerMatcher.matchInstallers(
             installerResults,
             previousInstallers
@@ -292,6 +276,7 @@ class QuickUpdate : CliktCommand(
                     )
                 }
         ).forEach { (_, newInstaller) ->
+            val downloadedFile = downloads[newInstaller.installerUrl]
             InstallerManifestData.addInstaller(
                 packageVersion = packageVersion,
                 installerUrl = newInstaller.installerUrl,
@@ -304,10 +289,10 @@ class QuickUpdate : CliktCommand(
                 installers = installers,
                 architecture = newInstaller.architecture,
                 productCode = newInstaller.productCode,
-                msix = null,
-                msi = null,
-                zip = null,
-                msixBundle = null,
+                msix = downloadedFile?.msix,
+                msi = downloadedFile?.msi,
+                zip = downloadedFile?.zip,
+                msixBundle = downloadedFile?.msixBundle,
                 gitHubDetection = null,
                 previousManifestData = previousManifestData
             ) {

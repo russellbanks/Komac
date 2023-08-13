@@ -1,27 +1,11 @@
 package data.shared
 
-import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextStyles
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
-import io.ktor.http.Url
 import io.menu.prompts.UrlPrompt
 import io.menu.prompts.UrlValidationRules
-import kotlinx.datetime.LocalDate
-import network.Http
-import network.HttpUtils
-import network.HttpUtils.downloadFile
-import network.HttpUtils.getDownloadProgressBar
-import okio.FileSystem
-import schemas.manifest.InstallerManifest
-import utils.FileAnalyser
-import utils.Zip
-import utils.extension
-import utils.findArchitecture
-import utils.hashSha256
-import utils.msi.Msi
-import utils.msix.Msix
 import utils.msix.MsixBundle
 
 object InstallerUrl : UrlPrompt {
@@ -31,56 +15,6 @@ object InstallerUrl : UrlPrompt {
 
     override val validationRules: UrlValidationRules = UrlValidationRules(
         isRequired = true
-    )
-
-    suspend fun Terminal.downloadInstaller(
-        packageIdentifier: String,
-        packageVersion: String,
-        installerUrl: Url,
-        fileSystem: FileSystem = FileSystem.SYSTEM
-    ): DownloadResult {
-        lateinit var fileAnalyser: FileAnalyser
-        lateinit var downloadedFile: HttpUtils.DownloadedFile
-        var zip: Zip? = null
-        val progress = getDownloadProgressBar(installerUrl).apply(ProgressAnimation::start)
-        downloadedFile = Http.client.downloadFile(installerUrl, packageIdentifier, packageVersion, progress, fileSystem)
-        progress.clear()
-        fileAnalyser = FileAnalyser(downloadedFile.path)
-        if (downloadedFile.path.extension.equals(InstallerManifest.InstallerType.ZIP.name, ignoreCase = true)) {
-            zip = Zip(zip = downloadedFile.path).also { it.prompt(this) }
-        }
-        return DownloadResult(
-            releaseDate = downloadedFile.lastModified,
-            scope = fileAnalyser.scope,
-            installerSha256 = downloadedFile.path.hashSha256(),
-            installerType = fileAnalyser.installerType,
-            upgradeBehavior = fileAnalyser.upgradeBehaviour,
-            architecture = installerUrl.findArchitecture() ?: fileAnalyser.architecture,
-            productCode = fileAnalyser.productCode,
-            publisherDisplayName = fileAnalyser.publisherDisplayName,
-            msix = fileAnalyser.msix,
-            msixBundle = fileAnalyser.msixBundle,
-            msi = fileAnalyser.msi,
-            zip = zip
-        ).also {
-            fileSystem.delete(downloadedFile.path)
-            downloadedFile.removeFileDeletionHook()
-        }
-    }
-
-    data class DownloadResult(
-        val releaseDate: LocalDate?,
-        val scope: InstallerManifest.Scope?,
-        val installerSha256: String,
-        val installerType: InstallerManifest.InstallerType?,
-        val upgradeBehavior: InstallerManifest.UpgradeBehavior?,
-        val architecture: InstallerManifest.Installer.Architecture,
-        val productCode: String?,
-        val publisherDisplayName: String?,
-        val msix: Msix?,
-        val msixBundle: MsixBundle?,
-        val msi: Msi?,
-        val zip: Zip?
     )
 
     fun Terminal.msixBundleDetection(msixBundle: MsixBundle?) {
