@@ -6,7 +6,6 @@ import com.github.ajalt.mordant.terminal.Terminal
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.prepareGet
-import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.Url
 import io.ktor.http.contentLength
@@ -66,7 +65,7 @@ object Downloader {
         }
     }
 
-    suspend fun HttpClient.downloadFile(
+    private suspend fun HttpClient.downloadFile(
         url: Url,
         packageIdentifier: String,
         packageVersion: String,
@@ -81,7 +80,9 @@ object Downloader {
         fileSystem.sink(path).buffer().use { sink ->
             var lastModified: LocalDate? = null
             prepareGet(url).execute { httpResponse ->
-                val fileName = httpResponse.headers.FileName ?: url.getFileName()
+                val fileName = httpResponse.headers[HttpHeaders.ContentDisposition]
+                    ?.let(::parseFileName)
+                    ?: url.getFileName()
                 progress = terminal.getProgressBar(fileName).apply(ProgressAnimation::start)
                 lastModified = httpResponse
                     .lastModified()
@@ -104,8 +105,8 @@ object Downloader {
         }
     }
 
-    val Headers.FileName: String? get() = this[HttpHeaders.ContentDisposition]?.let { contentDisposition ->
-        Regex("filename=([^;]+)").find(contentDisposition)?.groupValues?.get(1)
+    private fun parseFileName(contentDisposition: String): String? {
+        return Regex("filename=([^;]+)").find(contentDisposition)?.groupValues?.get(1)
     }
 
     private fun Terminal.getProgressBar(fileName: String?): ProgressAnimation = progressAnimation {
