@@ -206,7 +206,7 @@ class QuickUpdate : CliktCommand(
                 }
                 echo()
                 installerUrl = prompt(InstallerUrl)
-                val installerResult = Downloader.download(packageIdentifier, packageVersion, installerUrl, terminal)
+                val installerResult = Downloader.download(packageIdentifier, packageVersion, installerUrl, updateState, terminal)
                 if (installers.map(InstallerManifest.Installer::installerUrl).contains(installerUrl)) {
                     installers += installers.first { it.installerUrl == installerUrl }
                 } else {
@@ -252,7 +252,7 @@ class QuickUpdate : CliktCommand(
             .firstOrNull { it.host.equals(GitHubDetection.GITHUB_URL, ignoreCase = true) }
             ?.let(::GitHubDetection)
         val downloads = parameterUrls.associateWith { url ->
-            Downloader.download(packageIdentifier, packageVersion, url, terminal)
+            Downloader.download(packageIdentifier, packageVersion, url, updateState, terminal)
         }
         val installerResults = downloads.map { (url, downloadResult) ->
             InstallerManifest.Installer(

@@ -3,6 +3,7 @@ package network
 import com.github.ajalt.mordant.animation.ProgressAnimation
 import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.terminal.Terminal
+import data.VersionUpdateState
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.prepareGet
@@ -34,6 +35,7 @@ object Downloader {
         packageIdentifier: String,
         packageVersion: String,
         installerUrl: Url,
+        updateState: VersionUpdateState,
         terminal: Terminal,
         fileSystem: FileSystem = FileSystem.SYSTEM
     ): DownloadResult {
@@ -42,10 +44,12 @@ object Downloader {
         val downloadedFile = Http.client.downloadFile(installerUrl, packageIdentifier, packageVersion, terminal, fileSystem)
         fileAnalyser = FileAnalyser(downloadedFile.path)
         if (downloadedFile.path.extension.equals(InstallerManifest.InstallerType.ZIP.name, ignoreCase = true)) {
-            zip = Zip(zip = downloadedFile.path).also { it.prompt(terminal) }
+            if (updateState == VersionUpdateState.NewPackage) {
+                zip = Zip(zip = downloadedFile.path).apply { prompt(terminal) }
+            }
         }
-        try {
-            return DownloadResult(
+        return try {
+            DownloadResult(
                 releaseDate = downloadedFile.lastModified,
                 scope = fileAnalyser.scope,
                 installerSha256 = downloadedFile.path.hashSha256(),

@@ -131,7 +131,7 @@ class NewManifest : CliktCommand(name = "new") {
             if (installers.map(InstallerManifest.Installer::installerUrl).contains(installerUrl)) {
                 installers += installers.first { it.installerUrl == installerUrl }
             } else {
-                downloadResult = Downloader.download(packageIdentifier, packageVersion, installerUrl, terminal)
+                downloadResult = Downloader.download(packageIdentifier, packageVersion, installerUrl, updateState, terminal)
                 terminal.msixBundleDetection(downloadResult.msixBundle)
                 installerType = downloadResult.installerType ?: prompt(InstallerType(installerUrl, installers, previousInstallerManifest))
                 if (installerType == InstallerManifest.InstallerType.EXE) {
