@@ -12,7 +12,7 @@ object JsonUrlSerializer : KSerializer<Url> {
     override val descriptor = PrimitiveSerialDescriptor(Url::class.simpleName as String, PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: Url) {
-        encoder.encodeString(value.toString().removeSuffix("/").decodeURLPart())
+        encoder.encodeString(value.toString().removeSuffix("/").decodeURLPart().replace(" ", "%20"))
     }
 
     override fun deserialize(decoder: Decoder): Url {
