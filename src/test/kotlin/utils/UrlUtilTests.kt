@@ -18,7 +18,10 @@ class UrlUtilTests : FunSpec({
         val delimiters = listOf(",", ".", "_", "-", "/")
 
         context("x86 tests") {
-            withData("x86", "x32", "32-bit", "32bit", "Win32", "ia32", "i386", "386", "i486", "486", "i586", "586", "i686", "686") {
+            withData(
+                "x86", "x32", "32-bit", "32bit", "Win32", "Winx86", "ia32", "i386", "386", "i486", "486", "i586", "586",
+                "i686", "686"
+            ) {
                 withData(delimiters) { delimiter ->
                     architectureUrl(it, delimiter).findArchitecture() shouldBe Architecture.X86
                 }
@@ -26,7 +29,7 @@ class UrlUtilTests : FunSpec({
         }
 
         context("x64 tests") {
-            withData("x64", "x86_64", "64-bit", "64bit", "Win64", "amd64") {
+            withData("x64", "x86_64", "64-bit", "64bit", "Win64", "Winx64", "amd64") {
                 withData(delimiters) { delimiter ->
                     architectureUrl(it, delimiter).findArchitecture() shouldBe Architecture.X64
                 }
