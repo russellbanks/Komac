@@ -1,5 +1,6 @@
 package token
 
+import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.ConversionResult
@@ -10,6 +11,7 @@ import io.menu.prompts.ValidationRules
 import java.io.IOException
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GitHub
+import org.kohsuke.github.HttpException
 
 object Token : TextPrompt {
     override val name: String = "Token"
@@ -30,16 +32,29 @@ object Token : TextPrompt {
     }
 
     override suspend fun getError(input: String): String? {
-        return try {
-            if (isTokenValid(input)) null else "Invalid token. Please try again"
-        } catch (_: IOException) {
-            "Invalid token. Please try again"
-        }
+        return if (isTokenValid(input)) null else "Invalid token. Please try again"
     }
 
     fun isTokenValid(tokenString: String?): Boolean {
         return try {
-            GitHub.connectUsingOAuth(tokenString).isCredentialValid
+            GitHub.connectUsingOAuth(tokenString).run {
+                checkApiUrlValidity()
+                isCredentialValid
+            }
+        } catch (httpException: HttpException) {
+            if (httpException.responseCode == -1) {
+                throw PrintMessage(
+                    message = TextColors.red("""
+                        Komac was unable to connect to GitHub.
+                        Please check your internet connection and try again.
+                        """.trimIndent()
+                    ),
+                    statusCode = 1,
+                    printError = true
+                )
+            } else {
+                false
+            }
         } catch (_: IOException) {
             false
         }

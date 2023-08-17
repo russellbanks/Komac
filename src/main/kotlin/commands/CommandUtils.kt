@@ -17,6 +17,8 @@ import io.menu.prompts.Prompt
 import io.menu.prompts.RadioMenuPrompt
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.UrlPrompt
+import token.Token
+import token.TokenStore
 
 suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, transform: (String) -> T): T? {
     val error = parameter?.let { prompt.getError(it) }
@@ -86,3 +88,13 @@ fun CliktCommand.warning(
 ) = terminal.warning(message, whitespace, align, overflowWrap, width)
 
 val CliktCommand.theme get() = terminal.theme
+
+suspend fun CliktCommand.handleToken(tokenParameter: String? = null) {
+    if (tokenParameter != null) {
+        TokenStore.putToken(tokenParameter)
+    } else if (TokenStore.token == null) {
+        TokenStore.putToken(prompt(Token))
+    } else {
+        if (!Token.isTokenValid(TokenStore.token)) TokenStore.invalidTokenPrompt(terminal)
+    }
+}

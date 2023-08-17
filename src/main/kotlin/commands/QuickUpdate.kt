@@ -33,7 +33,6 @@ import kotlinx.coroutines.runBlocking
 import network.Downloader
 import network.WebPageScraper
 import okio.Path.Companion.toPath
-import org.kohsuke.github.GitHub
 import schemas.AdditionalMetadata
 import schemas.Schemas
 import schemas.installerSorter
@@ -41,7 +40,6 @@ import schemas.manifest.EncodeConfig
 import schemas.manifest.InstallerManifest
 import schemas.manifest.Manifest
 import token.Token
-import token.TokenStore
 import utils.ManifestUtils.formattedManifestLinesSequence
 import utils.UrlsToInstallerMatcher
 import utils.findArchitecture
@@ -88,7 +86,7 @@ class QuickUpdate : CliktCommand(
         "-t", "--token", "--pat", "--personal-access-token",
         help = "GitHub personal access token with the public_repo scope",
         envvar = "GITHUB_TOKEN"
-    ).check("The token is invalid or has expired") { GitHub.connectUsingOAuth(it).isCredentialValid }
+    ).check("The token is invalid or has expired") { Token.isTokenValid(it) }
 
     private val additionalMetadata by option(hidden = true).convert {
         EncodeConfig.jsonDefault.decodeFromString(AdditionalMetadata.serializer(), it)
@@ -105,13 +103,11 @@ class QuickUpdate : CliktCommand(
     private lateinit var allVersions: List<String>
 
     override fun run(): Unit = runBlocking {
-        tokenParameter?.let { TokenStore.useTokenParameter(it) }
-        if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
+        handleToken(tokenParameter)
         if (Environment.isCI) {
             info("CI environment detected! Komac will throw errors instead of prompting on invalid input")
         }
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
-        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
         allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
             ?: throw doesNotExistError(packageIdentifier, isUpdate = true, theme = theme)
         val latestVersion = allVersions.maxWith(versionStringComparator)

@@ -5,16 +5,14 @@ import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import commands.handleToken
 import commands.info
-import commands.prompt
 import commands.success
 import commands.warning
 import github.GitHubImpl
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHIssueState
 import org.kohsuke.github.GitHub
-import token.Token
-import token.TokenStore
 
 class Cleanup : CliktCommand(
     help = "Deletes branches that have had a merged or closed pull request associated with them",
@@ -29,9 +27,7 @@ class Cleanup : CliktCommand(
     ).check("The token is invalid or has expired") { GitHub.connectUsingOAuth(it).isCredentialValid }
 
     override fun run() = runBlocking {
-        tokenParameter?.let { TokenStore.useTokenParameter(it) }
-        if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
-        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
+        handleToken(tokenParameter)
         val mergeState = when {
             onlyMerged && !onlyClosed -> "merged"
             !onlyMerged && onlyClosed -> "closed"
