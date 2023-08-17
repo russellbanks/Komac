@@ -16,7 +16,7 @@ class CheckMenu<T>(
     private val selectedIndices = items.indices
         .filter { index -> items[index] in defaultChecked.map { MenuItem.Item(it) } }
         .toMutableList()
-    private val animation = terminal.animation<Int> { menuWidget }
+    override val animation = terminal.animation<Int>(trailingLinebreak = false) { menuWidget }
 
     override val menuWidget: Widget
         get() = verticalLayout {
@@ -38,7 +38,7 @@ class CheckMenu<T>(
         updateAnimation()
         handleKeyPress(reader(), shouldBreak = { confirmPressed }) {
             if (confirmPressed) {
-                clearAnimation()
+                animation.clear()
                 terminal.println(menuWidget)
             } else {
                 toggleSelected()
@@ -63,8 +63,6 @@ class CheckMenu<T>(
     }
 
     override fun updateAnimation() = animation.update(selectedIndex)
-
-    override fun clearAnimation() = animation.clear()
 
     companion object {
         private const val CONFIRM = "[Confirm]"

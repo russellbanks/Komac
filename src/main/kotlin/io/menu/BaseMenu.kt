@@ -1,5 +1,6 @@
 package io.menu
 
+import com.github.ajalt.mordant.animation.Animation
 import com.github.ajalt.mordant.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import org.jline.utils.NonBlockingReader
@@ -10,6 +11,8 @@ abstract class BaseMenu<R, T>(
     val nameConvert: (MenuItem<T>) -> String = MenuItem<T>::toString,
     protected val terminal: Terminal
 ) : Menu<R> {
+    abstract val animation: Animation<*>
+
     override val validIndices: List<Int> = items.indices.toList()
     protected var selectedIndex: Int = items.indexOf(default).takeIf { it != -1 } ?: 0
     protected val selectedItem get() = items[selectedIndex]
@@ -57,6 +60,4 @@ abstract class BaseMenu<R, T>(
     }
 
     protected abstract fun updateAnimation()
-
-    protected abstract fun clearAnimation()
 }

@@ -18,13 +18,13 @@ import io.menu.prompts.RadioMenuPrompt
 import io.menu.prompts.TextPrompt
 import io.menu.prompts.UrlPrompt
 
-suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, transform: (String) -> T): T {
+suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, transform: (String) -> T): T? {
     val error = parameter?.let { prompt.getError(it) }
     return when {
         error != null -> if (!Environment.isCI) {
             danger(error)
             println()
-            prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CTRLC)
+            prompt.prompt(this).also { println() }
         } else {
             throw CliktError(theme.danger(error), statusCode = 1)
         }
@@ -33,12 +33,12 @@ suspend fun <T> Terminal.prompt(prompt: Prompt<T>, parameter: String? = null, tr
             message = theme.danger("${prompt.name} was not provided"),
             statusCode = 1
         )
-        else -> prompt.prompt(this)?.also { println() } ?: throw ProgramResult(ExitCode.CTRLC)
+        else -> prompt.prompt(this).also { println() }
     }
 }
 
 suspend fun CliktCommand.prompt(textPrompt: TextPrompt, parameter: String? = null): String {
-    return terminal.prompt(textPrompt, parameter, transform = { it })
+    return terminal.prompt(textPrompt, parameter, transform = { it }) ?: throw ProgramResult(ExitCode.CTRLC)
 }
 
 suspend fun <T> CliktCommand.prompt(listPrompt: ListPrompt<T>, parameter: String? = null): List<T> {
@@ -46,19 +46,19 @@ suspend fun <T> CliktCommand.prompt(listPrompt: ListPrompt<T>, parameter: String
         listPrompt,
         parameter,
         transform = { listPrompt.validationRules.transform(it) }
-    )
+    ) ?: throw ProgramResult(ExitCode.CTRLC)
 }
 
 suspend fun CliktCommand.prompt(urlPrompt: UrlPrompt, parameter: String? = null): Url {
-    return terminal.prompt(urlPrompt, parameter, transform = { urlPrompt.validationRules.transform(it) })
+    return terminal.prompt(urlPrompt, parameter, transform = { urlPrompt.validationRules.transform(it) }) ?: throw ProgramResult(ExitCode.CTRLC)
 }
 
-suspend fun <T> CliktCommand.prompt(radioMenuPrompt: RadioMenuPrompt<T>, parameter: String? = null): T {
+suspend fun <T> CliktCommand.prompt(radioMenuPrompt: RadioMenuPrompt<T>, parameter: String? = null): T? {
     return terminal.prompt(radioMenuPrompt, parameter, transform = { it as T })
 }
 
 suspend fun <T> CliktCommand.prompt(checkMenuPrompt: CheckMenuPrompt<T>, parameter: String? = null): List<T> {
-    return terminal.prompt(checkMenuPrompt, parameter, transform = { it as List<T> })
+    return terminal.prompt(checkMenuPrompt, parameter, transform = { it as List<T> }) ?: throw ProgramResult(ExitCode.CTRLC)
 }
 
 fun CliktCommand.info(

@@ -12,7 +12,7 @@ open class RadioMenu<T>(
     nameConvert: (MenuItem<T>) -> String = MenuItem<T>::toString,
     terminal: Terminal
 ) : BaseMenu<T?, T>(items, default, nameConvert, terminal) {
-    private val animation = terminal.animation<MenuItem<T>> { menuWidget }
+    override val animation = terminal.animation<MenuItem<T>>(trailingLinebreak = false) { menuWidget }
 
     override val menuWidget: Widget
         get() = verticalLayout {
@@ -27,7 +27,7 @@ open class RadioMenu<T>(
         terminal.cursor.hide(showOnExit = true)
         updateAnimation()
         handleKeyPress(reader()) {
-            clearAnimation()
+            animation.clear()
             terminal.println(menuWidget)
         }
 
@@ -38,25 +38,23 @@ open class RadioMenu<T>(
     }
 
     override fun updateAnimation() = animation.update(selectedItem)
-
-    override fun clearAnimation() = animation.clear()
 }
 
 class RadioMenuBuilder<T> {
     lateinit var items: List<T>
     var default: T? = null
-    var optionalItemName: String? = null
-    var nameConvert: (MenuItem<T>, String?) -> String = { item, optionalName ->
+    var skip: Boolean = false
+    var nameConvert: (MenuItem<T>) -> String = { item ->
         when (item) {
             is MenuItem.Item -> item.value.toString()
-            MenuItem.Optional -> optionalName ?: item.toString()
+            MenuItem.Optional -> "Skip"
         }
     }
 
     internal fun buildMenuItems(): List<MenuItem<T>> {
         val menuItems = items.map { MenuItem.Item(it) }
-        return if (optionalItemName != null) {
-            menuItems + MenuItem.Optional
+        return if (skip) {
+            listOf(MenuItem.Optional) + menuItems
         } else {
             menuItems
         }
@@ -67,5 +65,5 @@ fun <T> Terminal.radioMenu(block: RadioMenuBuilder<T>.() -> Unit): RadioMenu<T> 
     val builder = RadioMenuBuilder<T>().apply(block)
     val items = builder.buildMenuItems()
     val defaultItem = builder.default?.let { MenuItem.Item(it) }
-    return RadioMenu(items, defaultItem, { item -> builder.nameConvert(item, builder.optionalItemName) }, this)
+    return RadioMenu(items, defaultItem, { item -> builder.nameConvert(item) }, this)
 }

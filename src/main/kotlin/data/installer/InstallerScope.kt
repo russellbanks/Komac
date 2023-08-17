@@ -11,6 +11,8 @@ class InstallerScope(
 
     override val items: List<InstallerManifest.Scope> = InstallerManifest.Scope.entries
 
+    override val skip: Boolean = true
+
     override val default: InstallerManifest.Scope? get() = previousInstallerManifest?.let {
         it.scope ?: it.installers.getOrNull(currentInstallerIndex)?.scope
     }

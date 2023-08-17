@@ -1,7 +1,9 @@
 package token
 
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.mordant.terminal.Terminal
 import commands.prompt
+import io.ExitCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -32,7 +34,8 @@ object TokenStore {
 
     suspend fun invalidTokenPrompt(terminal: Terminal) = with(terminal) {
         warning("Token is invalid. Please enter a new token.")
-        prompt(Token, parameter = null, transform = { it }).also { putToken(it) }
+        val inputToken = prompt(Token, parameter = null, transform = { it }) ?: throw ProgramResult(ExitCode.CTRLC)
+        putToken(inputToken)
         println()
     }
 }
