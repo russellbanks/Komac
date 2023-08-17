@@ -138,7 +138,6 @@ object GitHubImpl {
             info("Would you like to proceed?")
             if (!yesNoMenu(default = false).prompt()) throw ProgramResult(0)
         }
-        println()
     }
 
     fun createBranchFromUpstreamDefaultBranch(

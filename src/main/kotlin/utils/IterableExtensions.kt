@@ -1,30 +1,27 @@
 package utils
 
 /**
- * Returns the default value if the values returned by the [selector] function on each element
- * in this iterable are all the same. Otherwise, returns `null`.
+ * Transforms each element of the iterable using the provided [selector] function, collects the transformed elements
+ * into a set, and then evaluates whether there is a single distinct element in the set. If there's only one distinct
+ * element, returns `null`; otherwise, returns the specified [default] value.
  *
- * @param default the value to return if the elements are not distinct
- * @param selector a function that maps elements to a value to be compared for distinctness
- * @return the default value if the elements are not distinct, `null` otherwise
+ * @param default the default value to return if there is more than one distinct element.
+ * @param selector the function to transform elements.
+ * @return `null` if there is a single distinct element; otherwise, the [default] value.
  */
-inline fun <T, R> Iterable<T>.takeIfNotDistinct(default: R, selector: (T) -> R): R? {
-    return if (any()) {
-        if (distinctBy(selector).size == 1) null else default
-    } else {
-        null
-    }
+inline fun <T, R> Iterable<T>.filterSingleDistinctOrElse(default: R, selector: (T) -> R): R? {
+    return if (mapTo(HashSet(), selector).size == 1) null else default
 }
 
 /**
- * Returns a distinct value of type [R] obtained by applying the given [selector] function to each element of the
- * iterable, or null if there are multiple distinct values or if there are no values after applying the [selector].
+ * Maps each element of the iterable using the provided [selector] function, collects the transformed elements into a
+ * set, and then returns a single distinct element from the set, or null if the set is empty or contains more than one
+ * element.
  *
- * @param selector a function that maps an element of the iterable to a value of type [R] or returns null if the
- * element should be skipped.
- * @return a distinct value of type [R] or null if there are multiple distinct values or if there are no values
- * after applying the [selector].
+ * @param selector the function to transform elements.
+ * @return a single distinct element from the transformed set, or null if the set is empty or contains more than one
+ * element.
  */
-inline fun <T, R> Iterable<T>.getDistinctOrNull(selector: (T) -> R?): R? {
-    return mapNotNull(selector).toSet().singleOrNull()
+inline fun <T, R> Iterable<T>.mapDistinctSingleOrNull(selector: (T) -> R): R? {
+    return mapTo(HashSet(), selector).singleOrNull()
 }

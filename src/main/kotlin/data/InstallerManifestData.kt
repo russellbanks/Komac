@@ -10,11 +10,11 @@ import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import utils.ManifestUtils.updateVersionInString
 import utils.Zip
-import utils.getDistinctOrNull
+import utils.filterSingleDistinctOrElse
+import utils.mapDistinctSingleOrNull
 import utils.msi.Msi
 import utils.msix.Msix
 import utils.msix.MsixBundle
-import utils.takeIfNotDistinct
 
 object InstallerManifestData {
     suspend fun addInstaller(
@@ -163,40 +163,40 @@ object InstallerManifestData {
         return InstallerManifest.getBase(previousInstallerManifest, packageIdentifier, packageVersion).copy(
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion,
-            installerLocale = installers.getDistinctOrNull(InstallerManifest.Installer::installerLocale)
+            installerLocale = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::installerLocale)
                 ?.ifBlank { null }
                 ?: previousInstallerManifest?.installerLocale,
-            platform = installers.getDistinctOrNull(InstallerManifest.Installer::platform)
+            platform = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::platform)
                 ?: previousInstallerManifest?.platform,
-            minimumOSVersion = installers.getDistinctOrNull(InstallerManifest.Installer::minimumOSVersion)
+            minimumOSVersion = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::minimumOSVersion)
                 ?.ifBlank { null },
-            installerType = installers.getDistinctOrNull(InstallerManifest.Installer::installerType)
+            installerType = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::installerType)
                 ?: previousInstallerManifest?.installerType,
-            nestedInstallerType = installers.getDistinctOrNull(InstallerManifest.Installer::nestedInstallerType)
+            nestedInstallerType = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::nestedInstallerType)
                 ?: previousInstallerManifest?.nestedInstallerType,
             nestedInstallerFiles = (
-                installers.getDistinctOrNull(InstallerManifest.Installer::nestedInstallerFiles)
+                installers.mapDistinctSingleOrNull(InstallerManifest.Installer::nestedInstallerFiles)
                     ?: previousInstallerManifest?.nestedInstallerFiles
             )?.map {
                 it.copy(relativeFilePath = it.relativeFilePath.updateVersionInString(allVersions, packageVersion))
             },
-            scope = installers.getDistinctOrNull(InstallerManifest.Installer::scope)
+            scope = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::scope)
                 ?: previousInstallerManifest?.scope,
-            packageFamilyName = installers.getDistinctOrNull(InstallerManifest.Installer::packageFamilyName)
+            packageFamilyName = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::packageFamilyName)
                 ?: previousInstallerManifest?.packageFamilyName,
-            productCode = installers.getDistinctOrNull(InstallerManifest.Installer::productCode),
+            productCode = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::productCode),
             installModes = installModes?.ifEmpty { null }
                 ?: previousInstallerManifest?.installModes,
-            installerSwitches = installers.getDistinctOrNull(InstallerManifest.Installer::installerSwitches)
+            installerSwitches = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::installerSwitches)
                 ?: previousInstallerManifest?.installerSwitches,
             installerSuccessCodes = installerSuccessCodes?.ifEmpty { null }
                 ?: previousInstallerManifest?.installerSuccessCodes,
-            upgradeBehavior = installers.getDistinctOrNull(InstallerManifest.Installer::upgradeBehavior)
+            upgradeBehavior = installers.mapDistinctSingleOrNull(InstallerManifest.Installer::upgradeBehavior)
                 ?: previousInstallerManifest?.upgradeBehavior,
             commands = commands?.ifEmpty { null } ?: previousInstallerManifest?.commands,
             protocols = protocols?.ifEmpty { null } ?: previousInstallerManifest?.protocols,
             fileExtensions = fileExtensions?.ifEmpty { null } ?: previousInstallerManifest?.fileExtensions,
-            releaseDate = installers.getDistinctOrNull { it.releaseDate },
+            releaseDate = installers.mapDistinctSingleOrNull { it.releaseDate },
             appsAndFeaturesEntries = when (installers.distinctBy { it.appsAndFeaturesEntries }.size) {
                 0 -> previousInstallerManifest?.appsAndFeaturesEntries
                 1 -> installers.first().appsAndFeaturesEntries
@@ -212,22 +212,22 @@ object InstallerManifestData {
         List<InstallerManifest.Installer> {
         return map { installer ->
             installer.copy(
-                installerLocale = installers.takeIfNotDistinct(installer.installerLocale) { it.installerLocale },
-                platform = installers.takeIfNotDistinct(installer.platform) { it.platform },
-                minimumOSVersion = installers.takeIfNotDistinct(installer.minimumOSVersion) { it.minimumOSVersion },
-                installerType = installers.takeIfNotDistinct(installer.installerType) { it.installerType },
+                installerLocale = installers.filterSingleDistinctOrElse(installer.installerLocale) { it.installerLocale },
+                platform = installers.filterSingleDistinctOrElse(installer.platform) { it.platform },
+                minimumOSVersion = installers.filterSingleDistinctOrElse(installer.minimumOSVersion) { it.minimumOSVersion },
+                installerType = installers.filterSingleDistinctOrElse(installer.installerType) { it.installerType },
                 nestedInstallerType = installers
-                    .takeIfNotDistinct(installer.nestedInstallerType) { it.nestedInstallerType },
+                    .filterSingleDistinctOrElse(installer.nestedInstallerType) { it.nestedInstallerType },
                 nestedInstallerFiles = installers
-                    .takeIfNotDistinct(installer.nestedInstallerFiles) { it.nestedInstallerFiles },
-                scope = installers.takeIfNotDistinct(installer.scope) { it.scope },
-                packageFamilyName = installers.takeIfNotDistinct(installer.packageFamilyName) { it.packageFamilyName },
-                productCode = installers.takeIfNotDistinct(installer.productCode) { it.productCode },
-                releaseDate = installers.takeIfNotDistinct(installer.releaseDate) { it.releaseDate },
-                upgradeBehavior = installers.takeIfNotDistinct(installer.upgradeBehavior) { it.upgradeBehavior },
-                installerSwitches = installers.takeIfNotDistinct(installer.installerSwitches) { it.installerSwitches },
+                    .filterSingleDistinctOrElse(installer.nestedInstallerFiles) { it.nestedInstallerFiles },
+                scope = installers.filterSingleDistinctOrElse(installer.scope) { it.scope },
+                packageFamilyName = installers.filterSingleDistinctOrElse(installer.packageFamilyName) { it.packageFamilyName },
+                productCode = installers.filterSingleDistinctOrElse(installer.productCode) { it.productCode },
+                releaseDate = installers.filterSingleDistinctOrElse(installer.releaseDate) { it.releaseDate },
+                upgradeBehavior = installers.filterSingleDistinctOrElse(installer.upgradeBehavior) { it.upgradeBehavior },
+                installerSwitches = installers.filterSingleDistinctOrElse(installer.installerSwitches) { it.installerSwitches },
                 appsAndFeaturesEntries = installers
-                    .takeIfNotDistinct(installer.appsAndFeaturesEntries) { it.appsAndFeaturesEntries }
+                    .filterSingleDistinctOrElse(installer.appsAndFeaturesEntries) { it.appsAndFeaturesEntries }
             )
         }
     }

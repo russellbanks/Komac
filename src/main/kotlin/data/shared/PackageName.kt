@@ -15,9 +15,15 @@ class PackageName(private val msi: Msi?, private val defaultLocaleManifest: Defa
     )
 
     override val extraText: String = buildString {
-        append("Example: Microsoft Teams")
-        msi?.productName?.let { appendLine("Detected from MSI: $it") }
+        msi?.productName?.let {
+            appendLine(EXAMPLE)
+            append("Detected from MSI: $it")
+        } ?: append(EXAMPLE)
     }
 
     override val default: String? get() = defaultLocaleManifest?.packageName
+
+    companion object {
+        private const val EXAMPLE = "Example: Microsoft Teams"
+    }
 }
