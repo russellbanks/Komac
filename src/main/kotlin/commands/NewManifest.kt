@@ -140,8 +140,8 @@ class NewManifest : CliktCommand(name = "new") {
                 }
                 installerSwitches[InstallerManifest.InstallerSwitches.Key.Custom] = prompt(InstallerSwitch.Custom(installers.size, previousInstallerManifest))
                 val installerLocale = downloadResult.msi?.productLanguage ?: prompt(Locale.Installer(installers.size, previousInstallerManifest))
-                if (downloadResult.scope == null && installerType != InstallerManifest.InstallerType.PORTABLE) {
-                    scope = prompt(InstallerScope(installers.size, previousInstallerManifest))
+                if (installerType != InstallerManifest.InstallerType.PORTABLE && downloadResult.zip?.nestedInstallerType != InstallerManifest.InstallerType.PORTABLE) {
+                    scope = downloadResult.scope ?: prompt(InstallerScope(installers.size, previousInstallerManifest))
                 }
                 upgradeBehavior = prompt(UpgradeBehaviour(installers.size, previousInstallerManifest))
                 if (gitHubDetection == null && installerUrl.host.equals(GitHubDetection.GITHUB_URL, true)) {
