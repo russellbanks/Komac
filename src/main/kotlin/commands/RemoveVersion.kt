@@ -23,8 +23,6 @@ import io.menu.yesNoMenu
 import kotlinx.coroutines.runBlocking
 import org.kohsuke.github.GHContent
 import org.kohsuke.github.GitHub
-import token.Token
-import token.TokenStore
 import utils.versionStringComparator
 
 class RemoveVersion : CliktCommand(
@@ -55,7 +53,7 @@ class RemoveVersion : CliktCommand(
         help = "Automatically submits a pull request with the updated pull request"
     ).flag(default = false)
 
-    private val token: String? by option(
+    private val tokenParameter: String? by option(
         "-t", "--token", "--pat", "--personal-access-token",
         help = "GitHub personal access token with the public_repo scope",
         envvar = "GITHUB_TOKEN"
@@ -65,12 +63,10 @@ class RemoveVersion : CliktCommand(
     private lateinit var packageVersion: String
 
     override fun run(): Unit = runBlocking {
-        token?.let { TokenStore.useTokenParameter(it) }
-        if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
+        handleToken(tokenParameter)
         warning("Packages should only be removed when necessary.")
         echo()
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
-        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
         val allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)?.also {
             info("Found $packageIdentifier in the winget-pkgs repository")
             it.maxWithOrNull(versionStringComparator)?.let { latestVersion ->
@@ -95,7 +91,7 @@ class RemoveVersion : CliktCommand(
             winGetPkgsFork = forkRepository,
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion
-        ) ?: return@runBlocking
+        )
         val directoryContent: MutableList<GHContent> = forkRepository
             .getDirectoryContent(GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion), ref.ref)
         val progress = terminal.progressAnimation {

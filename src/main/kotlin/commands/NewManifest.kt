@@ -48,8 +48,6 @@ import network.WebPageScraper
 import schemas.Schemas
 import schemas.manifest.InstallerManifest
 import schemas.manifest.Manifest
-import token.Token
-import token.TokenStore
 import utils.ManifestUtils.formattedManifestLinesSequence
 import utils.versionStringComparator
 
@@ -101,9 +99,8 @@ class NewManifest : CliktCommand(name = "new") {
     private lateinit var packageName: String
 
     override fun run(): Unit = runBlocking {
-        if (TokenStore.token == null) prompt(Token).also { TokenStore.putToken(it) }
+        handleToken()
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
-        if (!TokenStore.isTokenValid.await()) TokenStore.invalidTokenPrompt(terminal)
         val allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)
         val latestVersion = allVersions?.maxWithOrNull(versionStringComparator)
         if (latestVersion != null) {
