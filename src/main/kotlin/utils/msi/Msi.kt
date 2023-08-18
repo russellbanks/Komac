@@ -27,7 +27,6 @@ class Msi(private val msiFile: Path) {
     private val sql = sqlQuery {
         select(PROPERTY, VALUE)
         from(PROPERTY)
-        where(PROPERTY, values)
     }
 
     init {
@@ -138,15 +137,15 @@ class Msi(private val msiFile: Path) {
     }
 
     fun setValue(property: String?, value: String?) {
-        when (property) {
-            UPGRADE_CODE -> upgradeCode = value
-            PRODUCT_CODE -> productCode = value
-            PRODUCT_NAME -> productName = value
-            PRODUCT_VERSION -> productVersion = value
-            MANUFACTURER -> manufacturer = value
-            PRODUCT_LANGUAGE -> productLanguage = value?.toIntOrNull()?.let { ProductLanguage(it).locale }
-            WIXUI_MODE -> isWix = true
-            ALL_USERS -> allUsers = AllUsers.entries.find { it.code == value }
+        when {
+            property == UPGRADE_CODE -> upgradeCode = value
+            property == PRODUCT_CODE -> productCode = value
+            property == PRODUCT_NAME -> productName = value
+            property == PRODUCT_VERSION -> productVersion = value
+            property == MANUFACTURER -> manufacturer = value
+            property == PRODUCT_LANGUAGE -> productLanguage = value?.toIntOrNull()?.let { ProductLanguage(it).locale }
+            property?.contains(WIX, ignoreCase = true) == true -> isWix = true
+            property == ALL_USERS -> allUsers = AllUsers.entries.find { it.code == value }
         }
     }
 
@@ -165,25 +164,15 @@ class Msi(private val msiFile: Path) {
     companion object {
         private const val PROPERTY = "Property"
         private const val VALUE = "Value"
+        private const val WIX = "Wix"
         private const val UPGRADE_CODE = "UpgradeCode"
         private const val PRODUCT_CODE = "ProductCode"
         private const val PRODUCT_NAME = "ProductName"
         private const val PRODUCT_VERSION = "ProductVersion"
         private const val MANUFACTURER = "Manufacturer"
         private const val PRODUCT_LANGUAGE = "ProductLanguage"
-        private const val WIXUI_MODE = "WixUI_Mode"
         private const val ALL_USERS = "ALLUSERS"
         private const val PROPERTY_BUFFER_SIZE = 64
         private const val VALUE_BUFFER_SIZE = 1024
-        val values = listOf(
-            UPGRADE_CODE,
-            PRODUCT_CODE,
-            PRODUCT_NAME,
-            PRODUCT_VERSION,
-            MANUFACTURER,
-            PRODUCT_LANGUAGE,
-            WIXUI_MODE,
-            ALL_USERS
-        )
     }
 }
