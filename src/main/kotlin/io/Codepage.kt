@@ -9,12 +9,12 @@ object Codepage {
     private val initialCodePage = Kernel32.INSTANCE.GetConsoleCP()
     private val initialOutputCodePage = Kernel32.INSTANCE.GetConsoleOutputCP()
 
-    fun setConsoleUTF8() {
+    fun setConsoleUTF8() = Kernel32.INSTANCE.run {
         if (initialCodePage != UTF8) {
-            Kernel32.INSTANCE.SetConsoleCP(UTF8)
+            SetConsoleCP(UTF8)
         }
         if (initialOutputCodePage != UTF8) {
-            Kernel32.INSTANCE.SetConsoleOutputCP(UTF8)
+            SetConsoleOutputCP(UTF8)
             // Refresh the cached Standard Output now we have a new codepage
             System.setOut(PrintStream(System.out, true, Charsets.UTF_8))
         }

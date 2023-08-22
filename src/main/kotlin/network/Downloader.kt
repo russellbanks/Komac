@@ -78,32 +78,40 @@ object Downloader {
         tempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY,
     ): DownloadedFile {
         val path = FileUtils.createTempFile(packageIdentifier, packageVersion, url, tempDirectory)
-        val fileDeletionThread = Thread { fileSystem.delete(path) }
+        var fileDeletionThread = Thread { fileSystem.delete(path) }
         lateinit var progress: ProgressAnimation
-        Runtime.getRuntime().addShutdownHook(fileDeletionThread)
-        fileSystem.sink(path).buffer().use { sink ->
-            var lastModified: LocalDate? = null
-            prepareGet(url).execute { httpResponse ->
-                val fileName = httpResponse.headers[HttpHeaders.ContentDisposition]
-                    ?.let(::parseFileName)
-                    ?: url.getFileName()
-                progress = terminal.getProgressBar(fileName).apply(ProgressAnimation::start)
-                lastModified = httpResponse
-                    .lastModified()
-                    ?.toInstant()
-                    ?.toKotlinInstant()
-                    ?.toLocalDateTime(TimeZone.UTC)
-                    ?.date
-                val channel: ByteReadChannel = httpResponse.body()
-                while (!channel.isClosedForRead) {
-                    val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
-                    while (packet.isNotEmpty) {
-                        sink.write(packet.readBytes())
-                        fileSystem.metadata(path).size?.let { progress.update(it, httpResponse.contentLength()) }
-                    }
+        fileSystem.sink(path)
+            .buffer()
+            .also { bufferedSink ->
+                // Close the sink and delete the file if the user presses Ctrl+C
+                fileDeletionThread = Thread {
+                    runCatching { bufferedSink.close() }
+                    fileSystem.delete(path)
                 }
-                httpResponse.contentLength()?.let { progress.update(it, it) }
-            }
+                Runtime.getRuntime().addShutdownHook(fileDeletionThread)
+            }.use { sink ->
+                var lastModified: LocalDate? = null
+                prepareGet(url).execute { httpResponse ->
+                    val fileName = httpResponse.headers[HttpHeaders.ContentDisposition]
+                        ?.let(::parseFileName)
+                        ?: url.getFileName()
+                    progress = terminal.getProgressBar(fileName).apply(ProgressAnimation::start)
+                    lastModified = httpResponse
+                        .lastModified()
+                        ?.toInstant()
+                        ?.toKotlinInstant()
+                        ?.toLocalDateTime(TimeZone.UTC)
+                        ?.date
+                    val channel: ByteReadChannel = httpResponse.body()
+                    while (!channel.isClosedForRead) {
+                        val packet = channel.readRemaining(DEFAULT_BUFFER_SIZE.toLong())
+                        while (packet.isNotEmpty) {
+                            sink.write(packet.readBytes())
+                            fileSystem.metadata(path).size?.let { progress.update(it, httpResponse.contentLength()) }
+                        }
+                    }
+                    httpResponse.contentLength()?.let { progress.update(it, it) }
+                }
             progress.clear()
             return DownloadedFile(path, lastModified, fileDeletionThread, progress)
         }

@@ -23,7 +23,7 @@ class Komac : CliktCommand(printHelpOnEmptyArgs = true) {
     override fun run() {
         if (Platform.isWindows()) {
             Codepage.setConsoleUTF8()
-            Runtime.getRuntime().addShutdownHook(Thread { Codepage.resetCodepage() })
+            Runtime.getRuntime().addShutdownHook(Thread(Codepage::resetCodepage))
         }
         if (useSystemProxy) {
             Proxy.useSystemProxy()
