@@ -2,6 +2,8 @@
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.sun.jna.Platform
+import io.Codepage
 import network.Proxy
 
 class Komac : CliktCommand(printHelpOnEmptyArgs = true) {
@@ -19,6 +21,10 @@ class Komac : CliktCommand(printHelpOnEmptyArgs = true) {
     )
 
     override fun run() {
+        if (Platform.isWindows()) {
+            Codepage.setConsoleUTF8()
+            Runtime.getRuntime().addShutdownHook(Thread { Codepage.resetCodepage() })
+        }
         if (useSystemProxy) {
             Proxy.useSystemProxy()
         }
