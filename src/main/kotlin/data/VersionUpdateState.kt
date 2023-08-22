@@ -4,7 +4,8 @@ enum class VersionUpdateState {
     NewPackage,
     NewVersion,
     AddVersion,
-    UpdateVersion;
+    UpdateVersion,
+    RemoveVersion;
 
     override fun toString() = name
         .replace("(?<=.)(?=\\p{Lu})".toRegex(), " ")

@@ -9,10 +9,10 @@ import com.github.ajalt.clikt.core.terminal
 import com.github.ajalt.clikt.parameters.options.check
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.mordant.animation.progressAnimation
 import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.terminal.ConversionResult
 import com.github.ajalt.mordant.terminal.Terminal
+import data.VersionUpdateState
 import data.shared.PackageIdentifier
 import data.shared.PackageVersion
 import github.GitHubImpl
@@ -67,9 +67,9 @@ class RemoveVersion : CliktCommand(
         warning("Packages should only be removed when necessary.")
         echo()
         packageIdentifier = prompt(PackageIdentifier, parameter = packageIdentifierParam)
-        val allVersions = GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)?.also {
+        GitHubUtils.getAllVersions(GitHubImpl.microsoftWinGetPkgs, packageIdentifier)?.also { allVersions ->
             info("Found $packageIdentifier in the winget-pkgs repository")
-            it.maxWithOrNull(versionStringComparator)?.let { latestVersion ->
+            allVersions.maxWithOrNull(versionStringComparator)?.let { latestVersion ->
                 info("Found latest version: $latestVersion")
             }
         }
@@ -87,28 +87,33 @@ class RemoveVersion : CliktCommand(
         if (!shouldRemoveManifest) return@runBlocking
         echo()
         val forkRepository = GitHubImpl.getWingetPkgsFork(terminal)
-        val ref = GitHubImpl.createBranchFromUpstreamDefaultBranch(
+        val pullRequestBranch = GitHubImpl.createBranchFromUpstreamDefaultBranch(
             winGetPkgsFork = forkRepository,
             packageIdentifier = packageIdentifier,
             packageVersion = packageVersion
         )
-        val directoryContent: MutableList<GHContent> = forkRepository
-            .getDirectoryContent(GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion), ref.ref)
-        val progress = terminal.progressAnimation {
-            text("Deleting files")
-            percentage()
-            progressBar()
-            completed()
-        }
-        progress.start()
-        directoryContent.forEachIndexed { index, ghContent ->
-            ghContent.delete("Remove: ${ghContent.name}", ref.ref)
-            progress.update(index.inc().toLong(), directoryContent.size.toLong())
-        }
-        progress.clear()
+        val directoryContent: List<GHContent> = forkRepository
+            .getDirectoryContent(GitHubUtils.getPackageVersionsPath(packageIdentifier, packageVersion), pullRequestBranch.ref)
+        val title = GitHubUtils.getCommitTitle(packageIdentifier, packageVersion, VersionUpdateState.RemoveVersion)
+        forkRepository.createCommit()
+            ?.message(title)
+            ?.parent(pullRequestBranch.getObject()?.sha)
+            ?.tree(
+                forkRepository.createTree()
+                    .baseTree(forkRepository.getBranch(pullRequestBranch.ref).shA1)
+                    .apply {
+                        for (file in directoryContent) {
+                            delete(file.path)
+                        }
+                    }
+                    .create()
+                    .sha
+            )
+            ?.create()
+            ?.also { pullRequestBranch.updateTo(it.shA1) }
         GitHubImpl.microsoftWinGetPkgs.createPullRequest(
-            "Remove: $packageIdentifier version $packageVersion",
-            "${GitHubImpl.forkOwner}:${ref.ref}",
+            title,
+            "${GitHubImpl.forkOwner}:${pullRequestBranch.ref}",
             GitHubImpl.microsoftWinGetPkgs.defaultBranch,
             "## $deletionReason"
         ).also { success("Pull request created: ${it.htmlUrl}") }
