@@ -17,6 +17,7 @@ object Http {
     val client = HttpClient(Java) {
         engine {
             pipelining = true
+            protocolVersion = java.net.http.HttpClient.Version.HTTP_2
         }
         install(UserAgent) {
             agent = DELIVERY_OPTIMIZATION_USER_AGENT
