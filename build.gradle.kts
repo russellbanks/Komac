@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.buildconfig)
     alias(libs.plugins.detekt)
     alias(libs.plugins.jpackage)
+    alias(libs.plugins.kotest.multiplatform)
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.shadow)
@@ -23,65 +24,123 @@ repositories {
     maven("https://oss.sonatype.org/content/repositories/snapshots")
 }
 
-dependencies {
-    // Clikt - https://github.com/ajalt/clikt
-    implementation(libs.clikt)
-
-    // GitHub API - https://github.com/hub4j/github-api
-    implementation(libs.github.api)
-
-    // Kotlin Coroutines - https://github.com/Kotlin/kotlinx.coroutines
-    implementation(libs.coroutines.core)
-
-    // Detekt Formatting Plugin - https://github.com/detekt/detekt
-    detektPlugins(libs.detekt.formatting)
-
-    // JLine - https://github.com/jline/jline3
-    implementation(libs.jline.terminal.jna)
-
-    // JNA - https://github.com/java-native-access/jna
-    implementation(libs.jna)
-    implementation(libs.jna.platform)
-
-    // Kaml - https://github.com/charleskorn/kaml
-    implementation(libs.kaml)
-
-    // Kotest - https://github.com/kotest/kotest
-    testImplementation(libs.kotest.junit5)
-    testImplementation(libs.kotest.assertions.core)
-    testImplementation(libs.kotest.framework.datatest)
-    testImplementation(libs.kotest.extensions.assertions.ktor)
-
-    // KotlinX DateTime - https://github.com/Kotlin/kotlinx-datetime
-    implementation(libs.kotlinx.datetime)
-
-    // KotlinX Serialization - https://github.com/Kotlin/kotlinx.serialization
-    implementation(libs.kotlinx.serialization.json)
-
-    // Ktor - https://github.com/ktorio/ktor
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.java)
-    testImplementation(libs.ktor.client.mock)
-
-    // Mockk - https://github.com/mockk/mockk
-    testImplementation(libs.mockk)
-
-    // Mordant - https://github.com/ajalt/mordant
-    implementation(libs.mordant)
-
-    // Okio - https://github.com/square/okio
-    implementation(libs.okio)
-    testImplementation(libs.okio.fakefilesystem)
-
-    // Skrape{it} - https://github.com/skrapeit/skrape.it
-    implementation(libs.skrapeit.htmlparser) {
-        constraints {
-            implementation(libs.jsoup)
-        }
+kotlin {
+    jvm {
+        withJava()
     }
+    mingwX64()
+    linuxX64()
+    // macosX64()
 
-    // SLF4J No-operation implementation - https://www.slf4j.org
-    implementation(libs.slf4j.nop)
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                // Clikt - https://github.com/ajalt/clikt
+                implementation(libs.clikt)
+
+                // KMath - https://github.com/SciProgCentre/kmath
+                implementation(libs.kmath.core)
+
+                // Kotlin Coroutines - https://github.com/Kotlin/kotlinx.coroutines
+                implementation(libs.coroutines.core)
+
+                // KotlinX DateTime - https://github.com/Kotlin/kotlinx-datetime
+                implementation(libs.kotlinx.datetime)
+
+                // KotlinX Serialization - https://github.com/Kotlin/kotlinx.serialization
+                implementation(libs.kotlinx.serialization.json)
+
+                // Ktor - https://github.com/ktorio/ktor
+                implementation(libs.ktor.client.core)
+
+                // Mordant - https://github.com/ajalt/mordant
+                implementation(libs.mordant)
+
+                // Okio - https://github.com/square/okio
+                implementation(libs.okio)
+                implementation(libs.okio.fakefilesystem)
+            }
+        }
+
+        val commonTest by getting {
+            dependencies {
+                // Kotest - https://github.com/kotest/kotest
+                implementation(libs.kotest.assertions.core)
+                implementation(libs.kotest.framework.datatest)
+                implementation(libs.kotest.extensions.assertions.ktor)
+
+                // Ktor Mock Engine - https://ktor.io/docs/http-client-testing.html
+                implementation(libs.ktor.client.mock)
+            }
+        }
+
+        val jvmMain by getting {
+            dependencies {
+                // GitHub API - https://github.com/hub4j/github-api
+                implementation(libs.github.api)
+
+                // JLine - https://github.com/jline/jline3
+                implementation(libs.jline.terminal.jna)
+
+                // JNA - https://github.com/java-native-access/jna
+                implementation(libs.jna)
+                implementation(libs.jna.platform)
+
+                // Kaml - https://github.com/charleskorn/kaml
+                implementation(libs.kaml)
+
+                // Ktor Java Engine - https://ktor.io/docs/http-client-engines.html#java
+                implementation(libs.ktor.client.java)
+
+                // Skrape{it} - https://github.com/skrapeit/skrape.it
+                implementation(libs.skrapeit.htmlparser)
+
+                // SLF4J No-operation implementation - https://www.slf4j.org
+                implementation(libs.slf4j.nop)
+            }
+        }
+
+        val jvmTest by getting {
+            dependencies {
+                // Kotest - https://github.com/kotest/kotest
+                implementation(libs.kotest.junit5)
+
+                // Mockk - https://github.com/mockk/mockk
+                implementation(libs.mockk)
+            }
+        }
+
+        val nativeMain by creating {
+            dependsOn(commonMain)
+        }
+
+        val mingwX64Main by getting {
+            dependsOn(nativeMain)
+
+            dependencies {
+                // Ktor WinHttp Engine - https://ktor.io/docs/http-client-engines.html#winhttp
+                implementation(libs.ktor.client.winhttp)
+            }
+        }
+
+        val linuxX64Main by getting {
+            dependsOn(nativeMain)
+
+            dependencies {
+                // Ktor Curl Engine - https://ktor.io/docs/http-client-engines.html#curl
+                implementation(libs.ktor.client.curl)
+            }
+        }
+
+        /*val macosX64Main by getting {
+            dependsOn(nativeMain)
+
+            dependencies {
+                // Ktor Darwin Engine - https://ktor.io/docs/http-client-engines.html#darwin
+                implementation(libs.ktor.client.darwin)
+            }
+        }*/
+    }
 }
 
 application {
@@ -96,6 +155,11 @@ tasks.withType<ShadowJar> {
         exclude(dependency(libs.jline.terminal.asProvider().get().toString()))
         exclude(dependency(libs.jline.terminal.jna.get().toString()))
     }
+}
+
+dependencies {
+    // Detekt Formatting Plugin - https://github.com/detekt/detekt
+    detektPlugins(libs.detekt.formatting)
 }
 
 detekt {
@@ -168,6 +232,6 @@ tasks.withType<KotlinCompile> {
 }
 
 java {
-    sourceCompatibility = JavaVersion.current()
+    sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
 }
