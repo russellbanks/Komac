@@ -21,7 +21,7 @@ mordant = "2.1.0"
 okio = "3.5.0"
 shadow = "8.1.1"
 skrapeit = "1.2.2"
-slf4j = "2.0.7"
+slf4j = "2.0.9"
 
 [libraries]
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
