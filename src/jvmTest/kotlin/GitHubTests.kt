@@ -236,5 +236,11 @@ class GitHubTests : FunSpec({
                 - 💯 Bullet point 👍
             """.trimIndent()
         }
+
+        test("Non-breaking spaces are replaced with regular spaces") {
+            // The spaces in the string below are U+00A0 (Non-breaking space)
+            every { ghRelease.body } returns "- Release notes with non-breaking spaces"
+            ghRelease.formattedReleaseNotes shouldBe "- Release notes with non-breaking spaces"
+        }
     }
 })

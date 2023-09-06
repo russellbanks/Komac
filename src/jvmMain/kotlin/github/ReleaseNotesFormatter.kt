@@ -33,6 +33,7 @@ object ReleaseNotesFormatter {
                         .replace("\\[?!\\[(.*?)]\\((.*?)\\)(?:]\\((.*?)\\))?".toRegex(), "")
                         .replace("\\[([^]]+)]\\([^)]+\\)".toRegex(), "$1")
                         .replace("[a-fA-F0-9]{40}".toRegex(), "")
+                        .replace("\u00a0", " ") // Remove NBSP characters
                         .replace("https?://github.com/([\\w-]+)/([\\w-]+)/(pull|issues)/(\\d+)".toRegex()) {
                             val urlRepository = "${it.groupValues[1]}/${it.groupValues[2]}"
                             val issueNumber = it.groupValues[4]
