@@ -4,8 +4,8 @@ import com.github.ajalt.mordant.rendering.TextColors
 import com.github.ajalt.mordant.rendering.TextStyles
 import com.github.ajalt.mordant.table.verticalLayout
 import com.github.ajalt.mordant.terminal.Terminal
-import io.menu.prompts.UrlPrompt
 import commands.prompts.validation.UrlValidationRules
+import io.menu.prompts.UrlPrompt
 import utils.msix.MsixBundle
 
 object InstallerUrl : UrlPrompt {
@@ -32,7 +32,7 @@ object InstallerUrl : UrlPrompt {
                             "Architecture" to individualPackage.processorArchitecture,
                             "Version" to individualPackage.version,
                             "Minimum version" to individualPackage.minVersion,
-                            "utils.Platform" to individualPackage.targetDeviceFamily
+                            "Platform" to individualPackage.targetDeviceFamily
                         ).forEach { (text, value) ->
                             if (value != null) {
                                 var newText = text

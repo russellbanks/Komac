@@ -1,5 +1,7 @@
 package data
 
+import extensions.filterSingleDistinctOrElse
+import extensions.mapDistinctSingleOrNull
 import github.GitHubDetection
 import io.ktor.http.Url
 import kotlinx.datetime.LocalDate
@@ -10,8 +12,6 @@ import schemas.manifest.DefaultLocaleManifest
 import schemas.manifest.InstallerManifest
 import utils.ManifestUtils.updateVersionInString
 import utils.Zip
-import extensions.filterSingleDistinctOrElse
-import extensions.mapDistinctSingleOrNull
 import utils.msi.Msi
 import utils.msix.Msix
 import utils.msix.MsixBundle
@@ -53,7 +53,7 @@ object InstallerManifestData {
             minimumOSVersion = msix?.minVersion
                 ?: (previousInstaller?.minimumOSVersion ?: previousInstallerManifest?.minimumOSVersion)
                     .takeUnless { it == "10.0.0.0" },
-            architecture = previousInstaller?.architecture ?: architecture,
+            architecture = architecture,
             installerType = installerType ?: previousInstaller?.installerType,
             nestedInstallerType = zip?.nestedInstallerType
                 ?: previousInstaller?.nestedInstallerType

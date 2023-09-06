@@ -5,5 +5,5 @@ import kotlinx.cinterop.toKString
 
 actual object System {
     @OptIn(ExperimentalForeignApi::class)
-    actual fun getenv(name: String): String? = platform.posix.getenv("test")?.toKString()
+    actual fun getenv(name: String): String? = platform.posix.getenv(name)?.toKString()
 }
