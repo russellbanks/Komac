@@ -1,0 +1,64 @@
+[package]
+name = "komac"
+version = "2.0.0"
+authors = ["Russell Banks"]
+edition = "2021"
+description = "A manifest creator for winget-pkgs"
+license = "GPL-3.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true
+
+[dependencies]
+async-tempfile = { version = "0.5.0" }
+async_zip = { version = "0.0.15", features = ["deflate", "tokio", "tokio-fs"] }
+base16ct = { version = "0.2.0", features = ["std"] }
+base64ct = { version = "1.6.0", features = ["std"] }
+clap = { version = "4.4.11", features = ["derive", "cargo", "env"] }
+color-eyre = { version = "0.6.2", default-features = false }
+const_format = "0.2.32"
+crossterm = "0.27.0"
+derivative = "2.2.0"
+derive_more = "0.99.17"
+exe = "0.5.6"
+futures = "0.3.29"
+futures-util = "0.3.29"
+indexmap = "2.1.0"
+indicatif = "0.17.7"
+inquire = "0.6.2"
+itertools = "0.12.0"
+keyring = "2.1.0"
+language-tags = { version = "0.3.2", features = ["serde"] }
+msi = "0.7.0"
+num_cpus = "1.16.0"
+nutype = { version = "0.4.0", features = ["serde"] }
+package-family-name = "1.0.0"
+percent-encoding = "2.3.1"
+pulldown-cmark = "0.9.3"
+quick-xml = { version = "0.31.0", features = ["serialize"] }
+rand = { version = "0.8.5", features = ["small_rng"] }
+serde = { version = "1.0.193", features = ["derive"] }
+serde_with = { version = "3.4.0", features = ["macros"] }
+serde_yaml = "0.9.27"
+sha2 = "0.10.8"
+strum = { version = "0.25.0", features = ["derive"] }
+thiserror = "1.0.50"
+time = { version = "0.3.30", features = ["serde-human-readable"] }
+tokio = { version = "1.35.0", features = ["rt-multi-thread", "macros", "fs"] }
+tokio-util = { version = "0.7.10", features = ["compat"] }
+url = { version = "2.5.0", features = ["serde"] }
+versions = { version = "6.0.0" }
+xxhash-rust = { version = "0.8.7", features = ["xxh3"] }
+
+[target.'cfg(any(windows, target_os = "macos"))'.dependencies]
+graphql_client = { version = "0.13.0", features = ["reqwest"] }
+reqwest = { version = "0.11.22", features = ["stream"] }
+
+[target.'cfg(not(any(windows, target_os = "macos")))'.dependencies]
+graphql_client = { version = "0.13.0", features = ["reqwest-rustls"] }
+reqwest = { version = "0.11.22", default-features = false, features = ["stream", "rustls-tls"] }
+
+[dev-dependencies]
+rstest = "0.18.2"
