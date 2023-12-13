@@ -5,12 +5,13 @@
 ![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
 ![License](https://img.shields.io/github/license/russellbanks/Komac)
 
-Komac is an advanced CLI designed to create manifests for the [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
+Komac (**K**ommunity **Ma**nifest **C**reator for WinGet) is an advanced CLI designed to create manifests for the [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
+
+Previously, **Ko**mac was written in **Ko**tlin, hence the name. However, it has been rewritten in [Rust](https://www.rust-lang.org/) to drastically improve performance and reduce the complexity of the codebase.
 
 ## Installation
 
-Komac is cross-platform and runs on Windows, Linux and macOS. A cross-platform JAR is available from
-the [releases](https://github.com/russellbanks/Komac/releases).
+The binaries for respective platforms are available in the [releases](https://github.com/russellbanks/Komac/releases). However, we also support package managers for easy installation.
 
 ### Windows
 
@@ -30,10 +31,10 @@ scoop install komac
 
 ### Linux & macOS
 
-It is recommended to use the cross-platform JAR for Linux and macOS. Installers are although available for these platforms but there's no guarantee on their working state. The JAR can be used with the following command:
+#### Homebrew
 
 ```bash
-java -jar komac.jar
+brew install russellbanks/komac/komac
 ```
 
 ## Commands
@@ -72,7 +73,7 @@ komac update
 ## Komac vs other tools 🏆
 
 While other manifest creation tools have made remarkable strides in the winget-pkgs community, their development pace is
-notably slow and lacks the advanced detection capabilities that comes with Komac.
+notably slow and lacks the advanced detection capabilities that come with Komac.
 
 |                                          |   Komac    | WinGetCreate |                              YamlCreate                              |
 | ---------------------------------------- | :--------: | :----------: | :------------------------------------------------------------------: |
@@ -109,7 +110,7 @@ notably slow and lacks the advanced detection capabilities that comes with Komac
 
 I'm happy to say that WinGet Releaser is powered by Komac, due to its advanced detection capabilities and ability to work cross-platform. The action is available on the [GitHub Marketplace](https://github.com/marketplace/actions/winget-releaser).
 
-It can be used in CI/CD workflows to automatically create & publish WinGet manifests for your releases. Just make sure to add first version of your manifest manually, and the action will take care of the future versions. More information to set it up can be found on the action's repository [here](https://github.com/vedantmgoyal2009/winget-releaser).
+It can be used in CI/CD workflows to automatically create & publish WinGet manifests for your releases. Just make sure to add the first version of your manifest manually, and the action will take care of the future versions. More information to set it up can be found on the action's repository [here](https://github.com/vedantmgoyal2009/winget-releaser).
 
 ## License
 
