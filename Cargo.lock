@@ -934,6 +934,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fast32"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c869a53267f2ac8eb95bf64d418db79ceb499f0e20e03aed8dc5ad9b269bc54a"
+
+[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1969,10 +1975,11 @@ checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 
 [[package]]
 name = "package-family-name"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2c6923fa1376584a15ffbeed559a76aa54f35ea4e56e15bbb76547ab9f75584"
+checksum = "31b3054ee34b594bd311810b72b57c0b6255cf78ea0b0461d782b066ecd56568"
 dependencies = [
+ "fast32",
  "sha2 0.10.8",
 ]
 
