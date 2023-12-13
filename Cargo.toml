@@ -5,6 +5,10 @@ authors = ["Russell Banks"]
 edition = "2021"
 description = "A manifest creator for winget-pkgs"
 license = "GPL-3.0"
+repository = "https://github.com/russellbanks/Komac"
+documentation = "https://github.com/russellbanks/Komac/blob/main/README.md"
+categories = ["command-line-utilities", "development-tools"]
+keywords = ["winget", "winget-pkgs", "winget-cli", "windows"]
 
 [profile.release]
 codegen-units = 1
