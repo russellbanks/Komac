@@ -45,7 +45,7 @@ quick-xml = { version = "0.31.0", features = ["serialize"] }
 rand = { version = "0.8.5", features = ["small_rng"] }
 serde = { version = "1.0.193", features = ["derive"] }
 serde_with = { version = "3.4.0", features = ["macros"] }
-serde_yaml = "0.9.27"
+serde_yaml = "0.9.28"
 sha2 = "0.10.8"
 strum = { version = "0.25.0", features = ["derive"] }
 thiserror = "1.0.51"
