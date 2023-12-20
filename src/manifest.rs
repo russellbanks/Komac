@@ -1,7 +1,7 @@
-use crate::default_locale_manifest::DefaultLocaleManifest;
-use crate::installer_manifest::InstallerManifest;
-use crate::locale_manifest::LocaleManifest;
-use crate::version_manifest::VersionManifest;
+use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
+use crate::manifests::installer_manifest::InstallerManifest;
+use crate::manifests::locale_manifest::LocaleManifest;
+use crate::manifests::version_manifest::VersionManifest;
 use clap::{crate_name, crate_version};
 use color_eyre::eyre::{Error, Result};
 use const_format::formatcp;
@@ -100,8 +100,8 @@ fn convert_to_crlf(buf: &mut Vec<u8>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::installer_manifest::InstallerManifest;
     use crate::manifest::{build_manifest_string, Manifest};
+    use crate::manifests::installer_manifest::InstallerManifest;
 
     fn contains_newline_not_preceded_by_carriage_return(value: &str) -> bool {
         value

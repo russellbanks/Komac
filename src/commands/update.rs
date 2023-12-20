@@ -1,5 +1,4 @@
 use crate::credential::{get_default_headers, handle_token};
-use crate::default_locale_manifest::DefaultLocaleManifest;
 use crate::download_file::{download_urls, process_files};
 use crate::file_analyser::get_upgrade_behavior;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -8,17 +7,18 @@ use crate::github::github_utils::{
     get_pull_request_body,
 };
 use crate::graphql::create_commit::FileAddition;
-use crate::installer_manifest::{AppsAndFeaturesEntry, Installer, InstallerManifest};
 use crate::iterable_extensions::IterableExt;
-use crate::locale_manifest::LocaleManifest;
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
+use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
+use crate::manifests::installer_manifest::{AppsAndFeaturesEntry, Installer, InstallerManifest};
+use crate::manifests::locale_manifest::LocaleManifest;
+use crate::manifests::version_manifest::VersionManifest;
 use crate::match_installers::match_installers;
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::update_state::get_update_state;
 use crate::url_utils::find_scope;
-use crate::version_manifest::VersionManifest;
 use base64ct::Encoding;
 use clap::Parser;
 use color_eyre::eyre::{Result, WrapErr};

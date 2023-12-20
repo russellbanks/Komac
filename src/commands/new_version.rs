@@ -1,13 +1,14 @@
 use crate::credential::{get_default_headers, handle_token};
-use crate::default_locale_manifest::DefaultLocaleManifest;
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::GitHub;
 use crate::github::github_utils::{get_full_package_path, get_package_path};
-use crate::installer_manifest::{
+use crate::manifest::{build_manifest_string, print_changes, Manifest};
+use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
+use crate::manifests::installer_manifest::{
     InstallModes, Installer, InstallerManifest, InstallerSwitches, InstallerType, UpgradeBehavior,
 };
-use crate::locale_manifest::LocaleManifest;
-use crate::manifest::{build_manifest_string, print_changes, Manifest};
+use crate::manifests::locale_manifest::LocaleManifest;
+use crate::manifests::version_manifest::VersionManifest;
 use crate::prompts::list_prompt::list_prompt;
 use crate::prompts::multi_prompt::{check_prompt, radio_prompt};
 use crate::prompts::prompt::{optional_prompt, required_prompt};
@@ -37,7 +38,6 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use crate::version_manifest::VersionManifest;
 use clap::Parser;
 use color_eyre::eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};

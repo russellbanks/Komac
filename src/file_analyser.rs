@@ -1,4 +1,4 @@
-use crate::installer_manifest::{Architecture, InstallerType, UpgradeBehavior};
+use crate::manifests::installer_manifest::{Architecture, InstallerType, UpgradeBehavior};
 use crate::msi::Msi;
 use crate::msix_family::msix::Msix;
 use crate::msix_family::msixbundle::MsixBundle;

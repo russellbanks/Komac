@@ -1,4 +1,4 @@
-use crate::installer_manifest::{Architecture, Scope};
+use crate::manifests::installer_manifest::{Architecture, Scope};
 
 pub const VALID_FILE_EXTENSIONS: [&str; 7] = [
     "msix",
@@ -90,7 +90,7 @@ pub fn find_scope(url: &str) -> Option<Scope> {
 
 #[cfg(test)]
 mod tests {
-    use crate::installer_manifest::Architecture;
+    use crate::manifests::installer_manifest::Architecture;
     use crate::url_utils::find_architecture;
     use rstest::rstest;
 

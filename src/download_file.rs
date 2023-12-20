@@ -1,5 +1,5 @@
 use crate::file_analyser::{get_architecture, FileAnalyser};
-use crate::installer_manifest::{Architecture, InstallerType};
+use crate::manifests::installer_manifest::{Architecture, InstallerType};
 use crate::msi::Msi;
 use crate::msix_family::msix::Msix;
 use crate::msix_family::msixbundle::MsixBundle;

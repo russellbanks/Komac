@@ -1,14 +1,12 @@
 mod commands;
 mod credential;
-mod default_locale_manifest;
 mod download_file;
 mod file_analyser;
 mod github;
 mod graphql;
-mod installer_manifest;
 mod iterable_extensions;
-mod locale_manifest;
 mod manifest;
+mod manifests;
 mod match_installers;
 mod msi;
 mod msix_family;
@@ -16,7 +14,6 @@ mod prompts;
 mod types;
 mod update_state;
 mod url_utils;
-mod version_manifest;
 mod zip;
 
 use crate::commands::cleanup::Cleanup;

@@ -1,4 +1,4 @@
-use crate::default_locale_manifest::{Agreement, Documentation, Icon};
+use crate::manifests::default_locale_manifest::{Agreement, Documentation, Icon};
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
 use crate::types::description::Description;

@@ -1,4 +1,4 @@
-use crate::installer_manifest::{InstallModes, UpgradeBehavior};
+use crate::manifests::installer_manifest::{InstallModes, UpgradeBehavior};
 use color_eyre::eyre::Error;
 use inquire::{MultiSelect, Select};
 use std::collections::BTreeSet;

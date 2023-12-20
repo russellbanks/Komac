@@ -1,5 +1,4 @@
 use crate::credential::get_default_headers;
-use crate::default_locale_manifest::DefaultLocaleManifest;
 use crate::github::github_utils::get_full_package_path;
 use crate::graphql::{
     create_branch, create_commit, create_pull_request, delete_ref, get_all_values,
@@ -7,11 +6,12 @@ use crate::graphql::{
     get_directory_content_with_text, get_pull_request_from_branch, get_repository_id,
     get_repository_info, Branch, GitHubValues, PullRequest, Ref, RepositoryData,
 };
-use crate::installer_manifest::InstallerManifest;
-use crate::locale_manifest::LocaleManifest;
+use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
+use crate::manifests::installer_manifest::InstallerManifest;
+use crate::manifests::locale_manifest::LocaleManifest;
+use crate::manifests::version_manifest::VersionManifest;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
-use crate::version_manifest::VersionManifest;
 use color_eyre::eyre::{eyre, Result};
 use const_format::formatcp;
 use reqwest::Client;

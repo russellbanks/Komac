@@ -1,4 +1,4 @@
-use crate::installer_manifest::Architecture;
+use crate::manifests::installer_manifest::Architecture;
 use crate::types::language_tag::LanguageTag;
 use color_eyre::eyre::{bail, Result};
 use msi::{Language, Select};

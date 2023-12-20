@@ -1,4 +1,4 @@
-use crate::installer_manifest::Installer;
+use crate::manifests::installer_manifest::Installer;
 use crate::url_utils::{find_architecture, find_scope};
 use std::collections::HashMap;
 
@@ -71,7 +71,7 @@ pub fn match_installers(
 
 #[cfg(test)]
 mod tests {
-    use crate::installer_manifest::{Architecture, Installer, Scope};
+    use crate::manifests::installer_manifest::{Architecture, Installer, Scope};
     use crate::match_installers::match_installers;
     use std::collections::HashMap;
     use url::Url;

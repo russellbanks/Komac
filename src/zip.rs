@@ -1,5 +1,5 @@
 use crate::file_analyser::FileAnalyser;
-use crate::installer_manifest::{InstallerType, NestedInstallerFiles};
+use crate::manifests::installer_manifest::{InstallerType, NestedInstallerFiles};
 use crate::url_utils::VALID_FILE_EXTENSIONS;
 use async_tempfile::TempFile;
 use async_zip::tokio::read::seek::ZipFileReader;
