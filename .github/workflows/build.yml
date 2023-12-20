@@ -1,102 +1,29 @@
-name: Build
+name: Cargo Build & Test
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
 
 env:
-  RELEASE_NAME: Nightly release
-  RELEASE_TAG_NAME: nightly
-  RELEASE_IS_PRERELEASE: true
+  CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build_and_test:
+    name: Rust project - latest
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-
     runs-on: ${{ matrix.os }}
+
     steps:
-      - name: Checkout code
+      - name: Clone repository
         uses: actions/checkout@v4
 
-      - name: Validate Gradle Wrapper
-        uses: gradle/wrapper-validation-action@v1
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
 
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 19
+      - name: Build
+        run: cargo build --verbose
 
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-
-      - name: Build with Gradle
-        run: ./gradlew build
-
-      - name: Build binaries
-        run: ./gradlew jpackage
-        env:
-          PER_USER_INSTALL: true
-
-      - name: Rename assets to Komac-nightly
-        if: (github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac'
-        shell: pwsh
-        run: |
-          Get-ChildItem -Recurse -Filter "Komac*" -Include "*-all.jar","*.dmg","*.exe","*.deb" | ForEach-Object {
-            if ($_.Extension -eq ".exe") {
-              Rename-Item $_.FullName -NewName "KomacUserSetup-nightly$($_.Extension)"
-            } else {
-              Rename-Item $_.FullName -NewName "Komac-nightly$($_.Extension)"
-            }
-          }
-
-      - name: Release nightly JAR
-        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'ubuntu-latest'
-        uses: softprops/action-gh-release@v1
-        with:
-          name: ${{env.RELEASE_NAME}}
-          tag_name: ${{env.RELEASE_TAG_NAME}}
-          prerelease: ${{env.RELEASE_IS_PRERELEASE}}
-          files: build/libs/Komac-nightly.jar
-
-      - name: Release nightly binaries
-        if: (github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac'
-        uses: softprops/action-gh-release@v1
-        with:
-          name: ${{env.RELEASE_NAME}}
-          tag_name: ${{env.RELEASE_TAG_NAME}}
-          prerelease: ${{env.RELEASE_IS_PRERELEASE}}
-          files: |
-            build/distributions/KomacUserSetup-nightly.exe
-            build/distributions/Komac-nightly.deb
-            build/distributions/Komac-nightly.dmg
-
-      - name: Clean build directory
-        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'windows-latest'
-        run: ./gradlew clean
-
-      - name: Build machine scope exe on Windows
-        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'windows-latest'
-        run: ./gradlew jpackage
-        env:
-          PER_USER_INSTALL: false
-
-      - name: Rename exe to KomacMachineSetup-nightly
-        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Get-ChildItem -Recurse -Filter "*.exe" | ForEach-Object {
-            if ($_.Name -ne "KomacUserSetup-nightly.exe") {
-              Rename-Item $_.FullName -NewName "KomacMachineSetup-nightly$($_.Extension)"
-            }
-          }
-
-      - name: Release machine scope exe
-        if: ((github.repository == 'russellbanks/Komac' && github.ref == 'refs/heads/main') || github.repository != 'russellbanks/Komac') && matrix.os == 'windows-latest'
-        uses: softprops/action-gh-release@v1
-        with:
-          name: ${{env.RELEASE_NAME}}
-          tag_name: ${{env.RELEASE_TAG_NAME}}
-          prerelease: ${{env.RELEASE_IS_PRERELEASE}}
-          files: build/distributions/KomacMachineSetup-nightly.exe
+      - name: Run tests
+        run: cargo test --verbose
