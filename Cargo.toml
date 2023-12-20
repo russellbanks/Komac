@@ -49,20 +49,20 @@ serde_yaml = "0.9.27"
 sha2 = "0.10.8"
 strum = { version = "0.25.0", features = ["derive"] }
 thiserror = "1.0.50"
-time = { version = "0.3.30", features = ["serde-human-readable"] }
-tokio = { version = "1.35.0", features = ["rt-multi-thread", "macros", "fs"] }
+time = { version = "0.3.31", features = ["serde-human-readable"] }
+tokio = { version = "1.35.1", features = ["rt-multi-thread", "macros", "fs"] }
 tokio-util = { version = "0.7.10", features = ["compat"] }
 url = { version = "2.5.0", features = ["serde"] }
 versions = { version = "6.0.0" }
-xxhash-rust = { version = "0.8.7", features = ["xxh3"] }
+xxhash-rust = { version = "0.8.8", features = ["xxh3"] }
 
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]
 graphql_client = { version = "0.13.0", features = ["reqwest"] }
-reqwest = { version = "0.11.22", features = ["stream"] }
+reqwest = { version = "0.11.23", features = ["stream"] }
 
 [target.'cfg(not(any(windows, target_os = "macos")))'.dependencies]
 graphql_client = { version = "0.13.0", features = ["reqwest-rustls"] }
-reqwest = { version = "0.11.22", default-features = false, features = ["stream", "rustls-tls"] }
+reqwest = { version = "0.11.23", default-features = false, features = ["stream", "rustls-tls"] }
 
 [dev-dependencies]
 rstest = "0.18.2"
