@@ -46,11 +46,13 @@ async fn download_file<'a>(
         .and_then(|last_modified| OffsetDateTime::parse(last_modified, &Rfc2822).ok())
         .map(OffsetDateTime::date);
 
-    let pb = multi_progress.add(ProgressBar::new(total_size));
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
-        .progress_chars("#>-"));
-    pb.set_message(format!("Downloading {url}"));
+    let pb = multi_progress.add(ProgressBar::new(total_size)
+        .with_style(ProgressStyle::default_bar()
+            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
+            .progress_chars("#>-")
+        )
+        .with_message(format!("Downloading {url}"))
+    );
 
     // Download chunks
     let temp_file = TempFile::new_with_name(filename).await?;

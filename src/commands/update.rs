@@ -24,7 +24,7 @@ use clap::Parser;
 use color_eyre::eyre::{Result, WrapErr};
 use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar};
 use inquire::Confirm;
 use percent_encoding::percent_decode_str;
 use reqwest::{Client, Url};
@@ -32,11 +32,8 @@ use std::collections::BTreeSet;
 use std::num::NonZeroU8;
 use std::ops::Deref;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::fs;
-use tokio::sync::Mutex;
-use tokio::time::sleep;
 
 #[derive(Parser)]
 pub struct Update {
@@ -56,6 +53,7 @@ pub struct Update {
     #[arg(short, long)]
     submit: bool,
 
+    // Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
     output: Option<PathBuf>,
 
@@ -344,23 +342,11 @@ impl Update {
         }
 
         // Create an indeterminate progress bar to show as a pull request is being created
-        let create_pr_progress = Arc::new(Mutex::new(
-            ProgressBar::new_spinner()
-                .with_style(ProgressStyle::with_template("{spinner:.green} {msg}")?)
-                .with_message(format!(
-                    "Creating a pull request for {} version {}",
-                    self.identifier, self.version
-                )),
+        let pr_progress = ProgressBar::new_spinner().with_message(format!(
+            "Creating a pull request for {} version {}",
+            self.identifier, self.version
         ));
-
-        // Spawn a new thread that ticks the progress bar every 50 milliseconds
-        let pb = create_pr_progress.clone();
-        let update_spinner_thread = tokio::spawn(async move {
-            loop {
-                pb.lock().await.tick();
-                sleep(Duration::from_millis(50)).await;
-            }
-        });
+        pr_progress.enable_steady_tick(Duration::from_millis(50));
 
         let current_user = github.get_username().await?;
         let winget_pkgs = github.get_winget_pkgs().await?;
@@ -401,8 +387,7 @@ impl Update {
             )
             .await?;
 
-        update_spinner_thread.abort();
-        create_pr_progress.lock().await.finish_and_clear();
+        pr_progress.finish_and_clear();
 
         println!(
             "{} created a pull request to {}",

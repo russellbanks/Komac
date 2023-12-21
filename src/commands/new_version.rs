@@ -1,7 +1,11 @@
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::GitHub;
-use crate::github::github_utils::{get_full_package_path, get_package_path};
+use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
+use crate::github::github_utils::{
+    get_branch_name, get_commit_title, get_full_package_path, get_package_path,
+    get_pull_request_body,
+};
+use crate::graphql::create_commit::FileAddition;
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
@@ -38,15 +42,21 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use crate::update_state::get_update_state;
+use base64ct::Encoding;
 use clap::Parser;
 use color_eyre::eyre::Result;
+use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
-use indicatif::MultiProgress;
+use indicatif::{MultiProgress, ProgressBar};
 use inquire::{Confirm, CustomType};
 use percent_encoding::percent_decode_str;
 use reqwest::Client;
 use std::collections::BTreeSet;
 use std::num::NonZeroU8;
+use std::path::PathBuf;
+use std::time::Duration;
+use tokio::fs;
 use url::Url;
 
 #[derive(Parser)]
@@ -108,6 +118,10 @@ pub struct New {
 
     #[arg(short, long)]
     submit: bool,
+
+    // Directory to output the manifests to
+    #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
+    output: Option<PathBuf>,
 
     /// GitHub personal access token with the public_repo scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -186,9 +200,7 @@ impl New {
             {
                 data.installer_type = InstallerType::Portable;
             }
-            let mut installer_switches = InstallerSwitches {
-                ..InstallerSwitches::default()
-            };
+            let mut installer_switches = InstallerSwitches::default();
             if data.installer_type == InstallerType::Exe {
                 installer_switches.silent = optional_prompt::<SilentSwitch>(None)?;
                 installer_switches.silent_with_progress =
@@ -306,6 +318,92 @@ impl New {
         };
 
         print_changes(&changes);
+
+        if let Some(output) = self.output {
+            stream::iter(
+                changes
+                    .iter()
+                    .map(|(_, content)| fs::write(&output, content)),
+            )
+            .buffer_unordered(2)
+            .try_collect::<Vec<_>>()
+            .await?;
+            println!(
+                "{} written all manifest files to {}",
+                "Successfully".green(),
+                output.to_str().unwrap_or("the given directory")
+            );
+        }
+
+        let should_remove_manifest = if self.submit {
+            true
+        } else {
+            Confirm::new(&format!(
+                "Would you like to make a pull request for {package_identifier} {package_version}?"
+            ))
+            .prompt()?
+        };
+        if !should_remove_manifest {
+            return Ok(());
+        }
+
+        // Create an indeterminate progress bar to show as a pull request is being created
+        let pr_progress = ProgressBar::new_spinner().with_message(format!(
+            "Creating a pull request for {package_identifier} version {package_version}"
+        ));
+        pr_progress.enable_steady_tick(Duration::from_millis(50));
+
+        let current_user = github.get_username().await?;
+        let winget_pkgs = github.get_winget_pkgs().await?;
+        let fork_id = github.get_winget_pkgs_fork_id(&current_user).await?;
+        let branch_name = get_branch_name(&package_identifier, &package_version);
+        let pull_request_branch = github
+            .create_branch(&fork_id, &branch_name, &winget_pkgs.default_branch_oid)
+            .await?;
+        let commit_title = get_commit_title(
+            &package_identifier,
+            &package_version,
+            get_update_state(
+                &package_version,
+                versions.as_ref().unwrap(),
+                latest_version.unwrap(),
+            ),
+        );
+        let changes = changes
+            .into_iter()
+            .map(|(path, content)| FileAddition {
+                contents: base64ct::Base64::encode_string(content.as_bytes()),
+                path,
+            })
+            .collect::<Vec<_>>();
+        let _commit_url = github
+            .create_commit(
+                &pull_request_branch.id,
+                &pull_request_branch.head_sha,
+                &commit_title,
+                Some(changes),
+                None,
+            )
+            .await?;
+        let pull_request_url = github
+            .create_pull_request(
+                &winget_pkgs.id,
+                &fork_id,
+                &format!("{current_user}:{}", pull_request_branch.name),
+                &winget_pkgs.default_branch_name,
+                &commit_title,
+                &get_pull_request_body(),
+            )
+            .await?;
+
+        pr_progress.finish_and_clear();
+
+        println!(
+            "{} created a pull request to {}",
+            "Successfully".green(),
+            WINGET_PKGS_FULL_NAME
+        );
+        println!("{}", pull_request_url.as_str());
 
         Ok(())
     }
