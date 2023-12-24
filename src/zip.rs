@@ -22,7 +22,7 @@ impl Zip {
             .file()
             .entries()
             .iter()
-            .flat_map(|stored_entry| stored_entry.entry().filename().as_str().ok())
+            .flat_map(|stored_entry| stored_entry.filename().as_str().ok())
             .collect::<Vec<_>>();
 
         let mut identified_files = file_names
@@ -87,6 +87,6 @@ pub fn get_entry_file_name<'a>(zip: &'a ZipFileReader<&mut File>, index: usize) 
     zip.file()
         .entries()
         .get(index)
-        .and_then(|stored_entry| stored_entry.entry().filename().as_str().ok())
+        .and_then(|stored_entry| stored_entry.filename().as_str().ok())
         .unwrap_or_default()
 }
