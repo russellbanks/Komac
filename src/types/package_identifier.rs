@@ -54,7 +54,7 @@ impl PackageIdentifier {
             return Err(PackageIdentifierError::InvalidPartCount);
         }
 
-        Ok(PackageIdentifier(identifier.to_string()))
+        Ok(Self(identifier.to_string()))
     }
 }
 
@@ -68,12 +68,12 @@ impl RequiredPrompt for PackageIdentifier {
 impl FromStr for PackageIdentifier {
     type Err = PackageIdentifierError;
 
-    fn from_str(input: &str) -> Result<PackageIdentifier, PackageIdentifierError> {
-        PackageIdentifier::parse(input)
+    fn from_str(input: &str) -> Result<Self, PackageIdentifierError> {
+        Self::parse(input)
     }
 }
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum PackageIdentifierError {
     #[error(
         "Package identifier length must be between {} and {} characters",

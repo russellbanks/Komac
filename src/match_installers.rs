@@ -2,10 +2,10 @@ use crate::manifests::installer_manifest::Installer;
 use crate::url_utils::{find_architecture, find_scope};
 use std::collections::HashMap;
 
-pub fn match_installers(
-    previous_installers: &[Installer],
-    new_installers: &[Installer],
-) -> HashMap<Installer, Installer> {
+pub fn match_installers<'prev, 'new>(
+    previous_installers: &'prev [Installer],
+    new_installers: &'new [Installer],
+) -> HashMap<&'prev Installer, &'new Installer> {
     let found_architectures = new_installers
         .iter()
         .filter_map(|installer| {
@@ -32,17 +32,17 @@ pub fn match_installers(
                 let installer_url = &new_installer.installer_url;
                 let mut score = 0;
                 if new_installer.architecture == previous_installer.architecture {
-                    score += 1
+                    score += 1;
                 }
                 if found_architectures.get(installer_url) == Some(&previous_installer.architecture)
                 {
-                    score += 1
+                    score += 1;
                 }
                 if new_installer.installer_type == previous_installer.installer_type {
-                    score += 1
+                    score += 1;
                 }
                 if new_installer.scope == previous_installer.scope {
-                    score += 1
+                    score += 1;
                 }
 
                 let is_new_architecture = !found_architectures
@@ -61,10 +61,7 @@ pub fn match_installers(
                     best_match = Some(new_installer);
                 }
             }
-            (
-                previous_installer.to_owned(),
-                best_match.unwrap().to_owned(),
-            )
+            (previous_installer, best_match.unwrap())
         })
         .collect::<HashMap<_, _>>()
 }
@@ -119,10 +116,10 @@ mod tests {
             installer_x64.clone(),
         ];
         let expected = HashMap::from([
-            (installer_user_x86.clone(), installer_user_x86.clone()),
-            (previous_machine_x86.clone(), installer_x86.clone()),
-            (installer_user_x64.clone(), installer_user_x64.clone()),
-            (previous_machine_x64.clone(), installer_x64.clone()),
+            (&installer_user_x86, &installer_user_x86),
+            (&previous_machine_x86, &installer_x86),
+            (&installer_user_x64, &installer_user_x64),
+            (&previous_machine_x64, &installer_x64),
         ]);
         assert_eq!(
             expected,

@@ -24,26 +24,23 @@ pub struct Msix {
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
 
 impl Msix {
-    pub async fn new(file: &mut File) -> Result<Msix> {
+    pub async fn new(file: &mut File) -> Result<Self> {
         let zip = ZipFileReader::with_tokio(file).await?;
 
         let (appx_manifest, appx_signature) =
             get_manifest_and_signature(zip, APPX_MANIFEST_XML).await?;
 
-        let signature_hash = Sha256::digest(appx_signature);
-        let signature_sha_256 = base16ct::upper::encode_string(&signature_hash);
-
         let manifest: Package = from_str(&appx_manifest)?;
 
-        let package_family_name =
-            get_package_family_name(&manifest.identity.name, &manifest.identity.publisher);
-
-        Ok(Msix {
+        Ok(Self {
             display_name: manifest.properties.display_name,
             publisher_display_name: manifest.properties.publisher_display_name,
             version: manifest.identity.version,
-            signature_sha_256,
-            package_family_name,
+            signature_sha_256: base16ct::upper::encode_string(&Sha256::digest(appx_signature)),
+            package_family_name: get_package_family_name(
+                &manifest.identity.name,
+                &manifest.identity.publisher,
+            ),
             target_device_family: Platform::from_str(
                 &manifest.dependencies.target_device_family.name,
             )?,

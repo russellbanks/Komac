@@ -37,10 +37,10 @@ where
             }
         });
         if let Some(help_message) = T::HELP_MESSAGE {
-            prompt = prompt.with_help_message(help_message)
+            prompt = prompt.with_help_message(help_message);
         }
         if let Some(placeholder) = T::PLACEHOLDER {
-            prompt = prompt.with_placeholder(placeholder)
+            prompt = prompt.with_placeholder(placeholder);
         }
         let result = prompt.prompt()?;
         if result.is_empty() {
@@ -67,10 +67,10 @@ where
             }
         });
         if let Some(help_message) = T::HELP_MESSAGE {
-            prompt = prompt.with_help_message(help_message)
+            prompt = prompt.with_help_message(help_message);
         }
         if let Some(placeholder) = T::PLACEHOLDER {
-            prompt = prompt.with_placeholder(placeholder)
+            prompt = prompt.with_placeholder(placeholder);
         }
         T::from_str(&prompt.prompt()?).map_err(Error::msg)
     }

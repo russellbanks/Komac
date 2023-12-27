@@ -27,11 +27,11 @@ const UPGRADE_CODE: &str = "UpgradeCode";
 const WIX: &str = "wix";
 
 impl Msi {
-    pub fn new(path: impl AsRef<Path>) -> Result<Msi> {
+    pub fn new(path: impl AsRef<Path>) -> Result<Self> {
         let mut msi = msi::open(path)?;
 
         let architecture = match msi.summary_info().arch() {
-            Some("x64") | Some("Intel64") | Some("AMD64") => Architecture::X64,
+            Some("x64" | "Intel64" | "AMD64") => Architecture::X64,
             Some("Intel") => Architecture::X86,
             _ => bail!("No architecture was found in the MSI"),
         };
@@ -52,7 +52,7 @@ impl Msi {
             })
             .collect::<HashMap<_, _>>();
 
-        Ok(Msi {
+        Ok(Self {
             architecture,
             product_code: property_map.remove(PRODUCT_CODE).unwrap(),
             upgrade_code: property_map.remove(UPGRADE_CODE).unwrap(),

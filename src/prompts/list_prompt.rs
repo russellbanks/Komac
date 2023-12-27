@@ -35,7 +35,7 @@ where
             }
             for item in items {
                 if let Err(error) = T::from_str(input) {
-                    return Ok(Validation::Invalid(format!("{}: {}", item, error).into()));
+                    return Ok(Validation::Invalid(format!("{item}: {error}").into()));
                 }
             }
             Ok(Validation::Valid)

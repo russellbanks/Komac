@@ -2,7 +2,7 @@ use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::file_analyser::get_upgrade_behavior;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::github_utils::{
+use crate::github::utils::{
     get_branch_name, get_commit_title, get_full_package_path, get_package_path,
     get_pull_request_body,
 };
@@ -17,7 +17,7 @@ use crate::match_installers::match_installers;
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
-use crate::update_state::get_update_state;
+use crate::update_state::UpdateState;
 use crate::url_utils::find_scope;
 use base64ct::Encoding;
 use clap::Parser;
@@ -26,11 +26,11 @@ use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::Confirm;
+use itertools::Itertools;
 use percent_encoding::percent_decode_str;
 use reqwest::{Client, Url};
 use std::collections::BTreeSet;
 use std::num::NonZeroU8;
-use std::ops::Deref;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::fs;
@@ -104,7 +104,7 @@ impl Update {
                         .into_owned(),
                 )
             });
-        let download_results = process_files(files).await?;
+        let mut download_results = process_files(files).await?;
         let installer_results = download_results
             .iter()
             .map(|(url, download)| Installer {
@@ -117,45 +117,45 @@ impl Update {
             .collect::<Vec<_>>();
         let manifests = manifests.await?;
         let previous_installer_manifest = manifests.installer_manifest;
-        let matched_installers = match_installers(
-            &previous_installer_manifest
-                .installers
-                .clone()
-                .into_iter()
-                .map(|installer| Installer {
-                    installer_type: previous_installer_manifest
-                        .installer_type
-                        .or(installer.installer_type),
-                    scope: previous_installer_manifest.scope.or(installer.scope),
-                    ..installer
-                })
-                .collect::<Vec<_>>(),
-            &installer_results,
-        );
+        let previous_installers = previous_installer_manifest
+            .installers
+            .iter()
+            .cloned()
+            .map(|installer| Installer {
+                installer_type: previous_installer_manifest
+                    .installer_type
+                    .or(installer.installer_type),
+                scope: previous_installer_manifest.scope.or(installer.scope),
+                ..installer
+            })
+            .collect::<Vec<_>>();
+        let matched_installers = match_installers(&previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
             .map(|(previous_installer, new_installer)| {
-                let download = &download_results[new_installer.installer_url.as_str()];
+                let download = download_results
+                    .remove(new_installer.installer_url.as_str())
+                    .unwrap();
                 Installer {
                     installer_locale: download
                         .msi
                         .as_ref()
-                        .map(|msi| msi.product_language.to_owned())
-                        .or(previous_installer.installer_locale)
-                        .or(previous_installer_manifest.installer_locale.to_owned()),
+                        .map(|msi| msi.product_language.clone())
+                        .or_else(|| previous_installer.installer_locale.clone())
+                        .or_else(|| previous_installer_manifest.installer_locale.clone()),
                     platform: download
                         .msix
                         .as_ref()
                         .map(|msix| BTreeSet::from([msix.target_device_family]))
-                        .or(previous_installer.platform)
-                        .or(previous_installer_manifest.platform.to_owned()),
+                        .or_else(|| previous_installer.platform.clone())
+                        .or_else(|| previous_installer_manifest.platform.clone()),
                     minimum_os_version: download
                         .msix
                         .as_ref()
-                        .map(|msix| msix.min_version.to_owned())
-                        .or(previous_installer.minimum_os_version)
-                        .or(previous_installer_manifest.minimum_os_version.to_owned())
-                        .filter(|minimum_os_version| minimum_os_version.deref() != "10.0.0.0"),
+                        .map(|msix| msix.min_version.clone())
+                        .or_else(|| previous_installer.minimum_os_version.clone())
+                        .or_else(|| previous_installer_manifest.minimum_os_version.clone())
+                        .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0"),
                     architecture: previous_installer.architecture,
                     installer_type: new_installer.installer_type,
                     scope: new_installer
@@ -167,64 +167,69 @@ impl Update {
                             .decode_utf8()
                             .unwrap_or_default(),
                     )
-                    .unwrap_or(new_installer.installer_url),
-                    installer_sha_256: download.installer_sha_256.to_owned(),
+                    .unwrap_or_else(|_| new_installer.installer_url.clone()),
+                    installer_sha_256: download.installer_sha_256,
                     signature_sha_256: download
                         .msix
                         .as_ref()
-                        .map(|msix| msix.signature_sha_256.to_owned())
-                        .or(download
-                            .msix_bundle
-                            .as_ref()
-                            .map(|msix_bundle| msix_bundle.signature_sha_256.to_owned())),
+                        .map(|msix| msix.signature_sha_256.clone())
+                        .or_else(|| {
+                            download
+                                .msix_bundle
+                                .map(|msix_bundle| msix_bundle.signature_sha_256)
+                        }),
                     install_modes: previous_installer
                         .install_modes
-                        .or(previous_installer_manifest.install_modes.to_owned()),
+                        .clone()
+                        .or_else(|| previous_installer_manifest.install_modes.clone()),
                     installer_switches: previous_installer
                         .installer_switches
-                        .or(previous_installer_manifest.installer_switches.to_owned()),
-                    installer_success_codes: previous_installer.installer_success_codes.or(
-                        previous_installer_manifest
-                            .installer_success_codes
-                            .to_owned(),
-                    ),
-                    upgrade_behavior: get_upgrade_behavior(&download.installer_type)
+                        .clone()
+                        .or_else(|| previous_installer_manifest.installer_switches.clone()),
+                    installer_success_codes: previous_installer
+                        .installer_success_codes
+                        .clone()
+                        .or_else(|| previous_installer_manifest.installer_success_codes.clone()),
+                    upgrade_behavior: get_upgrade_behavior(download.installer_type)
                         .or(previous_installer.upgrade_behavior)
                         .or(previous_installer_manifest.upgrade_behavior),
                     commands: previous_installer
                         .commands
-                        .or(previous_installer_manifest.commands.to_owned()),
+                        .clone()
+                        .or_else(|| previous_installer_manifest.commands.clone()),
                     protocols: previous_installer
                         .protocols
-                        .or(previous_installer_manifest.protocols.to_owned()),
+                        .clone()
+                        .or_else(|| previous_installer_manifest.protocols.clone()),
                     file_extensions: previous_installer
                         .file_extensions
-                        .or(previous_installer_manifest.file_extensions.to_owned()),
+                        .clone()
+                        .or_else(|| previous_installer_manifest.file_extensions.clone()),
                     package_family_name: download
                         .msix
                         .as_ref()
-                        .map(|msix| msix.package_family_name.to_owned()),
-                    product_code: download.msi.as_ref().map(|msi| msi.product_code.to_owned()),
+                        .map(|msix| msix.package_family_name.clone()),
+                    product_code: download.msi.as_ref().map(|msi| msi.product_code.clone()),
                     release_date: download.last_modified,
                     apps_and_features_entries: download.msi.as_ref().map(|msi| {
                         BTreeSet::from([AppsAndFeaturesEntry {
                             display_name: if msi.product_name
-                                != manifests.default_locale_manifest.package_name.as_str()
+                                == manifests.default_locale_manifest.package_name.as_str()
                             {
-                                Some(msi.product_name.to_owned())
-                            } else {
                                 None
-                            },
-                            display_version: if msi.product_version != self.version.to_string() {
-                                Some(msi.product_version.to_owned())
                             } else {
-                                None
+                                Some(msi.product_name.clone())
                             },
-                            upgrade_code: Some(msi.upgrade_code.to_owned()),
+                            display_version: if msi.product_version == self.version.to_string() {
+                                None
+                            } else {
+                                Some(msi.product_version.clone())
+                            },
+                            upgrade_code: Some(msi.upgrade_code.clone()),
                             ..AppsAndFeaturesEntry::default()
                         }])
                     }),
-                    ..previous_installer
+                    ..previous_installer.clone()
                 }
             })
             .collect::<BTreeSet<_>>();
@@ -244,22 +249,22 @@ impl Update {
         let default_locale_manifest = DefaultLocaleManifest {
             package_identifier: self.identifier.clone(),
             package_version: self.version.clone(),
-            publisher_url: previous_default_locale_manifest
-                .publisher_url
-                .or(github_values
+            publisher_url: previous_default_locale_manifest.publisher_url.or_else(|| {
+                github_values
                     .as_ref()
-                    .map(|values| values.publisher_url.to_owned())),
+                    .map(|values| values.publisher_url.clone())
+            }),
             license: github_values
                 .as_ref()
-                .and_then(|values| values.license.to_owned())
+                .and_then(|values| values.license.clone())
                 .unwrap_or(previous_default_locale_manifest.license),
             license_url: github_values
                 .as_ref()
-                .and_then(|values| values.license_url.to_owned())
+                .and_then(|values| values.license_url.clone())
                 .or(previous_default_locale_manifest.license_url),
             release_notes: github_values
                 .as_ref()
-                .and_then(|values| values.release_notes.to_owned()),
+                .and_then(|values| values.release_notes.clone()),
             release_notes_url: github_values.map(|values| values.release_notes_url),
             manifest_version: ManifestVersion::default(),
             ..previous_default_locale_manifest
@@ -276,14 +281,14 @@ impl Update {
             let mut path_content_map = Vec::new();
             path_content_map.push((
                 format!("{full_package_path}/{}.installer.yaml", self.identifier),
-                build_manifest_string(Manifest::Installer(&installer_manifest))?,
+                build_manifest_string(&Manifest::Installer(&installer_manifest))?,
             ));
             path_content_map.push((
                 format!(
                     "{full_package_path}/{}.locale.{}.yaml",
                     self.identifier, version_manifest.default_locale
                 ),
-                build_manifest_string(Manifest::DefaultLocale(&default_locale_manifest))?,
+                build_manifest_string(&Manifest::DefaultLocale(&default_locale_manifest))?,
             ));
             manifests
                 .locale_manifests
@@ -293,7 +298,7 @@ impl Update {
                     ..locale_manifest
                 })
                 .for_each(|locale_manifest| {
-                    if let Ok(yaml) = build_manifest_string(Manifest::Locale(&locale_manifest)) {
+                    if let Ok(yaml) = build_manifest_string(&Manifest::Locale(&locale_manifest)) {
                         path_content_map.push((
                             format!(
                                 "{full_package_path}/{}.locale.{}.yaml",
@@ -305,7 +310,7 @@ impl Update {
                 });
             path_content_map.push((
                 format!("{full_package_path}/{}.yaml", self.identifier),
-                build_manifest_string(Manifest::Version(&version_manifest))?,
+                build_manifest_string(&Manifest::Version(&version_manifest))?,
             ));
             path_content_map
         };
@@ -358,7 +363,7 @@ impl Update {
         let commit_title = get_commit_title(
             &self.identifier,
             &self.version,
-            get_update_state(&self.version, &versions, latest_version),
+            &UpdateState::get(&self.version, Some(&versions), Some(latest_version)),
         );
         let changes = changes
             .into_iter()
@@ -459,7 +464,9 @@ fn set_root_keys(
         ($field:ident) => {
             installers
                 .iter()
-                .distinct_or_none(|installer| installer.$field.to_owned())
+                .map(|installer| installer.$field.clone())
+                .all_equal_value()
+                .ok()
                 .flatten()
         };
     }

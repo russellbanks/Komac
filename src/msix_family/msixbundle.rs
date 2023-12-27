@@ -26,25 +26,20 @@ pub struct IndividualPackage {
 const APPX_BUNDLE_MANIFEST_PATH: &str = "AppxMetadata/AppxBundleManifest.xml";
 
 impl MsixBundle {
-    pub async fn new(file: &mut File) -> Result<MsixBundle> {
+    pub async fn new(file: &mut File) -> Result<Self> {
         let zip = ZipFileReader::with_tokio(file).await?;
 
         let (appx_bundle_manifest, appx_signature) =
             get_manifest_and_signature(zip, APPX_BUNDLE_MANIFEST_PATH).await?;
 
-        let signature_hash = Sha256::digest(appx_signature);
-        let signature_sha_256 = base16ct::upper::encode_string(&signature_hash);
-
         let bundle_manifest: Bundle = from_str(&appx_bundle_manifest)?;
 
-        let package_family_name = get_package_family_name(
-            &bundle_manifest.identity.name,
-            &bundle_manifest.identity.publisher,
-        );
-
-        Ok(MsixBundle {
-            signature_sha_256,
-            package_family_name,
+        Ok(Self {
+            signature_sha_256: base16ct::upper::encode_string(&Sha256::digest(appx_signature)),
+            package_family_name: get_package_family_name(
+                &bundle_manifest.identity.name,
+                &bundle_manifest.identity.publisher,
+            ),
             packages: bundle_manifest
                 .packages
                 .package

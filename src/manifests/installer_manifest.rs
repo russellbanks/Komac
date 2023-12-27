@@ -133,7 +133,7 @@ pub struct InstallerSwitches {
 }
 
 impl InstallerSwitches {
-    pub fn are_all_none(&self) -> bool {
+    pub const fn are_all_none(&self) -> bool {
         matches!(
             (
                 &self.silent,

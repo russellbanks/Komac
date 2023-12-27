@@ -9,10 +9,8 @@ use versions::Versioning;
 pub struct PackageVersion(Versioning);
 
 impl PackageVersion {
-    pub fn new(input: &str) -> Result<PackageVersion> {
-        Ok(PackageVersion(
-            Versioning::from_str(input).map_err(Error::msg)?,
-        ))
+    pub fn new(input: &str) -> Result<Self> {
+        Ok(Self(Versioning::from_str(input).map_err(Error::msg)?))
     }
 }
 
@@ -39,8 +37,8 @@ impl<'de> Deserialize<'de> for PackageVersion {
 impl FromStr for PackageVersion {
     type Err = Error;
 
-    fn from_str(input: &str) -> Result<PackageVersion, Error> {
-        PackageVersion::new(input)
+    fn from_str(input: &str) -> Result<Self, Error> {
+        Self::new(input)
     }
 }
 

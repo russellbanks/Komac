@@ -53,7 +53,7 @@ fn print_manifest(lock: &mut StdoutLock, manifest: &str) {
     }
 }
 
-pub fn build_manifest_string(manifest: Manifest) -> Result<String> {
+pub fn build_manifest_string(manifest: &Manifest) -> Result<String> {
     let mut result = Vec::from("# Created with ");
     if let Ok(created_with_tool) = env::var("KOMAC_CREATED_WITH") {
         write!(result, "{created_with_tool} using ")?;
@@ -114,7 +114,7 @@ mod tests {
     fn test_build_manifest_string_crlf() {
         let binding = InstallerManifest::default();
         let installer_manifest = Manifest::Installer(&binding);
-        let manifest_string = build_manifest_string(installer_manifest).unwrap();
+        let manifest_string = build_manifest_string(&installer_manifest).unwrap();
         assert!(!contains_newline_not_preceded_by_carriage_return(
             &manifest_string
         ));

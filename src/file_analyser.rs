@@ -4,7 +4,7 @@ use crate::msix_family::msix::Msix;
 use crate::msix_family::msixbundle::MsixBundle;
 use async_tempfile::TempFile;
 use color_eyre::eyre::{bail, Result};
-use exe::ResolvedDirectoryID::Name;
+use exe::ResolvedDirectoryID::{Name, ID};
 use exe::{CCharString, NTHeaders, PETranslation, ResourceDirectory, VecPE, PE};
 use std::ffi::OsStr;
 use std::io::SeekFrom;
@@ -60,7 +60,7 @@ pub struct FileAnalyser {
 }
 
 impl FileAnalyser {
-    pub async fn new(file: &mut TempFile) -> Result<FileAnalyser> {
+    pub async fn new(file: &mut TempFile) -> Result<Self> {
         let path = file.file_path();
         let extension = path
             .extension()
@@ -87,7 +87,7 @@ impl FileAnalyser {
                 msi = Some(extract_msi(file, pe).await?);
             }
         }
-        Ok(FileAnalyser {
+        Ok(Self {
             installer_type,
             msi,
             msix,
@@ -101,7 +101,7 @@ async fn extract_msi(file: &mut TempFile, pe: &VecPE) -> Result<Msi> {
     let msi_entry = ResourceDirectory::parse(pe)?
         .resources
         .into_iter()
-        .find(|entry| entry.rsrc_id == Name(MSI.to_uppercase()))
+        .find(|entry| entry.rsrc_id == Name(MSI.to_ascii_uppercase()))
         .unwrap()
         .get_data_entry(pe)?;
     let msi_name = format!(
@@ -120,7 +120,7 @@ async fn extract_msi(file: &mut TempFile, pe: &VecPE) -> Result<Msi> {
     file.seek(SeekFrom::Start(offset as u64)).await?;
 
     // Asynchronously write the MSI to the temporary MSI file
-    let mut take = file.take(msi_entry.size as u64);
+    let mut take = file.take(u64::from(msi_entry.size));
     io::copy(&mut take, &mut extracted_msi).await?;
 
     let msi = Msi::new(extracted_msi.file_path())?;
@@ -152,9 +152,10 @@ async fn get_installer_type(
     match extension {
         MSI => {
             if let Some(msi) = msi {
-                return Ok(match msi.is_wix {
-                    true => InstallerType::Wix,
-                    false => InstallerType::Msi,
+                return Ok(if msi.is_wix {
+                    InstallerType::Wix
+                } else {
+                    InstallerType::Msi
                 });
             }
         }
@@ -195,7 +196,7 @@ fn has_msi_resource(pe: &VecPE) -> bool {
                 .iter()
                 .any(|entry| match &entry.rsrc_id {
                     Name(value) => value.to_lowercase() == MSI,
-                    _ => false,
+                    ID(_) => false,
                 })
         })
         .unwrap_or(false)
@@ -213,7 +214,7 @@ fn has_burn_header(pe: &VecPE) -> bool {
         .unwrap_or(false)
 }
 
-pub fn get_upgrade_behavior(installer_type: &InstallerType) -> Option<UpgradeBehavior> {
+pub const fn get_upgrade_behavior(installer_type: InstallerType) -> Option<UpgradeBehavior> {
     match installer_type {
         InstallerType::Msix | InstallerType::Appx => Some(UpgradeBehavior::Install),
         _ => None,

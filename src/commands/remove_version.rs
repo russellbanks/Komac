@@ -1,6 +1,6 @@
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::github_utils::{
+use crate::github::utils::{
     get_branch_name, get_commit_title, get_full_package_path, get_package_path,
 };
 use crate::graphql::create_commit::FileDeletion;
@@ -97,7 +97,7 @@ impl Remove {
         let commit_title = get_commit_title(
             &self.package_identifier,
             &self.package_version,
-            UpdateState::RemoveVersion,
+            &UpdateState::RemoveVersion,
         );
         let directory_content = github
             .get_directory_content(

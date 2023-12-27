@@ -1,5 +1,5 @@
 use crate::manifests::installer_manifest::{InstallModes, UpgradeBehavior};
-use color_eyre::eyre::Error;
+use color_eyre::eyre::{Error, Result};
 use inquire::{MultiSelect, Select};
 use std::collections::BTreeSet;
 use std::fmt::Display;
@@ -12,37 +12,37 @@ pub trait MultiPrompt {
 }
 
 impl MultiPrompt for UpgradeBehavior {
-    type Item = UpgradeBehavior;
+    type Item = Self;
     const MESSAGE: &'static str = "Upgrade behaviour";
 
-    fn items() -> Vec<UpgradeBehavior> {
-        UpgradeBehavior::iter().collect::<Vec<_>>()
+    fn items() -> Vec<Self> {
+        Self::iter().collect()
     }
 }
 
 impl MultiPrompt for InstallModes {
-    type Item = InstallModes;
+    type Item = Self;
     const MESSAGE: &'static str = "Install modes";
 
     fn items() -> Vec<Self::Item> {
-        InstallModes::iter().collect::<Vec<_>>()
+        Self::iter().collect()
     }
 }
 
-pub fn radio_prompt<T: MultiPrompt>() -> color_eyre::Result<T::Item> {
+pub fn radio_prompt<T: MultiPrompt>() -> Result<T::Item> {
     Select::new(T::MESSAGE, T::items())
         .prompt()
         .map_err(Error::msg)
 }
 
-pub fn check_prompt<T: MultiPrompt>() -> color_eyre::Result<Option<BTreeSet<T::Item>>> {
+pub fn check_prompt<T: MultiPrompt>() -> Result<Option<BTreeSet<T::Item>>> {
     MultiSelect::new(T::MESSAGE, T::items())
         .prompt()
         .map(|items| {
             if items.is_empty() {
                 None
             } else {
-                Some(items.into_iter().collect())
+                Some(BTreeSet::from_iter(items))
             }
         })
         .map_err(Error::msg)

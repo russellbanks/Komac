@@ -27,7 +27,6 @@ pub fn get_package_path(identifier: &PackageIdentifier) -> String {
 }
 
 pub fn get_pull_request_body() -> String {
-    const PROJECT_URL: &str = "https://github.com/russellbanks/Komac";
     const FRUITS: [&str; 16] = [
         "apple",
         "banana",
@@ -48,12 +47,18 @@ pub fn get_pull_request_body() -> String {
     ];
     let mut rng = SmallRng::from_entropy();
 
-    let custom_tool_info = match (
+    let custom_tool_info = if let (Ok(tool_name), Ok(tool_url)) = (
         env::var("KOMAC_CREATED_WITH"),
         env::var("KOMAC_CREATED_WITH_URL"),
     ) {
-        (Ok(tool_name), Ok(tool_url)) => format!("[{}]({})", tool_name, tool_url),
-        _ => format!("[{}]({}) v{}", crate_name!(), PROJECT_URL, crate_version!()),
+        format!("[{tool_name}]({tool_url})")
+    } else {
+        format!(
+            "[{}]({}) v{}",
+            crate_name!(),
+            env!("CARGO_PKG_REPOSITORY"),
+            crate_version!()
+        )
     };
 
     let emoji = if rng.gen_range(0..50) == 0 {
@@ -80,7 +85,7 @@ pub fn get_branch_name(package_identifier: &str, package_version: &PackageVersio
 pub fn get_commit_title(
     identifier: &str,
     version: &PackageVersion,
-    update_state: UpdateState,
+    update_state: &UpdateState,
 ) -> String {
     format!("{update_state}: {identifier} version {version}")
 }

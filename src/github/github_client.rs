@@ -1,5 +1,5 @@
 use crate::credential::get_default_headers;
-use crate::github::github_utils::get_full_package_path;
+use crate::github::utils::get_full_package_path;
 use crate::graphql::{
     create_branch, create_commit, create_pull_request, delete_ref, get_all_values,
     get_all_versions, get_branches, get_current_user_login, get_directory_content,
@@ -15,6 +15,7 @@ use crate::types::package_version::PackageVersion;
 use color_eyre::eyre::{eyre, Result};
 use const_format::formatcp;
 use reqwest::Client;
+use std::path::Path;
 use url::Url;
 
 pub const MICROSOFT: &str = "Microsoft";
@@ -24,8 +25,8 @@ pub const WINGET_PKGS_FULL_NAME: &str = formatcp!("{MICROSOFT}/{WINGET_PKGS}");
 pub struct GitHub(Client);
 
 impl GitHub {
-    pub fn new(token: String) -> Result<GitHub> {
-        Ok(GitHub(
+    pub fn new(token: String) -> Result<Self> {
+        Ok(Self(
             Client::builder()
                 .default_headers(get_default_headers(Some(&token)))
                 .build()?,
@@ -57,8 +58,10 @@ impl GitHub {
             .iter()
             .filter(|file| {
                 file.name.starts_with(&format!("{identifier}.locale."))
-                    && file.name.ends_with(".yaml")
                     && !file.name.contains(version_manifest.default_locale.as_str())
+                    && Path::new(&file.name)
+                        .extension()
+                        .map_or(false, |ext| ext.eq_ignore_ascii_case("yaml"))
             })
             .map(|file| serde_yaml::from_str::<LocaleManifest>(&file.text).unwrap())
             .collect::<Vec<_>>();

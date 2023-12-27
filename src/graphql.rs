@@ -14,7 +14,7 @@ use crate::graphql::get_directory_content_with_text::{
 };
 use crate::types::license::License;
 use crate::types::package_version::PackageVersion;
-use crate::types::release_notes::{format_release_notes, ReleaseNotes};
+use crate::types::release_notes::ReleaseNotes;
 use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
@@ -315,9 +315,9 @@ pub async fn get_directory_content_with_text(
 
             if files.is_empty() {
                 bail!("No files were found for {path}")
-            } else {
-                Ok(files)
             }
+
+            Ok(files)
         } else {
             bail!("No files were found for {path}")
         }
@@ -436,9 +436,9 @@ pub async fn get_all_versions(
 
             if files.is_empty() {
                 bail!("No files were found for {path}")
-            } else {
-                Ok(files)
             }
+
+            Ok(files)
         } else {
             bail!("No files were found for {path}")
         }
@@ -553,27 +553,20 @@ pub async fn get_pull_request_from_branch(
         .nodes
         .ok_or_else(|| eyre!("No nodes were returned when getting an associated pull request for {head_ref_name} to {owner}/{repo}"))?;
 
-    Ok(nodes
-        .into_iter()
-        .flat_map(|nodes_opt| {
-            nodes_opt.map(|pr_nodes| PullRequest {
-                title: pr_nodes.title,
-                state: match pr_nodes.state {
-                    get_pull_request_from_branch::PullRequestState::OPEN => PullRequestState::Open,
-                    get_pull_request_from_branch::PullRequestState::CLOSED => {
-                        PullRequestState::Closed
-                    }
-                    get_pull_request_from_branch::PullRequestState::MERGED => {
-                        PullRequestState::Merged
-                    }
-                    get_pull_request_from_branch::PullRequestState::Other(str) => {
-                        PullRequestState::Other(str)
-                    }
-                },
-                url: pr_nodes.url,
-            })
+    Ok(nodes.into_iter().find_map(|nodes_opt| {
+        nodes_opt.map(|pr_nodes| PullRequest {
+            title: pr_nodes.title,
+            state: match pr_nodes.state {
+                get_pull_request_from_branch::PullRequestState::OPEN => PullRequestState::Open,
+                get_pull_request_from_branch::PullRequestState::CLOSED => PullRequestState::Closed,
+                get_pull_request_from_branch::PullRequestState::MERGED => PullRequestState::Merged,
+                get_pull_request_from_branch::PullRequestState::Other(str) => {
+                    PullRequestState::Other(str)
+                }
+            },
+            url: pr_nodes.url,
         })
-        .next())
+    }))
 }
 
 #[derive(GraphQLQuery)]
@@ -603,9 +596,9 @@ pub async fn get_all_values(
     tag_name: String,
 ) -> Result<GitHubValues> {
     let variables = get_all_values::Variables {
-        owner: owner.to_owned(),
-        name: repo.to_owned(),
-        tag_name: tag_name.to_owned(),
+        owner: owner.clone(),
+        name: repo.clone(),
+        tag_name: tag_name.clone(),
     };
 
     let data = post_graphql::<GetAllValues, _>(client, GITHUB_GRAPHQL_URL, variables)
@@ -681,7 +674,7 @@ pub async fn get_all_values(
         package_url: PackageUrl::from_str(repository.url.as_str())?,
         release_notes: release
             .description
-            .and_then(|body| format_release_notes(&body, &owner, &repo)),
+            .and_then(|body| ReleaseNotes::format(&body, &owner, &repo)),
         release_notes_url: ReleaseNotesUrl::from_str(release.url.as_str())?,
         has_issues_enabled: repository.has_issues_enabled,
         topics,

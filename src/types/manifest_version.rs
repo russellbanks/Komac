@@ -10,7 +10,7 @@ pub struct ManifestVersion(String);
 
 impl Default for ManifestVersion {
     fn default() -> Self {
-        ManifestVersion::new(MANIFEST_VERSION).unwrap()
+        Self::new(MANIFEST_VERSION).unwrap()
     }
 }
 

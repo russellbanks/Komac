@@ -1,7 +1,7 @@
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::github_utils::{
+use crate::github::utils::{
     get_branch_name, get_commit_title, get_full_package_path, get_package_path,
     get_pull_request_body,
 };
@@ -42,7 +42,7 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use crate::update_state::get_update_state;
+use crate::update_state::UpdateState;
 use base64ct::Encoding;
 use clap::Parser;
 use color_eyre::eyre::Result;
@@ -179,7 +179,7 @@ impl New {
                 };
                 if let Some(url) = installer_url {
                     count += 1;
-                    urls.push(url)
+                    urls.push(url);
                 } else {
                     break;
                 }
@@ -207,7 +207,7 @@ impl New {
                     optional_prompt::<SilentWithProgressSwitch>(None)?;
             }
             if data.installer_type != InstallerType::Portable {
-                installer_switches.custom = optional_prompt::<CustomSwitch>(None)?
+                installer_switches.custom = optional_prompt::<CustomSwitch>(None)?;
             }
             installers.insert(Installer {
                 platform: data
@@ -280,15 +280,15 @@ impl New {
             let full_package_path = get_full_package_path(&package_identifier, &package_version);
             let mut path_content_map = Vec::new();
             path_content_map.push((
-                format!("{full_package_path}/{}.installer.yaml", package_identifier),
-                build_manifest_string(Manifest::Installer(&installer_manifest))?,
+                format!("{full_package_path}/{package_identifier}.installer.yaml"),
+                build_manifest_string(&Manifest::Installer(&installer_manifest))?,
             ));
             path_content_map.push((
                 format!(
                     "{full_package_path}/{}.locale.{}.yaml",
                     package_identifier, version_manifest.default_locale
                 ),
-                build_manifest_string(Manifest::DefaultLocale(&default_locale_manifest))?,
+                build_manifest_string(&Manifest::DefaultLocale(&default_locale_manifest))?,
             ));
             if let Some(locale_manifests) = manifests.map(|manifests| manifests.locale_manifests) {
                 locale_manifests
@@ -298,7 +298,7 @@ impl New {
                         ..locale_manifest
                     })
                     .for_each(|locale_manifest| {
-                        if let Ok(yaml) = build_manifest_string(Manifest::Locale(&locale_manifest))
+                        if let Ok(yaml) = build_manifest_string(&Manifest::Locale(&locale_manifest))
                         {
                             path_content_map.push((
                                 format!(
@@ -311,8 +311,8 @@ impl New {
                     });
             }
             path_content_map.push((
-                format!("{full_package_path}/{}.yaml", package_identifier),
-                build_manifest_string(Manifest::Version(&version_manifest))?,
+                format!("{full_package_path}/{package_identifier}.yaml"),
+                build_manifest_string(&Manifest::Version(&version_manifest))?,
             ));
             path_content_map
         };
@@ -363,11 +363,7 @@ impl New {
         let commit_title = get_commit_title(
             &package_identifier,
             &package_version,
-            get_update_state(
-                &package_version,
-                versions.as_ref().unwrap(),
-                latest_version.unwrap(),
-            ),
+            &UpdateState::get(&package_version, versions.as_deref(), latest_version),
         );
         let changes = changes
             .into_iter()

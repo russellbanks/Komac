@@ -23,7 +23,7 @@ impl Ord for LanguageTag {
 
 impl Default for LanguageTag {
     fn default() -> Self {
-        LanguageTag::from_str("en-US").unwrap()
+        Self::from_str("en-US").unwrap()
     }
 }
 

@@ -144,11 +144,13 @@ pub async fn process_files(files: Vec<DownloadedFile<'_>>) -> Result<HashMap<&st
             let file_analyser = FileAnalyser::new(&mut file).await?;
             let initial_data = InitialData {
                 architecture: find_architecture(url)
-                    .or(file_analyser.msi.as_ref().map(|msi| msi.architecture))
-                    .or(file_analyser
-                        .msix
-                        .as_ref()
-                        .map(|msix| msix.processor_architecture))
+                    .or_else(|| file_analyser.msi.as_ref().map(|msi| msi.architecture))
+                    .or_else(|| {
+                        file_analyser
+                            .msix
+                            .as_ref()
+                            .map(|msix| msix.processor_architecture)
+                    })
                     .unwrap_or_else(|| get_architecture(&file_analyser.pe.unwrap()).unwrap()),
                 installer_type: file_analyser.installer_type,
                 installer_sha_256: sha_256,
