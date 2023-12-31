@@ -27,51 +27,63 @@ jobs:
         platform:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            name: Komac-windows-x64-nightly.exe
+            arch: x64
+            os_name: windows
             bin: cross
           - os: windows-latest
             target: i686-pc-windows-msvc
-            name: Komac-windows-x86-nightly.exe
+            arch: x86
+            os_name: windows
             bin: cross
           - os: windows-latest
             target: aarch64-pc-windows-msvc
-            name: Komac-windows-arm64-nightly.exe
+            arch: arm64
+            os_name: windows
             bin: cross
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            name: Komac-linux-x64-nightly
+            arch: x64
+            os_name: linux
             bin: cargo-zigbuild
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
-            name: Komac-linux-x86-nightly
+            arch: x86
+            os_name: linux
             bin: cargo-zigbuild
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            name: Komac-linux-arm64-nightly
+            arch: arm64
+            os_name: linux
             bin: cargo-zigbuild
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
-            name: Komac-linux-armv7-nightly
+            arch: armv7
+            os_name: linux
             bin: cargo-zigbuild
           - os: ubuntu-latest
             target: x86_64-unknown-freebsd
-            name: Komac-freebsd-x64-nightly
+            arch: x64
+            os_name: freebsd
             bin: cross
           - os: ubuntu-latest
             target: i686-unknown-freebsd
-            name: Komac-freebsd-x86-nightly
+            arch: x86
+            os_name: freebsd
             bin: cross
           - os: ubuntu-latest
             target: x86_64-unknown-illumos
-            name: Komac-illumos-x64-nightly
+            arch: x64
+            os_name: illumos
             bin: cross
           - os: macos-latest
             target: x86_64-apple-darwin
-            name: Komac-macos-x64-nightly
+            arch: x64
+            os_name: macos
             bin: cargo-zigbuild
           - os: macos-latest
             target: aarch64-apple-darwin
-            name: Komac-macos-arm64-nightly
+            arch: arm64
+            os_name: macos
             bin: cargo-zigbuild
 
     runs-on: ${{ matrix.platform.os }}
@@ -92,10 +104,31 @@ jobs:
         run: ${{ matrix.platform.bin }} build --target ${{ matrix.platform.target }} --release --locked
 
       - name: Rename binary
+        id: rename_binary
         shell: pwsh
         run: |
           $bin = if ($env:RUNNER_OS -eq 'Windows') { "komac.exe" } else { "komac" }
-          Rename-Item -path "target/${{ matrix.platform.target }}/release/$bin" -NewName "${{ matrix.platform.name }}"
+          $newName = "KomacPortable"
+          if ($env:RUNNER_OS -ne 'Windows') {
+            $newName += "-${{ matrix.platform.os_name }}"
+          }
+          $newName += "-nightly-${{ matrix.platform.arch }}"
+          if ($env:RUNNER_OS -eq 'Windows') {
+            $newName += ".exe"
+          }
+          Rename-Item -Path "target/${{ matrix.platform.target }}/release/$bin" -NewName "$newName"
+          "name=$newName" >> $env:GITHUB_OUTPUT
+
+      - name: Create Installer
+        if: ${{ matrix.platform.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          $input = "../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
+          iscc.exe assets/installer.iss `
+            /DInputExecutable=$input `
+            /DVersion=$((cargo pkgid) -split '@' | Select-Object -Last 1) `
+            /DArchitecture=${{ matrix.platform.arch }} `
+            /F$("${{ steps.rename_binary.outputs.name }}".Replace("Portable", "Setup").TrimEnd(".exe"))
 
       - name: Release nightly binary
         uses: softprops/action-gh-release@v1
@@ -103,4 +136,6 @@ jobs:
           name: ${{env.RELEASE_NAME}}
           tag_name: ${{env.RELEASE_TAG_NAME}}
           prerelease: ${{env.RELEASE_IS_PRERELEASE}}
-          files: "target/${{ matrix.platform.target }}/release/${{ matrix.platform.name }}"
+          files: |
+            target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
+            assets/Output/*
