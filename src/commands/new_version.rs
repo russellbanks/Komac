@@ -50,6 +50,7 @@ use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::{Confirm, CustomType};
+use ordinal::Ordinal;
 use percent_encoding::percent_decode_str;
 use reqwest::Client;
 use std::collections::BTreeSet;
@@ -158,16 +159,7 @@ impl New {
         if urls.is_empty() {
             let mut count: u16 = 1;
             while urls.len() < 1024 {
-                let suffix = match count % 100 {
-                    11..=13 => "th",
-                    _ => match count % 10 {
-                        1 => "st",
-                        2 => "nd",
-                        3 => "rd",
-                        _ => "th",
-                    },
-                };
-                let message = format!("{count}{suffix} Installer URL");
+                let message = format!("{count}{} Installer URL", Ordinal(count));
                 let url_prompt =
                     CustomType::<Url>::new(&message).with_error_message("Please enter a valid URL");
                 let installer_url = if count == 1 {
