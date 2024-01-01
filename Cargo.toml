@@ -9,6 +9,7 @@ repository = "https://github.com/russellbanks/Komac"
 documentation = "https://github.com/russellbanks/Komac/blob/main/README.md"
 categories = ["command-line-utilities", "development-tools"]
 keywords = ["winget", "winget-pkgs", "winget-cli", "windows"]
+build = "build.rs"
 
 [profile.release]
 codegen-units = 1
@@ -64,6 +65,9 @@ reqwest = { version = "0.11.23", features = ["stream"] }
 [target.'cfg(not(any(windows, target_os = "macos")))'.dependencies]
 graphql_client = { version = "0.13.0", features = ["reqwest-rustls"] }
 reqwest = { version = "0.11.23", default-features = false, features = ["stream", "rustls-tls"] }
+
+[build-dependencies]
+windows_exe_info = { version = "0.4.1", features = ["manifest"] }
 
 [dev-dependencies]
 rstest = "0.18.2"

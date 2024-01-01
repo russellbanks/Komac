@@ -126,7 +126,6 @@ jobs:
           $input = "../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
           iscc.exe assets/installer.iss `
             /DInputExecutable=$input `
-            /DVersion=$((cargo pkgid) -split '@' | Select-Object -Last 1) `
             /DArchitecture=${{ matrix.platform.arch }} `
             /F$("${{ steps.rename_binary.outputs.name }}".Replace("Portable", "Setup").TrimEnd(".exe"))
 

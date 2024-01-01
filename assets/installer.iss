@@ -1,4 +1,5 @@
 #define AppName "Komac"
+#define Version GetFileProductVersion(InputExecutable)
 #define Publisher "Russell Banks"
 #define URL "https://github.com/russellbanks/Komac"
 #define ExeName "Komac.exe"
@@ -18,7 +19,7 @@ DisableProgramGroupPage=yes
 LicenseFile=gpl-3.0.rst
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputBaseFilename={#AppName}Setup-{#Architecture}-#{Version}
+OutputBaseFilename={#AppName}Setup-{#Version}-{#Architecture}
 SetupIconFile=logo.ico
 UninstallDisplayName={#AppName} ({#Architecture})
 WizardStyle=modern
