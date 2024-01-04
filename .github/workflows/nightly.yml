@@ -119,6 +119,12 @@ jobs:
           Rename-Item -Path "target/${{ matrix.platform.target }}/release/$bin" -NewName "$newName"
           "name=$newName" >> $env:GITHUB_OUTPUT
 
+      - name: Create Tar archive
+        if: ${{ matrix.platform.os != 'windows-latest' }}
+        run: |
+          tar -czvf ${{ steps.rename_binary.outputs.name }}.tar.gz target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
+          rm target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
+
       - name: Create Installer
         if: ${{ matrix.platform.os == 'windows-latest' }}
         shell: pwsh
@@ -137,4 +143,5 @@ jobs:
           prerelease: ${{env.RELEASE_IS_PRERELEASE}}
           files: |
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
+            ${{ steps.rename_binary.outputs.name }}.tar.gz
             assets/Output/*
