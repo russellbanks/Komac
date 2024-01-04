@@ -12,5 +12,6 @@ pub struct VersionManifest {
     pub package_version: PackageVersion,
     pub default_locale: LanguageTag,
     pub manifest_type: ManifestType,
+    #[serde(default)]
     pub manifest_version: ManifestVersion,
 }

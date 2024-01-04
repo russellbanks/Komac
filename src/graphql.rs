@@ -664,10 +664,13 @@ pub async fn get_all_values(
         short_description: repository.description.unwrap_or_default(),
         license: repository
             .license_info
-            .and_then(|info| {
+            .and_then(|mut info| {
                 info.pseudo_license
                     .not()
-                    .then_some(info.spdx_id.unwrap_or_else(|| info.key.to_uppercase()))
+                    .then_some(info.spdx_id.unwrap_or_else(|| {
+                        info.key.make_ascii_uppercase();
+                        info.key
+                    }))
             })
             .and_then(|license| License::new(license).ok()),
         license_url,

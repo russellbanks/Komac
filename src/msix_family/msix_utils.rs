@@ -35,11 +35,11 @@ pub async fn get_manifest_and_signature(
     }
 
     if appx_manifest.is_empty() {
-        bail!("No {} was found in the Msix file", manifest_path)
+        bail!("No {manifest_path} was found in the Msix file")
     }
 
     if appx_signature.is_empty() {
-        bail!("No {} was found in the Msix file", APPX_SIGNATURE_P7X)
+        bail!("No {APPX_SIGNATURE_P7X} was found in the Msix file")
     }
 
     Ok((appx_manifest, appx_signature))

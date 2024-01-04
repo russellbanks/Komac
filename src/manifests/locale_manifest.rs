@@ -48,5 +48,6 @@ pub struct LocaleManifest {
     pub documentations: Option<BTreeSet<Documentation>>,
     pub icons: Option<BTreeSet<Icon>>,
     pub manifest_type: ManifestType,
+    #[serde(default)]
     pub manifest_version: ManifestVersion,
 }

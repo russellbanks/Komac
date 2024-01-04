@@ -70,8 +70,8 @@ pub fn match_installers<'prev, 'new>(
 mod tests {
     use crate::manifests::installer_manifest::{Architecture, Installer, Scope};
     use crate::match_installers::match_installers;
+    use crate::types::urls::url::Url;
     use std::collections::HashMap;
-    use url::Url;
 
     #[test]
     fn test_vscodium() {

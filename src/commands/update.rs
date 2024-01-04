@@ -14,6 +14,7 @@ use crate::manifests::installer_manifest::{AppsAndFeaturesEntry, Installer, Inst
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
 use crate::match_installers::match_installers;
+use crate::types;
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -30,8 +31,10 @@ use itertools::Itertools;
 use percent_encoding::percent_decode_str;
 use reqwest::{Client, Url};
 use std::collections::BTreeSet;
+use std::mem;
 use std::num::NonZeroU8;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::Duration;
 use tokio::fs;
 
@@ -75,8 +78,8 @@ impl Update {
             .await
             .wrap_err_with(|| {
                 format!(
-                    "{} does not exist in {}",
-                    self.identifier, WINGET_PKGS_FULL_NAME
+                    "{} does not exist in {WINGET_PKGS_FULL_NAME}",
+                    self.identifier
                 )
             })?;
 
@@ -111,7 +114,7 @@ impl Update {
                 architecture: download.architecture,
                 installer_type: Some(download.installer_type),
                 scope: find_scope(url),
-                installer_url: Url::parse(url).unwrap(),
+                installer_url: types::urls::url::Url::from_str(url).unwrap(),
                 ..Installer::default()
             })
             .collect::<Vec<_>>();
@@ -133,14 +136,14 @@ impl Update {
         let installers = matched_installers
             .into_iter()
             .map(|(previous_installer, new_installer)| {
-                let download = download_results
+                let mut download = download_results
                     .remove(new_installer.installer_url.as_str())
                     .unwrap();
                 Installer {
                     installer_locale: download
                         .msi
-                        .as_ref()
-                        .map(|msi| msi.product_language.clone())
+                        .as_mut()
+                        .map(|msi| mem::take(&mut msi.product_language))
                         .or_else(|| previous_installer.installer_locale.clone())
                         .or_else(|| previous_installer_manifest.installer_locale.clone()),
                     platform: download
@@ -162,17 +165,15 @@ impl Update {
                         .scope
                         .or(previous_installer.scope)
                         .or(previous_installer_manifest.scope),
-                    installer_url: Url::parse(
-                        &percent_decode_str(new_installer.installer_url.as_str())
-                            .decode_utf8()
-                            .unwrap_or_default(),
+                    installer_url: types::urls::url::Url::parse(
+                        new_installer.installer_url.as_str(),
                     )
-                    .unwrap_or_else(|_| new_installer.installer_url.clone()),
+                    .unwrap(),
                     installer_sha_256: download.installer_sha_256,
                     signature_sha_256: download
                         .msix
-                        .as_ref()
-                        .map(|msix| msix.signature_sha_256.clone())
+                        .as_mut()
+                        .map(|msix| mem::take(&mut msix.signature_sha_256))
                         .or_else(|| {
                             download
                                 .msix_bundle
@@ -205,27 +206,27 @@ impl Update {
                         .file_extensions
                         .clone()
                         .or_else(|| previous_installer_manifest.file_extensions.clone()),
-                    package_family_name: download
-                        .msix
-                        .as_ref()
-                        .map(|msix| msix.package_family_name.clone()),
-                    product_code: download.msi.as_ref().map(|msi| msi.product_code.clone()),
+                    package_family_name: download.msix.map(|msix| msix.package_family_name),
+                    product_code: download
+                        .msi
+                        .as_mut()
+                        .map(|msi| mem::take(&mut msi.product_code)),
                     release_date: download.last_modified,
-                    apps_and_features_entries: download.msi.as_ref().map(|msi| {
+                    apps_and_features_entries: download.msi.map(|msi| {
                         BTreeSet::from([AppsAndFeaturesEntry {
                             display_name: if msi.product_name
                                 == manifests.default_locale_manifest.package_name.as_str()
                             {
                                 None
                             } else {
-                                Some(msi.product_name.clone())
+                                Some(msi.product_name)
                             },
                             display_version: if msi.product_version == self.version.to_string() {
                                 None
                             } else {
-                                Some(msi.product_version.clone())
+                                Some(msi.product_version)
                             },
-                            upgrade_code: Some(msi.upgrade_code.clone()),
+                            upgrade_code: Some(msi.upgrade_code),
                             ..AppsAndFeaturesEntry::default()
                         }])
                     }),
@@ -241,7 +242,7 @@ impl Update {
             previous_installer_manifest,
         );
         let previous_default_locale_manifest = manifests.default_locale_manifest;
-        let github_values = match github_values {
+        let mut github_values = match github_values {
             Some(future) => Some(future.await),
             None => None,
         }
@@ -255,16 +256,16 @@ impl Update {
                     .map(|values| values.publisher_url.clone())
             }),
             license: github_values
-                .as_ref()
-                .and_then(|values| values.license.clone())
+                .as_mut()
+                .and_then(|values| mem::take(&mut values.license))
                 .unwrap_or(previous_default_locale_manifest.license),
             license_url: github_values
                 .as_ref()
                 .and_then(|values| values.license_url.clone())
                 .or(previous_default_locale_manifest.license_url),
             release_notes: github_values
-                .as_ref()
-                .and_then(|values| values.release_notes.clone()),
+                .as_mut()
+                .and_then(|values| mem::take(&mut values.release_notes)),
             release_notes_url: github_values.map(|values| values.release_notes_url),
             manifest_version: ManifestVersion::default(),
             ..previous_default_locale_manifest

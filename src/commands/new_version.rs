@@ -16,6 +16,7 @@ use crate::manifests::version_manifest::VersionManifest;
 use crate::prompts::list_prompt::list_prompt;
 use crate::prompts::multi_prompt::{check_prompt, radio_prompt};
 use crate::prompts::prompt::{optional_prompt, required_prompt};
+use crate::types;
 use crate::types::author::Author;
 use crate::types::command::Command;
 use crate::types::copyright::Copyright;
@@ -51,10 +52,10 @@ use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::{Confirm, CustomType};
 use ordinal::Ordinal;
-use percent_encoding::percent_decode_str;
 use reqwest::Client;
 use std::collections::BTreeSet;
 use std::num::NonZeroU8;
+use std::ops::Not;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::fs;
@@ -157,12 +158,11 @@ impl New {
 
         let mut urls = self.urls;
         if urls.is_empty() {
-            let mut count: u16 = 1;
             while urls.len() < 1024 {
-                let message = format!("{count}{} Installer URL", Ordinal(count));
+                let message = format!("{} Installer URL", Ordinal(urls.len() + 1));
                 let url_prompt =
                     CustomType::<Url>::new(&message).with_error_message("Please enter a valid URL");
-                let installer_url = if count == 1 {
+                let installer_url = if urls.len() + 1 == 1 {
                     Some(url_prompt.prompt()?)
                 } else {
                     url_prompt
@@ -170,7 +170,6 @@ impl New {
                         .prompt_skippable()?
                 };
                 if let Some(url) = installer_url {
-                    count += 1;
                     urls.push(url);
                 } else {
                     break;
@@ -207,15 +206,12 @@ impl New {
                     .as_ref()
                     .map(|msix| BTreeSet::from([msix.target_device_family])),
                 architecture: data.architecture,
-                installer_url: Url::parse(
-                    &percent_decode_str(url).decode_utf8().unwrap_or_default(),
-                )?,
+                installer_url: types::urls::url::Url::parse(url)?,
                 installer_sha_256: data.installer_sha_256,
-                installer_switches: if installer_switches.are_all_none() {
-                    None
-                } else {
-                    Some(installer_switches)
-                },
+                installer_switches: installer_switches
+                    .are_all_none()
+                    .not()
+                    .then_some(installer_switches),
                 ..Installer::default()
             });
         }

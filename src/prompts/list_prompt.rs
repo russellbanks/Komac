@@ -26,9 +26,8 @@ where
             if items_len > T::MAX_ITEMS as usize {
                 return Ok(Validation::Invalid(
                     format!(
-                        "There is a maximum of {} items. There were {} provided",
+                        "There is a maximum of {} items. There were {items_len} provided",
                         T::MAX_ITEMS,
-                        items_len
                     )
                     .into(),
                 ));

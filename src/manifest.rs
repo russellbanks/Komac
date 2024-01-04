@@ -28,6 +28,17 @@ pub enum Manifest<'a> {
     Version(&'a VersionManifest),
 }
 
+impl Manifest<'_> {
+    const fn schema(&self) -> &str {
+        match self {
+            Manifest::Installer(_) => INSTALLER_SCHEMA,
+            Manifest::DefaultLocale(_) => DEFAULT_LOCALE_SCHEMA,
+            Manifest::Locale(_) => LOCALE_SCHEMA,
+            Manifest::Version(_) => VERSION_SCHEMA,
+        }
+    }
+}
+
 pub fn print_changes(changes: &Vec<(String, String)>) {
     let mut lock = io::stdout().lock();
 
@@ -62,12 +73,7 @@ pub fn build_manifest_string(manifest: &Manifest) -> Result<String> {
     writeln!(
         result,
         "# yaml-language-server: $schema={}",
-        match manifest {
-            Manifest::Installer(_) => INSTALLER_SCHEMA,
-            Manifest::DefaultLocale(_) => DEFAULT_LOCALE_SCHEMA,
-            Manifest::Locale(_) => LOCALE_SCHEMA,
-            Manifest::Version(_) => VERSION_SCHEMA,
-        }
+        manifest.schema()
     )?;
     writeln!(result)?;
     match manifest {

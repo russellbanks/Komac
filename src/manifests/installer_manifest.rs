@@ -12,6 +12,7 @@ use crate::types::package_version::PackageVersion;
 use crate::types::protocol::Protocol;
 use crate::types::silent_switch::SilentSwitch;
 use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
+use crate::types::urls::url::Url;
 use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -19,7 +20,6 @@ use std::collections::BTreeSet;
 use std::num::NonZeroI64;
 use strum::{Display, EnumIter, EnumString};
 use time::Date;
-use url::Url;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]
@@ -63,6 +63,7 @@ pub struct InstallerManifest {
     pub installation_metadata: Option<InstallationMetadata>,
     pub installers: BTreeSet<Installer>,
     pub manifest_type: ManifestType,
+    #[serde(default)]
     pub manifest_version: ManifestVersion,
 }
 

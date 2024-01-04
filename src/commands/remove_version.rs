@@ -99,14 +99,13 @@ impl Remove {
             &self.package_version,
             &UpdateState::RemoveVersion,
         );
-        let directory_content = github
+        let deletions = github
             .get_directory_content(
                 &current_user,
                 &branch_name,
                 &get_full_package_path(&self.package_identifier, &self.package_version),
             )
-            .await?;
-        let deletions = directory_content
+            .await?
             .map(|path| FileDeletion { path })
             .collect::<Vec<_>>();
         let _commit_url = github

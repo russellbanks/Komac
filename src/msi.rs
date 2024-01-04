@@ -60,10 +60,8 @@ impl Msi {
             product_version: property_map.remove(PRODUCT_VERSION).unwrap(),
             manufacturer: property_map.remove(MANUFACTURER).unwrap(),
             product_language: LanguageTag::from_str(
-                Language::from_code(u16::from_str(
-                    &property_map.remove(PRODUCT_LANGUAGE).unwrap(),
-                )?)
-                .tag(),
+                Language::from_code(u16::from_str(property_map.get(PRODUCT_LANGUAGE).unwrap())?)
+                    .tag(),
             )?,
             is_wix: property_map.into_keys().any(|mut property| {
                 property.make_ascii_lowercase();
