@@ -4,7 +4,6 @@ mod download_file;
 mod file_analyser;
 mod github;
 mod graphql;
-mod iterable_extensions;
 mod manifest;
 mod manifests;
 mod match_installers;

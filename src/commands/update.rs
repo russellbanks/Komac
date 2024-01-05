@@ -7,7 +7,6 @@ use crate::github::utils::{
     get_pull_request_body,
 };
 use crate::graphql::create_commit::FileAddition;
-use crate::iterable_extensions::IterableExt;
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{AppsAndFeaturesEntry, Installer, InstallerManifest};
@@ -32,6 +31,7 @@ use reqwest::Client;
 use std::collections::BTreeSet;
 use std::mem;
 use std::num::NonZeroU8;
+use std::ops::Not;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::fs;
@@ -82,10 +82,10 @@ impl Update {
             })?;
 
         let latest_version = versions.iter().max().unwrap();
-        println!("Latest version of {}: {latest_version}", &self.identifier);
+        println!("Latest version of {}: {latest_version}", self.identifier);
         let manifests = github.get_manifests(&self.identifier, latest_version);
         let multi_progress = MultiProgress::new();
-        let files = stream::iter(download_urls(&client, &self.urls, &multi_progress))
+        let files = stream::iter(download_urls(&client, self.urls, &multi_progress))
             .buffer_unordered(self.concurrent_downloads.get() as usize)
             .try_collect::<Vec<_>>()
             .await?;
@@ -401,13 +401,16 @@ fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Install
         ($item: expr, $field: ident) => {
             installers
                 .iter()
-                .single_or_else($item.$field, |installer| installer.$field.to_owned())
+                .map(|installer| &installer.$field)
+                .all_equal()
+                .not()
+                .then_some($item.$field)
                 .flatten()
         };
     }
     installers
-        .clone()
-        .into_iter()
+        .iter()
+        .cloned()
         .map(|installer| Installer {
             installer_locale: installer_key!(installer, installer_locale),
             platform: installer_key!(installer, platform),
@@ -455,10 +458,11 @@ fn reorder_keys(
         ($field:ident) => {
             installers
                 .iter()
-                .map(|installer| installer.$field.clone())
+                .map(|installer| installer.$field.as_ref())
                 .all_equal_value()
                 .ok()
                 .flatten()
+                .cloned()
         };
     }
 

@@ -42,13 +42,10 @@ impl Msi {
                 if row.len() == 2 {
                     // Property and Value column
                     if let (Some(property), Some(value)) = (row[0].as_str(), row[1].as_str()) {
-                        Some((property.to_owned(), value.to_owned()))
-                    } else {
-                        None
+                        return Some((property.to_owned(), value.to_owned()));
                     }
-                } else {
-                    None
                 }
+                None
             })
             .collect::<HashMap<_, _>>();
 

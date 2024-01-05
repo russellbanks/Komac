@@ -97,22 +97,24 @@ fn cut_to_char_limit_with_lines(input: &str, char_limit: usize) -> Cow<str> {
     let mut result = String::with_capacity(char_limit);
     let mut current_size = 0;
 
-    for line in input.lines() {
+    for (iter_count, line) in input.lines().enumerate() {
         let prospective_size = current_size + line.chars().count() + 1; // +1 for NewLine
         if prospective_size > char_limit {
             break;
         }
+        if iter_count != 0 {
+            result.push('\n');
+        }
         result.push_str(line);
-        result.push('\n');
         current_size = prospective_size;
     }
 
-    Cow::Owned(result.trim().to_owned())
+    Cow::Owned(result)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::types::release_notes::ReleaseNotes;
+    use crate::types::release_notes::{cut_to_char_limit_with_lines, ReleaseNotes};
 
     #[test]
     fn test_issue_formatting() {
@@ -148,5 +150,23 @@ mod tests {
             ReleaseNotes::format(value, "owner", "repo"),
             ReleaseNotes::new("- No issue link").ok()
         )
+    }
+
+    #[test]
+    fn test_cut_to_lines() {
+        use std::fmt::Write;
+
+        const CHAR_LIMIT: usize = 100;
+
+        let mut buffer = String::new();
+        let mut line_count = 1;
+        while buffer.chars().count() <= CHAR_LIMIT {
+            writeln!(buffer, "Line {line_count}").unwrap();
+            line_count += 1;
+        }
+        let formatted = cut_to_char_limit_with_lines(&buffer, CHAR_LIMIT);
+        let formatted_char_count = formatted.chars().count();
+        assert!(formatted_char_count < buffer.chars().count());
+        assert_eq!(formatted_char_count, formatted.trim().chars().count());
     }
 }

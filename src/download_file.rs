@@ -22,19 +22,19 @@ use time::{Date, OffsetDateTime};
 use tokio::io::AsyncWriteExt;
 use xxhash_rust::xxh3::xxh3_64;
 
-async fn download_file<'url>(
+async fn download_file(
     client: &Client,
-    url: &'url str,
+    url: Url,
     multi_progress: &MultiProgress,
 ) -> Result<DownloadedFile> {
     let res = client
-        .get(url)
+        .get(url.as_str())
         .send()
         .await
         .wrap_err_with(|| format!("Failed to GET from '{url}'"))?;
 
     let content_disposition = res.headers().get(CONTENT_DISPOSITION);
-    let filename = get_file_name(url, content_disposition);
+    let filename = get_file_name(&url, content_disposition);
     let total_size = res
         .content_length()
         .ok_or_else(|| eyre!("Failed to get content length from '{url}'"))?;
@@ -73,15 +73,15 @@ async fn download_file<'url>(
     pb.finish_and_clear();
 
     Ok(DownloadedFile {
-        url: Url::parse(url)?,
+        url,
         file: temp_file.open_ro().await?,
         sha_256: base16ct::upper::encode_string(&hasher.finalize()),
         last_modified,
     })
 }
 
-fn get_file_name(url: &str, content_disposition: Option<&HeaderValue>) -> String {
-    if let Some(content_disposition) = content_disposition.map(|s| s.to_str().unwrap_or_default()) {
+fn get_file_name(url: &Url, content_disposition: Option<&HeaderValue>) -> String {
+    if let Some(content_disposition) = content_disposition.and_then(|value| value.to_str().ok()) {
         let mut sections = content_disposition.split(';');
         let _disposition = sections.next();
         for section in sections {
@@ -93,26 +93,23 @@ fn get_file_name(url: &str, content_disposition: Option<&HeaderValue>) -> String
                 if key.starts_with("filename") {
                     return value.trim_matches('"').to_owned();
                 }
-            } else {
-                break;
             }
         }
     }
-    if let Some((_, file_name)) = url.rsplit_once('/') {
-        file_name.to_owned()
-    } else {
-        xxh3_64(url.as_bytes()).to_string()
-    }
+    url.path_segments().and_then(Iterator::last).map_or_else(
+        || xxh3_64(url.as_str().as_bytes()).to_string(),
+        str::to_owned,
+    )
 }
 
 pub fn download_urls<'a>(
     client: &'a Client,
-    urls: &'a [Url],
+    urls: Vec<Url>,
     multi_progress: &'a MultiProgress,
 ) -> impl Iterator<Item = impl Future<Output = Result<DownloadedFile>> + 'a> {
-    urls.iter()
+    urls.into_iter()
         .unique()
-        .map(|url| download_file(client, url.as_str(), multi_progress))
+        .map(|url| download_file(client, url, multi_progress))
 }
 
 pub struct DownloadedFile {

@@ -99,6 +99,7 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
           bins: ${{ matrix.platform.bin }}
+          cache: false
 
       - name: Build binary
         run: ${{ matrix.platform.bin }} build --target ${{ matrix.platform.target }} --release --locked

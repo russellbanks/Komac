@@ -177,7 +177,7 @@ impl New {
         }
 
         let multi_progress = MultiProgress::new();
-        let files = stream::iter(download_urls(&client, &urls, &multi_progress))
+        let files = stream::iter(download_urls(&client, urls, &multi_progress))
             .buffer_unordered(self.concurrent_downloads.get() as usize)
             .try_collect::<Vec<_>>()
             .await?;
