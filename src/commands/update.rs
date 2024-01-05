@@ -14,10 +14,10 @@ use crate::manifests::installer_manifest::{AppsAndFeaturesEntry, Installer, Inst
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
 use crate::match_installers::match_installers;
-use crate::types;
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
+use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use crate::url_utils::find_scope;
 use base64ct::Encoding;
@@ -28,13 +28,11 @@ use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::Confirm;
 use itertools::Itertools;
-use percent_encoding::percent_decode_str;
-use reqwest::{Client, Url};
+use reqwest::Client;
 use std::collections::BTreeSet;
 use std::mem;
 use std::num::NonZeroU8;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::time::Duration;
 use tokio::fs;
 
@@ -94,17 +92,13 @@ impl Update {
         multi_progress.clear()?;
         let github_values = files
             .iter()
-            .filter_map(|download| Url::parse(download.url).ok())
-            .find(|url| url.host_str() == Some("github.com"))
-            .map(|url| {
-                let parts = url.path_segments().unwrap().collect::<Vec<_>>();
+            .find(|download| download.url.host_str() == Some("github.com"))
+            .map(|download| {
+                let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
                 github.get_all_values(
                     parts[0].to_owned(),
                     parts[1].to_owned(),
-                    percent_decode_str(parts[parts.len() - 2])
-                        .decode_utf8()
-                        .unwrap()
-                        .into_owned(),
+                    parts[4..parts.len() - 1].join("/"),
                 )
             });
         let mut download_results = process_files(files).await?;
@@ -113,8 +107,8 @@ impl Update {
             .map(|(url, download)| Installer {
                 architecture: download.architecture,
                 installer_type: Some(download.installer_type),
-                scope: find_scope(url),
-                installer_url: types::urls::url::Url::from_str(url).unwrap(),
+                scope: find_scope(url.as_str()),
+                installer_url: url.clone(),
                 ..Installer::default()
             })
             .collect::<Vec<_>>();
@@ -137,7 +131,7 @@ impl Update {
             .into_iter()
             .map(|(previous_installer, new_installer)| {
                 let mut download = download_results
-                    .remove(new_installer.installer_url.as_str())
+                    .remove(&new_installer.installer_url)
                     .unwrap();
                 Installer {
                     installer_locale: download
@@ -154,8 +148,8 @@ impl Update {
                         .or_else(|| previous_installer_manifest.platform.clone()),
                     minimum_os_version: download
                         .msix
-                        .as_ref()
-                        .map(|msix| msix.min_version.clone())
+                        .as_mut()
+                        .map(|msix| mem::take(&mut msix.min_version))
                         .or_else(|| previous_installer.minimum_os_version.clone())
                         .or_else(|| previous_installer_manifest.minimum_os_version.clone())
                         .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0"),
@@ -165,10 +159,7 @@ impl Update {
                         .scope
                         .or(previous_installer.scope)
                         .or(previous_installer_manifest.scope),
-                    installer_url: types::urls::url::Url::parse(
-                        new_installer.installer_url.as_str(),
-                    )
-                    .unwrap(),
+                    installer_url: new_installer.installer_url.clone(),
                     installer_sha_256: download.installer_sha_256,
                     signature_sha_256: download
                         .msix
@@ -235,7 +226,7 @@ impl Update {
             })
             .collect::<BTreeSet<_>>();
 
-        let installer_manifest = set_root_keys(
+        let installer_manifest = reorder_keys(
             self.identifier.clone(),
             self.version.clone(),
             installers,
@@ -396,9 +387,8 @@ impl Update {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a pull request to {}",
-            "Successfully".green(),
-            WINGET_PKGS_FULL_NAME
+            "{} created a pull request to {WINGET_PKGS_FULL_NAME}",
+            "Successfully".green()
         );
         println!("{}", pull_request_url.as_str());
 
@@ -455,7 +445,7 @@ fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Install
         .collect()
 }
 
-fn set_root_keys(
+fn reorder_keys(
     package_identifier: PackageIdentifier,
     package_version: PackageVersion,
     installers: BTreeSet<Installer>,

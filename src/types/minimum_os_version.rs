@@ -3,7 +3,8 @@ use std::str::FromStr;
 
 #[nutype(
     validate(predicate = is_minimum_os_version_valid),
-    derive(Clone, FromStr, Debug, Deref, Display, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)
+    default = "0.0.0.0",
+    derive(Clone, FromStr, Debug, Default, Deref, Display, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)
 )]
 pub struct MinimumOSVersion(String);
 

@@ -81,7 +81,7 @@ pub fn find_architecture(url: &str) -> Option<Architecture> {
 }
 
 pub fn find_scope(url: &str) -> Option<Scope> {
-    match url.to_lowercase() {
+    match url.to_ascii_lowercase() {
         url if url.contains("user") => Some(Scope::User),
         url if url.contains("machine") => Some(Scope::Machine),
         _ => None,

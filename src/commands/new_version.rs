@@ -16,7 +16,6 @@ use crate::manifests::version_manifest::VersionManifest;
 use crate::prompts::list_prompt::list_prompt;
 use crate::prompts::multi_prompt::{check_prompt, radio_prompt};
 use crate::prompts::prompt::{optional_prompt, required_prompt};
-use crate::types;
 use crate::types::author::Author;
 use crate::types::command::Command;
 use crate::types::copyright::Copyright;
@@ -43,6 +42,7 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use base64ct::Encoding;
 use clap::Parser;
@@ -59,7 +59,6 @@ use std::ops::Not;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::fs;
-use url::Url;
 
 #[derive(Parser)]
 pub struct New {
@@ -206,7 +205,7 @@ impl New {
                     .as_ref()
                     .map(|msix| BTreeSet::from([msix.target_device_family])),
                 architecture: data.architecture,
-                installer_url: types::urls::url::Url::parse(url)?,
+                installer_url: url,
                 installer_sha_256: data.installer_sha_256,
                 installer_switches: installer_switches
                     .are_all_none()
@@ -383,9 +382,8 @@ impl New {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a pull request to {}",
-            "Successfully".green(),
-            WINGET_PKGS_FULL_NAME
+            "{} created a pull request to {WINGET_PKGS_FULL_NAME}",
+            "Successfully".green()
         );
         println!("{}", pull_request_url.as_str());
 

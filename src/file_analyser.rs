@@ -83,7 +83,7 @@ impl FileAnalyser {
         .transpose()?;
         let installer_type = get_installer_type(file, &extension, &msi, &pe).await?;
         if installer_type == InstallerType::Burn {
-            if let Some(ref pe) = pe {
+            if let Some(pe) = &pe {
                 msi = Some(extract_msi(file, pe).await?);
             }
         }

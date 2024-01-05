@@ -3,9 +3,10 @@ use crate::manifests::installer_manifest::{Architecture, InstallerType};
 use crate::msi::Msi;
 use crate::msix_family::msix::Msix;
 use crate::msix_family::msixbundle::MsixBundle;
+use crate::types::urls::url::Url;
 use crate::url_utils::find_architecture;
 use async_tempfile::TempFile;
-use color_eyre::eyre::{eyre, Error, Result, WrapErr};
+use color_eyre::eyre::{eyre, Result, WrapErr};
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
@@ -19,14 +20,13 @@ use std::future::Future;
 use time::format_description::well_known::Rfc2822;
 use time::{Date, OffsetDateTime};
 use tokio::io::AsyncWriteExt;
-use url::Url;
 use xxhash_rust::xxh3::xxh3_64;
 
-async fn download_file<'a>(
+async fn download_file<'url>(
     client: &Client,
-    url: &'a str,
+    url: &'url str,
     multi_progress: &MultiProgress,
-) -> Result<DownloadedFile<'a>> {
+) -> Result<DownloadedFile> {
     let res = client
         .get(url)
         .send()
@@ -73,7 +73,7 @@ async fn download_file<'a>(
     pb.finish_and_clear();
 
     Ok(DownloadedFile {
-        url,
+        url: Url::parse(url)?,
         file: temp_file.open_ro().await?,
         sha_256: base16ct::upper::encode_string(&hasher.finalize()),
         last_modified,
@@ -109,14 +109,14 @@ pub fn download_urls<'a>(
     client: &'a Client,
     urls: &'a [Url],
     multi_progress: &'a MultiProgress,
-) -> impl Iterator<Item = impl Future<Output = Result<DownloadedFile<'a>>>> {
+) -> impl Iterator<Item = impl Future<Output = Result<DownloadedFile>> + 'a> {
     urls.iter()
         .unique()
         .map(|url| download_file(client, url.as_str(), multi_progress))
 }
 
-pub struct DownloadedFile<'a> {
-    pub url: &'a str,
+pub struct DownloadedFile {
+    pub url: Url,
     pub file: TempFile,
     pub sha_256: String,
     pub last_modified: Option<Date>,
@@ -133,7 +133,7 @@ pub struct InitialData {
     pub file_name: String,
 }
 
-pub async fn process_files(files: Vec<DownloadedFile<'_>>) -> Result<HashMap<&str, InitialData>> {
+pub async fn process_files(files: Vec<DownloadedFile>) -> Result<HashMap<Url, InitialData>> {
     stream::iter(files.into_iter().map(
         |DownloadedFile {
              url,
@@ -143,7 +143,7 @@ pub async fn process_files(files: Vec<DownloadedFile<'_>>) -> Result<HashMap<&st
          }| async move {
             let file_analyser = FileAnalyser::new(&mut file).await?;
             let initial_data = InitialData {
-                architecture: find_architecture(url)
+                architecture: find_architecture(url.as_str())
                     .or_else(|| file_analyser.msi.as_ref().map(|msi| msi.architecture))
                     .or_else(|| {
                         file_analyser
@@ -165,7 +165,7 @@ pub async fn process_files(files: Vec<DownloadedFile<'_>>) -> Result<HashMap<&st
                     .map(str::to_owned)
                     .unwrap(),
             };
-            Ok::<(&str, InitialData), Error>((url, initial_data))
+            Ok((url, initial_data))
         },
     ))
     .buffered(num_cpus::get())

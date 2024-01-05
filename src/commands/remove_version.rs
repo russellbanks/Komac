@@ -33,6 +33,9 @@ pub struct Remove {
 }
 
 impl Remove {
+    const MIN_REASON_LENGTH: usize = 4;
+    const MAX_REASON_LENGTH: usize = 1000;
+
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
         println!(
@@ -46,17 +49,16 @@ impl Remove {
             .await
             .wrap_err_with(|| {
                 format!(
-                    "{} does not exist in {}",
-                    self.package_identifier, WINGET_PKGS_FULL_NAME
+                    "{} does not exist in {WINGET_PKGS_FULL_NAME}",
+                    self.package_identifier
                 )
             })?;
 
         if !versions.contains(&self.package_version) {
             bail!(
-                "{} version {} does not exist in {}",
+                "{} version {} does not exist in {WINGET_PKGS_FULL_NAME}",
                 self.package_identifier,
                 self.package_version,
-                WINGET_PKGS_FULL_NAME
             );
         }
 
@@ -71,8 +73,8 @@ impl Remove {
                 "Give a reason for removing {} version {}",
                 &self.package_identifier, &self.package_version
             ))
-            .with_validator(MinLengthValidator::new(MIN_REASON_LENGTH))
-            .with_validator(MaxLengthValidator::new(MAX_REASON_LENGTH))
+            .with_validator(MinLengthValidator::new(Self::MIN_REASON_LENGTH))
+            .with_validator(MaxLengthValidator::new(Self::MAX_REASON_LENGTH))
             .prompt()?,
         };
         let should_remove_manifest = if self.submit {
@@ -138,6 +140,3 @@ impl Remove {
         Ok(())
     }
 }
-
-const MIN_REASON_LENGTH: usize = 4;
-const MAX_REASON_LENGTH: usize = 1000;

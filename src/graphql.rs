@@ -419,16 +419,11 @@ pub async fn get_all_versions(
                                 .count()
                                 == 0
                             {
-                                Some(entry)
-                            } else {
-                                None
+                                return Some(entry);
                             }
-                        } else {
-                            None
                         }
-                    } else {
-                        None
                     }
+                    None
                 })
                 .map(|entry| entry.name)
                 .filter_map(|entry| PackageVersion::new(&entry).ok())
