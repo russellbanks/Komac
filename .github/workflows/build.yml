@@ -22,8 +22,8 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
 
-      - name: Build
-        run: cargo build --verbose
+      - name: Check
+        run: cargo check --verbose
 
       - name: Run tests
         run: cargo test --verbose

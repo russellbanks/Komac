@@ -126,7 +126,7 @@ impl Update {
                 ..installer
             })
             .collect::<Vec<_>>();
-        let matched_installers = match_installers(&previous_installers, &installer_results);
+        let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
             .map(|(previous_installer, new_installer)| {
@@ -138,19 +138,19 @@ impl Update {
                         .msi
                         .as_mut()
                         .map(|msi| mem::take(&mut msi.product_language))
-                        .or_else(|| previous_installer.installer_locale.clone())
+                        .or(previous_installer.installer_locale)
                         .or_else(|| previous_installer_manifest.installer_locale.clone()),
                     platform: download
                         .msix
                         .as_ref()
                         .map(|msix| BTreeSet::from([msix.target_device_family]))
-                        .or_else(|| previous_installer.platform.clone())
+                        .or(previous_installer.platform)
                         .or_else(|| previous_installer_manifest.platform.clone()),
                     minimum_os_version: download
                         .msix
                         .as_mut()
                         .map(|msix| mem::take(&mut msix.min_version))
-                        .or_else(|| previous_installer.minimum_os_version.clone())
+                        .or(previous_installer.minimum_os_version)
                         .or_else(|| previous_installer_manifest.minimum_os_version.clone())
                         .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0"),
                     architecture: previous_installer.architecture,
@@ -172,30 +172,24 @@ impl Update {
                         }),
                     install_modes: previous_installer
                         .install_modes
-                        .clone()
                         .or_else(|| previous_installer_manifest.install_modes.clone()),
                     installer_switches: previous_installer
                         .installer_switches
-                        .clone()
                         .or_else(|| previous_installer_manifest.installer_switches.clone()),
                     installer_success_codes: previous_installer
                         .installer_success_codes
-                        .clone()
                         .or_else(|| previous_installer_manifest.installer_success_codes.clone()),
                     upgrade_behavior: get_upgrade_behavior(download.installer_type)
                         .or(previous_installer.upgrade_behavior)
                         .or(previous_installer_manifest.upgrade_behavior),
                     commands: previous_installer
                         .commands
-                        .clone()
                         .or_else(|| previous_installer_manifest.commands.clone()),
                     protocols: previous_installer
                         .protocols
-                        .clone()
                         .or_else(|| previous_installer_manifest.protocols.clone()),
                     file_extensions: previous_installer
                         .file_extensions
-                        .clone()
                         .or_else(|| previous_installer_manifest.file_extensions.clone()),
                     package_family_name: download.msix.map(|msix| msix.package_family_name),
                     product_code: download
@@ -221,7 +215,7 @@ impl Update {
                             ..AppsAndFeaturesEntry::default()
                         }])
                     }),
-                    ..previous_installer.clone()
+                    ..previous_installer
                 }
             })
             .collect::<BTreeSet<_>>();
