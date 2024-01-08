@@ -1,3 +1,4 @@
+pub mod architecture;
 pub mod author;
 pub mod command;
 pub mod copyright;
@@ -7,6 +8,7 @@ pub mod file_extension;
 pub mod installation_notes;
 pub mod installer_success_code;
 pub mod installer_switch;
+pub mod installer_type;
 pub mod language_tag;
 pub mod license;
 pub mod manifest_type;

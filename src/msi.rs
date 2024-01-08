@@ -1,4 +1,4 @@
-use crate::manifests::installer_manifest::Architecture;
+use crate::types::architecture::Architecture;
 use crate::types::language_tag::LanguageTag;
 use color_eyre::eyre::{bail, Result};
 use msi::{Language, Select};
@@ -27,7 +27,7 @@ const UPGRADE_CODE: &str = "UpgradeCode";
 const WIX: &str = "wix";
 
 impl Msi {
-    pub fn new(path: impl AsRef<Path>) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut msi = msi::open(path)?;
 
         let architecture = match msi.summary_info().arch() {

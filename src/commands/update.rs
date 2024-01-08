@@ -1,6 +1,5 @@
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
-use crate::file_analyser::get_upgrade_behavior;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_full_package_path, get_package_path,
@@ -9,7 +8,9 @@ use crate::github::utils::{
 use crate::graphql::create_commit::FileAddition;
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
-use crate::manifests::installer_manifest::{AppsAndFeaturesEntry, Installer, InstallerManifest};
+use crate::manifests::installer_manifest::{
+    AppsAndFeaturesEntry, Installer, InstallerManifest, UpgradeBehavior,
+};
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
 use crate::match_installers::match_installers;
@@ -130,26 +131,20 @@ impl Update {
         let installers = matched_installers
             .into_iter()
             .map(|(previous_installer, new_installer)| {
-                let mut download = download_results
+                let analyser = download_results
                     .remove(&new_installer.installer_url)
                     .unwrap();
                 Installer {
-                    installer_locale: download
-                        .msi
-                        .as_mut()
-                        .map(|msi| mem::take(&mut msi.product_language))
+                    installer_locale: analyser
+                        .product_language
                         .or(previous_installer.installer_locale)
                         .or_else(|| previous_installer_manifest.installer_locale.clone()),
-                    platform: download
-                        .msix
-                        .as_ref()
-                        .map(|msix| BTreeSet::from([msix.target_device_family]))
+                    platform: analyser
+                        .platform
                         .or(previous_installer.platform)
                         .or_else(|| previous_installer_manifest.platform.clone()),
-                    minimum_os_version: download
-                        .msix
-                        .as_mut()
-                        .map(|msix| mem::take(&mut msix.min_version))
+                    minimum_os_version: analyser
+                        .minimum_os_version
                         .or(previous_installer.minimum_os_version)
                         .or_else(|| previous_installer_manifest.minimum_os_version.clone())
                         .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0"),
@@ -160,16 +155,8 @@ impl Update {
                         .or(previous_installer.scope)
                         .or(previous_installer_manifest.scope),
                     installer_url: new_installer.installer_url.clone(),
-                    installer_sha_256: download.installer_sha_256,
-                    signature_sha_256: download
-                        .msix
-                        .as_mut()
-                        .map(|msix| mem::take(&mut msix.signature_sha_256))
-                        .or_else(|| {
-                            download
-                                .msix_bundle
-                                .map(|msix_bundle| msix_bundle.signature_sha_256)
-                        }),
+                    installer_sha_256: analyser.installer_sha_256,
+                    signature_sha_256: analyser.signature_sha_256,
                     install_modes: previous_installer
                         .install_modes
                         .or_else(|| previous_installer_manifest.install_modes.clone()),
@@ -179,7 +166,7 @@ impl Update {
                     installer_success_codes: previous_installer
                         .installer_success_codes
                         .or_else(|| previous_installer_manifest.installer_success_codes.clone()),
-                    upgrade_behavior: get_upgrade_behavior(download.installer_type)
+                    upgrade_behavior: UpgradeBehavior::get(analyser.installer_type)
                         .or(previous_installer.upgrade_behavior)
                         .or(previous_installer_manifest.upgrade_behavior),
                     commands: previous_installer
@@ -191,13 +178,10 @@ impl Update {
                     file_extensions: previous_installer
                         .file_extensions
                         .or_else(|| previous_installer_manifest.file_extensions.clone()),
-                    package_family_name: download.msix.map(|msix| msix.package_family_name),
-                    product_code: download
-                        .msi
-                        .as_mut()
-                        .map(|msi| mem::take(&mut msi.product_code)),
-                    release_date: download.last_modified,
-                    apps_and_features_entries: download.msi.map(|msi| {
+                    package_family_name: analyser.package_family_name,
+                    product_code: analyser.product_code,
+                    release_date: analyser.last_modified,
+                    apps_and_features_entries: analyser.msi.map(|msi| {
                         BTreeSet::from([AppsAndFeaturesEntry {
                             display_name: if msi.product_name
                                 == manifests.default_locale_manifest.package_name.as_str()
@@ -237,16 +221,16 @@ impl Update {
             package_version: self.version.clone(),
             publisher_url: previous_default_locale_manifest.publisher_url.or_else(|| {
                 github_values
-                    .as_ref()
-                    .map(|values| values.publisher_url.clone())
+                    .as_mut()
+                    .map(|values| mem::take(&mut values.publisher_url))
             }),
             license: github_values
                 .as_mut()
                 .and_then(|values| mem::take(&mut values.license))
                 .unwrap_or(previous_default_locale_manifest.license),
             license_url: github_values
-                .as_ref()
-                .and_then(|values| values.license_url.clone())
+                .as_mut()
+                .and_then(|values| mem::take(&mut values.license_url))
                 .or(previous_default_locale_manifest.license_url),
             release_notes: github_values
                 .as_mut()
@@ -442,7 +426,7 @@ fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Install
         .collect()
 }
 
-fn reorder_keys(
+pub fn reorder_keys(
     package_identifier: PackageIdentifier,
     package_version: PackageVersion,
     installers: BTreeSet<Installer>,

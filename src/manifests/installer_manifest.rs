@@ -1,8 +1,10 @@
+use crate::types::architecture::Architecture;
 use crate::types::command::Command;
 use crate::types::custom_switch::CustomSwitch;
 use crate::types::file_extension::FileExtension;
 use crate::types::installer_success_code::InstallerSuccessCode;
 use crate::types::installer_switch::InstallerSwitch;
+use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::manifest_type::ManifestType;
 use crate::types::manifest_version::ManifestVersion;
@@ -13,7 +15,6 @@ use crate::types::protocol::Protocol;
 use crate::types::silent_switch::SilentSwitch;
 use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::Url;
-use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::BTreeSet;
@@ -33,7 +34,7 @@ pub struct InstallerManifest {
     #[serde(rename = "MinimumOSVersion")]
     pub minimum_os_version: Option<MinimumOSVersion>,
     pub installer_type: Option<InstallerType>,
-    pub nested_installer_type: Option<InstallerType>,
+    pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub scope: Option<Scope>,
     pub install_modes: Option<BTreeSet<InstallModes>>,
@@ -81,17 +82,15 @@ pub enum Platform {
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "lowercase")]
-pub enum InstallerType {
+pub enum NestedInstallerType {
     Msix,
     Msi,
     Appx,
     Exe,
-    Zip,
     Inno,
     Nullsoft,
     Wix,
     Burn,
-    Pwa,
     Portable,
 }
 
@@ -203,6 +202,15 @@ pub enum UpgradeBehavior {
     UninstallPrevious,
 }
 
+impl UpgradeBehavior {
+    pub const fn get(installer_type: InstallerType) -> Option<Self> {
+        match installer_type {
+            InstallerType::Msix | InstallerType::Appx => Some(Self::Install),
+            _ => None,
+        }
+    }
+}
+
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -293,10 +301,7 @@ pub enum MetadataFileType {
 }
 
 #[skip_serializing_none]
-#[derive(
-    Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Derivative,
-)]
-#[derivative(Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct Installer {
     pub installer_locale: Option<LanguageTag>,
@@ -305,10 +310,9 @@ pub struct Installer {
     pub minimum_os_version: Option<MinimumOSVersion>,
     pub architecture: Architecture,
     pub installer_type: Option<InstallerType>,
-    pub nested_installer_type: Option<InstallerType>,
+    pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub scope: Option<Scope>,
-    #[derivative(Default(value = "Url::parse(\"https://www.example.com\").unwrap()"))]
     pub installer_url: Url,
     pub installer_sha_256: String,
     pub signature_sha_256: Option<String>,
@@ -337,29 +341,4 @@ pub struct Installer {
     pub apps_and_features_entries: Option<BTreeSet<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    Deserialize,
-    EnumString,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-    Serialize,
-)]
-#[serde(rename_all = "lowercase")]
-#[strum(serialize_all = "lowercase")]
-pub enum Architecture {
-    X86,
-    X64,
-    Arm,
-    Arm64,
-    #[default]
-    Neutral,
 }

@@ -1,67 +1,64 @@
-use crate::manifests::installer_manifest::{Architecture, InstallerType, UpgradeBehavior};
+use crate::manifests::installer_manifest::Platform;
 use crate::msi::Msi;
 use crate::msix_family::msix::Msix;
 use crate::msix_family::msixbundle::MsixBundle;
+use crate::types::architecture::Architecture;
+use crate::types::copyright::Copyright;
+use crate::types::installer_type::InstallerType;
+use crate::types::language_tag::LanguageTag;
+use crate::types::minimum_os_version::MinimumOSVersion;
+use crate::types::package_name::PackageName;
+use crate::types::publisher::Publisher;
+use crate::zip::Zip;
+use async_recursion::async_recursion;
 use async_tempfile::TempFile;
-use color_eyre::eyre::{bail, Result};
-use exe::ResolvedDirectoryID::{Name, ID};
-use exe::{CCharString, NTHeaders, PETranslation, ResourceDirectory, VecPE, PE};
+use color_eyre::eyre::Result;
+use exe::ResolvedDirectoryID::Name;
+use exe::{PETranslation, ResourceDirectory, VSVersionInfo, VecPE, PE};
+use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::io::SeekFrom;
+use std::mem;
+use time::Date;
 use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
-const NULLSOFT_BYTES_LEN: usize = 224;
-
-/// The first 224 bytes of an exe made with NSIS are always the same
-const NULLSOFT_BYTES: [u8; NULLSOFT_BYTES_LEN] = [
-    77, 90, 144, 0, 3, 0, 0, 0, 4, 0, 0, 0, 255, 255, 0, 0, 184, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    216, 0, 0, 0, 14, 31, 186, 14, 0, 180, 9, 205, 33, 184, 1, 76, 205, 33, 84, 104, 105, 115, 32,
-    112, 114, 111, 103, 114, 97, 109, 32, 99, 97, 110, 110, 111, 116, 32, 98, 101, 32, 114, 117,
-    110, 32, 105, 110, 32, 68, 79, 83, 32, 109, 111, 100, 101, 46, 13, 13, 10, 36, 0, 0, 0, 0, 0,
-    0, 0, 173, 49, 8, 129, 233, 80, 102, 210, 233, 80, 102, 210, 233, 80, 102, 210, 42, 95, 57,
-    210, 235, 80, 102, 210, 233, 80, 103, 210, 76, 80, 102, 210, 42, 95, 59, 210, 230, 80, 102,
-    210, 189, 115, 86, 210, 227, 80, 102, 210, 46, 86, 96, 210, 232, 80, 102, 210, 82, 105, 99,
-    104, 233, 80, 102, 210, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    80, 69, 0, 0, 76, 1, 5, 0,
-];
-
-const INNO_BYTES_LEN: usize = 264;
-
-/// The first 264 bytes of an exe made with Inno Setup are always the same
-const INNO_BYTES: [u8; INNO_BYTES_LEN] = [
-    77, 90, 80, 0, 2, 0, 0, 0, 4, 0, 15, 0, 255, 255, 0, 0, 184, 0, 0, 0, 0, 0, 0, 0, 64, 0, 26, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 1, 0, 0, 186, 16, 0, 14, 31, 180, 9, 205, 33, 184, 1, 76, 205, 33, 144, 144, 84, 104, 105,
-    115, 32, 112, 114, 111, 103, 114, 97, 109, 32, 109, 117, 115, 116, 32, 98, 101, 32, 114, 117,
-    110, 32, 117, 110, 100, 101, 114, 32, 87, 105, 110, 51, 50, 13, 10, 36, 55, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 80, 69, 0, 0, 76, 1, 10, 0,
-];
-
-const EXE: &str = "exe";
-const MSI: &str = "msi";
-const MSIX: &str = "msix";
-const APPX: &str = "appx";
-const MSIX_BUNDLE: &str = "msixbundle";
-const APPX_BUNDLE: &str = "appxbundle";
-const ZIP: &str = "zip";
+pub const EXE: &str = "exe";
+pub const MSI: &str = "msi";
+pub const MSIX: &str = "msix";
+pub const APPX: &str = "appx";
+pub const MSIX_BUNDLE: &str = "msixbundle";
+pub const APPX_BUNDLE: &str = "appxbundle";
+pub const ZIP: &str = "zip";
 
 pub struct FileAnalyser {
+    pub platform: Option<BTreeSet<Platform>>,
+    pub minimum_os_version: Option<MinimumOSVersion>,
+    pub architecture: Architecture,
     pub installer_type: InstallerType,
+    pub installer_sha_256: String,
+    pub signature_sha_256: Option<String>,
+    pub package_family_name: Option<String>,
+    pub product_code: Option<String>,
+    pub product_language: Option<LanguageTag>,
+    pub last_modified: Option<Date>,
+    pub file_name: String,
+    pub copyright: Option<Copyright>,
+    pub package_name: Option<PackageName>,
+    pub publisher: Option<Publisher>,
     pub msi: Option<Msi>,
-    pub msix: Option<Msix>,
-    pub msix_bundle: Option<MsixBundle>,
-    pub pe: Option<VecPE>,
+    pub zip: Option<Zip>,
 }
 
 impl FileAnalyser {
-    pub async fn new(file: &mut TempFile) -> Result<Self> {
+    #[async_recursion]
+    pub async fn new(file: &mut TempFile, nested: bool) -> Result<Self> {
         let path = file.file_path();
+        let file_name = path
+            .file_name()
+            .and_then(OsStr::to_str)
+            .map(str::to_owned)
+            .unwrap();
         let extension = path
             .extension()
             .and_then(OsStr::to_str)
@@ -71,28 +68,67 @@ impl FileAnalyser {
             .then(|| VecPE::from_disk_file(path))
             .transpose()?;
         let mut msi = (extension == MSI).then(|| Msi::new(path)).transpose()?;
-        let msix = match extension.as_str() {
-            MSIX | APPX => Some(Msix::new(file).await),
+        let mut msix = match extension.as_str() {
+            MSIX | APPX => Some(Msix::new(file).await?),
             _ => None,
-        }
-        .transpose()?;
-        let msix_bundle = match extension.as_str() {
-            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(file).await),
+        };
+        let mut msix_bundle = match extension.as_str() {
+            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(file).await?),
             _ => None,
-        }
-        .transpose()?;
-        let installer_type = get_installer_type(file, &extension, &msi, &pe).await?;
+        };
+        let zip = if nested {
+            None
+        } else {
+            // File Analyser can be called from within a zip making this function asynchronously recursive
+            match extension.as_str() {
+                ZIP => Some(Zip::new(file).await?),
+                _ => None,
+            }
+        };
+        let installer_type =
+            InstallerType::get(file, &extension, msi.as_ref(), pe.as_ref()).await?;
         if installer_type == InstallerType::Burn {
             if let Some(pe) = &pe {
                 msi = Some(extract_msi(file, pe).await?);
             }
         }
+        let mut string_map = pe
+            .as_ref()
+            .and_then(|pe| VSVersionInfo::parse(pe).ok())
+            .and_then(|vs_version_info| vs_version_info.string_file_info)
+            .and_then(|mut info| info.children.swap_remove(0).string_map().ok());
         Ok(Self {
+            platform: msix
+                .as_ref()
+                .map(|msix| BTreeSet::from([msix.target_device_family])),
+            minimum_os_version: msix.as_mut().map(|msix| mem::take(&mut msix.min_version)),
+            architecture: msi
+                .as_ref()
+                .map(|msi| msi.architecture)
+                .or_else(|| msix.as_ref().map(|msix| msix.processor_architecture))
+                .unwrap_or_else(|| Architecture::get_from_exe(&pe.unwrap()).unwrap()),
             installer_type,
+            installer_sha_256: String::new(),
+            signature_sha_256: msix
+                .as_mut()
+                .map(|msix| mem::take(&mut msix.signature_sha_256))
+                .or_else(|| {
+                    msix_bundle
+                        .as_mut()
+                        .map(|msix_bundle| mem::take(&mut msix_bundle.signature_sha_256))
+                }),
+            package_family_name: msix
+                .map(|msix| msix.package_family_name)
+                .or_else(|| msix_bundle.map(|msix_bundle| msix_bundle.package_family_name)),
+            product_code: msi.as_mut().map(|msi| mem::take(&mut msi.product_code)),
+            product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
+            last_modified: None,
+            file_name,
+            copyright: string_map.as_mut().and_then(Copyright::get_from_exe),
+            package_name: string_map.as_mut().and_then(PackageName::get_from_exe),
+            publisher: string_map.as_mut().and_then(Publisher::get_from_exe),
             msi,
-            msix,
-            msix_bundle,
-            pe,
+            zip,
         })
     }
 }
@@ -125,98 +161,4 @@ async fn extract_msi(file: &mut TempFile, pe: &VecPE) -> Result<Msi> {
 
     let msi = Msi::new(extracted_msi.file_path())?;
     Ok(msi)
-}
-
-pub fn get_architecture(pe: &VecPE) -> Result<Architecture> {
-    let machine = match pe.get_valid_nt_headers()? {
-        NTHeaders::NTHeaders32(nt_header) => nt_header.file_header.machine,
-        NTHeaders::NTHeaders64(nt_header) => nt_header.file_header.machine,
-    };
-    // https://learn.microsoft.com/windows/win32/debug/pe-format#machine-types
-    Ok(match machine {
-        34404 => Architecture::X64,           // 0x8664
-        332 => Architecture::X86,             // 0x14c
-        43620 => Architecture::Arm64,         // 0xaa64
-        448 | 450 | 452 => Architecture::Arm, // 0x1c0 | 0x1c2 | 0x1c4
-        0 => Architecture::Neutral,           // 0x0
-        _ => bail!("Unknown machine value {:04x}", machine),
-    })
-}
-
-async fn get_installer_type(
-    file: &mut TempFile,
-    extension: &str,
-    msi: &Option<Msi>,
-    pe: &Option<VecPE>,
-) -> Result<InstallerType> {
-    match extension {
-        MSI => {
-            if let Some(msi) = msi {
-                return Ok(if msi.is_wix {
-                    InstallerType::Wix
-                } else {
-                    InstallerType::Msi
-                });
-            }
-        }
-        MSIX | MSIX_BUNDLE => return Ok(InstallerType::Msix),
-        APPX | APPX_BUNDLE => return Ok(InstallerType::Appx),
-        ZIP => return Ok(InstallerType::Zip),
-        EXE => {
-            // Check if the file is Inno or Nullsoft from their magic bytes
-            let mut buffer = [0; INNO_BYTES_LEN];
-            file.seek(SeekFrom::Start(0)).await?;
-            file.read_exact(&mut buffer).await?;
-            match () {
-                _ if buffer == INNO_BYTES => return Ok(InstallerType::Inno),
-                _ if buffer[..NULLSOFT_BYTES_LEN] == NULLSOFT_BYTES => {
-                    return Ok(InstallerType::Nullsoft)
-                }
-                _ => {}
-            };
-            if let Some(pe) = pe {
-                match () {
-                    _ if has_msi_resource(pe) => return Ok(InstallerType::Burn),
-                    _ if has_burn_header(pe) => return Ok(InstallerType::Burn),
-                    _ => {}
-                }
-            }
-            return Ok(InstallerType::Exe);
-        }
-        _ => {}
-    }
-    bail!("Unsupported file extension {extension}")
-}
-
-fn has_msi_resource(pe: &VecPE) -> bool {
-    ResourceDirectory::parse(pe)
-        .map(|resource_directory| {
-            resource_directory
-                .resources
-                .iter()
-                .any(|entry| match &entry.rsrc_id {
-                    Name(value) => value.to_lowercase() == MSI,
-                    ID(_) => false,
-                })
-        })
-        .unwrap_or(false)
-}
-
-fn has_burn_header(pe: &VecPE) -> bool {
-    const WIX_BURN_HEADER: &str = ".wixburn";
-
-    pe.get_section_table()
-        .map(|section_table| {
-            section_table
-                .iter()
-                .any(|section| section.name.as_str().unwrap_or_default() == WIX_BURN_HEADER)
-        })
-        .unwrap_or(false)
-}
-
-pub const fn get_upgrade_behavior(installer_type: InstallerType) -> Option<UpgradeBehavior> {
-    match installer_type {
-        InstallerType::Msix | InstallerType::Appx => Some(UpgradeBehavior::Install),
-        _ => None,
-    }
 }

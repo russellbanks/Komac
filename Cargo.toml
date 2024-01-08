@@ -17,6 +17,7 @@ lto = true
 strip = true
 
 [dependencies]
+async-recursion = "1.0.5"
 async-tempfile = { version = "0.5.0" }
 async_zip = { version = "0.0.16", features = ["deflate", "tokio", "tokio-fs"] }
 base16ct = { version = "0.2.0", features = ["std"] }
@@ -25,7 +26,6 @@ clap = { version = "4.4.13", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.2", default-features = false }
 const_format = "0.2.32"
 crossterm = "0.27.0"
-derivative = "2.2.0"
 derive_more = "0.99.17"
 exe = "0.5.6"
 futures = "0.3.30"

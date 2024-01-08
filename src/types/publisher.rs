@@ -1,5 +1,6 @@
 use crate::prompts::prompt::RequiredPrompt;
 use nutype::nutype;
+use std::collections::HashMap;
 
 #[nutype(
     validate(len_char_min = 2, len_char_max = 256),
@@ -7,6 +8,14 @@ use nutype::nutype;
     derive(Clone, Default, FromStr, Display, Deserialize, Serialize)
 )]
 pub struct Publisher(String);
+
+impl Publisher {
+    pub fn get_from_exe(string_map: &mut HashMap<String, String>) -> Option<Self> {
+        string_map
+            .remove("CompanyName")
+            .and_then(|company_name| Self::new(company_name.trim()).ok())
+    }
+}
 
 impl RequiredPrompt for Publisher {
     const MESSAGE: &'static str = "Publisher:";

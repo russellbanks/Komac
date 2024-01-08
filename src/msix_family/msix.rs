@@ -1,5 +1,6 @@
-use crate::manifests::installer_manifest::{Architecture, Platform};
+use crate::manifests::installer_manifest::Platform;
 use crate::msix_family::msix_utils::get_manifest_and_signature;
+use crate::types::architecture::Architecture;
 use crate::types::minimum_os_version::MinimumOSVersion;
 use async_zip::tokio::read::seek::ZipFileReader;
 use color_eyre::eyre::Result;

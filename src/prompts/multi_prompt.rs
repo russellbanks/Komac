@@ -6,37 +6,31 @@ use std::fmt::Display;
 use strum::IntoEnumIterator;
 
 pub trait MultiPrompt {
-    type Item: Display + Ord;
     const MESSAGE: &'static str;
-    fn items() -> Vec<Self::Item>;
 }
 
 impl MultiPrompt for UpgradeBehavior {
-    type Item = Self;
-    const MESSAGE: &'static str = "Upgrade behaviour";
-
-    fn items() -> Vec<Self> {
-        Self::iter().collect()
-    }
+    const MESSAGE: &'static str = "Upgrade behaviour:";
 }
 
 impl MultiPrompt for InstallModes {
-    type Item = Self;
-    const MESSAGE: &'static str = "Install modes";
-
-    fn items() -> Vec<Self::Item> {
-        Self::iter().collect()
-    }
+    const MESSAGE: &'static str = "Install modes:";
 }
 
-pub fn radio_prompt<T: MultiPrompt>() -> Result<T::Item> {
-    Select::new(T::MESSAGE, T::items())
+pub fn radio_prompt<T>() -> Result<T>
+where
+    T: MultiPrompt + IntoEnumIterator + Display + Ord,
+{
+    Select::new(T::MESSAGE, T::iter().collect())
         .prompt()
         .map_err(Error::msg)
 }
 
-pub fn check_prompt<T: MultiPrompt>() -> Result<Option<BTreeSet<T::Item>>> {
-    MultiSelect::new(T::MESSAGE, T::items())
+pub fn check_prompt<T>() -> Result<Option<BTreeSet<T>>>
+where
+    T: MultiPrompt + IntoEnumIterator + Display + Ord,
+{
+    MultiSelect::new(T::MESSAGE, T::iter().collect())
         .prompt()
         .map(|items| {
             if items.is_empty() {

@@ -1,3 +1,4 @@
+use crate::commands::update::reorder_keys;
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -9,7 +10,7 @@ use crate::graphql::create_commit::FileAddition;
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
-    InstallModes, Installer, InstallerManifest, InstallerSwitches, InstallerType, UpgradeBehavior,
+    InstallModes, Installer, InstallerManifest, InstallerSwitches, UpgradeBehavior,
 };
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
@@ -23,6 +24,7 @@ use crate::types::custom_switch::CustomSwitch;
 use crate::types::description::Description;
 use crate::types::file_extension::FileExtension;
 use crate::types::installer_success_code::InstallerSuccessCode;
+use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::license::License;
 use crate::types::manifest_type::ManifestType;
@@ -44,6 +46,7 @@ use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
+use crate::url_utils::find_scope;
 use base64ct::Encoding;
 use clap::Parser;
 use color_eyre::eyre::Result;
@@ -54,6 +57,7 @@ use inquire::{Confirm, CustomType};
 use ordinal::Ordinal;
 use reqwest::Client;
 use std::collections::BTreeSet;
+use std::mem;
 use std::num::NonZeroU8;
 use std::ops::Not;
 use std::path::PathBuf;
@@ -182,31 +186,42 @@ impl New {
             .try_collect::<Vec<_>>()
             .await?;
         multi_progress.clear()?;
-        let download_results = process_files(files).await?;
+        let mut download_results = process_files(files).await?;
         let mut installers = BTreeSet::new();
-        for (url, mut data) in download_results {
-            if data.installer_type == InstallerType::Exe
-                && Confirm::new(&format!("Is {} a portable exe?", data.file_name)).prompt()?
+        for (url, analyser) in &mut download_results {
+            if analyser.installer_type == InstallerType::Exe
+                && Confirm::new(&format!("Is {} a portable exe?", analyser.file_name)).prompt()?
             {
-                data.installer_type = InstallerType::Portable;
+                analyser.installer_type = InstallerType::Portable;
             }
             let mut installer_switches = InstallerSwitches::default();
-            if data.installer_type == InstallerType::Exe {
+            if analyser.installer_type == InstallerType::Exe {
                 installer_switches.silent = optional_prompt::<SilentSwitch>(None)?;
                 installer_switches.silent_with_progress =
                     optional_prompt::<SilentWithProgressSwitch>(None)?;
             }
-            if data.installer_type != InstallerType::Portable {
+            if analyser.installer_type != InstallerType::Portable {
                 installer_switches.custom = optional_prompt::<CustomSwitch>(None)?;
             }
+            if let Some(zip) = &mut analyser.zip {
+                zip.prompt()?;
+            }
             installers.insert(Installer {
-                platform: data
-                    .msix
-                    .as_ref()
-                    .map(|msix| BTreeSet::from([msix.target_device_family])),
-                architecture: data.architecture,
-                installer_url: url,
-                installer_sha_256: data.installer_sha_256,
+                platform: mem::take(&mut analyser.platform),
+                architecture: analyser.architecture,
+                installer_type: Some(analyser.installer_type),
+                nested_installer_type: analyser
+                    .zip
+                    .as_mut()
+                    .and_then(|zip| mem::take(&mut zip.nested_installer_type)),
+                nested_installer_files: analyser
+                    .zip
+                    .as_mut()
+                    .and_then(|zip| mem::take(&mut zip.nested_installer_files)),
+                scope: find_scope(url.as_str()),
+                installer_url: url.clone(),
+                installer_sha_256: mem::take(&mut analyser.installer_sha_256),
+                signature_sha_256: mem::take(&mut analyser.signature_sha_256),
                 installer_switches: installer_switches
                     .are_all_none()
                     .not()
@@ -228,23 +243,39 @@ impl New {
             commands: list_prompt::<Command>()?,
             protocols: list_prompt::<Protocol>()?,
             file_extensions: list_prompt::<FileExtension>()?,
-            installers,
             manifest_type: ManifestType::Installer,
-            manifest_version: ManifestVersion::default(),
             ..InstallerManifest::default()
         };
+        let installer_manifest = reorder_keys(
+            package_identifier.clone(),
+            package_version.clone(),
+            installers,
+            installer_manifest,
+        );
         let default_locale_manifest = DefaultLocaleManifest {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
             package_locale: default_locale.clone(),
-            publisher: required_prompt(self.publisher)?,
+            publisher: download_results
+                .values_mut()
+                .find(|analyser| analyser.publisher.is_some())
+                .and_then(|analyser| mem::take(&mut analyser.publisher))
+                .unwrap_or_else(|| required_prompt(self.publisher).unwrap_or_default()),
             publisher_url: optional_prompt(self.publisher_url)?,
             author: optional_prompt(self.author)?,
-            package_name: required_prompt(self.package_name)?,
+            package_name: download_results
+                .values_mut()
+                .find(|analyser| analyser.package_name.is_some())
+                .and_then(|analyser| mem::take(&mut analyser.package_name))
+                .unwrap_or_else(|| required_prompt(self.package_name).unwrap_or_default()),
             package_url: optional_prompt(self.package_url)?,
             license: required_prompt(self.license)?,
             license_url: optional_prompt(self.license_url)?,
-            copyright: optional_prompt(self.copyright)?,
+            copyright: download_results
+                .values_mut()
+                .find(|analyser| analyser.copyright.is_some())
+                .and_then(|analyser| mem::take(&mut analyser.copyright))
+                .or_else(|| optional_prompt(self.copyright).ok()?),
             copyright_url: optional_prompt(self.copyright_url)?,
             short_description: required_prompt(self.short_description)?,
             description: optional_prompt(self.description)?,
@@ -252,7 +283,6 @@ impl New {
             tags: list_prompt::<Tag>()?,
             release_notes_url: optional_prompt(self.release_notes_url)?,
             manifest_type: ManifestType::DefaultLocale,
-            manifest_version: ManifestVersion::default(),
             ..DefaultLocaleManifest::default()
         };
         let version_manifest = VersionManifest {

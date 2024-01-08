@@ -1,8 +1,4 @@
-use crate::file_analyser::{get_architecture, FileAnalyser};
-use crate::manifests::installer_manifest::{Architecture, InstallerType};
-use crate::msi::Msi;
-use crate::msix_family::msix::Msix;
-use crate::msix_family::msixbundle::MsixBundle;
+use crate::file_analyser::FileAnalyser;
 use crate::types::urls::url::Url;
 use crate::url_utils::find_architecture;
 use async_tempfile::TempFile;
@@ -15,7 +11,6 @@ use reqwest::Client;
 use sha2::{Digest, Sha256};
 use std::cmp::min;
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::future::Future;
 use time::format_description::well_known::Rfc2822;
 use time::{Date, OffsetDateTime};
@@ -119,18 +114,7 @@ pub struct DownloadedFile {
     pub last_modified: Option<Date>,
 }
 
-pub struct InitialData {
-    pub architecture: Architecture,
-    pub installer_type: InstallerType,
-    pub installer_sha_256: String,
-    pub last_modified: Option<Date>,
-    pub msi: Option<Msi>,
-    pub msix: Option<Msix>,
-    pub msix_bundle: Option<MsixBundle>,
-    pub file_name: String,
-}
-
-pub async fn process_files(files: Vec<DownloadedFile>) -> Result<HashMap<Url, InitialData>> {
+pub async fn process_files(files: Vec<DownloadedFile>) -> Result<HashMap<Url, FileAnalyser>> {
     stream::iter(files.into_iter().map(
         |DownloadedFile {
              url,
@@ -138,31 +122,12 @@ pub async fn process_files(files: Vec<DownloadedFile>) -> Result<HashMap<Url, In
              sha_256,
              last_modified,
          }| async move {
-            let file_analyser = FileAnalyser::new(&mut file).await?;
-            let initial_data = InitialData {
-                architecture: find_architecture(url.as_str())
-                    .or_else(|| file_analyser.msi.as_ref().map(|msi| msi.architecture))
-                    .or_else(|| {
-                        file_analyser
-                            .msix
-                            .as_ref()
-                            .map(|msix| msix.processor_architecture)
-                    })
-                    .unwrap_or_else(|| get_architecture(&file_analyser.pe.unwrap()).unwrap()),
-                installer_type: file_analyser.installer_type,
-                installer_sha_256: sha_256,
-                last_modified,
-                msi: file_analyser.msi,
-                msix: file_analyser.msix,
-                msix_bundle: file_analyser.msix_bundle,
-                file_name: file
-                    .file_path()
-                    .file_name()
-                    .and_then(OsStr::to_str)
-                    .map(str::to_owned)
-                    .unwrap(),
-            };
-            Ok((url, initial_data))
+            let mut file_analyser = FileAnalyser::new(&mut file, false).await?;
+            file_analyser.architecture =
+                find_architecture(url.as_str()).unwrap_or(file_analyser.architecture);
+            file_analyser.installer_sha_256 = sha_256;
+            file_analyser.last_modified = last_modified;
+            Ok((url, file_analyser))
         },
     ))
     .buffered(num_cpus::get())

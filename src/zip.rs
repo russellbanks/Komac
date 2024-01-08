@@ -1,5 +1,5 @@
 use crate::file_analyser::FileAnalyser;
-use crate::manifests::installer_manifest::{InstallerType, NestedInstallerFiles};
+use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
 use crate::url_utils::VALID_FILE_EXTENSIONS;
 use async_tempfile::TempFile;
 use async_zip::tokio::read::seek::ZipFileReader;
@@ -13,7 +13,7 @@ use tokio::io;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 pub struct Zip {
-    pub nested_installer_type: Option<InstallerType>,
+    pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     identified_files: Vec<String>,
 }
@@ -72,8 +72,9 @@ impl Zip {
                     let entry_reader = zip.reader_without_entry(index).await?;
                     let temp_file = TempFile::new_with_name(&chosen_file_name).await?;
                     io::copy(&mut entry_reader.compat(), &mut temp_file.open_rw().await?).await?;
-                    let file_analyser = FileAnalyser::new(&mut temp_file.open_ro().await?).await?;
-                    nested_installer_type = Some(file_analyser.installer_type);
+                    let file_analyser =
+                        FileAnalyser::new(&mut temp_file.open_ro().await?, true).await?;
+                    nested_installer_type = file_analyser.installer_type.to_nested();
                     break;
                 }
             }
@@ -94,7 +95,7 @@ impl Zip {
         })
     }
 
-    pub fn prompt(mut self) -> Result<Self> {
+    pub fn prompt(&mut self) -> Result<()> {
         if !&self.identified_files.is_empty() {
             let chosen = MultiSelect::new(
                 "Select the nested files",
@@ -112,7 +113,7 @@ impl Zip {
                     .collect(),
             );
         }
-        Ok(self)
+        Ok(())
     }
 }
 
