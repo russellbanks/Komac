@@ -62,6 +62,7 @@ use std::num::NonZeroU8;
 use std::ops::Not;
 use std::path::PathBuf;
 use std::time::Duration;
+use strum::IntoEnumIterator;
 use tokio::fs;
 
 #[derive(Parser)]
@@ -237,7 +238,14 @@ impl New {
         let installer_manifest = InstallerManifest {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
-            install_modes: check_prompt::<InstallModes>()?,
+            install_modes: if installers
+                .iter()
+                .any(|installer| installer.installer_type == Some(InstallerType::Inno))
+            {
+                Some(InstallModes::iter().collect())
+            } else {
+                check_prompt::<InstallModes>()?
+            },
             installer_success_codes: list_prompt::<InstallerSuccessCode>()?,
             upgrade_behavior: Some(radio_prompt::<UpgradeBehavior>()?),
             commands: list_prompt::<Command>()?,

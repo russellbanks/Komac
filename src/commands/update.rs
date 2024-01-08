@@ -137,16 +137,11 @@ impl Update {
                 Installer {
                     installer_locale: analyser
                         .product_language
-                        .or(previous_installer.installer_locale)
-                        .or_else(|| previous_installer_manifest.installer_locale.clone()),
-                    platform: analyser
-                        .platform
-                        .or(previous_installer.platform)
-                        .or_else(|| previous_installer_manifest.platform.clone()),
+                        .or(previous_installer.installer_locale),
+                    platform: analyser.platform.or(previous_installer.platform),
                     minimum_os_version: analyser
                         .minimum_os_version
                         .or(previous_installer.minimum_os_version)
-                        .or_else(|| previous_installer_manifest.minimum_os_version.clone())
                         .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0"),
                     architecture: previous_installer.architecture,
                     installer_type: new_installer.installer_type,
@@ -157,27 +152,14 @@ impl Update {
                     installer_url: new_installer.installer_url.clone(),
                     installer_sha_256: analyser.installer_sha_256,
                     signature_sha_256: analyser.signature_sha_256,
-                    install_modes: previous_installer
-                        .install_modes
-                        .or_else(|| previous_installer_manifest.install_modes.clone()),
-                    installer_switches: previous_installer
-                        .installer_switches
-                        .or_else(|| previous_installer_manifest.installer_switches.clone()),
-                    installer_success_codes: previous_installer
-                        .installer_success_codes
-                        .or_else(|| previous_installer_manifest.installer_success_codes.clone()),
+                    install_modes: previous_installer.install_modes,
+                    installer_switches: previous_installer.installer_switches,
+                    installer_success_codes: previous_installer.installer_success_codes,
                     upgrade_behavior: UpgradeBehavior::get(analyser.installer_type)
-                        .or(previous_installer.upgrade_behavior)
-                        .or(previous_installer_manifest.upgrade_behavior),
-                    commands: previous_installer
-                        .commands
-                        .or_else(|| previous_installer_manifest.commands.clone()),
-                    protocols: previous_installer
-                        .protocols
-                        .or_else(|| previous_installer_manifest.protocols.clone()),
-                    file_extensions: previous_installer
-                        .file_extensions
-                        .or_else(|| previous_installer_manifest.file_extensions.clone()),
+                        .or(previous_installer.upgrade_behavior),
+                    commands: previous_installer.commands,
+                    protocols: previous_installer.protocols,
+                    file_extensions: previous_installer.file_extensions,
                     package_family_name: analyser.package_family_name,
                     product_code: analyser.product_code,
                     release_date: analyser.last_modified,
@@ -204,12 +186,15 @@ impl Update {
             })
             .collect::<BTreeSet<_>>();
 
-        let installer_manifest = reorder_keys(
+        let mut installer_manifest = reorder_keys(
             self.identifier.clone(),
             self.version.clone(),
             installers,
             previous_installer_manifest,
         );
+        installer_manifest.minimum_os_version = installer_manifest
+            .minimum_os_version
+            .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0");
         let previous_default_locale_manifest = manifests.default_locale_manifest;
         let mut github_values = match github_values {
             Some(future) => Some(future.await),
@@ -430,17 +415,23 @@ pub fn reorder_keys(
     package_identifier: PackageIdentifier,
     package_version: PackageVersion,
     installers: BTreeSet<Installer>,
-    previous_installer_manifest: InstallerManifest,
+    installer_manifest: InstallerManifest,
 ) -> InstallerManifest {
     macro_rules! root_manifest_key {
         ($field:ident) => {
             installers
                 .iter()
-                .map(|installer| installer.$field.as_ref())
-                .all_equal_value()
-                .ok()
+                .all(|installer| installer.$field.is_none())
+                .then_some(installer_manifest.$field)
+                .or_else(|| {
+                    installers
+                        .iter()
+                        .map(|installer| installer.$field.as_ref())
+                        .all_equal_value()
+                        .ok()
+                        .map(|value| value.cloned())
+                })
                 .flatten()
-                .cloned()
         };
     }
 
@@ -480,6 +471,6 @@ pub fn reorder_keys(
         installation_metadata: root_manifest_key!(installation_metadata),
         installers: remove_non_distinct_keys(installers),
         manifest_version: ManifestVersion::default(),
-        ..previous_installer_manifest
+        ..installer_manifest
     }
 }
