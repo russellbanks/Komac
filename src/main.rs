@@ -22,6 +22,10 @@ use crate::commands::token::token::{TokenArgs, TokenCommands};
 use crate::commands::update_version::UpdateVersion;
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::Result;
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,7 +34,7 @@ async fn main() -> Result<()> {
         .install()?;
     match Cli::parse().command {
         Commands::New(new_version) => new_version.run().await,
-        Commands::Update(update) => update.run().await,
+        Commands::Update(update_version) => update_version.run().await,
         Commands::Cleanup(cleanup) => cleanup.run().await,
         Commands::Remove(remove_version) => remove_version.run().await,
         Commands::Token(token_args) => match token_args.command {

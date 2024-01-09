@@ -70,11 +70,6 @@ jobs:
             arch: x86
             os_name: freebsd
             bin: cross
-          - os: ubuntu-latest
-            target: x86_64-unknown-illumos
-            arch: x64
-            os_name: illumos
-            bin: cross
           - os: macos-latest
             target: x86_64-apple-darwin
             arch: x64

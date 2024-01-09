@@ -57,7 +57,7 @@ async fn download_file(
 
     let mut hasher = Sha256::new();
     while let Some(item) = stream.next().await {
-        let chunk = item.wrap_err_with(|| "Error while downloading file")?;
+        let chunk = item?;
         let write = file.write_all(&chunk);
         hasher.update(&chunk); // Hash file as it's downloading
         let new = min(downloaded + (chunk.len() as u64), total_size);

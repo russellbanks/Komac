@@ -55,7 +55,7 @@ pub struct UpdateVersion {
     #[arg(long, default_value_t = NonZeroU8::new(2).unwrap())]
     concurrent_downloads: NonZeroU8,
 
-    /// Automatically submit a pull request to update the package
+    /// Automatically submit a pull request
     #[arg(short, long)]
     submit: bool,
 
