@@ -38,33 +38,37 @@ use std::time::Duration;
 use tokio::fs;
 
 #[derive(Parser)]
-pub struct Update {
+pub struct UpdateVersion {
+    /// The package's unique identifier
     #[arg(id = "package_identifier", short = 'i', long = "identifier")]
     identifier: PackageIdentifier,
 
+    /// The package's version
     #[arg(id = "package_version", short = 'v', long = "version")]
     version: PackageVersion,
 
+    /// The list of package installers
     #[arg(short, long, num_args=1.., required = true)]
     urls: Vec<Url>,
 
-    // Number of installers to download at the same time
+    /// Number of installers to download at the same time
     #[arg(long, default_value_t = NonZeroU8::new(2).unwrap())]
     concurrent_downloads: NonZeroU8,
 
+    /// Automatically submit a pull request to update the package
     #[arg(short, long)]
     submit: bool,
 
-    // Directory to output the manifests to
+    /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
     output: Option<PathBuf>,
 
-    /// GitHub personal access token with the public_repo scope
+    /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
 
-impl Update {
+impl UpdateVersion {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
         let github = GitHub::new(token)?;

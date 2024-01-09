@@ -10,7 +10,7 @@ const SERVICE: &str = "komac";
 const USERNAME: &str = "github-access-token";
 const GITHUB_API_ENDPOINT: &str = "https://api.github.com/octocat";
 
-fn get_komac_credential() -> Result<Entry> {
+pub fn get_komac_credential() -> Result<Entry> {
     Entry::new(SERVICE, USERNAME)
 }
 
@@ -57,7 +57,7 @@ pub async fn handle_token(token: Option<String>) -> color_eyre::eyre::Result<Str
         })?;
         if credential_entry.set_password(&token).is_ok() {
             println!("Successfully stored token in platform's secure storage");
-        };
+        }
         Ok(token)
     }
 }

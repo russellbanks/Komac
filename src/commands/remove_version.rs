@@ -14,7 +14,7 @@ use inquire::validator::{MaxLengthValidator, MinLengthValidator};
 use inquire::{Confirm, Text};
 
 #[derive(Parser)]
-pub struct Remove {
+pub struct RemoveVersion {
     #[arg(short = 'i', long = "identifier")]
     package_identifier: PackageIdentifier,
 
@@ -27,12 +27,12 @@ pub struct Remove {
     #[arg(short, long)]
     submit: bool,
 
-    /// GitHub personal access token with the public_repo scope
+    /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
 
-impl Remove {
+impl RemoveVersion {
     const MIN_REASON_LENGTH: usize = 4;
     const MAX_REASON_LENGTH: usize = 1000;
 

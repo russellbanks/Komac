@@ -16,9 +16,10 @@ mod url_utils;
 mod zip;
 
 use crate::commands::cleanup::Cleanup;
-use crate::commands::new_version::New;
-use crate::commands::remove_version::Remove;
-use crate::commands::update::Update;
+use crate::commands::new_version::NewVersion;
+use crate::commands::remove_version::RemoveVersion;
+use crate::commands::token::token::{TokenArgs, TokenCommands};
+use crate::commands::update_version::UpdateVersion;
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::Result;
 
@@ -32,6 +33,10 @@ async fn main() -> Result<()> {
         Commands::Update(update) => update.run().await,
         Commands::Cleanup(cleanup) => cleanup.run().await,
         Commands::Remove(remove_version) => remove_version.run().await,
+        Commands::Token(token_args) => match token_args.command {
+            TokenCommands::RemoveToken(remove_token) => remove_token.run(),
+            TokenCommands::UpdateToken(update_token) => update_token.run(),
+        },
     }
 }
 
@@ -44,8 +49,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    New(Box<New>), // Boxed to store on the heap instead as New is a large struct
-    Update(Update),
+    #[command(name = "new")]
+    New(Box<NewVersion>), // Boxed to store on the heap instead as New is a large struct
+    #[command(name = "update")]
+    Update(UpdateVersion),
+    #[command(name = "remove")]
+    Remove(RemoveVersion),
     Cleanup(Cleanup),
-    Remove(Remove),
+    Token(TokenArgs),
 }

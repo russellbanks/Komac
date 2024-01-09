@@ -1,4 +1,4 @@
-use crate::commands::update::reorder_keys;
+use crate::commands::update_version::reorder_keys;
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -66,13 +66,16 @@ use strum::IntoEnumIterator;
 use tokio::fs;
 
 #[derive(Parser)]
-pub struct New {
+pub struct NewVersion {
+    /// The package's unique identifier
     #[arg(short = 'i', long = "identifier")]
     package_identifier: Option<PackageIdentifier>,
 
+    /// The package's version
     #[arg(short = 'v', long = "version")]
     package_version: Option<PackageVersion>,
 
+    /// The list of package installers
     #[arg(short, long, num_args=1..)]
     urls: Vec<Url>,
 
@@ -118,23 +121,24 @@ pub struct New {
     #[arg(long)]
     release_notes_url: Option<ReleaseNotesUrl>,
 
-    // Number of installers to download at the same time
+    /// Number of installers to download at the same time
     #[arg(long, default_value_t = NonZeroU8::new(2).unwrap())]
     concurrent_downloads: NonZeroU8,
 
+    /// Automatically submit a pull request to update the package
     #[arg(short, long)]
     submit: bool,
 
-    // Directory to output the manifests to
+    /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
     output: Option<PathBuf>,
 
-    /// GitHub personal access token with the public_repo scope
+    /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
 
-impl New {
+impl NewVersion {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
         let github = GitHub::new(token)?;

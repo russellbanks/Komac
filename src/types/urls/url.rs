@@ -1,6 +1,5 @@
 use nutype::nutype;
 use percent_encoding::percent_decode_str;
-use std::str::FromStr;
 
 #[nutype(
     sanitize(with = |url: url::Url| {
@@ -10,9 +9,3 @@ use std::str::FromStr;
     derive(Clone, Deref, FromStr, Display, Default, Deserialize, Serialize, Hash, Eq, PartialEq, Ord, PartialOrd, Debug)
 )]
 pub struct Url(url::Url);
-
-impl Url {
-    pub fn parse(url: &str) -> Result<Self, UrlParseError> {
-        Self::from_str(url)
-    }
-}

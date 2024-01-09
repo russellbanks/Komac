@@ -24,7 +24,7 @@ pub struct Cleanup {
     #[arg(long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
     concurrent_calls: NonZeroUsize,
 
-    /// GitHub personal access token with the public_repo scope
+    /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }

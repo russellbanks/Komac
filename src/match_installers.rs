@@ -68,27 +68,28 @@ mod tests {
     use crate::types::architecture::Architecture;
     use crate::types::urls::url::Url;
     use std::collections::HashMap;
+    use std::str::FromStr;
 
     #[test]
     fn test_vscodium() {
         let installer_x86 = Installer {
             architecture: Architecture::X86,
-            installer_url: Url::parse("https://www.example.com/file-x86.exe").unwrap(),
+            installer_url: Url::from_str("https://www.example.com/file-x86.exe").unwrap(),
             ..Installer::default()
         };
         let installer_user_x86 = Installer {
             scope: Some(Scope::User),
-            installer_url: Url::parse("https://www.example.com/fileUser-x86.exe").unwrap(),
+            installer_url: Url::from_str("https://www.example.com/fileUser-x86.exe").unwrap(),
             ..installer_x86.clone()
         };
         let installer_x64 = Installer {
             architecture: Architecture::X64,
-            installer_url: Url::parse("https://www.example.com/file-x64.exe").unwrap(),
+            installer_url: Url::from_str("https://www.example.com/file-x64.exe").unwrap(),
             ..Installer::default()
         };
         let installer_user_x64 = Installer {
             scope: Some(Scope::User),
-            installer_url: Url::parse("https://www.example.com/fileUser-x64.exe").unwrap(),
+            installer_url: Url::from_str("https://www.example.com/fileUser-x64.exe").unwrap(),
             ..installer_x64.clone()
         };
         let previous_machine_x86 = Installer {
