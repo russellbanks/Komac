@@ -19,7 +19,7 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use color_eyre::eyre::{bail, eyre, Result};
+use color_eyre::eyre::{bail, eyre, OptionExt, Result};
 use graphql_client::reqwest::post_graphql;
 use graphql_client::GraphQLQuery;
 use reqwest::Client;
@@ -160,7 +160,7 @@ pub async fn get_current_user_login(client: &Client) -> Result<String> {
     )
     .await?
     .data
-    .ok_or_else(|| eyre!("No data was returned when retrieving the current user's login"))
+    .ok_or_eyre("No data was returned when retrieving the current user's login")
     .map(|data| data.viewer.login)
 }
 
@@ -202,12 +202,12 @@ pub async fn create_commit(
     post_graphql::<CreateCommit, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_else(|| eyre!("No data was returned when attempting to create commit"))?
+        .ok_or_eyre("No data was returned when attempting to create commit")?
         .create_commit_on_branch
-        .ok_or_else(|| eyre!("Failed to create commit"))?
+        .ok_or_eyre("Failed to create commit")?
         .commit
         .map(|commit| commit.url)
-        .ok_or_else(|| eyre!("No commit data was returned when creating commit"))
+        .ok_or_eyre("No commit data was returned when creating commit")
 }
 
 #[derive(GraphQLQuery)]

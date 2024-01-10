@@ -1,13 +1,12 @@
+use crate::exe::vs_version_info::VSVersionInfo;
 use crate::file_analyser::{APPX, APPX_BUNDLE, EXE, MSI, MSIX, MSIX_BUNDLE, ZIP};
 use crate::manifests::installer_manifest::NestedInstallerType;
 use crate::msi::Msi;
-use async_tempfile::TempFile;
-use color_eyre::eyre::{bail, Result};
-use exe::ResolvedDirectoryID::{Name, ID};
-use exe::{ResourceDirectory, VSVersionInfo, VecPE, WCharString};
+use color_eyre::eyre::{bail, OptionExt, Result};
+use object::pe::RT_RCDATA;
+use object::read::pe::{ImageNtHeaders, PeFile};
+use object::ReadRef;
 use serde::{Deserialize, Serialize};
-use std::io::SeekFrom;
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "lowercase")]
@@ -26,12 +25,16 @@ pub enum InstallerType {
 }
 
 impl InstallerType {
-    pub async fn get(
-        file: &mut TempFile,
+    pub async fn get<'data, Pe, R>(
+        data: &[u8],
+        pe: Option<&PeFile<'data, Pe, R>>,
         extension: &str,
         msi: Option<&Msi>,
-        pe: Option<&VecPE>,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    where
+        Pe: ImageNtHeaders,
+        R: ReadRef<'data>,
+    {
         match extension {
             MSI => {
                 if let Some(msi) = msi {
@@ -43,11 +46,13 @@ impl InstallerType {
             ZIP => return Ok(Self::Zip),
             EXE => {
                 return match () {
-                    () if pe.is_some_and(Self::is_inno) => Ok(Self::Inno),
-                    () if Self::is_nullsoft(file).await? => Ok(Self::Nullsoft),
-                    () if pe.is_some_and(Self::is_burn) => Ok(Self::Burn),
+                    () if pe.is_some_and(|pe| Self::is_inno(pe, data)) => Ok(Self::Inno),
+                    () if Self::is_nullsoft(data) => Ok(Self::Nullsoft),
+                    () if pe.and_then(|pe| Self::is_burn(pe).ok()).unwrap_or(false) => {
+                        Ok(Self::Burn)
+                    }
                     () => Ok(Self::Exe),
-                }
+                };
             }
             _ => {}
         }
@@ -55,7 +60,7 @@ impl InstallerType {
     }
 
     /// Checks if the file is Nullsoft from its magic bytes
-    async fn is_nullsoft(file: &mut TempFile) -> Result<bool> {
+    fn is_nullsoft(data: &[u8]) -> bool {
         const NULLSOFT_BYTES_LEN: usize = 224;
 
         /// The first 224 bytes of an exe made with NSIS are always the same
@@ -73,18 +78,19 @@ impl InstallerType {
             0,
         ];
 
-        let mut buffer = [0; NULLSOFT_BYTES_LEN];
-        file.seek(SeekFrom::Start(0)).await?;
-        file.read_exact(&mut buffer).await?;
-        Ok(buffer == NULLSOFT_BYTES)
+        data[..NULLSOFT_BYTES_LEN] == NULLSOFT_BYTES
     }
 
     /// Checks the String File Info of the exe for whether its comment states that it was built with Inno Setup
-    fn is_inno(pe: &VecPE) -> bool {
+    fn is_inno<'data, Pe, R>(pe: &PeFile<'data, Pe, R>, data: &[u8]) -> bool
+    where
+        Pe: ImageNtHeaders,
+        R: ReadRef<'data>,
+    {
         const COMMENTS: &str = "Comments";
         const INNO_COMMENT: &str = "This installation was built with Inno Setup.";
 
-        VSVersionInfo::parse(pe)
+        VSVersionInfo::parse(pe, data)
             .ok()
             .and_then(|info| info.string_file_info)
             .is_some_and(|mut string_info| {
@@ -93,43 +99,42 @@ impl InstallerType {
                     .swap_remove(0)
                     .children
                     .into_iter()
-                    .find(|entry| {
-                        entry
-                            .header
-                            .key
-                            .as_u16_str()
-                            .map(|utf16_str| utf16_str.to_string())
-                            .ok()
-                            .as_deref()
-                            == Some(COMMENTS)
-                    })
-                    .and_then(|entry| {
-                        entry
-                            .value
-                            .as_u16_str()
-                            .map(|utf_16_str| utf_16_str.to_string())
-                            .ok()
-                    })
+                    .find(|entry| String::from_utf16_lossy(entry.header.key) == COMMENTS)
+                    .map(|entry| String::from_utf16_lossy(entry.value))
                     .as_deref()
                     == Some(INNO_COMMENT)
             })
     }
 
-    fn is_burn(pe: &VecPE) -> bool {
-        ResourceDirectory::parse(pe)
-            .map(|resource_directory| {
-                resource_directory
-                    .resources
-                    .into_iter()
-                    .any(|entry| match entry.rsrc_id {
-                        Name(mut value) => {
-                            value.make_ascii_lowercase();
-                            value == MSI
-                        }
-                        ID(_) => false,
-                    })
+    fn is_burn<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<bool>
+    where
+        Pe: ImageNtHeaders,
+        R: ReadRef<'data>,
+    {
+        let resource_directory = pe
+            .data_directories()
+            .resource_directory(pe.data(), &pe.section_table())?
+            .ok_or_eyre("No resource directory was found")?;
+        let rc_data = resource_directory
+            .root()?
+            .entries
+            .iter()
+            .find(|entry| entry.name_or_id().id() == Some(RT_RCDATA))
+            .ok_or_eyre("No RT_RCDATA was found")?;
+        Ok(rc_data
+            .data(resource_directory)?
+            .table()
+            .and_then(|table| {
+                table.entries.iter().find(|entry| {
+                    entry
+                        .name_or_id()
+                        .name()
+                        .and_then(|name| name.to_string_lossy(resource_directory).ok())
+                        .as_deref()
+                        == Some("MSI")
+                })
             })
-            .unwrap_or(false)
+            .is_some())
     }
 
     pub const fn to_nested(self) -> Option<NestedInstallerType> {
