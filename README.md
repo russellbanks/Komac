@@ -34,7 +34,7 @@ scoop install komac
 #### Homebrew
 
 ```bash
-brew install russellbanks/komac/komac
+brew install russellbanks/tap/komac
 ```
 
 ## Commands
