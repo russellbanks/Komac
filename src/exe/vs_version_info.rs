@@ -71,7 +71,7 @@ impl<'data> VSVersionInfo<'data> {
             value = None;
         } else {
             let struct_size = mem::size_of::<VSFixedFileInfo>();
-            value = Some(bytemuck::from_bytes(&data[offset..offset + struct_size]));
+            value = Some(data.read_at(offset as u64).unwrap());
             offset += struct_size;
             consumed = offset - base_offset;
         }

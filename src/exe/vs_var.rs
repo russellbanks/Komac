@@ -2,6 +2,7 @@ use crate::exe::utils::align;
 use crate::exe::var_dword::VarDword;
 use crate::exe::vs_header::VSHeader;
 use color_eyre::eyre::Result;
+use object::ReadRef;
 use std::mem;
 
 /// Represents a [`Var`](https://docs.microsoft.com/en-us/windows/win32/menurc/var-str) structure.
@@ -19,7 +20,7 @@ impl<'data> VSVar<'data> {
         let mut children = Vec::<&'data VarDword>::new();
 
         while consumed < (*header.length as usize) {
-            let child = bytemuck::from_bytes(&data[offset..offset + mem::size_of::<VarDword>()]);
+            let child = data.read_at(offset as u64).unwrap();
 
             offset += mem::size_of::<VarDword>();
             offset = align(offset, 4);

@@ -1,6 +1,8 @@
 use crate::exe::utils::get_widestring_size;
 use color_eyre::eyre::Result;
+use object::ReadRef;
 use std::mem;
+use zerocopy::FromBytes;
 
 /// Represents a header for a `VS_VERSION` structure.
 ///
@@ -17,19 +19,18 @@ impl<'data> VSHeader<'data> {
     pub fn parse(data: &'data [u8], base_offset: usize) -> Result<(usize, Self)> {
         let mut offset = base_offset;
 
-        let length = bytemuck::from_bytes::<u16>(&data[offset..offset + mem::size_of::<u16>()]);
+        let length = data.read_at(offset as u64).unwrap();
         offset += mem::size_of::<u16>();
 
-        let value_length =
-            bytemuck::from_bytes::<u16>(&data[offset..offset + mem::size_of::<u16>()]);
+        let value_length = data.read_at(offset as u64).unwrap();
         offset += mem::size_of::<u16>();
 
-        let type_value = bytemuck::from_bytes::<u16>(&data[offset..offset + mem::size_of::<u16>()]);
+        let type_value = data.read_at(offset as u64).unwrap();
         offset += mem::size_of::<u16>();
 
         let widestring_size = get_widestring_size(data, offset)?;
 
-        let key = bytemuck::cast_slice(&data[offset..offset + widestring_size]);
+        let key = FromBytes::slice_from(&data[offset..offset + widestring_size]).unwrap();
         let key_size = (key.len() + 1) * mem::size_of::<u16>();
         offset += key_size;
 

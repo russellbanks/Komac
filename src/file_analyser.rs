@@ -61,9 +61,10 @@ impl<'a> FileAnalyser<'a> {
             .to_lowercase();
         let mut installer_type = None;
         let map = unsafe { Mmap::map(file) }?;
-        let mut msi = (extension == MSI)
-            .then(|| Msi::new(Cursor::new(map.as_ref())))
-            .transpose()?;
+        let mut msi = match extension.as_str() {
+            MSI => Some(Msi::new(Cursor::new(map.as_ref()))?),
+            _ => None,
+        };
         let mut pe_arch = None;
         let mut string_map = None;
         match FileKind::parse(map.as_ref())? {

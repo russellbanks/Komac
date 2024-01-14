@@ -19,8 +19,7 @@ strip = true
 [dependencies]
 base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
-bitflags = { version = "2.4.1", features = ["bytemuck"] }
-bytemuck = { version = "1.14.0", features = ["derive"] }
+bitflags = "2.4.1"
 byteorder = "1.5.0"
 clap = { version = "4.4.16", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.2", default-features = false }
@@ -59,6 +58,7 @@ tokio = { version = "1.35.1", features = ["rt-multi-thread", "macros", "fs"] }
 url = { version = "2.5.0", features = ["serde"] }
 versions = "6.1.0"
 xxhash-rust = { version = "0.8.8", features = ["xxh3"] }
+zerocopy = "0.7.32"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]

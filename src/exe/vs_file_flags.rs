@@ -1,12 +1,13 @@
 use bitflags::bitflags;
-use bytemuck::{Pod, Zeroable};
+
+/// A series of bitflags representing the file flags for the [`VS_FIXEDFILEINFO`](https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo)
+/// structure.
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct VSFileFlags(u32);
 
 bitflags! {
-    /// A series of bitflags representing the file flags for the [`VS_FIXEDFILEINFO`](https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo)
-    /// structure.
-    #[repr(C)]
-    #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy, Pod, Zeroable)]
-    pub struct VSFileFlags: u32 {
+    impl VSFileFlags: u32 {
         const DEBUG = 0x0000_0001;
         const PRERELEASE = 0x0000_0002;
         const PATCHED = 0x0000_0004;

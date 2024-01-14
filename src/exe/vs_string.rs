@@ -1,6 +1,7 @@
 use crate::exe::utils::{align, get_widestring_size};
 use crate::exe::vs_header::VSHeader;
 use color_eyre::eyre::Result;
+use zerocopy::FromBytes;
 
 /// Represents a [`String`](https://docs.microsoft.com/en-us/windows/win32/menurc/string-str) structure.
 pub struct VSString<'data> {
@@ -14,7 +15,7 @@ impl<'data> VSString<'data> {
         offset = align(offset, 4);
 
         let widestring_size = get_widestring_size(data, offset)?;
-        let value = bytemuck::cast_slice(&data[offset..offset + widestring_size]);
+        let value = FromBytes::slice_from(&data[offset..offset + widestring_size]).unwrap();
 
         Ok(Self { header, value })
     }

@@ -1,9 +1,9 @@
 use crate::exe::vs_file_flags::VSFileFlags;
-use bytemuck::{Pod, Zeroable};
+use object::Pod;
 
 /// Represents a [`VS_FIXEDFILEINFO`](https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo) structure.
 #[repr(C)]
-#[derive(Copy, Clone, Pod, Zeroable, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone)]
 pub struct VSFixedFileInfo {
     pub signature: u32,
     pub struct_version: u32,
@@ -19,3 +19,5 @@ pub struct VSFixedFileInfo {
     pub file_date_ms: u32,
     pub file_date_ls: u32,
 }
+
+unsafe impl Pod for VSFixedFileInfo {}
