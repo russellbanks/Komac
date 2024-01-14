@@ -1,6 +1,5 @@
-use byteorder::{LittleEndian, ReadBytesExt};
+use crate::exe::utils::get_widestring_size;
 use color_eyre::eyre::Result;
-use std::io::Cursor;
 use std::mem;
 
 /// Represents a header for a `VS_VERSION` structure.
@@ -28,20 +27,7 @@ impl<'data> VSHeader<'data> {
         let type_value = bytemuck::from_bytes::<u16>(&data[offset..offset + mem::size_of::<u16>()]);
         offset += mem::size_of::<u16>();
 
-        let widestring_size = {
-            let mut cursor = Cursor::new(data);
-            let mut index = offset;
-            for i in (index..data.len()).step_by(2) {
-                cursor.set_position(i as u64);
-
-                if cursor.read_u16::<LittleEndian>()? == 0 {
-                    index = i;
-                    break;
-                }
-            }
-
-            index - offset
-        };
+        let widestring_size = get_widestring_size(data, offset)?;
 
         let key = bytemuck::cast_slice(&data[offset..offset + widestring_size]);
         let key_size = (key.len() + 1) * mem::size_of::<u16>();

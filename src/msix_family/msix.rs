@@ -1,15 +1,14 @@
 use crate::manifests::installer_manifest::Platform;
-use crate::msix_family::msix_utils::get_manifest_and_signature;
 use crate::types::architecture::Architecture;
 use crate::types::minimum_os_version::MinimumOSVersion;
-use async_zip::tokio::read::seek::ZipFileReader;
 use color_eyre::eyre::Result;
 use package_family_name::get_package_family_name;
 use quick_xml::de::from_str;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use std::io::{Read, Seek};
 use std::str::FromStr;
-use tokio::fs::File;
+use zip::ZipArchive;
 
 pub struct Msix {
     pub display_name: String,
@@ -23,13 +22,20 @@ pub struct Msix {
 }
 
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
+pub const APPX_SIGNATURE_P7X: &str = "AppxSignature.p7x";
 
 impl Msix {
-    pub async fn new(file: &mut File) -> Result<Self> {
-        let zip = ZipFileReader::with_tokio(file).await?;
+    pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
+        let mut zip = ZipArchive::new(reader)?;
 
-        let (appx_manifest, appx_signature) =
-            get_manifest_and_signature(zip, APPX_MANIFEST_XML).await?;
+        let mut appx_manifest = String::new();
+        let mut appx_signature = Vec::new();
+
+        zip.by_name(APPX_MANIFEST_XML)?
+            .read_to_string(&mut appx_manifest)?;
+
+        zip.by_name(APPX_SIGNATURE_P7X)?
+            .read_to_end(&mut appx_signature)?;
 
         let manifest: Package = from_str(&appx_manifest)?;
 

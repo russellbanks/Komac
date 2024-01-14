@@ -17,9 +17,6 @@ lto = true
 strip = true
 
 [dependencies]
-async-recursion = "1.0.5"
-async-tempfile = "0.5.0"
-async_zip = { version = "0.0.16", features = ["deflate", "tokio", "tokio-fs"] }
 base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
 bitflags = { version = "2.4.1", features = ["bytemuck"] }
@@ -55,13 +52,14 @@ serde_with = { version = "3.4.0", features = ["macros"] }
 serde_yaml = "0.9.30"
 sha2 = "0.10.8"
 strum = { version = "0.25.0", features = ["derive"] }
+tempfile = "3.9.0"
 thiserror = "1.0.56"
 time = { version = "0.3.31", features = ["serde-human-readable"] }
 tokio = { version = "1.35.1", features = ["rt-multi-thread", "macros", "fs"] }
-tokio-util = { version = "0.7.10", features = ["compat"] }
 url = { version = "2.5.0", features = ["serde"] }
 versions = "6.1.0"
 xxhash-rust = { version = "0.8.8", features = ["xxh3"] }
+zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]
 graphql_client = { version = "0.13.0", features = ["reqwest"] }

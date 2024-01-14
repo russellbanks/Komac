@@ -1,9 +1,9 @@
 use crate::types::architecture::Architecture;
 use crate::types::language_tag::LanguageTag;
 use color_eyre::eyre::{bail, Result};
-use msi::{Language, Select};
+use msi::{Language, Package, Select};
 use std::collections::HashMap;
-use std::path::Path;
+use std::io::{Read, Seek};
 use std::str::FromStr;
 
 pub struct Msi {
@@ -27,8 +27,8 @@ const UPGRADE_CODE: &str = "UpgradeCode";
 const WIX: &str = "wix";
 
 impl Msi {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut msi = msi::open(path)?;
+    pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
+        let mut msi = Package::open(reader)?;
 
         let architecture = match msi.summary_info().arch() {
             Some("x64" | "Intel64" | "AMD64") => Architecture::X64,

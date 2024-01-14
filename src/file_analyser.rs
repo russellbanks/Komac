@@ -11,20 +11,19 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
 use crate::zip::Zip;
-use async_recursion::async_recursion;
-use async_tempfile::TempFile;
 use color_eyre::eyre::{OptionExt, Result};
 use memmap2::Mmap;
 use object::pe::{ImageNtHeaders64, RT_RCDATA};
 use object::read::pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64, ResourceDirectoryEntryData};
 use object::{FileKind, LittleEndian, ReadRef};
+use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::ffi::OsStr;
-use std::io::SeekFrom;
+use std::fs::File;
+use std::io::Cursor;
 use std::mem;
+use std::path::Path;
 use time::Date;
-use tokio::io;
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -34,7 +33,7 @@ pub const MSIX_BUNDLE: &str = "msixbundle";
 pub const APPX_BUNDLE: &str = "appxbundle";
 pub const ZIP: &str = "zip";
 
-pub struct FileAnalyser {
+pub struct FileAnalyser<'a> {
     pub platform: Option<BTreeSet<Platform>>,
     pub minimum_os_version: Option<MinimumOSVersion>,
     pub architecture: Architecture,
@@ -45,7 +44,7 @@ pub struct FileAnalyser {
     pub product_code: Option<String>,
     pub product_language: Option<LanguageTag>,
     pub last_modified: Option<Date>,
-    pub file_name: String,
+    pub file_name: Cow<'a, str>,
     pub copyright: Option<Copyright>,
     pub package_name: Option<PackageName>,
     pub publisher: Option<Publisher>,
@@ -53,67 +52,65 @@ pub struct FileAnalyser {
     pub zip: Option<Zip>,
 }
 
-impl FileAnalyser {
-    #[async_recursion]
-    pub async fn new(file: &mut TempFile, nested: bool) -> Result<Self> {
-        let path = file.file_path();
-        let file_name = path
-            .file_name()
-            .and_then(OsStr::to_str)
-            .map(str::to_owned)
-            .unwrap();
-        let extension = path
+impl<'a> FileAnalyser<'a> {
+    pub fn new(file: &File, file_name: Cow<'a, str>, nested: bool) -> Result<Self> {
+        let extension = Path::new(file_name.as_ref())
             .extension()
             .and_then(OsStr::to_str)
             .unwrap_or_default()
             .to_lowercase();
-        let mut msi = (extension == MSI).then(|| Msi::new(path)).transpose()?;
         let mut installer_type = None;
-        let mmap_file = std::fs::File::open(path)?;
-        let map = unsafe { Mmap::map(&mmap_file) }?;
+        let map = unsafe { Mmap::map(file) }?;
+        let mut msi = (extension == MSI)
+            .then(|| Msi::new(Cursor::new(map.as_ref())))
+            .transpose()?;
         let mut pe_arch = None;
         let mut string_map = None;
         match FileKind::parse(map.as_ref())? {
             FileKind::Pe32 => {
                 let pe_file = PeFile32::parse(map.as_ref())?;
-                installer_type = Some(
-                    InstallerType::get(map.as_ref(), Some(&pe_file), &extension, msi.as_ref())
-                        .await?,
-                );
+                installer_type = Some(InstallerType::get(
+                    map.as_ref(),
+                    Some(&pe_file),
+                    &extension,
+                    msi.as_ref(),
+                )?);
                 if installer_type == Some(InstallerType::Burn) {
-                    msi = Some(extract_msi(file, &pe_file).await?);
+                    msi = Some(extract_msi(&pe_file, map.as_ref())?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
                 string_map = VSVersionInfo::parse(&pe_file, map.as_ref())?
                     .string_file_info
                     .map(|mut string_file_info| {
                         string_file_info.children.swap_remove(0).string_map()
-                    })
+                    });
             }
             FileKind::Pe64 => {
                 let pe_file = PeFile64::parse(map.as_ref())?;
-                installer_type = Some(
-                    InstallerType::get(map.as_ref(), Some(&pe_file), &extension, msi.as_ref())
-                        .await?,
-                );
+                installer_type = Some(InstallerType::get(
+                    map.as_ref(),
+                    Some(&pe_file),
+                    &extension,
+                    msi.as_ref(),
+                )?);
                 if installer_type == Some(InstallerType::Burn) {
-                    msi = Some(extract_msi(file, &pe_file).await?);
+                    msi = Some(extract_msi(&pe_file, map.as_ref())?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
                 string_map = VSVersionInfo::parse(&pe_file, map.as_ref())?
                     .string_file_info
                     .map(|mut string_file_info| {
                         string_file_info.children.swap_remove(0).string_map()
-                    })
+                    });
             }
             _ => {}
         }
         let mut msix = match extension.as_str() {
-            MSIX | APPX => Some(Msix::new(file).await?),
+            MSIX | APPX => Some(Msix::new(Cursor::new(map.as_ref()))?),
             _ => None,
         };
         let mut msix_bundle = match extension.as_str() {
-            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(file).await?),
+            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(Cursor::new(map.as_ref()))?),
             _ => None,
         };
         let zip = if nested {
@@ -121,20 +118,17 @@ impl FileAnalyser {
         } else {
             // File Analyser can be called from within a zip making this function asynchronously recursive
             match extension.as_str() {
-                ZIP => Some(Zip::new(file).await?),
+                ZIP => Some(Zip::new(Cursor::new(map.as_ref()))?),
                 _ => None,
             }
         };
         if installer_type.is_none() {
-            installer_type = Some(
-                InstallerType::get::<ImageNtHeaders64, &[u8]>(
-                    map.as_ref(),
-                    None::<&PeFile<'_, ImageNtHeaders64, &[u8]>>,
-                    &extension,
-                    msi.as_ref(),
-                )
-                .await?,
-            );
+            installer_type = Some(InstallerType::get::<ImageNtHeaders64, &[u8]>(
+                map.as_ref(),
+                None::<&PeFile<'_, ImageNtHeaders64, &[u8]>>,
+                &extension,
+                msi.as_ref(),
+            )?);
         }
         Ok(Self {
             platform: msix
@@ -172,10 +166,7 @@ impl FileAnalyser {
     }
 }
 
-pub async fn extract_msi<'data, Pe, R>(
-    file: &mut TempFile,
-    pe: &PeFile<'data, Pe, R>,
-) -> Result<Msi>
+pub fn extract_msi<'data, Pe, R>(pe: &PeFile<'data, Pe, R>, data: &[u8]) -> Result<Msi>
 where
     Pe: ImageNtHeaders,
     R: ReadRef<'data>,
@@ -199,8 +190,12 @@ where
                     .name_or_id()
                     .name()
                     .and_then(|name| name.to_string_lossy(resource_directory).ok())
+                    .map(|mut name| {
+                        name.make_ascii_lowercase();
+                        name
+                    })
                     .as_deref()
-                    == Some("MSI")
+                    == Some(MSI)
             })
         })
         .ok_or_eyre("No MSI resource was found")?;
@@ -217,31 +212,17 @@ where
         .section_containing(msi_entry.offset_to_data.get(LittleEndian))
         .unwrap();
 
-    let msi_name = format!(
-        "{}.{}",
-        file.file_path()
-            .file_name()
-            .and_then(OsStr::to_str)
-            .unwrap_or_default(),
-        MSI
-    );
-    let mut extracted_msi = TempFile::new_with_name(msi_name).await?.open_rw().await?;
-
     // Translate the offset into a usable one
     let offset = {
         let mut rva = msi_entry.offset_to_data.get(LittleEndian);
         rva -= section.virtual_address.get(LittleEndian);
         rva += section.pointer_to_raw_data.get(LittleEndian);
         rva
-    };
+    } as usize;
 
-    // Seek to the MSI offset
-    file.seek(SeekFrom::Start(u64::from(offset))).await?;
+    // Write the MSI to the temporary MSI file
+    let msi_data = Cursor::new(&data[offset..offset + msi_entry.size.get(LittleEndian) as usize]);
 
-    // Asynchronously write the MSI to the temporary MSI file
-    let mut take = file.take(u64::from(msi_entry.size.get(LittleEndian)));
-    io::copy(&mut take, &mut extracted_msi).await?;
-
-    let msi = Msi::new(extracted_msi.file_path())?;
+    let msi = Msi::new(msi_data)?;
     Ok(msi)
 }

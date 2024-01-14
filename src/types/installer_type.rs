@@ -25,7 +25,7 @@ pub enum InstallerType {
 }
 
 impl InstallerType {
-    pub async fn get<'data, Pe, R>(
+    pub fn get<'data, Pe, R>(
         data: &[u8],
         pe: Option<&PeFile<'data, Pe, R>>,
         extension: &str,

@@ -1,15 +1,15 @@
 use crate::manifests::installer_manifest::Platform;
 use crate::msix_family::msix;
-use crate::msix_family::msix_utils::get_manifest_and_signature;
+use crate::msix_family::msix::APPX_SIGNATURE_P7X;
 use crate::types::architecture::Architecture;
-use async_zip::tokio::read::seek::ZipFileReader;
 use color_eyre::eyre::Result;
 use package_family_name::get_package_family_name;
 use quick_xml::de::from_str;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use std::io::{Read, Seek};
 use std::str::FromStr;
-use tokio::fs::File;
+use zip::ZipArchive;
 
 pub struct MsixBundle {
     pub signature_sha_256: String,
@@ -27,11 +27,17 @@ pub struct IndividualPackage {
 const APPX_BUNDLE_MANIFEST_PATH: &str = "AppxMetadata/AppxBundleManifest.xml";
 
 impl MsixBundle {
-    pub async fn new(file: &mut File) -> Result<Self> {
-        let zip = ZipFileReader::with_tokio(file).await?;
+    pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
+        let mut zip = ZipArchive::new(reader)?;
 
-        let (appx_bundle_manifest, appx_signature) =
-            get_manifest_and_signature(zip, APPX_BUNDLE_MANIFEST_PATH).await?;
+        let mut appx_bundle_manifest = String::new();
+        let mut appx_signature = Vec::new();
+
+        zip.by_name(APPX_BUNDLE_MANIFEST_PATH)?
+            .read_to_string(&mut appx_bundle_manifest)?;
+
+        zip.by_name(APPX_SIGNATURE_P7X)?
+            .read_to_end(&mut appx_signature)?;
 
         let bundle_manifest: Bundle = from_str(&appx_bundle_manifest)?;
 

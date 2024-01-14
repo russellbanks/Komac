@@ -1,16 +1,14 @@
 use crate::file_analyser::FileAnalyser;
 use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
 use crate::url_utils::VALID_FILE_EXTENSIONS;
-use async_tempfile::TempFile;
-use async_zip::tokio::read::seek::ZipFileReader;
 use color_eyre::eyre::Result;
 use inquire::{min_length, MultiSelect};
+use std::borrow::Cow;
 use std::collections::{BTreeSet, HashMap};
-use std::mem;
+use std::io::{Read, Seek};
 use std::path::Path;
-use tokio::fs::File;
-use tokio::io;
-use tokio_util::compat::FuturesAsyncReadCompatExt;
+use std::{io, mem};
+use zip::ZipArchive;
 
 pub struct Zip {
     pub nested_installer_type: Option<NestedInstallerType>,
@@ -19,18 +17,11 @@ pub struct Zip {
 }
 
 impl Zip {
-    pub async fn new(file: &mut File) -> Result<Self> {
-        let mut zip = ZipFileReader::with_tokio(file).await?;
+    pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
+        let mut zip = ZipArchive::new(reader)?;
 
-        let file_names = zip
-            .file()
-            .entries()
-            .iter()
-            .filter_map(|stored_entry| stored_entry.filename().as_str().ok())
-            .collect::<Vec<_>>();
-
-        let mut identified_files = file_names
-            .iter()
+        let mut identified_files = zip
+            .file_names()
             .filter(|file_name| {
                 VALID_FILE_EXTENSIONS.iter().any(|file_extension| {
                     Path::new(file_name).extension().map_or(false, |extension| {
@@ -46,8 +37,7 @@ impl Zip {
             .map(|file_extension| {
                 (
                     file_extension,
-                    file_names
-                        .iter()
+                    zip.file_names()
                         .filter(|file_name| {
                             Path::new(file_name).extension().map_or(false, |extension| {
                                 extension.eq_ignore_ascii_case(file_extension)
@@ -67,16 +57,12 @@ impl Zip {
         {
             let mut nested_installer_type = None;
             let chosen_file_name = (*identified_files.swap_remove(0)).to_string();
-            for index in 0..zip.file().entries().len() {
-                if get_entry_file_name(&zip, index) == chosen_file_name {
-                    let entry_reader = zip.reader_without_entry(index).await?;
-                    let temp_file = TempFile::new_with_name(&chosen_file_name).await?;
-                    io::copy(&mut entry_reader.compat(), &mut temp_file.open_rw().await?).await?;
-                    let file_analyser =
-                        FileAnalyser::new(&mut temp_file.open_ro().await?, true).await?;
-                    nested_installer_type = file_analyser.installer_type.to_nested();
-                    break;
-                }
+            if let Ok(mut chosen_file) = zip.by_name(&chosen_file_name) {
+                let mut temp_file = tempfile::tempfile()?;
+                io::copy(&mut chosen_file, &mut temp_file)?;
+                let file_analyser =
+                    FileAnalyser::new(&temp_file, Cow::Borrowed(&chosen_file_name), true)?;
+                nested_installer_type = file_analyser.installer_type.to_nested();
             }
             return Ok(Self {
                 nested_installer_type,
@@ -115,15 +101,4 @@ impl Zip {
         }
         Ok(())
     }
-}
-
-pub fn get_entry_file_name<'reader>(
-    zip: &'reader ZipFileReader<&mut File>,
-    index: usize,
-) -> &'reader str {
-    zip.file()
-        .entries()
-        .get(index)
-        .and_then(|stored_entry| stored_entry.filename().as_str().ok())
-        .unwrap_or_default()
 }
