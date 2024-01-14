@@ -18,16 +18,18 @@ strip = true
 
 [dependencies]
 async-recursion = "1.0.5"
-async-tempfile = { version = "0.5.0" }
+async-tempfile = "0.5.0"
 async_zip = { version = "0.0.16", features = ["deflate", "tokio", "tokio-fs"] }
 base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
+bitflags = { version = "2.4.1", features = ["bytemuck"] }
+bytemuck = { version = "1.14.0", features = ["derive"] }
+byteorder = "1.5.0"
 clap = { version = "4.4.14", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.2", default-features = false }
 const_format = "0.2.32"
 crossterm = "0.27.0"
 derive_more = "0.99.17"
-exe = "0.5.6"
 futures = "0.3.30"
 futures-util = "0.3.30"
 indexmap = "2.1.0"
@@ -36,10 +38,12 @@ inquire = "0.6.2"
 itertools = "0.12.0"
 keyring = "2.3.1"
 language-tags = { version = "0.3.2", features = ["serde"] }
+memmap2 = "0.9.3"
 mimalloc = "0.1.39"
 msi = "0.7.0"
 num_cpus = "1.16.0"
 nutype = { version = "0.4.0", features = ["serde"] }
+object = "0.32.2"
 ordinal = "0.3.2"
 package-family-name = "1.1.0"
 percent-encoding = "2.3.1"
@@ -56,7 +60,7 @@ time = { version = "0.3.31", features = ["serde-human-readable"] }
 tokio = { version = "1.35.1", features = ["rt-multi-thread", "macros", "fs"] }
 tokio-util = { version = "0.7.10", features = ["compat"] }
 url = { version = "2.5.0", features = ["serde"] }
-versions = { version = "6.0.0" }
+versions = "6.0.0"
 xxhash-rust = { version = "0.8.8", features = ["xxh3"] }
 
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]

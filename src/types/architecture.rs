@@ -1,5 +1,11 @@
 use color_eyre::eyre::{bail, Result};
-use exe::{NTHeaders, VecPE, PE};
+use object::pe::{
+    IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_ARM, IMAGE_FILE_MACHINE_ARM64,
+    IMAGE_FILE_MACHINE_ARMNT, IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_THUMB,
+    IMAGE_FILE_MACHINE_UNKNOWN,
+};
+use object::read::pe::{ImageNtHeaders, PeFile};
+use object::{LittleEndian, ReadRef};
 use serde::{Deserialize, Serialize};
 use strum::EnumString;
 
@@ -29,19 +35,22 @@ pub enum Architecture {
 }
 
 impl Architecture {
-    pub fn get_from_exe(pe: &VecPE) -> Result<Self> {
-        let machine = match pe.get_valid_nt_headers()? {
-            NTHeaders::NTHeaders32(nt_header) => nt_header.file_header.machine,
-            NTHeaders::NTHeaders64(nt_header) => nt_header.file_header.machine,
-        };
-        // https://learn.microsoft.com/windows/win32/debug/pe-format#machine-types
-        Ok(match machine {
-            34404 => Self::X64,           // 0x8664
-            332 => Self::X86,             // 0x14c
-            43620 => Self::Arm64,         // 0xaa64
-            448 | 450 | 452 => Self::Arm, // 0x1c0 | 0x1c2 | 0x1c4
-            0 => Self::Neutral,           // 0x0
-            _ => bail!("Unknown machine value {:04x}", machine),
-        })
+    pub fn get_from_exe<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<Self>
+    where
+        Pe: ImageNtHeaders,
+        R: ReadRef<'data>,
+    {
+        Ok(
+            match pe.nt_headers().file_header().machine.get(LittleEndian) {
+                IMAGE_FILE_MACHINE_AMD64 => Self::X64,
+                IMAGE_FILE_MACHINE_I386 => Self::X86,
+                IMAGE_FILE_MACHINE_ARM64 => Self::Arm64,
+                IMAGE_FILE_MACHINE_ARM | IMAGE_FILE_MACHINE_THUMB | IMAGE_FILE_MACHINE_ARMNT => {
+                    Self::Arm
+                }
+                IMAGE_FILE_MACHINE_UNKNOWN => Self::Neutral,
+                machine => bail!("Unexpected architecture: {:04x}", machine),
+            },
+        )
     }
 }

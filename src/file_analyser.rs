@@ -1,3 +1,4 @@
+use crate::exe::vs_version_info::VSVersionInfo;
 use crate::manifests::installer_manifest::Platform;
 use crate::msi::Msi;
 use crate::msix_family::msix::Msix;
@@ -12,9 +13,11 @@ use crate::types::publisher::Publisher;
 use crate::zip::Zip;
 use async_recursion::async_recursion;
 use async_tempfile::TempFile;
-use color_eyre::eyre::Result;
-use exe::ResolvedDirectoryID::Name;
-use exe::{PETranslation, ResourceDirectory, VSVersionInfo, VecPE, PE};
+use color_eyre::eyre::{OptionExt, Result};
+use memmap2::Mmap;
+use object::pe::{ImageNtHeaders64, RT_RCDATA};
+use object::read::pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64, ResourceDirectoryEntryData};
+use object::{FileKind, LittleEndian, ReadRef};
 use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::io::SeekFrom;
@@ -64,10 +67,47 @@ impl FileAnalyser {
             .and_then(OsStr::to_str)
             .unwrap_or_default()
             .to_lowercase();
-        let pe = (extension == EXE)
-            .then(|| VecPE::from_disk_file(path))
-            .transpose()?;
         let mut msi = (extension == MSI).then(|| Msi::new(path)).transpose()?;
+        let mut installer_type = None;
+        let mmap_file = std::fs::File::open(path)?;
+        let map = unsafe { Mmap::map(&mmap_file) }?;
+        let mut pe_arch = None;
+        let mut string_map = None;
+        match FileKind::parse(map.as_ref())? {
+            FileKind::Pe32 => {
+                let pe_file = PeFile32::parse(map.as_ref())?;
+                installer_type = Some(
+                    InstallerType::get(map.as_ref(), Some(&pe_file), &extension, msi.as_ref())
+                        .await?,
+                );
+                if installer_type == Some(InstallerType::Burn) {
+                    msi = Some(extract_msi(file, &pe_file).await?);
+                }
+                pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
+                string_map = VSVersionInfo::parse(&pe_file, map.as_ref())?
+                    .string_file_info
+                    .map(|mut string_file_info| {
+                        string_file_info.children.swap_remove(0).string_map()
+                    })
+            }
+            FileKind::Pe64 => {
+                let pe_file = PeFile64::parse(map.as_ref())?;
+                installer_type = Some(
+                    InstallerType::get(map.as_ref(), Some(&pe_file), &extension, msi.as_ref())
+                        .await?,
+                );
+                if installer_type == Some(InstallerType::Burn) {
+                    msi = Some(extract_msi(file, &pe_file).await?);
+                }
+                pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
+                string_map = VSVersionInfo::parse(&pe_file, map.as_ref())?
+                    .string_file_info
+                    .map(|mut string_file_info| {
+                        string_file_info.children.swap_remove(0).string_map()
+                    })
+            }
+            _ => {}
+        }
         let mut msix = match extension.as_str() {
             MSIX | APPX => Some(Msix::new(file).await?),
             _ => None,
@@ -85,18 +125,17 @@ impl FileAnalyser {
                 _ => None,
             }
         };
-        let installer_type =
-            InstallerType::get(file, &extension, msi.as_ref(), pe.as_ref()).await?;
-        if installer_type == InstallerType::Burn {
-            if let Some(pe) = &pe {
-                msi = Some(extract_msi(file, pe).await?);
-            }
+        if installer_type.is_none() {
+            installer_type = Some(
+                InstallerType::get::<ImageNtHeaders64, &[u8]>(
+                    map.as_ref(),
+                    None::<&PeFile<'_, ImageNtHeaders64, &[u8]>>,
+                    &extension,
+                    msi.as_ref(),
+                )
+                .await?,
+            );
         }
-        let mut string_map = pe
-            .as_ref()
-            .and_then(|pe| VSVersionInfo::parse(pe).ok())
-            .and_then(|vs_version_info| vs_version_info.string_file_info)
-            .and_then(|mut info| info.children.swap_remove(0).string_map().ok());
         Ok(Self {
             platform: msix
                 .as_ref()
@@ -106,8 +145,8 @@ impl FileAnalyser {
                 .as_ref()
                 .map(|msi| msi.architecture)
                 .or_else(|| msix.as_ref().map(|msix| msix.processor_architecture))
-                .unwrap_or_else(|| Architecture::get_from_exe(&pe.unwrap()).unwrap()),
-            installer_type,
+                .unwrap_or_else(|| pe_arch.unwrap()),
+            installer_type: installer_type.unwrap(),
             installer_sha_256: String::new(),
             signature_sha_256: msix
                 .as_mut()
@@ -133,13 +172,51 @@ impl FileAnalyser {
     }
 }
 
-async fn extract_msi(file: &mut TempFile, pe: &VecPE) -> Result<Msi> {
-    let msi_entry = ResourceDirectory::parse(pe)?
-        .resources
-        .into_iter()
-        .find(|entry| entry.rsrc_id == Name(MSI.to_ascii_uppercase()))
-        .unwrap()
-        .get_data_entry(pe)?;
+pub async fn extract_msi<'data, Pe, R>(
+    file: &mut TempFile,
+    pe: &PeFile<'data, Pe, R>,
+) -> Result<Msi>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    let resource_directory = pe
+        .data_directories()
+        .resource_directory(pe.data(), &pe.section_table())?
+        .ok_or_eyre("No resource directory")?;
+    let rc_data = resource_directory
+        .root()?
+        .entries
+        .iter()
+        .find(|entry| entry.name_or_id().id() == Some(RT_RCDATA))
+        .ok_or_eyre("No RT_RCDATA was found")?;
+    let msi = rc_data
+        .data(resource_directory)?
+        .table()
+        .and_then(|table| {
+            table.entries.iter().find(|entry| {
+                entry
+                    .name_or_id()
+                    .name()
+                    .and_then(|name| name.to_string_lossy(resource_directory).ok())
+                    .as_deref()
+                    == Some("MSI")
+            })
+        })
+        .ok_or_eyre("No MSI resource was found")?;
+    let msi_entry = msi
+        .data(resource_directory)?
+        .table()
+        .and_then(|table| table.entries.first())
+        .and_then(|entry| entry.data(resource_directory).ok())
+        .and_then(ResourceDirectoryEntryData::data)
+        .unwrap();
+
+    let section = pe
+        .section_table()
+        .section_containing(msi_entry.offset_to_data.get(LittleEndian))
+        .unwrap();
+
     let msi_name = format!(
         "{}.{}",
         file.file_path()
@@ -149,14 +226,20 @@ async fn extract_msi(file: &mut TempFile, pe: &VecPE) -> Result<Msi> {
         MSI
     );
     let mut extracted_msi = TempFile::new_with_name(msi_name).await?.open_rw().await?;
+
     // Translate the offset into a usable one
-    let offset = pe.translate(PETranslation::Memory(msi_entry.offset_to_data))?;
+    let offset = {
+        let mut rva = msi_entry.offset_to_data.get(LittleEndian);
+        rva -= section.virtual_address.get(LittleEndian);
+        rva += section.pointer_to_raw_data.get(LittleEndian);
+        rva
+    };
 
     // Seek to the MSI offset
-    file.seek(SeekFrom::Start(offset as u64)).await?;
+    file.seek(SeekFrom::Start(u64::from(offset))).await?;
 
     // Asynchronously write the MSI to the temporary MSI file
-    let mut take = file.take(u64::from(msi_entry.size));
+    let mut take = file.take(u64::from(msi_entry.size.get(LittleEndian)));
     io::copy(&mut take, &mut extracted_msi).await?;
 
     let msi = Msi::new(extracted_msi.file_path())?;

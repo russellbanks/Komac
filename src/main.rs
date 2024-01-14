@@ -1,6 +1,9 @@
+extern crate core;
+
 mod commands;
 mod credential;
 mod download_file;
+mod exe;
 mod file_analyser;
 mod github;
 mod graphql;
