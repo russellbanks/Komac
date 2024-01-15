@@ -21,7 +21,7 @@ base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
 bitflags = "2.4.1"
 byteorder = "1.5.0"
-clap = { version = "4.4.16", features = ["derive", "cargo", "env"] }
+clap = { version = "4.4.17", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.2", default-features = false }
 const_format = "0.2.32"
 crossterm = "0.27.0"
