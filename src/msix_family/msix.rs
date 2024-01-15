@@ -37,7 +37,7 @@ impl Msix {
         zip.by_name(APPX_SIGNATURE_P7X)?
             .read_to_end(&mut appx_signature)?;
 
-        let manifest: Package = from_str(&appx_manifest)?;
+        let manifest = from_str::<Package>(&appx_manifest)?;
 
         Ok(Self {
             display_name: manifest.properties.display_name,

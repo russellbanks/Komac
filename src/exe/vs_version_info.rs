@@ -26,7 +26,7 @@ impl<'data> VSVersionInfo<'data> {
         let resource_directory = pe
             .data_directories()
             .resource_directory(pe.data(), &pe.section_table())?
-            .ok_or_eyre("No resource directory")?;
+            .ok_or_eyre("No resource directory was found in the exe")?;
         let rt_version = resource_directory
             .root()?
             .entries
@@ -51,8 +51,7 @@ impl<'data> VSVersionInfo<'data> {
             .unwrap();
         let section = pe
             .section_table()
-            .iter()
-            .find(|header| header.contains_rva(manifest_entry.offset_to_data.get(LittleEndian)))
+            .section_containing(manifest_entry.offset_to_data.get(LittleEndian))
             .unwrap();
         // Translate the offset into a usable one
         let base_offset = {

@@ -3,9 +3,10 @@ use crate::file_analyser::{APPX, APPX_BUNDLE, EXE, MSI, MSIX, MSIX_BUNDLE, ZIP};
 use crate::manifests::installer_manifest::NestedInstallerType;
 use crate::msi::Msi;
 use color_eyre::eyre::{bail, OptionExt, Result};
-use object::pe::RT_RCDATA;
-use object::read::pe::{ImageNtHeaders, PeFile};
-use object::ReadRef;
+use object::pe::{RT_MANIFEST, RT_RCDATA};
+use object::read::pe::{ImageNtHeaders, PeFile, ResourceDirectoryEntryData};
+use object::{LittleEndian, ReadRef};
+use quick_xml::de::from_reader;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -47,7 +48,12 @@ impl InstallerType {
             EXE => {
                 return match () {
                     () if pe.is_some_and(|pe| Self::is_inno(pe, data)) => Ok(Self::Inno),
-                    () if Self::is_nullsoft(data) => Ok(Self::Nullsoft),
+                    () if pe
+                        .and_then(|pe| Self::is_nullsoft(pe).ok())
+                        .unwrap_or(false) =>
+                    {
+                        Ok(Self::Nullsoft)
+                    }
                     () if pe.and_then(|pe| Self::is_burn(pe).ok()).unwrap_or(false) => {
                         Ok(Self::Burn)
                     }
@@ -59,26 +65,62 @@ impl InstallerType {
         bail!("Unsupported file extension {extension}")
     }
 
-    /// Checks if the file is Nullsoft from its magic bytes
-    fn is_nullsoft(data: &[u8]) -> bool {
-        const NULLSOFT_BYTES_LEN: usize = 224;
+    /// Checks if the file is Nullsoft from the executable's manifest
+    fn is_nullsoft<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<bool>
+    where
+        Pe: ImageNtHeaders,
+        R: ReadRef<'data>,
+    {
+        #[derive(Default, Deserialize)]
+        #[serde(default, rename_all = "camelCase")]
+        struct Assembly {
+            assembly_identity: AssemblyIdentity,
+        }
 
-        /// The first 224 bytes of an exe made with NSIS are always the same
-        const NULLSOFT_BYTES: [u8; NULLSOFT_BYTES_LEN] = [
-            77, 90, 144, 0, 3, 0, 0, 0, 4, 0, 0, 0, 255, 255, 0, 0, 184, 0, 0, 0, 0, 0, 0, 0, 64,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 216, 0, 0, 0, 14, 31, 186, 14, 0, 180, 9, 205, 33, 184, 1, 76, 205,
-            33, 84, 104, 105, 115, 32, 112, 114, 111, 103, 114, 97, 109, 32, 99, 97, 110, 110, 111,
-            116, 32, 98, 101, 32, 114, 117, 110, 32, 105, 110, 32, 68, 79, 83, 32, 109, 111, 100,
-            101, 46, 13, 13, 10, 36, 0, 0, 0, 0, 0, 0, 0, 173, 49, 8, 129, 233, 80, 102, 210, 233,
-            80, 102, 210, 233, 80, 102, 210, 42, 95, 57, 210, 235, 80, 102, 210, 233, 80, 103, 210,
-            76, 80, 102, 210, 42, 95, 59, 210, 230, 80, 102, 210, 189, 115, 86, 210, 227, 80, 102,
-            210, 46, 86, 96, 210, 232, 80, 102, 210, 82, 105, 99, 104, 233, 80, 102, 210, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 69, 0, 0, 76, 1, 5,
-            0,
-        ];
+        #[derive(Default, Deserialize)]
+        #[serde(default)]
+        struct AssemblyIdentity {
+            #[serde(rename = "@name")]
+            name: String,
+        }
 
-        data[..NULLSOFT_BYTES_LEN] == NULLSOFT_BYTES
+        const NULLSOFT_MANIFEST_NAME: &str = "Nullsoft.NSIS.exehead";
+
+        let resource_directory = pe
+            .data_directories()
+            .resource_directory(pe.data(), &pe.section_table())?
+            .ok_or_eyre("No resource directory was found")?;
+        let rt_manifest = resource_directory
+            .root()?
+            .entries
+            .iter()
+            .find(|entry| entry.name_or_id().id() == Some(RT_MANIFEST))
+            .ok_or_eyre("No RT_MANIFEST was found")?
+            .data(resource_directory)?
+            .table()
+            .and_then(|table| table.entries.first())
+            .and_then(|entry| entry.data(resource_directory).ok())
+            .and_then(ResourceDirectoryEntryData::table)
+            .and_then(|table| table.entries.first())
+            .and_then(|entry| entry.data(resource_directory).ok())
+            .and_then(ResourceDirectoryEntryData::data)
+            .unwrap();
+        let section = pe
+            .section_table()
+            .section_containing(rt_manifest.offset_to_data.get(LittleEndian))
+            .unwrap();
+        let offset = {
+            let mut rva = rt_manifest.offset_to_data.get(LittleEndian);
+            rva -= section.virtual_address.get(LittleEndian);
+            rva += section.pointer_to_raw_data.get(LittleEndian);
+            rva as usize
+        };
+        let manifest = pe
+            .data()
+            .read_bytes_at(offset as u64, u64::from(rt_manifest.size.get(LittleEndian)))
+            .unwrap();
+        let assembly: Assembly = from_reader(manifest)?;
+        Ok(assembly.assembly_identity.name == NULLSOFT_MANIFEST_NAME)
     }
 
     /// Checks the String File Info of the exe for whether its comment states that it was built with Inno Setup

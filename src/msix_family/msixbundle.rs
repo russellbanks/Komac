@@ -39,7 +39,7 @@ impl MsixBundle {
         zip.by_name(APPX_SIGNATURE_P7X)?
             .read_to_end(&mut appx_signature)?;
 
-        let bundle_manifest: Bundle = from_str(&appx_bundle_manifest)?;
+        let bundle_manifest = from_str::<Bundle>(&appx_bundle_manifest)?;
 
         Ok(Self {
             signature_sha_256: base16ct::upper::encode_string(&Sha256::digest(appx_signature)),
