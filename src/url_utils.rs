@@ -54,7 +54,9 @@ pub fn find_architecture(url: &str) -> Option<Architecture> {
         if url.contains(arch_name) {
             let mut url_chars = url.chars();
             // Get the character before the architecture, consuming the characters before it
-            let char_before_arch = url_chars.nth(url.rfind(arch_name).unwrap_or(usize::MAX) - 1);
+            let char_before_arch = url
+                .rfind(arch_name)
+                .and_then(|arch_index| url_chars.nth(arch_index));
             // As the characters have been consumed, we can skip by the length of the architecture
             let char_after_arch = url_chars.nth(arch_name.chars().count());
             // If the architecture is surrounded by valid delimiters, the architecture is valid
@@ -68,8 +70,8 @@ pub fn find_architecture(url: &str) -> Option<Architecture> {
 
     // If the architecture has not been found, check for {architecture}.{extension}
     let extensions = VALID_FILE_EXTENSIONS
-        .into_iter()
-        .filter(|extension| url.contains(extension));
+        .iter()
+        .filter(|&extension| url.contains(extension));
     for extension in extensions {
         for (arch_name, arch) in ARCHITECTURES {
             if url.contains(&format!("{arch_name}.{extension}")) {

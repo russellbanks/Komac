@@ -77,7 +77,7 @@ impl<'a> FileAnalyser<'a> {
                     msi.as_ref(),
                 )?);
                 if installer_type == Some(InstallerType::Burn) {
-                    msi = Some(extract_msi(&pe_file, map.as_ref())?);
+                    msi = Some(extract_msi(&pe_file)?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
                 string_map = VSVersionInfo::parse(&pe_file, map.as_ref())?
@@ -95,7 +95,7 @@ impl<'a> FileAnalyser<'a> {
                     msi.as_ref(),
                 )?);
                 if installer_type == Some(InstallerType::Burn) {
-                    msi = Some(extract_msi(&pe_file, map.as_ref())?);
+                    msi = Some(extract_msi(&pe_file)?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
                 string_map = VSVersionInfo::parse(&pe_file, map.as_ref())?
@@ -167,7 +167,7 @@ impl<'a> FileAnalyser<'a> {
     }
 }
 
-pub fn extract_msi<'data, Pe, R>(pe: &PeFile<'data, Pe, R>, data: &[u8]) -> Result<Msi>
+pub fn extract_msi<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<Msi>
 where
     Pe: ImageNtHeaders,
     R: ReadRef<'data>,
@@ -218,11 +218,15 @@ where
         let mut rva = msi_entry.offset_to_data.get(LittleEndian);
         rva -= section.virtual_address.get(LittleEndian);
         rva += section.pointer_to_raw_data.get(LittleEndian);
-        rva
-    } as usize;
+        rva as usize
+    };
 
-    // Write the MSI to the temporary MSI file
-    let msi_data = Cursor::new(&data[offset..offset + msi_entry.size.get(LittleEndian) as usize]);
+    // Get the slice that represents the embedded MSI
+    let msi_data = Cursor::new(
+        pe.data()
+            .read_bytes_at(offset as u64, msi_entry.size.get(LittleEndian) as u64)
+            .unwrap(),
+    );
 
     let msi = Msi::new(msi_data)?;
     Ok(msi)
