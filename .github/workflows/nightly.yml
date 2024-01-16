@@ -29,57 +29,68 @@ jobs:
             target: x86_64-pc-windows-msvc
             arch: x64
             os_name: windows
-            bin: cross
+            bins: cross
+            build: cross
           - os: windows-latest
             target: i686-pc-windows-msvc
             arch: x86
             os_name: windows
-            bin: cross
+            bins: cross
+            build: cross
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             arch: arm64
             os_name: windows
-            bin: cross
+            bins: cross
+            build: cross
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             arch: x64
             os_name: linux
-            bin: cargo-zigbuild
+            bins: cargo-deb, cargo-zigbuild
+            build: cargo-zigbuild
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
             arch: x86
             os_name: linux
-            bin: cargo-zigbuild
+            bins: cargo-deb, cargo-zigbuild
+            build: cargo-zigbuild
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             arch: arm64
             os_name: linux
-            bin: cargo-zigbuild
+            bins: cargo-deb, cargo-zigbuild
+            build: cargo-zigbuild
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
             arch: armv7
             os_name: linux
-            bin: cargo-zigbuild
+            bins: cargo-deb, cargo-zigbuild
+            build: cargo-zigbuild
           - os: ubuntu-latest
             target: x86_64-unknown-freebsd
             arch: x64
             os_name: freebsd
-            bin: cross
+            bins: cross
+            build: cross
           - os: ubuntu-latest
             target: i686-unknown-freebsd
             arch: x86
             os_name: freebsd
-            bin: cross
+            bins: cross
+            build: cross
           - os: macos-latest
             target: x86_64-apple-darwin
             arch: x64
             os_name: macos
-            bin: cargo-zigbuild
+            bins: cargo-zigbuild
+            build: cargo-zigbuild
           - os: macos-latest
             target: aarch64-apple-darwin
             arch: arm64
             os_name: macos
-            bin: cargo-zigbuild
+            bins: cargo-zigbuild
+            build: cargo-zigbuild
 
     runs-on: ${{ matrix.platform.os }}
     steps:
@@ -88,16 +99,20 @@ jobs:
 
       - name: Setup Zig
         uses: goto-bus-stop/setup-zig@v2
-        if: ${{ matrix.platform.bin == 'cargo-zigbuild' }}
+        if: ${{ matrix.platform.build == 'cargo-zigbuild' }}
 
       - uses: moonrepo/setup-rust@v1
         with:
           targets: ${{ matrix.platform.target }}
-          bins: ${{ matrix.platform.bin }}
+          bins: ${{ matrix.platform.bins }}
           cache: false
 
       - name: Build binary
-        run: ${{ matrix.platform.bin }} build --target ${{ matrix.platform.target }} --release --locked
+        run: ${{ matrix.platform.build }} build --target ${{ matrix.platform.target }} --release --locked
+
+      - name: Create Deb package
+        if: ${{ matrix.platform.os_name == 'linux' }}
+        run: cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip
 
       - name: Rename binary
         id: rename_binary
@@ -121,7 +136,7 @@ jobs:
           tar -czvf ${{ steps.rename_binary.outputs.name }}.tar.gz -C target/${{ matrix.platform.target }}/release ${{ steps.rename_binary.outputs.name }}
           rm target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
 
-      - name: Create Installer
+      - name: Create Inno Installer
         if: ${{ matrix.platform.os == 'windows-latest' }}
         shell: pwsh
         run: |
@@ -139,5 +154,6 @@ jobs:
           prerelease: ${{env.RELEASE_IS_PRERELEASE}}
           files: |
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
+            target/${{ matrix.platform.target }}/debian/*.deb
             ${{ steps.rename_binary.outputs.name }}.tar.gz
             assets/Output/*
