@@ -92,8 +92,6 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 | Fully standalone (w/o winget-pkgs clone) |     ✅     |      ✅      |                                  ❌                                  |
 | No telemetry                             |     ✅     |      ❌      |                                  ✅                                  |
 | Type-safety                              |     ✅     |      ✅      |                                  ❌                                  |
-| Inno setup detection                     |     ✅     |      ✅      |                               ✅ [^2]                                |
-| Nullsoft detection                       |     ✅     |      ✅      |                               ✅ [^2]                                |
 | Burn installer detection                 |     ✅     |      ✅      | Opt-in feature [^2] (not enabled by default, due to slow processing) |
 | Progress bar & ETA while downloading     |     ✅     |      ❌      |                                  ❌                                  |
 | Language                                 |    Rust     |      C#      |                              PowerShell                              |
