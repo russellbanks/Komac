@@ -29,6 +29,10 @@ struct OutputType {
     #[arg(long)]
     json: bool,
 
+    /// Output the versions as prettified JSON
+    #[arg(long)]
+    pretty_json: bool,
+
     /// Output the versions as YAML
     #[arg(long)]
     yaml: bool,
@@ -53,9 +57,14 @@ impl ListVersions {
         versions.sort_unstable();
 
         let mut stdout_lock = io::stdout().lock();
-        match (self.output_type.json, self.output_type.yaml) {
-            (true, _) => serde_json::to_writer(stdout_lock, &versions)?,
-            (_, true) => serde_yaml::to_writer(stdout_lock, &versions)?,
+        match (
+            self.output_type.json,
+            self.output_type.pretty_json,
+            self.output_type.yaml,
+        ) {
+            (true, _, _) => serde_json::to_writer(stdout_lock, &versions)?,
+            (_, true, _) => serde_json::to_writer_pretty(stdout_lock, &versions)?,
+            (_, _, true) => serde_yaml::to_writer(stdout_lock, &versions)?,
             _ => {
                 for version in versions {
                     writeln!(stdout_lock, "{version}")?;
