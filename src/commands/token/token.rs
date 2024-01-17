@@ -9,8 +9,6 @@ pub struct TokenArgs {
 }
 #[derive(Subcommand)]
 pub enum TokenCommands {
-    #[command(name = "update")]
-    UpdateToken(UpdateToken),
-    #[command(name = "remove")]
-    RemoveToken(RemoveToken),
+    Update(UpdateToken),
+    Remove(RemoveToken),
 }

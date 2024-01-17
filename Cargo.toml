@@ -47,6 +47,7 @@ pulldown-cmark = "0.9.3"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
 rand = { version = "0.8.5", features = ["small_rng"] }
 serde = { version = "1.0.195", features = ["derive"] }
+serde_json = "1.0.111"
 serde_with = { version = "3.4.0", features = ["macros"] }
 serde_yaml = "0.9.30"
 sha2 = "0.10.8"

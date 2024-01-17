@@ -224,7 +224,7 @@ where
     // Get the slice that represents the embedded MSI
     let msi_data = Cursor::new(
         pe.data()
-            .read_bytes_at(offset as u64, msi_entry.size.get(LittleEndian) as u64)
+            .read_bytes_at(offset as u64, u64::from(msi_entry.size.get(LittleEndian)))
             .unwrap(),
     );
 

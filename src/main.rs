@@ -19,6 +19,7 @@ mod url_utils;
 mod zip;
 
 use crate::commands::cleanup::Cleanup;
+use crate::commands::list_versions::ListVersions;
 use crate::commands::new_version::NewVersion;
 use crate::commands::remove_version::RemoveVersion;
 use crate::commands::token::token::{TokenArgs, TokenCommands};
@@ -41,9 +42,10 @@ async fn main() -> Result<()> {
         Commands::Cleanup(cleanup) => cleanup.run().await,
         Commands::Remove(remove_version) => remove_version.run().await,
         Commands::Token(token_args) => match token_args.command {
-            TokenCommands::RemoveToken(remove_token) => remove_token.run(),
-            TokenCommands::UpdateToken(update_token) => update_token.run(),
+            TokenCommands::Remove(remove_token) => remove_token.run(),
+            TokenCommands::Update(update_token) => update_token.run(),
         },
+        Commands::ListVersions(list_versions) => list_versions.run().await,
     }
 }
 
@@ -56,12 +58,10 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[command(name = "new")]
     New(Box<NewVersion>), // Boxed to store on the heap instead as New is a large struct
-    #[command(name = "update")]
     Update(UpdateVersion),
-    #[command(name = "remove")]
     Remove(RemoveVersion),
     Cleanup(Cleanup),
     Token(TokenArgs),
+    ListVersions(ListVersions),
 }

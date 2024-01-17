@@ -63,11 +63,10 @@ pub async fn handle_token(token: Option<String>) -> color_eyre::eyre::Result<Str
 }
 
 pub fn get_default_headers(github_token: Option<&str>) -> HeaderMap {
+    const MICROSOFT_DELIVERY_OPTIMIZATION: HeaderValue =
+        HeaderValue::from_static("Microsoft-Delivery-Optimization/10.1");
     let mut default_headers = HeaderMap::new();
-    default_headers.insert(
-        USER_AGENT,
-        "Microsoft-Delivery-Optimization/10.1".parse().unwrap(),
-    );
+    default_headers.insert(USER_AGENT, MICROSOFT_DELIVERY_OPTIMIZATION);
     default_headers.insert(DNT, HeaderValue::from(1));
     if let Some(token) = github_token {
         if let Ok(bearer_auth) = HeaderValue::from_str(&format!("Bearer {token}")) {
