@@ -44,7 +44,7 @@ brew install russellbanks/tap/komac
 | New            | Create a package from scratch                                                 | `new`                                      |
 | Update         | Update a pre-existing package in winget-pkgs                                  | `update` `up`                              |
 | Remove         | Remove a version from winget-pkgs                                             | `remove` `rm`                              |
-| Branch Cleanup | Deletes branches that have had a merged or closed pull request to winget-pkgs | `branch cleanup`                           |
+| Cleanup        | Deletes branches that have had a merged or closed pull request to winget-pkgs | `cleanup`                                  |
 | Token update   | Update stored GitHub OAuth token                                              | `token update`, `token up`                 |
 | Token remove   | Delete stored GitHub OAuth token                                              | `token remove`, `token rm`, `token delete` |
 
@@ -52,19 +52,20 @@ brew install russellbanks/tap/komac
 
 ```bash
 # Without user interaction
-komac update --id Package.Identifier --version 1.2.3 --urls https://www.firstUrl.com,https://www.secondUrl.com --submit
+komac update -i Package.Identifier -v 1.2.3 --urls https://www.firstUrl.com,https://www.secondUrl.com --submit
 
 # With user interaction
 komac update
 ```
 
-| Parameter                            | Usage       | Notes                                                      |
-| ------------------------------------ | ----------- | ---------------------------------------------------------- |
-| Package Identifier                   | `--id`      |                                                            |
-| Version                              | `--version` |                                                            |
-| URLs                                 | `--urls`    | URLs are delimited by a comma (`,`)                        |
-| Automatically submit                 | `--submit`  |                                                            |
-| Token (if one is not already stored) | `--token`   | Komac will check for a `GITHUB_TOKEN` environment variable |
+| Parameter                            | Usage              | Notes                                                        |
+| ------------------------------------ | ------------------ | ------------------------------------------------------------ |
+| Package Identifier                   | `-i, --identifier` |                                                              |
+| Version                              | `-v, --version`    |                                                              |
+| URLs                                 | `-u, --urls`       | URLs are delimited by a comma (`,`)                          |
+| Automatically submit                 | `-s, --submit`     |                                                              |
+| Output Directory to save manifests   | `-o, --output`     | Komac will check for `OUTPUT_DIRECTORY` environment variable |
+| Token (if one is not already stored) | `-t, --token`      | Komac will check for a `GITHUB_TOKEN` environment variable   |
 
 ## Komac in Action 🎥
 
@@ -95,7 +96,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 | Nullsoft detection                       |     ✅     |      ✅      |                               ✅ [^2]                                |
 | Burn installer detection                 |     ✅     |      ✅      | Opt-in feature [^2] (not enabled by default, due to slow processing) |
 | Progress bar & ETA while downloading     |     ✅     |      ❌      |                                  ❌                                  |
-| Language                                 | Kotlin/JVM |      C#      |                              PowerShell                              |
+| Language                                 |    Rust     |      C#      |                              PowerShell                              |
 
 [^1]: If all installers have the same value, that value is put at the root of the manifest to reduce redundancy.
 [^2]: The logic for this was contributed by me :) Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request this feature for YamlCreate.
