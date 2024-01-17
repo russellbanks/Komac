@@ -59,10 +59,7 @@ pub async fn get_repository_info(
     let repository = post_graphql::<GetRepositoryInfo, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_else(|| {
-            eyre!("No data was returned when requesting repository information for {owner}/{name}")
-        })?
-        .repository
+        .and_then(|data| data.repository)
         .ok_or_else(|| {
             eyre!(
             "No repository was returned when requesting repository information for {owner}/{name}"
@@ -74,8 +71,8 @@ pub async fn get_repository_info(
 
     let default_branch_oid = default_branch
         .target
-        .ok_or_else(|| eyre!("No default branch object was returned when requesting repository information for {owner}/{name}"))
-        .map(|target| target.oid)?;
+        .map(|target| target.oid)
+        .ok_or_else(|| eyre!("No default branch object was returned when requesting repository information for {owner}/{name}"))?;
 
     Ok(RepositoryData {
         id: repository.id,
@@ -99,10 +96,11 @@ pub async fn get_repository_id(client: &Client, owner: &str, name: &str) -> Resu
     post_graphql::<GetRepositoryId, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .unwrap()
-        .repository
-        .ok_or_else(|| eyre!("Repository missing when retrieving repository ID for {owner}/{name}"))
+        .and_then(|data| data.repository)
         .map(|repository| repository.id)
+        .ok_or_else(|| {
+            eyre!("No repository was return when retrieving repository ID for {owner}/{name}")
+        })
 }
 
 #[derive(GraphQLQuery)]
@@ -132,16 +130,14 @@ pub async fn create_branch(
     let r#ref = post_graphql::<CreateRef, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_else(|| eyre!("No data was returned when attempting to create {branch_name}"))?
-        .create_ref
-        .ok_or_else(|| eyre!("Failed to create {branch_name}"))?
-        .ref_
-        .ok_or_else(|| eyre!("GitHub did not return a reference after creating {branch_name}"))?;
+        .and_then(|data| data.create_ref)
+        .and_then(|create_ref| create_ref.ref_)
+        .ok_or_else(|| eyre!("No reference was returned after creating {branch_name}"))?;
 
     Ok(Ref {
         id: r#ref.id,
         name: r#ref.name,
-        head_sha: r#ref.target.unwrap().oid,
+        head_sha: r#ref.target.map(|target| target.oid).unwrap(),
     })
 }
 
@@ -160,8 +156,8 @@ pub async fn get_current_user_login(client: &Client) -> Result<String> {
     )
     .await?
     .data
-    .ok_or_eyre("No data was returned when retrieving the current user's login")
     .map(|data| data.viewer.login)
+    .ok_or_eyre("No data was returned when retrieving the current user's login")
 }
 
 #[derive(GraphQLQuery)]
@@ -202,10 +198,8 @@ pub async fn create_commit(
     post_graphql::<CreateCommit, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_eyre("No data was returned when attempting to create commit")?
-        .create_commit_on_branch
-        .ok_or_eyre("Failed to create commit")?
-        .commit
+        .and_then(|data| data.create_commit_on_branch)
+        .and_then(|commit_object| commit_object.commit)
         .map(|commit| commit.url)
         .ok_or_eyre("No commit data was returned when creating commit")
 }
@@ -224,34 +218,27 @@ pub async fn get_directory_content(
     branch: &str,
     path: &str,
 ) -> Result<impl Iterator<Item = String>> {
-    let expression = format!("{branch}:{path}");
     let variables = get_directory_content::Variables {
         owner: owner.to_owned(),
         name: repo.to_owned(),
-        expression,
+        expression: format!("{branch}:{path}"),
     };
-    let object = post_graphql::<GetDirectoryContent, _>(client, GITHUB_GRAPHQL_URL, variables)
+
+    let entries = post_graphql::<GetDirectoryContent, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_else(|| {
-            eyre!("No data was returned when attempting to get the directory content of {path}")
-        })?
-        .repository
-        .ok_or_else(|| {
-            eyre!("Response is missing repository when getting the directory content of {path}")
-        })?
-        .object
-        .ok_or_else(|| {
-            eyre!("Response is missing object when getting the directory content of {path}")
-        })?;
+        .and_then(|data| data.repository)
+        .and_then(|repository| repository.object)
+        .and_then(|object| {
+            if let GetDirectoryContentRepositoryObject::Tree(tree) = object {
+                Some(tree.entries.unwrap_or_default())
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| eyre!("No directory content was returned for {path}"))?;
 
-    if let GetDirectoryContentRepositoryObject::Tree(tree) = object {
-        tree.entries
-            .map(|entries| entries.into_iter().filter_map(|entry| entry.path))
-            .ok_or_else(|| eyre!("No files were found for {path}"))
-    } else {
-        bail!("GitHub did not return the expected type of a tree when retrieving the directory content of {path}")
-    }
+    Ok(entries.into_iter().filter_map(|entry| entry.path))
 }
 
 #[derive(GraphQLQuery)]
@@ -271,59 +258,45 @@ pub async fn get_directory_content_with_text(
     owner: &str,
     repo: &str,
     path: &str,
-) -> Result<Vec<GitHubFile>> {
-    let expression = format!("HEAD:{path}");
+) -> Result<impl Iterator<Item = GitHubFile>> {
     let variables = get_directory_content_with_text::Variables {
         owner: owner.to_owned(),
         name: repo.to_owned(),
-        expression,
+        expression: format!("HEAD:{path}"),
     };
 
-    let data =
-        post_graphql::<GetDirectoryContentWithText, _>(client, GITHUB_GRAPHQL_URL, variables)
-            .await?
-            .data
-            .ok_or_else(|| {
-                eyre!("No data was returned when attempting to get the directory content of {path}")
-            })?;
-
-    let repository = data.repository.ok_or_else(|| {
-        eyre!("Response is missing repository when getting the directory content of {path}")
-    })?;
-    let object = repository.object.ok_or_else(|| {
-        eyre!("Response is missing object when getting the directory content of {path}")
-    })?;
-
-    if let GetDirectoryContentWithTextRepositoryObject::Tree(tree) = object {
-        if let Some(entries) = tree.entries {
-            let files = entries
-                .into_iter()
-                .filter_map(|entry| {
-                    if let Some(
-                        GetDirectoryContentWithTextRepositoryObjectOnTreeEntriesObject::Blob(blob),
-                    ) = entry.object
-                    {
-                        Some(GitHubFile {
-                            name: entry.name,
-                            text: blob.text.unwrap_or_default(),
-                        })
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<GitHubFile>>();
-
-            if files.is_empty() {
-                bail!("No files were found for {path}")
+    post_graphql::<GetDirectoryContentWithText, _>(client, GITHUB_GRAPHQL_URL, variables)
+        .await?
+        .data
+        .and_then(|data| data.repository)
+        .and_then(|repository| repository.object)
+        .and_then(|object| {
+            if let GetDirectoryContentWithTextRepositoryObject::Tree(tree) = object {
+                Some(tree.entries.unwrap_or_default())
+            } else {
+                None
             }
-
-            Ok(files)
-        } else {
-            bail!("No files were found for {path}")
-        }
-    } else {
-        bail!("GitHub did not return the expected type of a tree when retrieving the directory content of {path}")
-    }
+        })
+        .map(|entries| {
+            entries.into_iter().filter_map(|entry| {
+                if let Some(GetDirectoryContentWithTextRepositoryObjectOnTreeEntriesObject::Blob(
+                    blob,
+                )) = entry.object
+                {
+                    Some(GitHubFile {
+                        name: entry.name,
+                        text: blob.text.unwrap_or_default(),
+                    })
+                } else {
+                    None
+                }
+            })
+        })
+        .ok_or_else(|| {
+            eyre!(
+                "No directory content was returned when retrieving the directory content of {path}"
+            )
+        })
 }
 
 #[derive(GraphQLQuery)]
@@ -360,18 +333,14 @@ pub async fn create_pull_request(
     post_graphql::<CreatePullRequest, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_else(|| {
-            eyre!("No data was returned when creating pull request from {fork_ref_name}")
-        })?
-        .create_pull_request
-        .ok_or_else(|| eyre!("Failed to create the pull request from {fork_ref_name}"))?
-        .pull_request
+        .and_then(|data| data.create_pull_request)
+        .and_then(|create_pull_request| create_pull_request.pull_request)
+        .map(|pull_request| pull_request.url)
         .ok_or_else(|| {
             eyre!(
             "No pull request data was returned when creating a pull request from {fork_ref_name}"
         )
         })
-        .map(|pull_request| pull_request.url)
 }
 
 #[derive(GraphQLQuery)]
@@ -396,50 +365,39 @@ pub async fn get_all_versions(
     let object = post_graphql::<GetDeepDirectoryContent, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_else(|| eyre!("No data was returned when getting directory content of {path}"))?
-        .repository
-        .ok_or_else(|| {
-            eyre!("No repository was returned when getting directory content of {path}")
-        })?
-        .object
-        .ok_or_else(|| eyre!("No object was returned when getting directory content of {path}"))?;
-    if let GetDeepDirectoryContentRepositoryObject::Tree(tree) = object {
-        if let Some(entries) = tree.entries {
-            let files = entries
-                .into_iter()
-                .filter_map(|entry| {
-                    if let Some(GetDeepDirectoryContentRepositoryObjectOnTreeEntriesObject::Tree(
-                        tree,
-                    )) = &entry.object
-                    {
-                        if let Some(sub_entries) = &tree.entries {
-                            if sub_entries
-                                .iter()
-                                .filter(|entry| entry.type_ == "tree")
-                                .count()
-                                == 0
-                            {
-                                return Some(entry);
-                            }
-                        }
-                    }
-                    None
-                })
-                .map(|entry| entry.name)
-                .filter_map(|entry| PackageVersion::new(&entry).ok())
-                .collect::<Vec<_>>();
-
-            if files.is_empty() {
-                bail!("No files were found for {path}")
+        .and_then(|data| data.repository)
+        .and_then(|repository| repository.object)
+        .and_then(|object| {
+            if let GetDeepDirectoryContentRepositoryObject::Tree(tree) = object {
+                Some(tree.entries.unwrap_or_default())
+            } else {
+                None
             }
+        })
+        .ok_or_else(|| eyre!("Failed to retrieve directory content of {path}"))?;
 
-            Ok(files)
-        } else {
-            bail!("No files were found for {path}")
-        }
-    } else {
-        bail!("GitHub did not return the expected type of a tree when retrieving the directory content of {path}")
+    let files = object
+        .into_iter()
+        .filter_map(|entry| {
+            if let Some(GetDeepDirectoryContentRepositoryObjectOnTreeEntriesObject::Tree(tree)) =
+                &entry.object
+            {
+                if let Some(sub_entries) = &tree.entries {
+                    if sub_entries.iter().all(|entry| entry.type_ != "tree") {
+                        return Some(entry.name);
+                    }
+                }
+            }
+            None
+        })
+        .filter_map(|entry| PackageVersion::new(&entry).ok())
+        .collect::<Vec<_>>();
+
+    if files.is_empty() {
+        bail!("No files were found for {path}")
     }
+
+    Ok(files)
 }
 
 #[derive(GraphQLQuery)]
@@ -464,38 +422,32 @@ pub async fn get_branches(
     let repository = post_graphql::<GetBranches, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_else(|| eyre!("No data was returned when getting branches for {owner}/{repo}"))?
-        .repository
+        .and_then(|data| data.repository)
         .ok_or_else(|| {
             eyre!("No repository was returned when getting branches for {owner}/{repo}")
         })?;
 
     let default_branch_name = repository
         .default_branch_ref
+        .map(|default_branch_ref| default_branch_ref.name)
         .ok_or_else(|| {
             eyre!(
                 "No default branch reference was returned when getting branches for {owner}/{repo}"
             )
-        })?
-        .name;
+        })?;
 
-    let refs = repository
-        .refs
-        .ok_or_else(|| {
-            eyre!("No references were returned when getting branches for {owner}/{repo}")
-        })?
-        .nodes
-        .ok_or_else(|| eyre!("No nodes were returned when getting branches for {owner}/{repo}"))?;
+    let refs = repository.refs.and_then(|refs| refs.nodes).ok_or_else(|| {
+        eyre!("No references were returned when getting branches for {owner}/{repo}")
+    })?;
 
-    Ok((
-        refs.into_iter()
-            .flatten()
-            .filter(|branch| branch.name != default_branch_name)
-            .collect(),
-        default_branch_name,
-    ))
+    let branches = refs
+        .into_iter()
+        .flatten()
+        .filter(|branch| branch.name != default_branch_name)
+        .collect();
+
+    Ok((branches, default_branch_name))
 }
-
 #[derive(GraphQLQuery)]
 #[graphql(
     schema_path = "src/graphql/schema.graphql",
@@ -541,12 +493,9 @@ pub async fn get_pull_request_from_branch(
     let nodes = post_graphql::<GetPullRequestFromBranch, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
-        .ok_or_else(|| eyre!("No data was returned when getting an associated pull request for {head_ref_name} to {owner}/{repo}"))?
-        .repository
-        .ok_or_else(|| eyre!("No repository was returned when getting an associated pull request for {head_ref_name} to {owner}/{repo}"))?
-        .pull_requests
-        .nodes
-        .ok_or_else(|| eyre!("No nodes were returned when getting an associated pull request for {head_ref_name} to {owner}/{repo}"))?;
+        .and_then(|data| data.repository)
+        .and_then(|repository| repository.pull_requests.nodes)
+        .ok_or_else(|| eyre!("No data was returned when getting an associated pull request for {head_ref_name} to {owner}/{repo}"))?;
 
     Ok(nodes.into_iter().find_map(|nodes_opt| {
         nodes_opt.map(|pr_nodes| PullRequest {
@@ -555,8 +504,8 @@ pub async fn get_pull_request_from_branch(
                 get_pull_request_from_branch::PullRequestState::OPEN => PullRequestState::Open,
                 get_pull_request_from_branch::PullRequestState::CLOSED => PullRequestState::Closed,
                 get_pull_request_from_branch::PullRequestState::MERGED => PullRequestState::Merged,
-                get_pull_request_from_branch::PullRequestState::Other(str) => {
-                    PullRequestState::Other(str)
+                get_pull_request_from_branch::PullRequestState::Other(other) => {
+                    PullRequestState::Other(other)
                 }
             },
             url: pr_nodes.url,

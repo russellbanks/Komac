@@ -45,7 +45,8 @@ impl GitHub {
         let full_package_path = get_full_package_path(identifier, latest_version);
         let content =
             get_directory_content_with_text(&self.0, MICROSOFT, WINGET_PKGS, &full_package_path)
-                .await?;
+                .await?
+                .collect::<Vec<_>>();
 
         let version_manifest = content
             .iter()
