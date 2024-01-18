@@ -362,7 +362,7 @@ pub async fn get_all_versions(
         expression: format!("HEAD:{path}"),
     };
 
-    let object = post_graphql::<GetDeepDirectoryContent, _>(client, GITHUB_GRAPHQL_URL, variables)
+    let files = post_graphql::<GetDeepDirectoryContent, _>(client, GITHUB_GRAPHQL_URL, variables)
         .await?
         .data
         .and_then(|data| data.repository)
@@ -374,9 +374,7 @@ pub async fn get_all_versions(
                 None
             }
         })
-        .ok_or_else(|| eyre!("Failed to retrieve directory content of {path}"))?;
-
-    let files = object
+        .ok_or_else(|| eyre!("Failed to retrieve directory content of {path}"))?
         .into_iter()
         .filter_map(|entry| {
             if let Some(GetDeepDirectoryContentRepositoryObjectOnTreeEntriesObject::Tree(tree)) =
@@ -637,7 +635,7 @@ struct DeleteRef;
 
 pub async fn delete_ref(client: &Client, ref_id: &str) -> Result<()> {
     let variables = delete_ref::Variables {
-        ref_: ref_id.to_string(),
+        ref_: ref_id.to_owned(),
     };
 
     let response = post_graphql::<DeleteRef, _>(client, GITHUB_GRAPHQL_URL, variables).await?;

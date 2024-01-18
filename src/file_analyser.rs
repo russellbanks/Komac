@@ -67,8 +67,8 @@ impl<'a> FileAnalyser<'a> {
         };
         let mut pe_arch = None;
         let mut string_map = None;
-        match FileKind::parse(map.as_ref())? {
-            FileKind::Pe32 => {
+        match FileKind::parse(map.as_ref()) {
+            Ok(FileKind::Pe32) => {
                 let pe_file = PeFile32::parse(map.as_ref())?;
                 installer_type = Some(InstallerType::get(
                     map.as_ref(),
@@ -86,7 +86,7 @@ impl<'a> FileAnalyser<'a> {
                         string_file_info.children.swap_remove(0).string_map()
                     });
             }
-            FileKind::Pe64 => {
+            Ok(FileKind::Pe64) => {
                 let pe_file = PeFile64::parse(map.as_ref())?;
                 installer_type = Some(InstallerType::get(
                     map.as_ref(),
