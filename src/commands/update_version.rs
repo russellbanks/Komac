@@ -118,11 +118,9 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
         let manifests = manifests.await?;
-        let previous_installer_manifest = manifests.installer_manifest;
-        let previous_installers = previous_installer_manifest
-            .installers
-            .iter()
-            .cloned()
+        let mut previous_installer_manifest = manifests.installer_manifest;
+        let previous_installers = mem::take(&mut previous_installer_manifest.installers)
+            .into_iter()
             .map(|installer| Installer {
                 installer_type: previous_installer_manifest
                     .installer_type
@@ -201,10 +199,9 @@ impl UpdateVersion {
             .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0");
         let previous_default_locale_manifest = manifests.default_locale_manifest;
         let mut github_values = match github_values {
-            Some(future) => Some(future.await),
+            Some(future) => Some(future.await?),
             None => None,
-        }
-        .transpose()?;
+        };
         let default_locale_manifest = DefaultLocaleManifest {
             package_identifier: self.identifier.clone(),
             package_version: self.version.clone(),

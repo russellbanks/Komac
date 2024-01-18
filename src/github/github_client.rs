@@ -15,6 +15,7 @@ use crate::types::package_version::PackageVersion;
 use color_eyre::eyre::{eyre, Result};
 use const_format::formatcp;
 use reqwest::Client;
+use std::env;
 use std::path::Path;
 use url::Url;
 
@@ -96,7 +97,11 @@ impl GitHub {
     }
 
     pub async fn get_username(&self) -> Result<String> {
-        get_current_user_login(&self.0).await
+        const KOMAC_FORK_OWNER: &str = "KOMAC_FORK_OWNER";
+        match env::var(KOMAC_FORK_OWNER) {
+            Ok(login) => Ok(login),
+            _ => get_current_user_login(&self.0).await,
+        }
     }
 
     pub async fn get_winget_pkgs(&self) -> Result<RepositoryData> {
