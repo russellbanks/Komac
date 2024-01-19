@@ -81,11 +81,12 @@ pub fn get_branch_name(
 ) -> String {
     /// GitHub rejects branch names longer than 255 bytes. Considering `refs/heads/`, 244 bytes are left for the name.
     const MAX_BRANCH_NAME_LEN: usize = u8::MAX as usize - "refs/heads/".len();
-    let uuid = Uuid::new_v4().simple().to_string();
+    let mut uuid_buffer = Uuid::encode_buffer();
+    let uuid = Uuid::new_v4().simple().encode_upper(&mut uuid_buffer);
     let mut branch_name = format!("{package_identifier}-{package_version}-{uuid}");
     if branch_name.len() > MAX_BRANCH_NAME_LEN {
         branch_name.truncate(MAX_BRANCH_NAME_LEN - uuid.len());
-        branch_name.push_str(&uuid);
+        branch_name.push_str(uuid);
     }
     branch_name
 }

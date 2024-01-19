@@ -230,6 +230,7 @@ impl NewVersion {
                     .are_all_none()
                     .not()
                     .then_some(installer_switches),
+                product_code: analyser.product_code,
                 ..Installer::default()
             });
         }

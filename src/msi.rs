@@ -5,11 +5,12 @@ use msi::{Language, Package, Select};
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::str::FromStr;
+use uuid::Uuid;
 
 pub struct Msi {
     pub architecture: Architecture,
-    pub product_code: String,
-    pub upgrade_code: String,
+    pub product_code: Uuid,
+    pub upgrade_code: Uuid,
     pub product_name: String,
     pub product_version: String,
     pub manufacturer: String,
@@ -51,8 +52,8 @@ impl Msi {
 
         Ok(Self {
             architecture,
-            product_code: property_map.remove(PRODUCT_CODE).unwrap(),
-            upgrade_code: property_map.remove(UPGRADE_CODE).unwrap(),
+            product_code: Uuid::parse_str(property_map.get(PRODUCT_CODE).unwrap())?,
+            upgrade_code: Uuid::parse_str(property_map.get(UPGRADE_CODE).unwrap())?,
             product_name: property_map.remove(PRODUCT_NAME).unwrap(),
             product_version: property_map.remove(PRODUCT_VERSION).unwrap(),
             manufacturer: property_map.remove(MANUFACTURER).unwrap(),
