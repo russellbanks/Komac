@@ -1,8 +1,6 @@
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::utils::{
-    get_branch_name, get_commit_title, get_full_package_path, get_package_path,
-};
+use crate::github::utils::{get_branch_name, get_commit_title, get_package_path};
 use crate::graphql::create_commit::FileDeletion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -45,7 +43,7 @@ impl RemoveVersion {
         println!();
         let github = GitHub::new(token)?;
         let versions = github
-            .get_versions(&get_package_path(&self.package_identifier))
+            .get_versions(&get_package_path(&self.package_identifier, None))
             .await
             .wrap_err_with(|| {
                 format!(
@@ -105,7 +103,7 @@ impl RemoveVersion {
             .get_directory_content(
                 &current_user,
                 &branch_name,
-                &get_full_package_path(&self.package_identifier, &self.package_version),
+                &get_package_path(&self.package_identifier, Some(&self.package_version)),
             )
             .await?
             .map(|path| FileDeletion { path })

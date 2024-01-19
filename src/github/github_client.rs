@@ -1,5 +1,5 @@
 use crate::credential::get_default_headers;
-use crate::github::utils::get_full_package_path;
+use crate::github::utils::get_package_path;
 use crate::graphql::{
     create_branch, create_commit, create_pull_request, delete_ref, get_all_values,
     get_all_versions, get_branches, get_current_user_login, get_directory_content,
@@ -43,7 +43,7 @@ impl GitHub {
         identifier: &PackageIdentifier,
         latest_version: &PackageVersion,
     ) -> Result<Manifests> {
-        let full_package_path = get_full_package_path(identifier, latest_version);
+        let full_package_path = get_package_path(identifier, Some(latest_version));
         let content =
             get_directory_content_with_text(&self.0, MICROSOFT, WINGET_PKGS, &full_package_path)
                 .await?

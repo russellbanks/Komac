@@ -3,8 +3,7 @@ use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
 use crate::github::utils::{
-    get_branch_name, get_commit_title, get_full_package_path, get_package_path,
-    get_pull_request_body,
+    get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
 use crate::graphql::create_commit::FileAddition;
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
@@ -149,7 +148,7 @@ impl NewVersion {
         let package_identifier = required_prompt(self.package_identifier)?;
 
         let versions = github
-            .get_versions(&get_package_path(&package_identifier))
+            .get_versions(&get_package_path(&package_identifier, None))
             .await
             .ok();
 
@@ -306,7 +305,7 @@ impl NewVersion {
         };
 
         let changes = {
-            let full_package_path = get_full_package_path(&package_identifier, &package_version);
+            let full_package_path = get_package_path(&package_identifier, Some(&package_version));
             let mut path_content_map = Vec::new();
             path_content_map.push((
                 format!("{full_package_path}/{package_identifier}.installer.yaml"),

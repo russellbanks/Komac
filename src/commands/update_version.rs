@@ -2,8 +2,7 @@ use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
 use crate::github::utils::{
-    get_branch_name, get_commit_title, get_full_package_path, get_package_path,
-    get_pull_request_body,
+    get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
 use crate::graphql::create_commit::FileAddition;
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
@@ -77,7 +76,7 @@ impl UpdateVersion {
             .build()?;
 
         let versions = github
-            .get_versions(&get_package_path(&self.identifier))
+            .get_versions(&get_package_path(&self.identifier, None))
             .await
             .wrap_err_with(|| {
                 format!(
@@ -233,7 +232,7 @@ impl UpdateVersion {
         };
 
         let changes = {
-            let full_package_path = get_full_package_path(&self.identifier, &self.version);
+            let full_package_path = get_package_path(&self.identifier, Some(&self.version));
             let mut path_content_map = Vec::new();
             path_content_map.push((
                 format!("{full_package_path}/{}.installer.yaml", self.identifier),

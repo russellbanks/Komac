@@ -16,7 +16,7 @@ use std::future::Future;
 use time::format_description::well_known::Rfc2822;
 use time::{Date, OffsetDateTime};
 use tokio::io::AsyncWriteExt;
-use xxhash_rust::xxh3::xxh3_64;
+use uuid::Uuid;
 
 async fn download_file(
     client: &Client,
@@ -93,10 +93,9 @@ fn get_file_name(url: &Url, content_disposition: Option<&HeaderValue>) -> String
             }
         }
     }
-    url.path_segments().and_then(Iterator::last).map_or_else(
-        || xxh3_64(url.as_str().as_bytes()).to_string(),
-        str::to_owned,
-    )
+    url.path_segments()
+        .and_then(Iterator::last)
+        .map_or_else(|| Uuid::new_v4().to_string(), str::to_owned)
 }
 
 pub fn download_urls<'a>(

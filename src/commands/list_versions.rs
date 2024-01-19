@@ -44,7 +44,7 @@ impl ListVersions {
         let github = GitHub::new(token)?;
 
         let mut versions = github
-            .get_versions(&get_package_path(&self.package_identifier))
+            .get_versions(&get_package_path(&self.package_identifier, None))
             .await
             .wrap_err_with(|| {
                 format!(

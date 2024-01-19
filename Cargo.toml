@@ -45,7 +45,7 @@ package-family-name = "1.1.0"
 percent-encoding = "2.3.1"
 pulldown-cmark = "0.9.3"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
-rand = { version = "0.8.5", features = ["small_rng"] }
+rand = "0.8.5"
 serde = { version = "1.0.195", features = ["derive"] }
 serde_json = "1.0.111"
 serde_with = { version = "3.4.0", features = ["macros"] }
@@ -57,8 +57,8 @@ thiserror = "1.0.56"
 time = { version = "0.3.31", features = ["serde-human-readable"] }
 tokio = { version = "1.35.1", features = ["rt-multi-thread", "macros", "fs"] }
 url = { version = "2.5.0", features = ["serde"] }
+uuid = { version = "1.6.1", features = ["v4"] }
 versions = "6.1.0"
-xxhash-rust = { version = "0.8.8", features = ["xxh3"] }
 zerocopy = "0.7.32"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
