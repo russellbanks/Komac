@@ -1,7 +1,7 @@
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
+use crate::github::graphql::create_commit::FileDeletion;
 use crate::github::utils::{get_branch_name, get_commit_title, get_package_path};
-use crate::graphql::create_commit::FileDeletion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::update_state::UpdateState;
@@ -88,30 +88,36 @@ impl RemoveVersion {
             return Ok(());
         }
         let current_user = github.get_username().await?;
-        let winget_pkgs = github.get_winget_pkgs().await?;
-        let fork_id = github.get_winget_pkgs_fork_id(&current_user).await?;
+        let winget_pkgs = github.get_winget_pkgs(None).await?;
+        let fork = github.get_winget_pkgs(Some(&current_user)).await?;
         let branch_name = get_branch_name(&self.package_identifier, &self.package_version);
         let pull_request_branch = github
-            .create_branch(&fork_id, &branch_name, &winget_pkgs.default_branch_oid)
+            .create_branch(&fork.id, &branch_name, &winget_pkgs.default_branch_oid.0)
             .await?;
         let commit_title = get_commit_title(
             &self.package_identifier,
             &self.package_version,
             &UpdateState::RemoveVersion,
         );
-        let deletions = github
+        let directory_content = github
             .get_directory_content(
                 &current_user,
                 &branch_name,
                 &get_package_path(&self.package_identifier, Some(&self.package_version)),
             )
             .await?
+            .collect::<Vec<_>>();
+        let deletions = directory_content
+            .iter()
             .map(|path| FileDeletion { path })
             .collect::<Vec<_>>();
         let _commit_url = github
             .create_commit(
                 &pull_request_branch.id,
-                &pull_request_branch.head_sha,
+                &pull_request_branch
+                    .target
+                    .map(|object| object.oid.0)
+                    .unwrap(),
                 &commit_title,
                 None,
                 Some(deletions),
@@ -120,7 +126,7 @@ impl RemoveVersion {
         let pull_request_url = github
             .create_pull_request(
                 &winget_pkgs.id,
-                &fork_id,
+                &fork.id,
                 &format!("{current_user}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,

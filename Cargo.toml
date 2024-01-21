@@ -25,6 +25,7 @@ clap = { version = "4.4.18", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.2", default-features = false }
 const_format = "0.2.32"
 crossterm = "0.27.0"
+cynic = { version = "3.4.0", features = ["http-reqwest"] }
 derive_more = "0.99.17"
 futures = "0.3.30"
 futures-util = "0.3.30"
@@ -63,14 +64,13 @@ zerocopy = "0.7.32"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]
-graphql_client = { version = "0.13.0", features = ["reqwest"] }
 reqwest = { version = "0.11.23", features = ["stream"] }
 
 [target.'cfg(not(any(windows, target_os = "macos")))'.dependencies]
-graphql_client = { version = "0.13.0", features = ["reqwest-rustls"] }
 reqwest = { version = "0.11.23", default-features = false, features = ["stream", "rustls-tls"] }
 
 [build-dependencies]
+cynic-codegen = { version = "3.4.0", features = ["rkyv"] }
 windows_exe_info = { version = "0.4.1", features = ["manifest"] }
 
 [dev-dependencies]

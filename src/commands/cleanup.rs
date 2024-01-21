@@ -1,6 +1,6 @@
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
-use crate::graphql::PullRequestState;
+use crate::github::graphql::get_pull_request_from_branch::PullRequestState;
 use clap::Parser;
 use color_eyre::Result;
 use crossterm::style::Stylize;

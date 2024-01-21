@@ -25,7 +25,7 @@ pub fn get_package_path(
     }
     if let Some(version) = version {
         result.push('/');
-        result.push_str(&version.to_string())
+        result.push_str(&version.to_string());
     }
     result
 }
