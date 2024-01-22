@@ -1,0 +1,27 @@
+name: Update local copy of GraphQL schema
+
+on:
+  schedule:
+    - cron: 0 9 * * *
+
+jobs:
+  update-schema:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Download latest GitHub GraphQL Schema
+        run: curl -L https://docs.github.com/public/schema.docs.graphql -o assets/github.graphql
+          
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          commit-message: "Update GitHub GraphQL Schema"
+          branch: update-github-graphql-schema
+          title: "Update GitHub GraphQL Schema"
+          body: "This is an automated pull request to update the local GitHub GraphQL schema"
