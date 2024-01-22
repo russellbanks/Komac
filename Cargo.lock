@@ -724,9 +724,9 @@ dependencies = [
 
 [[package]]
 name = "cynic"
-version = "3.4.0"
+version = "3.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14e5d06f3d2b007994333130925ce153c024adf52557c2ddc4bb24c65906e4d9"
+checksum = "aa918de5403cafbaa6f58bdf170e80714cf5e5190f987b1f644f1a9eba0608a5"
 dependencies = [
  "cynic-proc-macros",
  "ref-cast",
@@ -758,9 +758,9 @@ dependencies = [
 
 [[package]]
 name = "cynic-proc-macros"
-version = "3.4.0"
+version = "3.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c77a54cd11efd03a7a85e17908e894c6440f320529a31186f233f945cbd677a"
+checksum = "1c1fdab6285ca647c7b875e8e938949c9e83d821c9307258e945fa89e29cd8bd"
 dependencies = [
  "cynic-codegen",
  "darling",
