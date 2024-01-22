@@ -7,7 +7,6 @@ query GetRepositoryInfo($owner: String!, $name: String!) {
     defaultBranchRef {
       name
       target {
-        __typename
         oid
       }
     }

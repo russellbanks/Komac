@@ -13,14 +13,12 @@ use crate::github::graphql::get_all_values::{
 };
 use crate::github::graphql::get_branches::{GetBranches, Ref as GetBranchRef};
 use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
-use crate::github::graphql::get_deep_directory_content::{
-    DeepGitObject, GetDeepDirectoryContent, GitObject2,
-};
+use crate::github::graphql::get_deep_directory_content::{DeepGitObject, GetDeepDirectoryContent};
 use crate::github::graphql::get_directory_content::{
     GetDirectoryContent, GetDirectoryContentVariables, TreeGitObject,
 };
 use crate::github::graphql::get_directory_content_with_text::{
-    DirTextTreeGitObject, GetDirectoryContentWithText, GitObject,
+    GetDirectoryContentWithText, GitObject,
 };
 use crate::github::graphql::get_pull_request_from_branch::{
     GetPullRequestFromBranch, GetPullRequestFromBranchVariables, PullRequest,
@@ -92,7 +90,7 @@ impl GitHub {
             .and_then(|data| data.repository)
             .and_then(|repository| repository.object)
             .and_then(|object| {
-                if let GitObject2::Tree2(tree) = object {
+                if let DeepGitObject::Tree(tree) = object {
                     return Some(tree.entries);
                 }
                 None
@@ -199,7 +197,7 @@ impl GitHub {
             .and_then(|data| data.repository)
             .and_then(|repository| repository.object)
             .and_then(|object| {
-                if let DirTextTreeGitObject::Tree(tree) = object {
+                if let GitObject::Tree(tree) = object {
                     Some(tree.entries)
                 } else {
                     None

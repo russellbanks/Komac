@@ -11,29 +11,29 @@ mutation CreatePullRequest($input: CreatePullRequestInput!){
 }
 */
 
-#[derive(cynic::QueryVariables, Debug)]
+#[derive(cynic::QueryVariables)]
 pub struct CreatePullRequestVariables<'a> {
     pub input: CreatePullRequestInput<'a>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Mutation", variables = "CreatePullRequestVariables")]
 pub struct CreatePullRequest {
     #[arguments(input: $input)]
     pub create_pull_request: Option<CreatePullRequestPayload>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment)]
 pub struct CreatePullRequestPayload {
     pub pull_request: Option<PullRequest>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment)]
 pub struct PullRequest {
     pub url: Url,
 }
 
-#[derive(cynic::InputObject, Debug)]
+#[derive(cynic::InputObject)]
 pub struct CreatePullRequestInput<'a> {
     pub base_ref_name: &'a str,
     #[cynic(skip_serializing_if = "Option::is_none")]

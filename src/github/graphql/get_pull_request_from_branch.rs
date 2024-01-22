@@ -14,7 +14,7 @@ query GetPullRequestFromBranch($owner: String!, $name: String!, $baseRefName: St
     }
   }
 }
- */
+*/
 
 #[derive(cynic::QueryVariables)]
 pub struct GetPullRequestFromBranchVariables<'a> {

@@ -29,6 +29,7 @@ pub struct Tree {
 #[derive(cynic::QueryFragment)]
 pub struct TreeEntry {
     pub name: String,
+    #[cynic(recurse = "1")]
     pub object: Option<GitObject>,
 }
 
@@ -43,7 +44,7 @@ pub struct GetDirectoryContentWithText {
 #[cynic(variables = "GetDirectoryContentVariables")]
 pub struct Repository {
     #[arguments(expression: $expression)]
-    pub object: Option<DirTextTreeGitObject>,
+    pub object: Option<GitObject>,
 }
 
 #[derive(cynic::QueryFragment)]
@@ -53,15 +54,8 @@ pub struct Blob {
 
 #[derive(cynic::InlineFragments)]
 pub enum GitObject {
-    Blob(Blob),
-    #[cynic(fallback)]
-    Unknown,
-}
-
-#[derive(cynic::InlineFragments)]
-#[cynic(graphql_type = "GitObject")]
-pub enum DirTextTreeGitObject {
     Tree(Tree),
+    Blob(Blob),
     #[cynic(fallback)]
     Unknown,
 }
