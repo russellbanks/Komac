@@ -2,10 +2,10 @@ use crate::commands::update_version::reorder_keys;
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
+use crate::github::graphql::create_commit::{Base64String, FileAddition};
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
-use crate::graphql::create_commit::FileAddition;
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
@@ -383,11 +383,11 @@ impl NewVersion {
         pr_progress.enable_steady_tick(Duration::from_millis(50));
 
         let current_user = github.get_username().await?;
-        let winget_pkgs = github.get_winget_pkgs().await?;
-        let fork_id = github.get_winget_pkgs_fork_id(&current_user).await?;
+        let winget_pkgs = github.get_winget_pkgs(None).await?;
+        let fork = github.get_winget_pkgs(Some(&current_user)).await?;
         let branch_name = get_branch_name(&package_identifier, &package_version);
         let pull_request_branch = github
-            .create_branch(&fork_id, &branch_name, &winget_pkgs.default_branch_oid)
+            .create_branch(&fork.id, &branch_name, &winget_pkgs.default_branch_oid.0)
             .await?;
         let commit_title = get_commit_title(
             &package_identifier,
@@ -395,16 +395,19 @@ impl NewVersion {
             &UpdateState::get(&package_version, versions.as_deref(), latest_version),
         );
         let changes = changes
-            .into_iter()
+            .iter()
             .map(|(path, content)| FileAddition {
-                contents: base64ct::Base64::encode_string(content.as_bytes()),
+                contents: Base64String(base64ct::Base64::encode_string(content.as_bytes())),
                 path,
             })
             .collect::<Vec<_>>();
         let _commit_url = github
             .create_commit(
                 &pull_request_branch.id,
-                &pull_request_branch.head_sha,
+                &pull_request_branch
+                    .target
+                    .map(|target| target.oid.0)
+                    .unwrap(),
                 &commit_title,
                 Some(changes),
                 None,
@@ -413,7 +416,7 @@ impl NewVersion {
         let pull_request_url = github
             .create_pull_request(
                 &winget_pkgs.id,
-                &fork_id,
+                &fork.id,
                 &format!("{current_user}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,

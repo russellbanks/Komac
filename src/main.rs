@@ -6,7 +6,6 @@ mod download_file;
 mod exe;
 mod file_analyser;
 mod github;
-mod graphql;
 mod manifest;
 mod manifests;
 mod match_installers;
