@@ -1,4 +1,4 @@
-<h1><img src="assets/logo.svg" align="left" height="39" alt="Komac logo">&nbsp;Komac - Another WinGet Manifest Creator <img src="assets/banner.svg" align="right" height="39" alt="Komac banner"></h1>
+<h1><img src="assets/logo.svg" align="left" height="39" alt="Komac logo">Komac - Another WinGet Manifest Creator <img src="assets/banner.svg" align="right" height="39" alt="Komac banner"></h1>
 
 ![GitHub release (release name instead of tag name)](https://img.shields.io/github/v/release/russellbanks/komac)
 ![GitHub Repo stars](https://img.shields.io/github/stars/russellbanks/komac)
