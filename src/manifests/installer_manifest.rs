@@ -219,7 +219,7 @@ impl UpgradeBehavior {
 pub struct Dependencies {
     pub windows_features: Option<BTreeSet<String>>,
     pub windows_libraries: Option<BTreeSet<String>>,
-    pub package_dependencies: Option<PackageDependencies>,
+    pub package_dependencies: Option<BTreeSet<PackageDependencies>>,
     pub external_dependencies: Option<BTreeSet<String>>,
 }
 
