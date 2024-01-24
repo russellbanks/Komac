@@ -3562,9 +3562,9 @@ checksum = "bbaa0368d4f1d2aaefc55b6fcfee13f41544ddf36801e793edbbfd7d7df075ef"
 
 [[package]]
 name = "windows_exe_info"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9faa07e7334c9339f96788af0be656836ef4c3cda9e4b19555a2a4d46ddb2c3a"
+checksum = "f7e7bfd02caf5cd98a197cec15c852685c8c42605f91d7be3083541a0b40a7ff"
 dependencies = [
  "embed-resource",
 ]
