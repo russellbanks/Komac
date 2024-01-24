@@ -71,7 +71,7 @@ reqwest = { version = "0.11.23", default-features = false, features = ["stream",
 
 [build-dependencies]
 cynic-codegen = { version = "3.4.3", features = ["rkyv"] }
-windows_exe_info = { version = "0.4.1", features = ["manifest"] }
+windows_exe_info = { version = "0.4.2", features = ["manifest"] }
 
 [dev-dependencies]
 rstest = "0.18.2"
