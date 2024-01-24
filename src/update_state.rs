@@ -1,5 +1,6 @@
 use crate::types::package_version::PackageVersion;
 use std::cmp::max;
+use std::collections::BTreeSet;
 use strum::Display;
 
 #[derive(Display)]
@@ -18,7 +19,7 @@ pub enum UpdateState {
 impl UpdateState {
     pub fn get(
         version: &PackageVersion,
-        versions: Option<&[PackageVersion]>,
+        versions: Option<&BTreeSet<PackageVersion>>,
         latest_version: Option<&PackageVersion>,
     ) -> Self {
         match version {

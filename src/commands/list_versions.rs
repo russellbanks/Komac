@@ -43,7 +43,7 @@ impl ListVersions {
         let token = handle_token(self.token).await?;
         let github = GitHub::new(token)?;
 
-        let mut versions = github
+        let versions = github
             .get_versions(&get_package_path(&self.package_identifier, None))
             .await
             .wrap_err_with(|| {
@@ -52,9 +52,6 @@ impl ListVersions {
                     self.package_identifier
                 )
             })?;
-
-        // Sort versions naturally. For example, so that 1.9.0 < 1.10.0.
-        versions.sort_unstable();
 
         let mut stdout_lock = io::stdout().lock();
         match (

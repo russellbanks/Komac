@@ -44,6 +44,7 @@ use const_format::formatcp;
 use cynic::http::ReqwestExt;
 use cynic::{Id, MutationBuilder, QueryBuilder};
 use reqwest::Client;
+use std::collections::BTreeSet;
 use std::env;
 use std::ops::Not;
 use std::path::Path;
@@ -66,7 +67,7 @@ impl GitHub {
         ))
     }
 
-    pub async fn get_versions(&self, path: &str) -> Result<Vec<PackageVersion>> {
+    pub async fn get_versions(&self, path: &str) -> Result<BTreeSet<PackageVersion>> {
         Self::get_all_versions(&self.0, MICROSOFT, WINGET_PKGS, path).await
     }
 
@@ -75,7 +76,7 @@ impl GitHub {
         owner: &str,
         repo: &str,
         path: &str,
-    ) -> Result<Vec<PackageVersion>> {
+    ) -> Result<BTreeSet<PackageVersion>> {
         let files = client
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetDeepDirectoryContent::build(
@@ -106,7 +107,7 @@ impl GitHub {
                 None
             })
             .filter_map(|entry| PackageVersion::new(&entry).ok())
-            .collect::<Vec<_>>();
+            .collect::<BTreeSet<_>>();
 
         if files.is_empty() {
             bail!("No files were found for {path}")

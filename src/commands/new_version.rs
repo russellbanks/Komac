@@ -392,7 +392,7 @@ impl NewVersion {
         let commit_title = get_commit_title(
             &package_identifier,
             &package_version,
-            &UpdateState::get(&package_version, versions.as_deref(), latest_version),
+            &UpdateState::get(&package_version, versions.as_ref(), latest_version),
         );
         let changes = changes
             .iter()
