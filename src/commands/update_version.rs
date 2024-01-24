@@ -105,7 +105,7 @@ impl UpdateVersion {
                     parts[4..parts.len() - 1].join("/"),
                 )
             });
-        let mut download_results = process_files(files).await?;
+        let download_results = process_files(files).await?;
         let installer_results = download_results
             .iter()
             .map(|(url, download)| Installer {
@@ -132,16 +132,16 @@ impl UpdateVersion {
         let installers = matched_installers
             .into_iter()
             .map(|(previous_installer, new_installer)| {
-                let analyser = download_results
-                    .remove(&new_installer.installer_url)
-                    .unwrap();
+                let analyser = download_results.get(&new_installer.installer_url).unwrap();
                 Installer {
                     installer_locale: analyser
                         .product_language
+                        .clone()
                         .or(previous_installer.installer_locale),
-                    platform: analyser.platform.or(previous_installer.platform),
+                    platform: analyser.platform.clone().or(previous_installer.platform),
                     minimum_os_version: analyser
                         .minimum_os_version
+                        .clone()
                         .or(previous_installer.minimum_os_version)
                         .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0"),
                     architecture: previous_installer.architecture,
@@ -151,8 +151,8 @@ impl UpdateVersion {
                         .or(previous_installer.scope)
                         .or(previous_installer_manifest.scope),
                     installer_url: new_installer.installer_url.clone(),
-                    installer_sha_256: analyser.installer_sha_256,
-                    signature_sha_256: analyser.signature_sha_256,
+                    installer_sha_256: analyser.installer_sha_256.clone(),
+                    signature_sha_256: analyser.signature_sha_256.clone(),
                     install_modes: previous_installer.install_modes,
                     installer_switches: previous_installer.installer_switches,
                     installer_success_codes: previous_installer.installer_success_codes,
@@ -161,22 +161,22 @@ impl UpdateVersion {
                     commands: previous_installer.commands,
                     protocols: previous_installer.protocols,
                     file_extensions: previous_installer.file_extensions,
-                    package_family_name: analyser.package_family_name,
-                    product_code: analyser.product_code,
-                    release_date: analyser.last_modified,
-                    apps_and_features_entries: analyser.msi.map(|msi| {
+                    package_family_name: analyser.package_family_name.clone(),
+                    product_code: analyser.product_code.clone(),
+                    release_date: analyser.last_modified.clone(),
+                    apps_and_features_entries: analyser.msi.as_ref().map(|msi| {
                         BTreeSet::from([AppsAndFeaturesEntry {
                             display_name: if msi.product_name
                                 == manifests.default_locale_manifest.package_name.as_str()
                             {
                                 None
                             } else {
-                                Some(msi.product_name)
+                                Some(msi.product_name.clone())
                             },
                             display_version: if msi.product_version == self.version.to_string() {
                                 None
                             } else {
-                                Some(msi.product_version)
+                                Some(msi.product_version.clone())
                             },
                             upgrade_code: Some(msi.upgrade_code),
                             ..AppsAndFeaturesEntry::default()
