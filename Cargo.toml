@@ -35,7 +35,7 @@ inquire = "0.6.2"
 itertools = "0.12.0"
 keyring = "2.3.1"
 language-tags = { version = "0.3.2", features = ["serde"] }
-memmap2 = "0.9.3"
+memmap2 = "0.9.4"
 mimalloc = "0.1.39"
 msi = "0.7.0"
 num_cpus = "1.16.0"
