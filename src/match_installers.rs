@@ -45,8 +45,10 @@ pub fn match_installers(
                     score += 1;
                 }
 
-                let is_new_architecture = !found_architectures.contains_key(installer_url);
-                let is_new_scope = !found_scopes.contains_key(installer_url);
+                let is_new_architecture = !found_architectures.is_empty()
+                    && !found_architectures.contains_key(installer_url);
+                let is_new_scope =
+                    !found_scopes.is_empty() && !found_scopes.contains_key(installer_url);
 
                 if score > max_score
                     || (score == max_score && (is_new_architecture || is_new_scope))
