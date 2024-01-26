@@ -56,7 +56,7 @@ pub fn find_architecture(url: &str) -> Option<Architecture> {
             // Get the character before the architecture, consuming the characters before it
             let char_before_arch = url
                 .rfind(arch_name)
-                .and_then(|arch_index| url_chars.nth(arch_index));
+                .and_then(|arch_index| url_chars.nth(arch_index - 1));
             // As the characters have been consumed, we can skip by the length of the architecture
             let char_after_arch = url_chars.nth(arch_name.chars().count());
             // If the architecture is surrounded by valid delimiters, the architecture is valid
@@ -98,63 +98,105 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    fn test_x64_architectures(
+    fn test_x64_architectures_at_end(
         #[values("x86_64", "x64", "64-bit", "64bit", "Win64", "Winx64", "ia64", "amd64")]
         architecture: &str,
-        #[values(",", "/", "\\", ".", "_", "-", "")] delimiter: &str,
     ) {
         assert_eq!(
-            Some(Architecture::X64),
-            find_architecture(&format!(
-                "https://www.example.com/file{delimiter}{architecture}.exe"
-            ))
+            find_architecture(&format!("https://www.example.com/file{architecture}.exe")),
+            Some(Architecture::X64)
         );
     }
 
     #[rstest]
-    fn test_x86_architectures(
+    fn test_x64_architectures_delimited(
+        #[values("x86_64", "x64", "64-bit", "64bit", "Win64", "Winx64", "ia64", "amd64")]
+        architecture: &str,
+        #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
+    ) {
+        assert_eq!(
+            find_architecture(&format!(
+                "https://www.example.com/file{delimiter}{architecture}{delimiter}app.exe"
+            )),
+            Some(Architecture::X64)
+        );
+    }
+
+    #[rstest]
+    fn test_x86_architectures_at_end(
         #[values(
             "x86", "x32", "32-bit", "32bit", "win32", "winx86", "ia32", "i386", "i486", "i586",
             "i686", "386", "486", "586", "686"
         )]
         architecture: &str,
-        #[values(",", "/", "\\", ".", "_", "-", "")] delimiter: &str,
     ) {
         assert_eq!(
-            Some(Architecture::X86),
-            find_architecture(&format!(
-                "https://www.example.com/file{delimiter}{architecture}.exe"
-            ))
+            find_architecture(&format!("https://www.example.com/file{architecture}.exe")),
+            Some(Architecture::X86)
         );
     }
 
     #[rstest]
-    fn test_arm64_architectures(
-        #[values("arm64", "aarch64")] architecture: &str,
-        #[values(",", "/", "\\", ".", "_", "-", "")] delimiter: &str,
+    fn test_x86_architectures_delimited(
+        #[values(
+            "x86", "x32", "32-bit", "32bit", "win32", "winx86", "ia32", "i386", "i486", "i586",
+            "i686", "386", "486", "586", "686"
+        )]
+        architecture: &str,
+        #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
     ) {
         assert_eq!(
-            Some(Architecture::Arm64),
             find_architecture(&format!(
-                "https://www.example.com/file{delimiter}{architecture}.exe"
-            ))
+                "https://www.example.com/file{delimiter}{architecture}{delimiter}app.exe"
+            )),
+            Some(Architecture::X86)
         );
     }
+
     #[rstest]
-    fn test_arm_architectures(
-        #[values("arm", "armv7", "aarch")] architecture: &str,
-        #[values(",", "/", "\\", ".", "_", "-", "")] delimiter: &str,
+    fn test_arm64_architectures_at_end(#[values("arm64", "aarch64")] architecture: &str) {
+        assert_eq!(
+            find_architecture(&format!("https://www.example.com/file{architecture}.exe")),
+            Some(Architecture::Arm64)
+        );
+    }
+
+    #[rstest]
+    fn test_arm64_architectures_delimited(
+        #[values("arm64", "aarch64")] architecture: &str,
+        #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
     ) {
         assert_eq!(
-            Some(Architecture::Arm),
             find_architecture(&format!(
-                "https://www.example.com/file{delimiter}{architecture}.exe"
+                "https://www.example.com/file{delimiter}{architecture}{delimiter}app.exe"
             )),
+            Some(Architecture::Arm64)
+        );
+    }
+
+    #[rstest]
+    fn test_arm_architectures_at_end(#[values("arm", "armv7", "aarch")] architecture: &str) {
+        assert_eq!(
+            find_architecture(&format!("https://www.example.com/file{architecture}.exe")),
+            Some(Architecture::Arm)
+        );
+    }
+
+    #[rstest]
+    fn test_arm_architectures_delimited(
+        #[values("arm", "armv7", "aarch")] architecture: &str,
+        #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
+    ) {
+        assert_eq!(
+            find_architecture(&format!(
+                "https://www.example.com/file{delimiter}{architecture}{delimiter}app.exe"
+            )),
+            Some(Architecture::Arm)
         );
     }
 
     #[test]
     fn test_no_architecture() {
-        assert_eq!(None, find_architecture("https://www.example.com/file.exe"));
+        assert_eq!(find_architecture("https://www.example.com/file.exe"), None);
     }
 }
