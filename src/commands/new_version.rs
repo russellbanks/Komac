@@ -9,7 +9,8 @@ use crate::github::utils::{
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
-    InstallModes, Installer, InstallerManifest, InstallerSwitches, UpgradeBehavior,
+    AppsAndFeaturesEntry, InstallModes, Installer, InstallerManifest, InstallerSwitches,
+    UpgradeBehavior,
 };
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
@@ -211,7 +212,9 @@ impl NewVersion {
                 zip.prompt()?;
             }
             installers.insert(Installer {
+                installer_locale: mem::take(&mut analyser.product_language),
                 platform: mem::take(&mut analyser.platform),
+                minimum_os_version: mem::take(&mut analyser.minimum_os_version),
                 architecture: analyser.architecture,
                 installer_type: Some(analyser.installer_type),
                 nested_installer_type: analyser
@@ -230,7 +233,20 @@ impl NewVersion {
                     .are_all_none()
                     .not()
                     .then_some(installer_switches),
+                package_family_name: mem::take(&mut analyser.package_family_name),
                 product_code: analyser.product_code,
+                release_date: analyser.last_modified,
+                apps_and_features_entries: analyser.msi.as_mut().map(|msi| {
+                    BTreeSet::from([AppsAndFeaturesEntry {
+                        display_version: if msi.product_version == package_version.to_string() {
+                            None
+                        } else {
+                            Some(mem::take(&mut msi.product_version))
+                        },
+                        upgrade_code: Some(msi.upgrade_code),
+                        ..AppsAndFeaturesEntry::default()
+                    }])
+                }),
                 ..Installer::default()
             });
         }
