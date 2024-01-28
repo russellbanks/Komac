@@ -10,6 +10,8 @@ use indicatif::{ProgressBar, ProgressStyle};
 use inquire::MultiSelect;
 use std::num::NonZeroUsize;
 
+/// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to microsoft/winget-pkgs
+/// from them, prompting for which ones to delete
 #[derive(Parser)]
 pub struct Cleanup {
     /// Only delete merged branches
@@ -20,8 +22,12 @@ pub struct Cleanup {
     #[arg(long)]
     only_closed: bool,
 
+    /// Automatically delete all relevant branches
+    #[arg(short, long, env = "CI")]
+    all: bool,
+
     /// Number of calls to send to GitHub concurrently
-    #[arg(long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
+    #[arg(short, long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
     concurrent_calls: NonZeroUsize,
 
     /// GitHub personal access token with the public_repo and read_org scope
@@ -94,14 +100,18 @@ impl Cleanup {
             return Ok(());
         }
 
-        // Show a multi-selection prompt for which branches to delete, with all options pre-selected
-        let to_delete = MultiSelect::new(
-            "Please select branches to delete",
-            pull_requests.keys().collect(),
-        )
-        .with_default(&(0..pull_requests.len()).collect::<Vec<_>>())
-        .with_page_size(10)
-        .prompt()?;
+        let to_delete = if self.all {
+            pull_requests.keys().collect()
+        } else {
+            // Show a multi-selection prompt for which branches to delete, with all options pre-selected
+            MultiSelect::new(
+                "Please select branches to delete",
+                pull_requests.keys().collect(),
+            )
+            .with_default(&(0..pull_requests.len()).collect::<Vec<_>>())
+            .with_page_size(10)
+            .prompt()?
+        };
 
         // Delete all selected branches
         let pb = ProgressBar::new(to_delete.len() as u64)
