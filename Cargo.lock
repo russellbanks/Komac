@@ -1574,7 +1574,6 @@ dependencies = [
  "inquire",
  "itertools",
  "keyring",
- "language-tags",
  "memmap2",
  "mimalloc",
  "msi",
@@ -1582,6 +1581,7 @@ dependencies = [
  "nutype",
  "object",
  "ordinal",
+ "oxilangtag",
  "package-family-name",
  "percent-encoding",
  "pulldown-cmark",
@@ -1605,15 +1605,6 @@ dependencies = [
  "windows_exe_info",
  "zerocopy",
  "zip",
-]
-
-[[package]]
-name = "language-tags"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4345964bb142484797b161f473a503a434de77149dd8c7427788c6e13379388"
-dependencies = [
- "serde",
 ]
 
 [[package]]
@@ -2042,6 +2033,15 @@ name = "owo-colors"
 version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
+
+[[package]]
+name = "oxilangtag"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d91edf4fbb970279443471345a4e8c491bf05bb283b3e6c88e4e606fd8c181b"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "package-family-name"
