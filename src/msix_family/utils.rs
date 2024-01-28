@@ -6,7 +6,7 @@ use zip::ZipArchive;
 
 pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Result<String> {
     let mut appx_manifest_file = zip.by_name(path)?;
-    let mut appx_manifest = String::with_capacity(appx_manifest_file.size() as usize);
+    let mut appx_manifest = String::with_capacity(usize::try_from(appx_manifest_file.size())?);
     appx_manifest_file.read_to_string(&mut appx_manifest)?;
     Ok(appx_manifest)
 }

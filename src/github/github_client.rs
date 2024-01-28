@@ -39,7 +39,8 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use color_eyre::eyre::{bail, eyre, OptionExt, Result};
+use color_eyre::eyre::{bail, eyre, Result};
+use color_eyre::Report;
 use const_format::formatcp;
 use cynic::http::ReqwestExt;
 use cynic::{Id, MutationBuilder, QueryBuilder};
@@ -77,7 +78,7 @@ impl GitHub {
         repo: &str,
         path: &str,
     ) -> Result<BTreeSet<PackageVersion>> {
-        let files = client
+        let response = client
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetDeepDirectoryContent::build(
                 GetDirectoryContentVariables {
@@ -86,7 +87,8 @@ impl GitHub {
                     owner,
                 },
             ))
-            .await?
+            .await?;
+        let files = response
             .data
             .and_then(|data| data.repository)
             .and_then(|repository| repository.object)
@@ -96,7 +98,12 @@ impl GitHub {
                 }
                 None
             })
-            .ok_or_else(|| eyre!("Failed to retrieve directory content of {path}"))?
+            .ok_or_else(|| {
+                response.errors.unwrap_or_default().into_iter().fold(
+                    eyre!("Failed to retrieve directory content of {path}"),
+                    Report::wrap_err,
+                )
+            })?
             .into_iter()
             .filter_map(|entry| {
                 if let Some(DeepGitObject::Tree(tree)) = &entry.object {
@@ -184,7 +191,7 @@ impl GitHub {
         repo: &str,
         path: &str,
     ) -> Result<impl Iterator<Item = GitHubFile>> {
-        client
+        let response = client
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetDirectoryContentWithText::build(
                 GetDirectoryContentVariables {
@@ -193,48 +200,56 @@ impl GitHub {
                     owner,
                 },
             ))
-            .await?
+            .await?;
+        response
             .data
             .and_then(|data| data.repository)
             .and_then(|repository| repository.object)
             .and_then(|object| {
                 if let GitObject::Tree(tree) = object {
-                    Some(tree.entries)
-                } else {
-                    None
+                    return Some(tree.entries);
                 }
+                None
             })
             .map(|entries| {
                 entries.into_iter().filter_map(|entry| {
                     if let Some(GitObject::Blob(blob)) = entry.object {
-                        Some(GitHubFile {
+                        return Some(GitHubFile {
                             name: entry.name,
                             text: blob.text.unwrap_or_default(),
                         })
-                    } else {
-                        None
                     }
+                    None
                 })
             })
             .ok_or_else(|| {
-                eyre!(
-                "No directory content was returned when retrieving the directory content of {path}"
-            )
+                response
+                    .errors
+                    .unwrap_or_default()
+                    .into_iter()
+                    .fold(
+                        eyre!("No directory content was returned when retrieving the directory content of {path}"),
+                        Report::wrap_err
+                    )
             })
     }
 
     pub async fn get_username(&self) -> Result<String> {
         const KOMAC_FORK_OWNER: &str = "KOMAC_FORK_OWNER";
-        match env::var(KOMAC_FORK_OWNER) {
-            Ok(login) => Ok(login),
-            _ => self
+        if let Ok(login) = env::var(KOMAC_FORK_OWNER) {
+            Ok(login)
+        } else {
+            let response = self
                 .0
                 .post(GITHUB_GRAPHQL_URL)
                 .run_graphql(GetCurrentUserLogin::build(()))
-                .await?
-                .data
-                .map(|data| data.viewer.login)
-                .ok_or_eyre("No data was returned when retrieving the current user's login"),
+                .await?;
+            response.data.map(|data| data.viewer.login).ok_or_else(|| {
+                response.errors.unwrap_or_default().into_iter().fold(
+                    eyre!("No data was returned when retrieving the current user's login"),
+                    Report::wrap_err,
+                )
+            })
         }
     }
 
@@ -256,11 +271,7 @@ impl GitHub {
             .await?
             .data
             .and_then(|data| data.repository)
-            .ok_or_else(|| {
-                eyre!(
-            "No repository was returned when requesting repository information for {owner}/{name}"
-        )
-            })?;
+            .ok_or_else(|| eyre!("No repository was returned when requesting repository information for {owner}/{name}"))?;
 
         let default_branch = repository.default_branch_ref
             .ok_or_else(|| eyre!("No default branch reference was returned when requesting repository information for {owner}/{name}"))?;
@@ -283,7 +294,7 @@ impl GitHub {
         branch_name: &str,
         oid: &str,
     ) -> Result<CreateBranchRef> {
-        let r#ref = self
+        let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(CreateRef::build(CreateRefVariables {
@@ -291,13 +302,17 @@ impl GitHub {
                 oid: GitObjectId(oid.to_owned()),
                 repository_id: fork_id,
             }))
-            .await?
+            .await?;
+        response
             .data
             .and_then(|data| data.create_ref)
             .and_then(|create_ref| create_ref.ref_)
-            .ok_or_else(|| eyre!("No reference was returned after creating {branch_name}"))?;
-
-        Ok(r#ref)
+            .ok_or_else(|| {
+                response.errors.unwrap_or_default().into_iter().fold(
+                    eyre!("No reference was returned after creating {branch_name}"),
+                    Report::wrap_err,
+                )
+            })
     }
 
     pub async fn create_commit(
@@ -308,7 +323,8 @@ impl GitHub {
         additions: Option<Vec<FileAddition<'_>>>,
         deletions: Option<Vec<FileDeletion<'_>>>,
     ) -> Result<Url> {
-        self.0
+        let response = self
+            .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(CreateCommit::build(CreateCommitVariables {
                 input: CreateCommitOnBranchInput {
@@ -329,12 +345,18 @@ impl GitHub {
                     },
                 },
             }))
-            .await?
+            .await?;
+        response
             .data
             .and_then(|data| data.create_commit_on_branch)
             .and_then(|commit_object| commit_object.commit)
             .map(|commit| commit.url)
-            .ok_or_eyre("No commit data was returned when creating commit")
+            .ok_or_else(|| {
+                response.errors.unwrap_or_default().into_iter().fold(
+                    eyre!("No commit data was returned when creating commit"),
+                    Report::wrap_err,
+                )
+            })
     }
 
     pub async fn get_directory_content(
@@ -343,7 +365,7 @@ impl GitHub {
         branch_name: &str,
         path: &str,
     ) -> Result<impl Iterator<Item = String> + Sized> {
-        let entries = self
+        let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetDirectoryContent::build(GetDirectoryContentVariables {
@@ -351,7 +373,8 @@ impl GitHub {
                 name: WINGET_PKGS,
                 owner,
             }))
-            .await?
+            .await?;
+        let entries = response
             .data
             .and_then(|data| data.repository)
             .and_then(|repository| repository.object)
@@ -361,7 +384,12 @@ impl GitHub {
                 }
                 None
             })
-            .ok_or_else(|| eyre!("No directory content was returned for {path}"))?;
+            .ok_or_else(|| {
+                response.errors.unwrap_or_default().into_iter().fold(
+                    eyre!("No directory content was returned for {path}"),
+                    Report::wrap_err,
+                )
+            })?;
 
         Ok(entries.into_iter().filter_map(|entry| entry.path))
     }
@@ -371,17 +399,32 @@ impl GitHub {
         default_branch_name: &str,
         branch_name: &str,
     ) -> Result<Option<PullRequest>> {
-        let operation = GetPullRequestFromBranch::build(GetPullRequestFromBranchVariables {
-            base_ref_name: default_branch_name,
-            head_ref_name: branch_name,
-            name: WINGET_PKGS,
-            owner: MICROSOFT,
-        });
-        let mut nodes = self.0.post(GITHUB_GRAPHQL_URL).run_graphql(operation).await?
+        let response = self
+            .0
+            .post(GITHUB_GRAPHQL_URL)
+            .run_graphql(GetPullRequestFromBranch::build(
+                GetPullRequestFromBranchVariables {
+                    base_ref_name: default_branch_name,
+                    head_ref_name: branch_name,
+                    name: WINGET_PKGS,
+                    owner: MICROSOFT,
+                },
+            ))
+            .await?;
+        let mut nodes = response
             .data
             .and_then(|data| data.repository)
             .map(|repository| repository.pull_requests.nodes)
-            .ok_or_else(|| eyre!("No data was returned when getting an associated pull request for {branch_name} to {MICROSOFT}/{WINGET_PKGS}"))?;
+            .ok_or_else(|| {
+                response
+                    .errors
+                    .unwrap_or_default()
+                    .into_iter()
+                    .fold(
+                        eyre!("No data was returned when getting an associated pull request for {branch_name} to {MICROSOFT}/{WINGET_PKGS}"),
+                        Report::wrap_err
+                    )
+            })?;
 
         if nodes.is_empty() {
             Ok(None)
@@ -448,18 +491,25 @@ impl GitHub {
                 title,
             },
         });
-        self.0
+        let response = self
+            .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(operation)
-            .await?
+            .await?;
+        response
             .data
             .and_then(|data| data.create_pull_request)
             .and_then(|create_pull_request| create_pull_request.pull_request)
             .map(|pull_request| pull_request.url)
             .ok_or_else(|| {
-                eyre!(
-            "No pull request data was returned when creating a pull request from {fork_ref_name}"
-        )
+                response
+                    .errors
+                    .unwrap_or_default()
+                    .into_iter()
+                    .fold(
+                        eyre!("No pull request data was returned when creating a pull request from {fork_ref_name}"),
+                        Report::wrap_err
+                    )
             })
     }
 
@@ -472,7 +522,10 @@ impl GitHub {
         if response.data.is_some() {
             Ok(())
         } else {
-            bail!("Failed to delete ref with id {:?}", branch_id)
+            Err(response.errors.unwrap_or_default().into_iter().fold(
+                eyre!("Failed to delete ref with id {:?}", branch_id),
+                Report::wrap_err,
+            ))
         }
     }
 
