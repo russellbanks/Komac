@@ -71,7 +71,7 @@ komac update -i Package.Identifier -v 1.2.3 --urls https://www.firstUrl.com http
 
 ## Komac in Action 🎥
 
-![Komac-demo](https://user-images.githubusercontent.com/74878137/216784291-de2d5dc8-d6f9-4bde-a059-7a1382c3940b.gif)
+![Komac-demo](assets/demo.gif)
 
 ## Komac vs other tools 🏆
 
