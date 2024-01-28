@@ -142,6 +142,16 @@ jobs:
 - ⭐ Star this project! :)
 - 🧑‍💻 Use Komac and [create an issue](https://github.com/russellbanks/Komac/issues/new) for feature requests or bugs.
 
+## Star History ⭐
+
+<a href="https://star-history.com/#russellbanks/Komac&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=russellbanks/Komac&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=russellbanks/Komac&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=russellbanks/Komac&type=Date" />
+  </picture>
+</a>
+
 ## License
 
 [![GNU GPLv3 Logo](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)
