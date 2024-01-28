@@ -9,6 +9,8 @@ Komac is an advanced CLI designed to create manifests for the [WinGet Community 
 
 Komac is both blazingly fast 🔥 and incredibly low on memory, using just ~3.5MB of memory on my machine.
 
+![Komac-demo](assets/demo.gif)
+
 ## Installation
 
 Komac is cross-platform and binaries are built for Windows, Linux, macOS, and FreeBSD.
@@ -44,6 +46,18 @@ Portable binaries for macOS are available from the [releases](https://github.com
 brew install russellbanks/tap/komac
 ```
 
+## GitHub Token
+
+Komac is currently only able to use a classic token. Whilst Komac can fully create manifests and commit with a
+fine-grained token, it fails to create a pull request to winget-pkgs. This may change as fine-grained tokens improve.
+See https://github.com/russellbanks/Komac/issues/310.
+
+### Classic
+
+A classic token with the `public_repo` and `read:org` scopes.
+
+![firefox_NiYtCiXBM1](https://github.com/russellbanks/Komac/assets/74878137/afd87dc3-e54e-4757-ad07-27affe88437e)
+
 ## Commands
 
 | Command        | Description                                                                   | Usage          |
@@ -68,10 +82,6 @@ komac update -i Package.Identifier -v 1.2.3 --urls https://www.firstUrl.com http
 | URLs                                 | `--urls`       | URLs are delimited by a space                              |
 | Automatically submit                 | `--submit`     |                                                            |
 | Token (if one is not already stored) | `--token`      | Komac will check for a `GITHUB_TOKEN` environment variable |
-
-## Komac in Action 🎥
-
-![Komac-demo](assets/demo.gif)
 
 ## Komac vs other tools 🏆
 
