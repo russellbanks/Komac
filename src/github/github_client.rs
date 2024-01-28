@@ -52,7 +52,7 @@ use std::path::Path;
 use std::str::FromStr;
 use url::Url;
 
-pub const MICROSOFT: &str = "Microsoft";
+pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
 pub const WINGET_PKGS_FULL_NAME: &str = formatcp!("{MICROSOFT}/{WINGET_PKGS}");
 const GITHUB_GRAPHQL_URL: &str = "https://api.github.com/graphql";
