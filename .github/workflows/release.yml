@@ -126,7 +126,7 @@ jobs:
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
             $newName += "-nightly"
           } else {
-            $newName += "-$($env:GITHUB_REF_NAME -replace '^v')"
+            $newName += "-$($env:GITHUB_REF_NAME.TrimStart('v'))"
           }
           $newName += "-${{ matrix.platform.arch }}"
           if ($env:RUNNER_OS -eq 'Windows') {
