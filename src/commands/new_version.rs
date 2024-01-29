@@ -9,7 +9,7 @@ use crate::github::utils::{
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallModes, Installer, InstallerManifest, InstallerSwitches,
+    AppsAndFeaturesEntry, InstallModes, Installer, InstallerManifest, InstallerSwitches, Scope,
     UpgradeBehavior,
 };
 use crate::manifests::locale_manifest::LocaleManifest;
@@ -46,7 +46,6 @@ use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
-use crate::url_utils::find_scope;
 use base64ct::Encoding;
 use clap::Parser;
 use color_eyre::eyre::Result;
@@ -191,6 +190,17 @@ impl NewVersion {
             .try_collect::<Vec<_>>()
             .await?;
         multi_progress.clear()?;
+        let github_values = files
+            .iter()
+            .find(|download| download.url.host_str() == Some("github.com"))
+            .map(|download| {
+                let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
+                github.get_all_values(
+                    parts[0].to_owned(),
+                    parts[1].to_owned(),
+                    parts[4..parts.len() - 1].join("/"),
+                )
+            });
         let mut download_results = process_files(files).await?;
         let mut installers = BTreeSet::new();
         for (url, analyser) in &mut download_results {
@@ -225,7 +235,7 @@ impl NewVersion {
                     .zip
                     .as_mut()
                     .and_then(|zip| mem::take(&mut zip.nested_installer_files)),
-                scope: find_scope(url.as_str()),
+                scope: Scope::find_from_url(url.as_str()),
                 installer_url: url.clone(),
                 installer_sha_256: mem::take(&mut analyser.installer_sha_256),
                 signature_sha_256: mem::take(&mut analyser.signature_sha_256),
@@ -280,6 +290,10 @@ impl NewVersion {
             installers,
             installer_manifest,
         );
+        let mut github_values = match github_values {
+            Some(future) => Some(future.await?),
+            None => None,
+        };
         let default_locale_manifest = DefaultLocaleManifest {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
@@ -308,7 +322,10 @@ impl NewVersion {
             short_description: required_prompt(self.short_description)?,
             description: optional_prompt(self.description)?,
             moniker: optional_prompt(self.moniker)?,
-            tags: list_prompt::<Tag>()?,
+            tags: github_values
+                .as_mut()
+                .map(|values| mem::take(&mut values.topics))
+                .or_else(|| list_prompt::<Tag>().ok()?),
             release_notes_url: optional_prompt(self.release_notes_url)?,
             manifest_type: ManifestType::DefaultLocale,
             ..DefaultLocaleManifest::default()

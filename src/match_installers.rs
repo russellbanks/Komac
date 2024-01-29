@@ -1,5 +1,5 @@
-use crate::manifests::installer_manifest::Installer;
-use crate::url_utils::{find_architecture, find_scope};
+use crate::manifests::installer_manifest::{Installer, Scope};
+use crate::url_utils::find_architecture;
 use std::collections::HashMap;
 
 pub fn match_installers(
@@ -18,7 +18,7 @@ pub fn match_installers(
         .iter()
         .filter_map(|installer| {
             let url = &installer.installer_url;
-            find_scope(url.as_str()).map(|scope| (url, scope))
+            Scope::find_from_url(url.as_str()).map(|scope| (url, scope))
         })
         .collect::<HashMap<_, _>>();
 

@@ -1,4 +1,3 @@
-use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
 
 pub const VALID_FILE_EXTENSIONS: [&str; 7] = [
@@ -81,14 +80,6 @@ pub fn find_architecture(url: &str) -> Option<Architecture> {
     }
 
     None
-}
-
-pub fn find_scope(url: &str) -> Option<Scope> {
-    match url.to_ascii_lowercase() {
-        url if url.contains("user") => Some(Scope::User),
-        url if url.contains("machine") => Some(Scope::Machine),
-        _ => None,
-    }
 }
 
 #[cfg(test)]

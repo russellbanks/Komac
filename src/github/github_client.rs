@@ -35,6 +35,7 @@ use crate::types::license::License;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::release_notes::ReleaseNotes;
+use crate::types::tag::Tag;
 use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
@@ -586,8 +587,8 @@ impl GitHub {
             .repository_topics
             .nodes
             .into_iter()
-            .map(|topic_node| topic_node.topic.name)
-            .collect::<Vec<_>>();
+            .filter_map(|topic_node| Tag::new(topic_node.topic.name).ok())
+            .collect();
 
         let publisher_url = if repository.is_in_organization {
             data.organization
@@ -645,7 +646,7 @@ pub struct GitHubValues {
     pub release_notes: Option<ReleaseNotes>,
     pub release_notes_url: ReleaseNotesUrl,
     pub has_issues_enabled: bool,
-    pub topics: Vec<String>,
+    pub topics: BTreeSet<Tag>,
 }
 
 pub struct GitHubFile {

@@ -111,6 +111,16 @@ pub enum Scope {
     Machine,
 }
 
+impl Scope {
+    pub fn find_from_url(url: &str) -> Option<Scope> {
+        match url.to_ascii_lowercase() {
+            url if url.contains("user") => Some(Scope::User),
+            url if url.contains("machine") => Some(Scope::Machine),
+            _ => None,
+        }
+    }
+}
+
 #[derive(
     Serialize, Deserialize, Clone, Debug, Display, EnumIter, Eq, PartialEq, Hash, Ord, PartialOrd,
 )]

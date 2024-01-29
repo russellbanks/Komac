@@ -8,7 +8,7 @@ use crate::github::utils::{
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, Installer, InstallerManifest, UpgradeBehavior,
+    AppsAndFeaturesEntry, Installer, InstallerManifest, Scope, UpgradeBehavior,
 };
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
@@ -18,7 +18,6 @@ use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
-use crate::url_utils::find_scope;
 use base64ct::Encoding;
 use clap::Parser;
 use color_eyre::eyre::{Result, WrapErr};
@@ -111,7 +110,7 @@ impl UpdateVersion {
             .map(|(url, download)| Installer {
                 architecture: download.architecture,
                 installer_type: Some(download.installer_type),
-                scope: find_scope(url.as_str()),
+                scope: Scope::find_from_url(url.as_str()),
                 installer_url: url.clone(),
                 ..Installer::default()
             })
@@ -217,6 +216,9 @@ impl UpdateVersion {
                 .as_mut()
                 .and_then(|values| mem::take(&mut values.license_url))
                 .or(previous_default_locale_manifest.license_url),
+            tags: previous_default_locale_manifest.tags.or(github_values
+                .as_mut()
+                .map(|values| mem::take(&mut values.topics))),
             release_notes: github_values
                 .as_mut()
                 .and_then(|values| mem::take(&mut values.release_notes)),
