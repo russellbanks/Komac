@@ -6,6 +6,7 @@ use color_eyre::eyre::Result;
 use package_family_name::get_package_family_name;
 use quick_xml::de::from_str;
 use serde::Deserialize;
+use std::collections::BTreeSet;
 use std::io::{Read, Seek};
 use std::str::FromStr;
 use zip::ZipArchive;
@@ -16,6 +17,7 @@ pub struct Msix {
     pub version: String,
     pub signature_sha_256: String,
     pub package_family_name: String,
+    pub capabilities: Option<BTreeSet<String>>,
     pub target_device_family: Platform,
     pub min_version: MinimumOSVersion,
     pub processor_architecture: Architecture,
@@ -43,6 +45,23 @@ impl Msix {
                 &manifest.identity.name,
                 &manifest.identity.publisher,
             ),
+            capabilities: manifest.capabilities.map(|capabilities| {
+                capabilities
+                    .capability
+                    .into_iter()
+                    .filter_map(|capability| {
+                        if let Capability::Restricted { name } = capability {
+                            println!("restricted");
+                            Some(name)
+                        } else if let Capability::Capability { name } = capability {
+                            println!("normal");
+                            Some(name)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }),
             target_device_family: Platform::from_str(
                 &manifest.dependencies.target_device_family.name,
             )?,
@@ -61,6 +80,7 @@ impl Msix {
 struct Package {
     identity: Identity,
     properties: Properties,
+    capabilities: Option<Capabilities>,
     dependencies: Dependencies,
 }
 
@@ -86,13 +106,33 @@ struct Properties {
 
 #[derive(Default, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]
-pub(super) struct Dependencies {
+struct Capabilities {
+    capability: Vec<Capability>,
+}
+
+#[derive(Deserialize)]
+pub enum Capability {
+    #[serde(rename = "rescap:Capability")]
+    Restricted {
+        #[serde(rename = "@Name")]
+        name: String,
+    },
+    #[serde(rename = "Capability")]
+    Capability {
+        #[serde(rename = "@Name")]
+        name: String,
+    },
+}
+
+#[derive(Default, Deserialize)]
+#[serde(default, rename_all = "PascalCase")]
+pub struct Dependencies {
     pub target_device_family: TargetDeviceFamily,
 }
 
 #[derive(Default, Deserialize)]
 #[serde(default)]
-pub(super) struct TargetDeviceFamily {
+pub struct TargetDeviceFamily {
     #[serde(rename = "@Name")]
     pub name: String,
     #[serde(rename = "@MinVersion")]

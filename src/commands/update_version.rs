@@ -163,6 +163,7 @@ impl UpdateVersion {
                     file_extensions: previous_installer.file_extensions,
                     package_family_name: analyser.package_family_name.clone(),
                     product_code: analyser.product_code,
+                    capabilities: analyser.capabilities.clone(),
                     release_date: analyser.last_modified,
                     apps_and_features_entries: analyser.msi.as_ref().map(|msi| {
                         BTreeSet::from([AppsAndFeaturesEntry {

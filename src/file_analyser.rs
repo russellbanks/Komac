@@ -42,6 +42,7 @@ pub struct FileAnalyser<'a> {
     pub installer_sha_256: String,
     pub signature_sha_256: Option<String>,
     pub package_family_name: Option<String>,
+    pub capabilities: Option<BTreeSet<String>>,
     pub product_code: Option<Uuid>,
     pub product_language: Option<LanguageTag>,
     pub last_modified: Option<Date>,
@@ -156,8 +157,10 @@ impl<'a> FileAnalyser<'a> {
                         .map(|msix_bundle| mem::take(&mut msix_bundle.signature_sha_256))
                 }),
             package_family_name: msix
-                .map(|msix| msix.package_family_name)
+                .as_mut()
+                .map(|msix| mem::take(&mut msix.package_family_name))
                 .or_else(|| msix_bundle.map(|msix_bundle| msix_bundle.package_family_name)),
+            capabilities: msix.and_then(|msix| msix.capabilities),
             product_code: msi.as_mut().map(|msi| mem::take(&mut msi.product_code)),
             product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
             last_modified: None,
