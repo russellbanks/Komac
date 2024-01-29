@@ -4,6 +4,8 @@
 #define URL "https://github.com/russellbanks/Komac"
 #define ExeName "Komac.exe"
 
+#include "CodeDependencies.iss"
+
 [Setup]
 AppId={{776938BF-CF8E-488B-A3DF-8048BC64F2CD}
 AppName={#AppName}
@@ -36,6 +38,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Source: "{#InputExecutable}"; DestDir: "{app}\bin"; DestName: "{#ExeName}"
 
 [Code]
+function InitializeSetup: Boolean;
+begin
+  Dependency_AddVC2015To2022;
+  Result := True;
+end;
+
 procedure EnvAddPath(Path: string);
 var
     Paths: string;
