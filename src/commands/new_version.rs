@@ -324,7 +324,7 @@ impl NewVersion {
             moniker: optional_prompt(self.moniker)?,
             tags: github_values
                 .as_mut()
-                .map(|values| mem::take(&mut values.topics))
+                .and_then(|values| mem::take(&mut values.topics))
                 .or_else(|| list_prompt::<Tag>().ok()?),
             release_notes_url: optional_prompt(self.release_notes_url)?,
             manifest_type: ManifestType::DefaultLocale,

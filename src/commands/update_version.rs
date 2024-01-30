@@ -218,7 +218,7 @@ impl UpdateVersion {
                 .or(previous_default_locale_manifest.license_url),
             tags: previous_default_locale_manifest.tags.or(github_values
                 .as_mut()
-                .map(|values| mem::take(&mut values.topics))),
+                .and_then(|values| mem::take(&mut values.topics))),
             release_notes: github_values
                 .as_mut()
                 .and_then(|values| mem::take(&mut values.release_notes)),

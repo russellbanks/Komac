@@ -553,9 +553,7 @@ impl GitHub {
         })?;
 
         let object = repository.object.ok_or_else(|| {
-            eyre!(
-        "No directory content was returned when getting root directory content for {owner}/{repo}"
-    )
+            eyre!("No directory content was returned when getting root directory content for {owner}/{repo}") 
         })?;
 
         let license_url = match object {
@@ -588,7 +586,7 @@ impl GitHub {
             .nodes
             .into_iter()
             .filter_map(|topic_node| Tag::new(topic_node.topic.name).ok())
-            .collect();
+            .collect::<BTreeSet<_>>();
 
         let publisher_url = if repository.is_in_organization {
             data.organization
@@ -624,7 +622,7 @@ impl GitHub {
                 .and_then(|body| ReleaseNotes::format(&body, &owner, &repo)),
             release_notes_url: ReleaseNotesUrl::from_str(release.url.as_str())?,
             has_issues_enabled: repository.has_issues_enabled,
-            topics,
+            topics: Option::from(topics).filter(|topics| !topics.is_empty()),
         })
     }
 }
@@ -646,7 +644,7 @@ pub struct GitHubValues {
     pub release_notes: Option<ReleaseNotes>,
     pub release_notes_url: ReleaseNotesUrl,
     pub has_issues_enabled: bool,
-    pub topics: BTreeSet<Tag>,
+    pub topics: Option<BTreeSet<Tag>>,
 }
 
 pub struct GitHubFile {
