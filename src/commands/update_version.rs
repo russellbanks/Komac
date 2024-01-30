@@ -251,6 +251,7 @@ impl UpdateVersion {
                 .locale_manifests
                 .into_iter()
                 .map(|locale_manifest| LocaleManifest {
+                    package_version: self.version.clone(),
                     manifest_version: ManifestVersion::default(),
                     ..locale_manifest
                 })
