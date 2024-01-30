@@ -24,7 +24,6 @@ use std::io::Cursor;
 use std::mem;
 use std::path::Path;
 use time::Date;
-use uuid::Uuid;
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -42,7 +41,7 @@ pub struct FileAnalyser<'a> {
     pub installer_sha_256: String,
     pub signature_sha_256: Option<String>,
     pub package_family_name: Option<String>,
-    pub product_code: Option<Uuid>,
+    pub product_code: Option<String>,
     pub product_language: Option<LanguageTag>,
     pub last_modified: Option<Date>,
     pub file_name: Cow<'a, str>,

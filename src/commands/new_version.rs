@@ -244,7 +244,7 @@ impl NewVersion {
                     .not()
                     .then_some(installer_switches),
                 package_family_name: mem::take(&mut analyser.package_family_name),
-                product_code: analyser.product_code,
+                product_code: mem::take(&mut analyser.product_code),
                 release_date: analyser.last_modified,
                 apps_and_features_entries: analyser.msi.as_mut().map(|msi| {
                     BTreeSet::from([AppsAndFeaturesEntry {
@@ -253,7 +253,7 @@ impl NewVersion {
                         } else {
                             Some(mem::take(&mut msi.product_version))
                         },
-                        upgrade_code: Some(msi.upgrade_code),
+                        upgrade_code: Some(mem::take(&mut msi.upgrade_code)),
                         ..AppsAndFeaturesEntry::default()
                     }])
                 }),

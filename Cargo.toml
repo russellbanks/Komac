@@ -58,7 +58,7 @@ thiserror = "1.0.56"
 time = { version = "0.3.31", features = ["serde-human-readable"] }
 tokio = { version = "1.35.1", features = ["rt-multi-thread", "macros", "fs"] }
 url = { version = "2.5.0", features = ["serde"] }
-uuid = { version = "1.7.0", features = ["serde", "v4"] }
+uuid = { version = "1.7.0", features = ["v4"] }
 versions = "6.1.0"
 zerocopy = "0.7.32"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }

@@ -21,7 +21,6 @@ use std::collections::BTreeSet;
 use std::num::NonZeroI64;
 use strum::{Display, EnumIter, EnumString};
 use time::Date;
-use uuid::Uuid;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]
@@ -48,8 +47,7 @@ pub struct InstallerManifest {
     pub file_extensions: Option<BTreeSet<FileExtension>>,
     pub dependencies: Option<Dependencies>,
     pub package_family_name: Option<String>,
-    #[serde(serialize_with = "upper_uuid_braced")]
-    pub product_code: Option<Uuid>,
+    pub product_code: Option<String>,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
     pub markets: Option<Markets>,
@@ -272,10 +270,8 @@ pub struct AppsAndFeaturesEntry {
     pub display_name: Option<String>,
     pub publisher: Option<String>,
     pub display_version: Option<String>,
-    #[serde(serialize_with = "upper_uuid_braced")]
-    pub product_code: Option<Uuid>,
-    #[serde(serialize_with = "upper_uuid_braced")]
-    pub upgrade_code: Option<Uuid>,
+    pub product_code: Option<String>,
+    pub upgrade_code: Option<String>,
     pub installer_type: Option<InstallerType>,
 }
 
@@ -340,8 +336,7 @@ pub struct Installer {
     pub file_extensions: Option<BTreeSet<FileExtension>>,
     pub dependencies: Option<Dependencies>,
     pub package_family_name: Option<String>,
-    #[serde(serialize_with = "upper_uuid_braced")]
-    pub product_code: Option<Uuid>,
+    pub product_code: Option<String>,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
     pub markets: Option<Markets>,
@@ -356,16 +351,4 @@ pub struct Installer {
     pub apps_and_features_entries: Option<BTreeSet<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
-}
-
-fn upper_uuid_braced<S>(uuid: &Option<Uuid>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    match uuid {
-        Some(uuid) => {
-            serializer.serialize_some(uuid.as_braced().encode_upper(&mut Uuid::encode_buffer()))
-        }
-        None => serializer.serialize_none(),
-    }
 }

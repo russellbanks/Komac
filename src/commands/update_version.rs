@@ -161,7 +161,7 @@ impl UpdateVersion {
                     protocols: previous_installer.protocols,
                     file_extensions: previous_installer.file_extensions,
                     package_family_name: analyser.package_family_name.clone(),
-                    product_code: analyser.product_code,
+                    product_code: analyser.product_code.clone(),
                     release_date: analyser.last_modified,
                     apps_and_features_entries: analyser.msi.as_ref().map(|msi| {
                         BTreeSet::from([AppsAndFeaturesEntry {
@@ -177,7 +177,7 @@ impl UpdateVersion {
                             } else {
                                 Some(msi.product_version.clone())
                             },
-                            upgrade_code: Some(msi.upgrade_code),
+                            upgrade_code: Some(msi.upgrade_code.clone()),
                             ..AppsAndFeaturesEntry::default()
                         }])
                     }),
