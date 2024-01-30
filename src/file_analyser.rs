@@ -84,8 +84,9 @@ impl<'a> FileAnalyser<'a> {
                     msi = Some(extract_msi(&pe_file)?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
-                string_map = VSVersionInfo::parse(&pe_file, map.as_ref())?
-                    .string_file_info
+                string_map = VSVersionInfo::parse(&pe_file, map.as_ref())
+                    .ok()
+                    .and_then(|vs_version_info| vs_version_info.string_file_info)
                     .map(|mut string_file_info| {
                         string_file_info.children.swap_remove(0).string_map()
                     });
@@ -102,8 +103,9 @@ impl<'a> FileAnalyser<'a> {
                     msi = Some(extract_msi(&pe_file)?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
-                string_map = VSVersionInfo::parse(&pe_file, map.as_ref())?
-                    .string_file_info
+                string_map = VSVersionInfo::parse(&pe_file, map.as_ref())
+                    .ok()
+                    .and_then(|vs_version_info| vs_version_info.string_file_info)
                     .map(|mut string_file_info| {
                         string_file_info.children.swap_remove(0).string_map()
                     });
