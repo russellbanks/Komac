@@ -120,7 +120,7 @@ impl<'a> FileAnalyser<'a> {
             MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(Cursor::new(map.as_ref()))?),
             _ => None,
         };
-        let zip = if nested {
+        let mut zip = if nested {
             None
         } else {
             // File Analyser can be called from within a zip making this function asynchronously recursive
@@ -146,7 +146,12 @@ impl<'a> FileAnalyser<'a> {
                 .as_ref()
                 .map(|msi| msi.architecture)
                 .or_else(|| msix.as_ref().map(|msix| msix.processor_architecture))
-                .unwrap_or_else(|| pe_arch.unwrap()),
+                .or(pe_arch)
+                .unwrap_or_else(|| {
+                    zip.as_mut()
+                        .and_then(|zip| mem::take(&mut zip.architecture))
+                        .unwrap()
+                }),
             installer_type: installer_type.unwrap(),
             installer_sha_256: String::new(),
             signature_sha_256: msix

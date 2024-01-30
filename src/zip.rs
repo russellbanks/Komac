@@ -1,5 +1,6 @@
 use crate::file_analyser::FileAnalyser;
 use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
+use crate::types::architecture::Architecture;
 use crate::url_utils::VALID_FILE_EXTENSIONS;
 use color_eyre::eyre::Result;
 use inquire::{min_length, MultiSelect};
@@ -13,6 +14,7 @@ use zip::ZipArchive;
 pub struct Zip {
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
+    pub architecture: Option<Architecture>,
     identified_files: Vec<String>,
 }
 
@@ -56,6 +58,7 @@ impl Zip {
             == 1
         {
             let mut nested_installer_type = None;
+            let mut architecture = None;
             let chosen_file_name = (*identified_files.swap_remove(0)).to_string();
             if let Ok(mut chosen_file) = zip.by_name(&chosen_file_name) {
                 let mut temp_file = tempfile::tempfile()?;
@@ -63,6 +66,7 @@ impl Zip {
                 let file_analyser =
                     FileAnalyser::new(&temp_file, Cow::Borrowed(&chosen_file_name), true)?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
+                architecture = Some(file_analyser.architecture);
             }
             return Ok(Self {
                 nested_installer_type,
@@ -70,6 +74,7 @@ impl Zip {
                     relative_file_path: chosen_file_name,
                     portable_command_alias: None,
                 }])),
+                architecture,
                 identified_files: Vec::new(),
             });
         }
@@ -77,6 +82,7 @@ impl Zip {
         Ok(Self {
             nested_installer_type: None,
             nested_installer_files: None,
+            architecture: None,
             identified_files,
         })
     }
