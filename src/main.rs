@@ -49,8 +49,10 @@ async fn main() -> Result<()> {
 }
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None, disable_version_flag = true)]
 struct Cli {
+    #[arg(short = 'v', short_alias = 'V', long, action = clap::builder::ArgAction::Version)]
+    version: (),
     #[command(subcommand)]
     command: Commands,
 }
