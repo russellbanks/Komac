@@ -185,6 +185,8 @@ jobs:
           files: |
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}.sha256
-            target/${{ matrix.platform.target }}/debian/*.{deb,sha256}
-            ${{ steps.rename_binary.outputs.name }}.{tar.gz,sha256}
+            target/${{ matrix.platform.target }}/debian/*.deb
+            target/${{ matrix.platform.target }}/debian/*.sha256
+            ${{ steps.rename_binary.outputs.name }}.tar.gz
+            ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/Output/*
