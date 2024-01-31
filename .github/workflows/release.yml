@@ -151,6 +151,14 @@ jobs:
             /DArchitecture=${{ matrix.platform.arch }} `
             /F$("${{ steps.rename_binary.outputs.name }}".Replace("Portable", "Setup").TrimEnd(".exe"))
 
+      - name: Compute SHA256 checksum
+        shell: pwsh
+        run: |
+          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*" -Include "KomacPortable*","KomacSetup*","komac*.deb" | ForEach-Object {
+            $FileHash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
+            New-Item -Force -ItemType File -Path $_.DirectoryName -Name "$($_.Name).sha256" -Value "$FileHash *$($_.Name)`n"
+          }
+
       - name: Set Release variables
         id: set_release_vars
         shell: pwsh
@@ -176,6 +184,9 @@ jobs:
           generate_release_notes: ${{ steps.set_release_vars.outputs.generate_release_notes }}
           files: |
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
+            target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}.sha256
             target/${{ matrix.platform.target }}/debian/*.deb
+            target/${{ matrix.platform.target }}/debian/*.sha256
             ${{ steps.rename_binary.outputs.name }}.tar.gz
+            ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/Output/*
