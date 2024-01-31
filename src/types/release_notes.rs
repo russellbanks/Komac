@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use std::num::NonZeroU32;
 
 #[nutype(
-    sanitize(with = |input| cut_to_char_limit_with_lines(&input, 10000).into_owned(), trim),
+    sanitize(with = |input| truncate_with_lines(&input, 10000).into_owned(), trim),
     validate(len_char_min = 1, len_char_max = 10000),
     default = "Release Notes",
     derive(Clone, Default, FromStr, Display, Deserialize, Serialize, PartialEq, Eq, Debug)
@@ -38,8 +38,14 @@ impl ReleaseNotes {
                     | Tag::TableRow
                     | Tag::Heading(..)
                     | Tag::BlockQuote
-                    | Tag::CodeBlock(_)
-                    | Tag::Item => buffer.push('\n'),
+                    | Tag::CodeBlock(_) => buffer.push('\n'),
+                    Tag::Item => {
+                        if &buffer[buffer.len() - 2..] == "- " {
+                            buffer.drain(buffer.len() - 2..);
+                        } else {
+                            buffer.push('\n')
+                        }
+                    }
                     _ => (),
                 },
                 Text(text) => {
@@ -62,7 +68,7 @@ impl ReleaseNotes {
                             Some(issue_number),
                         ) = (parts.next(), parts.next(), parts.next(), parts.next())
                         {
-                            if let "pull" | "issues" = issue_type {
+                            if issue_type == "pull" || issue_type == "issues" {
                                 if issue_number.parse::<NonZeroU32>().is_ok() {
                                     if repo_owner != owner || repo_name != repo {
                                         result.push_str(repo_owner);
@@ -89,7 +95,7 @@ impl ReleaseNotes {
     }
 }
 
-fn cut_to_char_limit_with_lines(input: &str, char_limit: usize) -> Cow<str> {
+fn truncate_with_lines(input: &str, char_limit: usize) -> Cow<str> {
     if input.chars().count() <= char_limit {
         return Cow::Borrowed(input);
     }
@@ -114,7 +120,7 @@ fn cut_to_char_limit_with_lines(input: &str, char_limit: usize) -> Cow<str> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::release_notes::{cut_to_char_limit_with_lines, ReleaseNotes};
+    use crate::types::release_notes::{truncate_with_lines, ReleaseNotes};
 
     #[test]
     fn test_issue_formatting() {
@@ -164,7 +170,7 @@ mod tests {
             writeln!(buffer, "Line {line_count}").unwrap();
             line_count += 1;
         }
-        let formatted = cut_to_char_limit_with_lines(&buffer, CHAR_LIMIT);
+        let formatted = truncate_with_lines(&buffer, CHAR_LIMIT);
         let formatted_char_count = formatted.chars().count();
         assert!(formatted_char_count < buffer.chars().count());
         assert_eq!(formatted_char_count, formatted.trim().chars().count());
