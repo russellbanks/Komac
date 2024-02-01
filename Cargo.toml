@@ -29,7 +29,7 @@ cynic = { version = "3.4.3", features = ["http-reqwest"] }
 derive_more = "0.99.17"
 futures = "0.3.30"
 futures-util = "0.3.30"
-indexmap = "2.2.1"
+indexmap = "2.2.2"
 indicatif = "0.17.7"
 inquire = "0.6.2"
 itertools = "0.12.1"
