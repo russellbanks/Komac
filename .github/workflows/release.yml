@@ -189,9 +189,12 @@ jobs:
             ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/Output/*
 
-      - name: Publish to WinGet (stable)
-        if: ${{ matrix.platform.os == 'windows-latest' && github.event_name != 'workflow_run' }}
-        uses: vedantmgoyal2009/winget-releaser@v2
+  publish-winget:
+    needs: release
+    if: ${{ github.event_name != 'workflow_run' }}
+    runs-on: windows-latest
+    steps:
+      - uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: RussellBanks.Komac
           installers-regex: 'KomacSetup.*\.exe$'
