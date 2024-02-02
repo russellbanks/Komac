@@ -2,7 +2,19 @@ name: Cargo Build & Test
 
 on:
   push:
+    paths:
+      - assets/**
+      - src/**
+      - Cargo.toml
+      - Cargo.lock
+      - build.rs
   pull_request:
+    paths:
+      - assets/**
+      - src/**
+      - Cargo.toml
+      - Cargo.lock
+      - build.rs
 
 env:
   CARGO_TERM_COLOR: always
