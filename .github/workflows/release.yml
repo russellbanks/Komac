@@ -125,8 +125,6 @@ jobs:
           }
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
             $newName += "-nightly"
-          } else {
-            $newName += "-$($env:GITHUB_REF_NAME.TrimStart('v'))"
           }
           $newName += "-${{ matrix.platform.arch }}"
           if ($env:RUNNER_OS -eq 'Windows') {
@@ -169,8 +167,8 @@ jobs:
             "prerelease=true" >> $env:GITHUB_OUTPUT
             "generate_release_notes=false" >> $env:GITHUB_OUTPUT
           } else {
-            "name=$env:GITHUB_REF_NAME" >> $env::GITHUB_OUTPUT
-            "tag_name=$env:GITHUB_REF" >> $env::GITHUB_OUTPUT
+            "name=$env:GITHUB_REF_NAME" >> $env:GITHUB_OUTPUT
+            "tag_name=$env:GITHUB_REF" >> $env:GITHUB_OUTPUT
             "prerelease=false" >> $env:GITHUB_OUTPUT
             "generate_release_notes=true" >> $env:GITHUB_OUTPUT
           }
