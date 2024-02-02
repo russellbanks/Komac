@@ -191,13 +191,28 @@ jobs:
 
   publish-winget:
     needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
     runs-on: windows-latest
     steps:
-      - uses: vedantmgoyal2009/winget-releaser@v2
+      - if: ${{ github.event_name != 'workflow_run' }}
+        uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: RussellBanks.Komac
           installers-regex: 'KomacSetup.*\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
+      - if: ${{ github.event_name == 'workflow_run' }}
+        name: Get nightly version
+        run: |
+          $cargo = Invoke-WebRequest -Uri https://raw.githubusercontent.com/russellbanks/Komac/main/Cargo.toml
+          $Version = ($cargo | Select-String -Pattern '(?<=version\s=\s")[\d.]+').Matches.Value
+          "version=$Version" >> $env:GITHUB_OUTPUT
+        id: get-version
+      - if: ${{ github.event_name == 'workflow_run' }}
+        uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: RussellBanks.Komac.Nightly
+          version: ${{ steps.get-version.outputs.version }}
+          installers-regex: 'KomacSetup.*\.exe$'
+          release-tag: nightly
           token: ${{ secrets.WINGET_TOKEN }}
 
   publish-homebrew-tap:
