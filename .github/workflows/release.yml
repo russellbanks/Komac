@@ -189,7 +189,7 @@ jobs:
             ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/Output/*
 
-  winget-and-homebrew:
+  publish-winget:
     needs: release
     if: ${{ github.event_name != 'workflow_run' }}
     runs-on: windows-latest
@@ -199,6 +199,12 @@ jobs:
           identifier: RussellBanks.Komac
           installers-regex: 'KomacSetup.*\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}
+
+  publish-homebrew-tap:
+    needs: release
+    if: ${{ github.event_name != 'workflow_run' }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger update formula workflow (homebrew-tap)
         run: gh workflow run komac.yml -f version=$($env:GITHUB_REF_NAME.TrimStart('v')) -R russellbanks/homebrew-tap
         env:
