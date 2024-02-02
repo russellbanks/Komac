@@ -201,3 +201,5 @@ jobs:
           token: ${{ secrets.WINGET_TOKEN }}
       - name: Trigger update formula workflow (homebrew-tap)
         run: gh workflow run komac.yml -f version=$($env:GITHUB_REF_NAME.TrimStart('v')) -R russellbanks/homebrew-tap
+        env:
+          GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
