@@ -3,6 +3,8 @@ name: Cargo Build & Test
 on:
   push:
     paths:
+      - .github/workflows/build.yml
+      - .github/workflows/release.yml
       - assets/**
       - src/**
       - Cargo.toml
@@ -10,6 +12,8 @@ on:
       - build.rs
   pull_request:
     paths:
+      - .github/workflows/build.yml
+      - .github/workflows/release.yml
       - assets/**
       - src/**
       - Cargo.toml
