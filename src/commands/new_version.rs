@@ -1,4 +1,5 @@
 use crate::commands::update_version::reorder_keys;
+use crate::commands::utils::prompt_existing_pull_request;
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -162,6 +163,16 @@ impl NewVersion {
             latest_version.map(|version| github.get_manifests(&package_identifier, version));
 
         let package_version = required_prompt(self.package_version)?;
+
+        if let Some(pull_request) = github
+            .get_existing_pull_request(&package_identifier, &package_version)
+            .await?
+        {
+            if !prompt_existing_pull_request(&package_identifier, &package_version, &pull_request)?
+            {
+                return Ok(());
+            }
+        }
 
         let mut urls = self.urls;
         if urls.is_empty() {

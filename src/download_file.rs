@@ -1,6 +1,7 @@
 use crate::file_analyser::FileAnalyser;
 use crate::types::urls::url::Url;
 use crate::url_utils::find_architecture;
+use chrono::{DateTime, NaiveDate};
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
@@ -13,8 +14,6 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::File;
 use std::future::Future;
-use time::format_description::well_known::Rfc2822;
-use time::{Date, OffsetDateTime};
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
@@ -39,8 +38,8 @@ async fn download_file(
         .headers()
         .get(LAST_MODIFIED)
         .and_then(|last_modified| last_modified.to_str().ok())
-        .and_then(|last_modified| OffsetDateTime::parse(last_modified, &Rfc2822).ok())
-        .map(OffsetDateTime::date);
+        .and_then(|last_modified| DateTime::parse_from_rfc2822(last_modified).ok())
+        .map(|date_time| date_time.date_naive());
 
     let pb = multi_progress.add(ProgressBar::new(total_size)
         .with_style(ProgressStyle::default_bar()
@@ -113,7 +112,7 @@ pub struct DownloadedFile {
     pub file: File,
     pub sha_256: String,
     pub file_name: String,
-    pub last_modified: Option<Date>,
+    pub last_modified: Option<NaiveDate>,
 }
 
 pub async fn process_files<'a>(

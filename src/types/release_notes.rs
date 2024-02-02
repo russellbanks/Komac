@@ -43,7 +43,7 @@ impl ReleaseNotes {
                         if &buffer[buffer.len() - 2..] == "- " {
                             buffer.drain(buffer.len() - 2..);
                         } else {
-                            buffer.push('\n')
+                            buffer.push('\n');
                         }
                     }
                     _ => (),
@@ -68,16 +68,16 @@ impl ReleaseNotes {
                             Some(issue_number),
                         ) = (parts.next(), parts.next(), parts.next(), parts.next())
                         {
-                            if issue_type == "pull" || issue_type == "issues" {
-                                if issue_number.parse::<NonZeroU32>().is_ok() {
-                                    if repo_owner != owner || repo_name != repo {
-                                        result.push_str(repo_owner);
-                                        result.push('/');
-                                        result.push_str(repo_name);
-                                    }
-                                    result.push('#');
-                                    result.push_str(issue_number);
+                            if (issue_type == "pull" || issue_type == "issues")
+                                && issue_number.parse::<NonZeroU32>().is_ok()
+                            {
+                                if repo_owner != owner || repo_name != repo {
+                                    result.push_str(repo_owner);
+                                    result.push('/');
+                                    result.push_str(repo_name);
                                 }
+                                result.push('#');
+                                result.push_str(issue_number);
                             }
                         }
 

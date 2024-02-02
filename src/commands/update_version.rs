@@ -1,3 +1,4 @@
+use crate::commands::utils::prompt_existing_pull_request;
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -74,6 +75,8 @@ impl UpdateVersion {
             .default_headers(get_default_headers(None))
             .build()?;
 
+        let existing_pr_future = github.get_existing_pull_request(&self.identifier, &self.version);
+
         let versions = github
             .get_versions(&get_package_path(&self.identifier, None))
             .await
@@ -86,6 +89,13 @@ impl UpdateVersion {
 
         let latest_version = versions.iter().max().unwrap();
         println!("Latest version of {}: {latest_version}", self.identifier);
+
+        if let Some(pull_request) = existing_pr_future.await? {
+            if !prompt_existing_pull_request(&self.identifier, &self.version, &pull_request)? {
+                return Ok(());
+            }
+        }
+
         let manifests = github.get_manifests(&self.identifier, latest_version);
         let multi_progress = MultiProgress::new();
         let files = stream::iter(download_urls(&client, self.urls, &multi_progress))
@@ -216,9 +226,11 @@ impl UpdateVersion {
                 .as_mut()
                 .and_then(|values| mem::take(&mut values.license_url))
                 .or(previous_default_locale_manifest.license_url),
-            tags: previous_default_locale_manifest.tags.or(github_values
-                .as_mut()
-                .and_then(|values| mem::take(&mut values.topics))),
+            tags: previous_default_locale_manifest.tags.or_else(|| {
+                github_values
+                    .as_mut()
+                    .and_then(|values| mem::take(&mut values.topics))
+            }),
             release_notes: github_values
                 .as_mut()
                 .and_then(|values| mem::take(&mut values.release_notes)),

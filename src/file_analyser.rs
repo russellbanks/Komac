@@ -11,6 +11,7 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
 use crate::zip::Zip;
+use chrono::NaiveDate;
 use color_eyre::eyre::{OptionExt, Result};
 use memmap2::Mmap;
 use object::pe::{ImageNtHeaders64, RT_RCDATA};
@@ -23,7 +24,6 @@ use std::fs::File;
 use std::io::Cursor;
 use std::mem;
 use std::path::Path;
-use time::Date;
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -43,7 +43,7 @@ pub struct FileAnalyser<'a> {
     pub package_family_name: Option<String>,
     pub product_code: Option<String>,
     pub product_language: Option<LanguageTag>,
-    pub last_modified: Option<Date>,
+    pub last_modified: Option<NaiveDate>,
     pub file_name: Cow<'a, str>,
     pub copyright: Option<Copyright>,
     pub package_name: Option<PackageName>,

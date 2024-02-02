@@ -13,7 +13,6 @@ query GetAllValues($owner: String!, $name: String!, $tagName: String!) {
       spdxId
     }
     object(expression: "HEAD:") {
-      __typename
       ... on Tree {
         entries {
           name

@@ -20,6 +20,10 @@ use crate::github::graphql::get_directory_content::{
 use crate::github::graphql::get_directory_content_with_text::{
     GetDirectoryContentWithText, GitObject,
 };
+use crate::github::graphql::get_existing_pull_request;
+use crate::github::graphql::get_existing_pull_request::{
+    GetExistingPullRequest, GetExistingPullRequestVariables, SearchResultItem,
+};
 use crate::github::graphql::get_pull_request_from_branch::{
     GetPullRequestFromBranch, GetPullRequestFromBranchVariables, PullRequest,
 };
@@ -528,6 +532,31 @@ impl GitHub {
                 Report::wrap_err,
             ))
         }
+    }
+
+    pub async fn get_existing_pull_request(
+        &self,
+        identifier: &PackageIdentifier,
+        version: &PackageVersion,
+    ) -> Result<Option<get_existing_pull_request::PullRequest>> {
+        let response = self
+            .0
+            .post(GITHUB_GRAPHQL_URL)
+            .run_graphql(GetExistingPullRequest::build(GetExistingPullRequestVariables {
+                query: &format!("repo:{WINGET_PKGS_FULL_NAME} is:pull-request in:title {identifier} {version}"),
+            }))
+            .await?;
+
+        Ok(response
+            .data
+            .and_then(|data| data.search.edges.into_iter().next())
+            .and_then(|edge| edge.node)
+            .and_then(|node| {
+                if let SearchResultItem::PullRequest(pull_request) = node {
+                    return Some(pull_request);
+                }
+                None
+            }))
     }
 
     pub async fn get_all_values(

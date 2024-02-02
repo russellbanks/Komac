@@ -15,12 +15,12 @@ use crate::types::protocol::Protocol;
 use crate::types::silent_switch::SilentSwitch;
 use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::Url;
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::BTreeSet;
 use std::num::NonZeroI64;
 use strum::{Display, EnumIter, EnumString};
-use time::Date;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]
@@ -52,7 +52,7 @@ pub struct InstallerManifest {
     pub restricted_capabilities: Option<BTreeSet<String>>,
     pub markets: Option<Markets>,
     pub installer_aborts_terminal: Option<bool>,
-    pub release_date: Option<Date>,
+    pub release_date: Option<NaiveDate>,
     pub installer_location_required: Option<bool>,
     pub require_explicit_upgrade: Option<bool>,
     pub display_install_warnings: Option<bool>,
@@ -110,10 +110,10 @@ pub enum Scope {
 }
 
 impl Scope {
-    pub fn find_from_url(url: &str) -> Option<Scope> {
+    pub fn find_from_url(url: &str) -> Option<Self> {
         match url.to_ascii_lowercase() {
-            url if url.contains("user") => Some(Scope::User),
-            url if url.contains("machine") => Some(Scope::Machine),
+            url if url.contains("user") => Some(Self::User),
+            url if url.contains("machine") => Some(Self::Machine),
             _ => None,
         }
     }
@@ -341,7 +341,7 @@ pub struct Installer {
     pub restricted_capabilities: Option<BTreeSet<String>>,
     pub markets: Option<Markets>,
     pub installer_aborts_terminal: Option<bool>,
-    pub release_date: Option<Date>,
+    pub release_date: Option<NaiveDate>,
     pub installer_location_required: Option<bool>,
     pub require_explicit_upgrade: Option<bool>,
     pub display_install_warnings: Option<bool>,
