@@ -8,8 +8,10 @@ use crate::update_state::UpdateState;
 use clap::Parser;
 use color_eyre::eyre::{bail, Result, WrapErr};
 use crossterm::style::Stylize;
+use indicatif::ProgressBar;
 use inquire::validator::{MaxLengthValidator, MinLengthValidator};
 use inquire::{Confirm, Text};
+use std::time::Duration;
 
 #[derive(Parser)]
 pub struct RemoveVersion {
@@ -87,6 +89,14 @@ impl RemoveVersion {
         if !should_remove_manifest {
             return Ok(());
         }
+
+        // Create an indeterminate progress bar to show as a pull request is being created
+        let pr_progress = ProgressBar::new_spinner().with_message(format!(
+            "Creating a pull request to remove {} version {}",
+            self.package_identifier, self.package_version
+        ));
+        pr_progress.enable_steady_tick(Duration::from_millis(50));
+
         let current_user = github.get_username().await?;
         let winget_pkgs = github.get_winget_pkgs(None).await?;
         let fork = github.get_winget_pkgs(Some(&current_user)).await?;
@@ -133,8 +143,11 @@ impl RemoveVersion {
                 &format!("## {deletion_reason}"),
             )
             .await?;
+
+        pr_progress.finish_and_clear();
+
         println!(
-            "{} created a pull request to delete {} version {}",
+            "{} created a pull request to remove {} version {}",
             "Successfully".green(),
             self.package_identifier,
             self.package_version
