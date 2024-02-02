@@ -199,3 +199,5 @@ jobs:
           identifier: RussellBanks.Komac
           installers-regex: 'KomacSetup.*\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}
+      - name: Trigger update formula workflow (homebrew-tap)
+        run: gh workflow run komac.yml -f version=$($env:GITHUB_REF_NAME.TrimStart('v')) -R russellbanks/homebrew-tap
