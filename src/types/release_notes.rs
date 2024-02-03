@@ -1,6 +1,6 @@
 use nutype::nutype;
 use pulldown_cmark::Event::{Code, End, Start, Text};
-use pulldown_cmark::{Event, Options, Parser, Tag};
+use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 use std::borrow::Cow;
 use std::num::NonZeroU32;
 
@@ -24,7 +24,18 @@ impl ReleaseNotes {
             match event {
                 Start(tag) => match tag {
                     Tag::CodeBlock(_info) => buffer.push_str("\n\n"),
-                    Tag::Link(_link_type, _dest, title) | Tag::Image(_link_type, _dest, title) => {
+                    Tag::Link {
+                        link_type: _,
+                        dest_url: _,
+                        title,
+                        id: _,
+                    }
+                    | Tag::Image {
+                        link_type: _,
+                        dest_url: _,
+                        title,
+                        id: _,
+                    } => {
                         if !title.is_empty() {
                             buffer.push_str(&title);
                         }
@@ -33,13 +44,13 @@ impl ReleaseNotes {
                     _ => (),
                 },
                 End(tag) => match tag {
-                    Tag::Table(_)
-                    | Tag::TableHead
-                    | Tag::TableRow
-                    | Tag::Heading(..)
-                    | Tag::BlockQuote
-                    | Tag::CodeBlock(_) => buffer.push('\n'),
-                    Tag::Item => {
+                    TagEnd::Table
+                    | TagEnd::TableHead
+                    | TagEnd::TableRow
+                    | TagEnd::Heading(..)
+                    | TagEnd::BlockQuote
+                    | TagEnd::CodeBlock => buffer.push('\n'),
+                    TagEnd::Item => {
                         if &buffer[buffer.len() - 2..] == "- " {
                             buffer.drain(buffer.len() - 2..);
                         } else {
