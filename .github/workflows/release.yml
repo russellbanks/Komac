@@ -191,7 +191,7 @@ jobs:
 
   publish-winget:
     needs: release
-    runs-on: windows-latest
+    runs-on: macos-14
     steps:
       - if: ${{ github.event_name != 'workflow_run' }}
         uses: vedantmgoyal2009/winget-releaser@v2
@@ -202,10 +202,11 @@ jobs:
       - if: ${{ github.event_name == 'workflow_run' }}
         name: Get nightly version
         run: |
-          $cargo = Invoke-WebRequest -Uri https://raw.githubusercontent.com/russellbanks/Komac/main/Cargo.toml
+          $cargo = Invoke-RestMethod -Uri https://raw.githubusercontent.com/russellbanks/Komac/main/Cargo.toml
           $Version = ($cargo | Select-String -Pattern '(?<=version\s=\s")[\d.]+').Matches.Value
           "version=$Version" >> $env:GITHUB_OUTPUT
         id: get-version
+        shell: pwsh
       - if: ${{ github.event_name == 'workflow_run' }}
         uses: vedantmgoyal2009/winget-releaser@v2
         with:
@@ -218,9 +219,10 @@ jobs:
   publish-homebrew-tap:
     needs: release
     if: ${{ github.event_name != 'workflow_run' }}
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     steps:
       - name: Trigger update formula workflow (homebrew-tap)
         run: gh workflow run komac.yml -f version=$($env:GITHUB_REF_NAME.TrimStart('v')) -R russellbanks/homebrew-tap
         env:
           GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        shell: pwsh
