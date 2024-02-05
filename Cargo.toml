@@ -54,7 +54,7 @@ serde_with = { version = "3.6.0", features = ["macros"] }
 serde_yaml = "0.9.31"
 sha2 = "0.10.8"
 strum = { version = "0.26.1", features = ["derive"] }
-tempfile = "3.9.0"
+tempfile = "3.10.0"
 thiserror = "1.0.56"
 tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "fs"] }
 url = { version = "2.5.0", features = ["serde"] }
