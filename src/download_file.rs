@@ -87,7 +87,10 @@ fn get_file_name(url: &Url, content_disposition: Option<&HeaderValue>) -> String
             let value = parts.next().map(str::trim);
             if let (Some(key), Some(value)) = (key, value) {
                 if key.starts_with("filename") {
-                    return value.trim_matches('"').to_owned();
+                    let trimmed = value.trim_matches('"');
+                    if !trimmed.is_empty() {
+                        return trimmed.to_owned();
+                    }
                 }
             }
         }
