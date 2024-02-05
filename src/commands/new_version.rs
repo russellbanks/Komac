@@ -58,7 +58,7 @@ use ordinal::Ordinal;
 use reqwest::Client;
 use std::collections::BTreeSet;
 use std::mem;
-use std::num::NonZeroU8;
+use std::num::{NonZeroU32, NonZeroU8};
 use std::ops::Not;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -124,6 +124,10 @@ pub struct NewVersion {
     /// Number of installers to download at the same time
     #[arg(long, default_value_t = NonZeroU8::new(2).unwrap())]
     concurrent_downloads: NonZeroU8,
+
+    /// List of issues that adding this package or version would resolve
+    #[arg(long)]
+    resolves: Option<Vec<NonZeroU32>>,
 
     /// Automatically submit a pull request
     #[arg(short, long)]
@@ -465,7 +469,7 @@ impl NewVersion {
                 &format!("{current_user}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,
-                &get_pull_request_body(),
+                &get_pull_request_body(self.resolves, None),
             )
             .await?;
 

@@ -1,7 +1,9 @@
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
 use crate::github::graphql::create_commit::FileDeletion;
-use crate::github::utils::{get_branch_name, get_commit_title, get_package_path};
+use crate::github::utils::{
+    get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
+};
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::update_state::UpdateState;
@@ -11,18 +13,25 @@ use crossterm::style::Stylize;
 use indicatif::ProgressBar;
 use inquire::validator::{MaxLengthValidator, MinLengthValidator};
 use inquire::{Confirm, Text};
+use std::num::NonZeroU32;
 use std::time::Duration;
 
 #[derive(Parser)]
 pub struct RemoveVersion {
+    /// The package's unique identifier
     #[arg(short = 'i', long = "identifier")]
     package_identifier: PackageIdentifier,
 
+    /// The package's version
     #[arg(short = 'v', long = "version")]
     package_version: PackageVersion,
 
     #[arg(short = 'r', long = "reason")]
     deletion_reason: Option<String>,
+
+    /// List of issues that removing this version would resolve
+    #[arg(long)]
+    resolves: Option<Vec<NonZeroU32>>,
 
     #[arg(short, long)]
     submit: bool,
@@ -140,7 +149,7 @@ impl RemoveVersion {
                 &format!("{current_user}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,
-                &format!("## {deletion_reason}"),
+                &get_pull_request_body(self.resolves, Some(deletion_reason)),
             )
             .await?;
 

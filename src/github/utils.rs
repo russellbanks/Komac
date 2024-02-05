@@ -3,7 +3,10 @@ use crate::types::package_version::PackageVersion;
 use crate::update_state::UpdateState;
 use clap::{crate_name, crate_version};
 use rand::{thread_rng, Rng};
+use std::collections::BTreeSet;
 use std::env;
+use std::fmt::Write;
+use std::num::NonZeroU32;
 use uuid::Uuid;
 
 pub fn get_package_path(
@@ -30,7 +33,10 @@ pub fn get_package_path(
     result
 }
 
-pub fn get_pull_request_body() -> String {
+pub fn get_pull_request_body(
+    issue_resolves: Option<Vec<NonZeroU32>>,
+    alternative_text: Option<String>,
+) -> String {
     const FRUITS: [&str; 16] = [
         "apple",
         "banana",
@@ -64,15 +70,33 @@ pub fn get_pull_request_body() -> String {
         )
     };
 
-    let mut rng = thread_rng();
-
-    let emoji = if rng.gen_range(0..50) == 0 {
-        FRUITS[rng.gen_range(0..FRUITS.len())]
+    let mut body = String::new();
+    if let Some(alternative_text) = alternative_text {
+        let _ = writeln!(body, "### {alternative_text}");
     } else {
-        "rocket"
-    };
+        let mut rng = thread_rng();
 
-    format!("### Pull request has been created with {custom_tool_info} :{emoji}:")
+        let emoji = if rng.gen_range(0..50) == 0 {
+            FRUITS[rng.gen_range(0..FRUITS.len())]
+        } else {
+            "rocket"
+        };
+
+        let _ = writeln!(
+            body,
+            "### Pull request has been created with {custom_tool_info} :{emoji}:"
+        );
+    }
+    if let Some(resolves) = issue_resolves {
+        if !resolves.is_empty() {
+            let _ = writeln!(body);
+            let _ = writeln!(body, "Resolves:");
+            for resolve in resolves.into_iter().collect::<BTreeSet<_>>() {
+                let _ = writeln!(body, "- #{resolve}");
+            }
+        }
+    }
+    body
 }
 
 pub fn get_branch_name(
