@@ -25,10 +25,6 @@ use crate::commands::token::token::{TokenArgs, TokenCommands};
 use crate::commands::update_version::UpdateVersion;
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::Result;
-use mimalloc::MiMalloc;
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
