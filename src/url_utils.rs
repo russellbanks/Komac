@@ -92,7 +92,9 @@ mod tests {
 
     #[rstest]
     fn test_x64_architectures_at_end(
-        #[values("x86_64", "x64", "64-bit", "64bit", "Win64", "Winx64", "ia64", "amd64")]
+        #[values(
+            "x86-64", "x86_64", "x64", "64-bit", "64bit", "Win64", "Winx64", "ia64", "amd64"
+        )]
         architecture: &str,
     ) {
         assert_eq!(
@@ -103,7 +105,9 @@ mod tests {
 
     #[rstest]
     fn test_x64_architectures_delimited(
-        #[values("x86_64", "x64", "64-bit", "64bit", "Win64", "Winx64", "ia64", "amd64")]
+        #[values(
+            "x86-64", "x86_64", "x64", "64-bit", "64bit", "Win64", "Winx64", "ia64", "amd64"
+        )]
         architecture: &str,
         #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
     ) {
