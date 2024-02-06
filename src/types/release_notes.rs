@@ -79,7 +79,7 @@ impl ReleaseNotes {
                             Some(issue_number),
                         ) = (parts.next(), parts.next(), parts.next(), parts.next())
                         {
-                            if matches!(issue_type, "pull" | "remove")
+                            if (issue_type == "pull" || issue_type == "issues")
                                 && issue_number.parse::<NonZeroU32>().is_ok()
                             {
                                 if repo_owner != owner || repo_name != repo {
