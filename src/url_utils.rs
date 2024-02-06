@@ -12,7 +12,8 @@ pub const VALID_FILE_EXTENSIONS: [&str; 7] = [
 
 const DELIMITERS: [char; 6] = [',', '/', '\\', '.', '_', '-'];
 
-const ARCHITECTURES: [(&str, Architecture); 30] = [
+const ARCHITECTURES: [(&str, Architecture); 31] = [
+    ("x86-64", Architecture::X64),
     ("x86_64", Architecture::X64),
     ("x64", Architecture::X64),
     ("64-bit", Architecture::X64),
