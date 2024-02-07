@@ -1,5 +1,5 @@
 use crate::commands::update_version::reorder_keys;
-use crate::commands::utils::prompt_existing_pull_request;
+use crate::commands::utils::{prompt_existing_pull_request, write_changes_to_dir};
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -63,7 +63,6 @@ use std::ops::Not;
 use std::path::PathBuf;
 use std::time::Duration;
 use strum::IntoEnumIterator;
-use tokio::fs;
 
 #[derive(Parser)]
 pub struct NewVersion {
@@ -353,8 +352,8 @@ impl NewVersion {
             manifest_version: ManifestVersion::default(),
         };
 
+        let full_package_path = get_package_path(&package_identifier, Some(&package_version));
         let changes = {
-            let full_package_path = get_package_path(&package_identifier, Some(&package_version));
             let mut path_content_map = Vec::new();
             path_content_map.push((
                 format!("{full_package_path}/{package_identifier}.installer.yaml"),
@@ -397,19 +396,12 @@ impl NewVersion {
 
         print_changes(&changes);
 
-        if let Some(output) = self.output {
-            stream::iter(
-                changes
-                    .iter()
-                    .map(|(_, content)| fs::write(&output, content)),
-            )
-            .buffer_unordered(2)
-            .try_collect::<Vec<_>>()
-            .await?;
+        if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
+            write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
                 "{} written all manifest files to {}",
                 "Successfully".green(),
-                output.to_str().unwrap_or("the given directory")
+                output.display()
             );
         }
 

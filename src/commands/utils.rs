@@ -4,9 +4,14 @@ use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use color_eyre::Result;
 use crossterm::style::Stylize;
+use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::Confirm;
 use std::env;
+use std::path::Path;
 use std::str::FromStr;
+use tokio::fs;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
 pub fn prompt_existing_pull_request(
     identifier: &PackageIdentifier,
@@ -30,4 +35,19 @@ pub fn prompt_existing_pull_request(
         Confirm::new("Would you like to proceed?").prompt()?
     };
     Ok(proceed)
+}
+
+pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Path) -> Result<()> {
+    fs::create_dir_all(output).await?;
+    stream::iter(changes.iter())
+        .map(|(path, content)| async move {
+            if let Some(file_name) = Path::new(path).file_name() {
+                let mut file = File::create(output.join(file_name)).await?;
+                file.write_all(content.as_bytes()).await?;
+            }
+            Ok::<(), color_eyre::eyre::Error>(())
+        })
+        .buffer_unordered(2)
+        .try_collect()
+        .await
 }
