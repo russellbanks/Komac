@@ -1,8 +1,8 @@
-use crate::credential::get_komac_credential;
+use crate::credential::{get_default_headers, get_komac_credential, token_prompt, validate_token};
 use clap::Parser;
 use color_eyre::eyre::Result;
 use crossterm::style::Stylize;
-use inquire::Text;
+use reqwest::Client;
 
 #[derive(Parser)]
 pub struct UpdateToken {
@@ -12,12 +12,19 @@ pub struct UpdateToken {
 }
 
 impl UpdateToken {
-    pub fn run(self) -> Result<()> {
+    pub async fn run(self) -> Result<()> {
         let credential = get_komac_credential()?;
 
+        let client = Client::builder()
+            .default_headers(get_default_headers(None))
+            .build()?;
+
         let token = match self.token {
-            Some(token) => token,
-            None => Text::new("Please enter the new token to set").prompt()?,
+            Some(token) => match validate_token(&client, &token).await {
+                Ok(_) => Ok(token),
+                Err(err) => Err(err),
+            }?,
+            None => token_prompt(client, Some("Please enter the new token to set"))?,
         };
 
         if credential.set_password(&token).is_ok() {

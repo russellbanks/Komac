@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
         Commands::Remove(remove_version) => remove_version.run().await,
         Commands::Token(token_args) => match token_args.command {
             TokenCommands::Remove(remove_token) => remove_token.run(),
-            TokenCommands::Update(update_token) => update_token.run(),
+            TokenCommands::Update(update_token) => update_token.run().await,
         },
         Commands::ListVersions(list_versions) => list_versions.run().await,
     }
