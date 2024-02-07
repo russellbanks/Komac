@@ -6,11 +6,13 @@ query GetAllValues($owner: String!, $name: String!, $tagName: String!) {
   repository(owner: $owner, name: $name) {
     description
     hasIssuesEnabled
-    isInOrganization
     licenseInfo {
       key
       pseudoLicense
       spdxId
+    }
+    owner {
+      url
     }
     object(expression: "HEAD:") {
       ... on Tree {
@@ -31,13 +33,6 @@ query GetAllValues($owner: String!, $name: String!, $tagName: String!) {
         }
       }
     }
-    url
-  }
-  organization(login: $owner) {
-    url
-    websiteUrl
-  }
-  user(login: $owner) {
     url
   }
 }
@@ -68,10 +63,6 @@ pub struct TreeEntry {
 pub struct GetAllValues {
     #[arguments(owner: $owner, name: $name)]
     pub repository: Option<Repository>,
-    #[arguments(login: $owner)]
-    pub organization: Option<Organization>,
-    #[arguments(login: $owner)]
-    pub user: Option<User>,
 }
 
 #[derive(cynic::QueryFragment)]
@@ -84,8 +75,8 @@ pub struct User {
 pub struct Repository {
     pub description: Option<String>,
     pub has_issues_enabled: bool,
-    pub is_in_organization: bool,
     pub license_info: Option<License>,
+    pub owner: RepositoryOwner,
     #[arguments(expression: "HEAD:")]
     pub object: Option<GetAllValuesGitObject>,
     #[arguments(tagName: $tag_name)]
@@ -118,9 +109,8 @@ pub struct Release {
 }
 
 #[derive(cynic::QueryFragment)]
-pub struct Organization {
+pub struct RepositoryOwner {
     pub url: Url,
-    pub website_url: Option<Url>,
 }
 
 #[derive(cynic::QueryFragment)]

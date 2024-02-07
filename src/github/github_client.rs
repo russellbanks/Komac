@@ -617,20 +617,12 @@ impl GitHub {
             .filter_map(|topic_node| Tag::new(topic_node.topic.name).ok())
             .collect::<BTreeSet<_>>();
 
-        let publisher_url = if repository.is_in_organization {
-            data.organization
-                .map(|org| org.website_url.unwrap_or(org.url))
-                .unwrap()
-        } else {
-            data.user.map(|user| user.url).unwrap()
-        };
-
         let publisher_support_url = repository
             .has_issues_enabled
             .then(|| format!("https://github.com/{owner}/{repo}/issues"));
 
         Ok(GitHubValues {
-            publisher_url: PublisherUrl::from_str(publisher_url.as_str())?,
+            publisher_url: PublisherUrl::from_str(repository.owner.url.as_str())?,
             publisher_support_url,
             short_description: repository.description.unwrap_or_default(),
             license: repository
