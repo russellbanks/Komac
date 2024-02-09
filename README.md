@@ -54,9 +54,9 @@ See https://github.com/russellbanks/Komac/issues/310.
 
 ### Classic
 
-A classic token with the `public_repo` and `read:org` scopes.
+A classic token with the `public_repo` scope.
 
-![firefox_NiYtCiXBM1](https://github.com/russellbanks/Komac/assets/74878137/afd87dc3-e54e-4757-ad07-27affe88437e)
+![firefox_IYiqtsd0Nl](https://github.com/russellbanks/Komac/assets/74878137/fbe4472e-dc53-4caf-ad2b-3bef75c47b07)
 
 ## Commands
 
