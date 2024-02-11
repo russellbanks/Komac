@@ -14,6 +14,7 @@ use crate::manifests::installer_manifest::{
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
 use crate::match_installers::match_installers;
+use crate::types::installer_type::InstallerType;
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -157,7 +158,10 @@ impl UpdateVersion {
                         .or(previous_installer.minimum_os_version)
                         .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0"),
                     architecture: previous_installer.architecture,
-                    installer_type: new_installer.installer_type,
+                    installer_type: match previous_installer.installer_type {
+                        Some(InstallerType::Portable) => previous_installer.installer_type,
+                        _ => new_installer.installer_type,
+                    },
                     scope: new_installer
                         .scope
                         .or(previous_installer.scope)
