@@ -167,8 +167,6 @@ jobs:
             "prerelease=true" >> $env:GITHUB_OUTPUT
             "generate_release_notes=false" >> $env:GITHUB_OUTPUT
           } else {
-            "name=$env:GITHUB_REF_NAME" >> $env:GITHUB_OUTPUT
-            "tag_name=$env:GITHUB_REF" >> $env:GITHUB_OUTPUT
             "prerelease=false" >> $env:GITHUB_OUTPUT
             "generate_release_notes=true" >> $env:GITHUB_OUTPUT
           }
