@@ -58,6 +58,7 @@ pub struct DefaultLocaleManifest {
     pub manifest_version: ManifestVersion,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Agreement {
@@ -66,6 +67,7 @@ pub struct Agreement {
     pub agreement_url: Option<Url>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Documentation {
@@ -73,6 +75,7 @@ pub struct Documentation {
     pub document_url: Option<Url>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Icon {
