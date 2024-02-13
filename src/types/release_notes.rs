@@ -20,6 +20,7 @@ impl ReleaseNotes {
         let parser = Parser::new_ext(body, options);
         let mut buffer = String::new();
 
+        let mut level = 0;
         for event in parser {
             match event {
                 Start(tag) => match tag {
@@ -40,7 +41,15 @@ impl ReleaseNotes {
                             buffer.push_str(&title);
                         }
                     }
-                    Tag::Item => buffer.push_str("- "),
+                    Tag::List(_) => {
+                        if level >= 1 {
+                            buffer.push('\n');
+                        }
+                    }
+                    Tag::Item => {
+                        level += 1;
+                        buffer.push_str("- ")
+                    }
                     _ => (),
                 },
                 End(tag) => match tag {
@@ -51,6 +60,7 @@ impl ReleaseNotes {
                     | TagEnd::BlockQuote
                     | TagEnd::CodeBlock => buffer.push('\n'),
                     TagEnd::Item => {
+                        level -= 1;
                         if &buffer[buffer.len() - 2..] == "- " {
                             buffer.drain(buffer.len() - 2..);
                         } else {
@@ -132,6 +142,7 @@ fn truncate_with_lines(input: &str, char_limit: usize) -> Cow<str> {
 #[cfg(test)]
 mod tests {
     use crate::types::release_notes::{truncate_with_lines, ReleaseNotes};
+    use indoc::indoc;
 
     #[test]
     fn test_issue_formatting() {
@@ -170,7 +181,28 @@ mod tests {
     }
 
     #[test]
-    fn test_cut_to_lines() {
+    fn test_nested_list_items() {
+        let value = indoc! {"
+        - Bullet point 1
+            - Nested bullet point 1
+            - Nested bullet point 2
+        - Bullet point 2
+        "};
+        let expected = indoc! {"
+        - Bullet point 1
+        - Nested bullet point 1
+        - Nested bullet point 2
+
+        - Bullet point 2
+        "};
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::new(expected).ok()
+        )
+    }
+
+    #[test]
+    fn test_truncate_to_lines() {
         use std::fmt::Write;
 
         const CHAR_LIMIT: usize = 100;
