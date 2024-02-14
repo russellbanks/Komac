@@ -101,6 +101,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                                  ❌                                   |
 | Release date identification              |   ✅    |      ❌       |                                  ❌                                   |
 | No telemetry                             |   ✅    |      ✅️ [^4]  |                                  ✅                                   |
+| Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                                  ❌                                   |
 | Type-safety                              |   ✅    |      ✅       |                                  ❌                                   |
 | Inno setup detection                     | ✅ [^2] |      ✅       |                                ✅ [^3]                                |
 | Nullsoft detection                       | ✅ [^2] |      ✅       |                                ✅ [^3]                                |
