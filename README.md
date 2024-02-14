@@ -92,7 +92,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 |------------------------------------------|:------:|:------------:|:--------------------------------------------------------------------:|
 | Parameters                               |   ✅    |      ✅       |                                  ❌                                   |
 | Works without Git                        |   ✅    |      ✅       |                                  ❌                                   |
-| Optimised manifest ordering [^1]         |   ✅    |      ❌       |                                  ✅                                   |
+| Optimised manifest ordering [^1]         |   ✅    |      ✅️       |                                  ✅                                   |
 | Fully cross-platform                     |   ✅    |      ❌       |                               Limited                                |
 | Full MSI value retrieval                 |   ✅    |   Partial    |                               Partial                                |
 | Linux & macOS MSI support                |   ✅    |      ❌       |                                  ❌                                   |
@@ -100,8 +100,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 | Get information from GitHub              |   ✅    |      ❌       |                                  ❌                                   |
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                                  ❌                                   |
 | Release date identification              |   ✅    |      ❌       |                                  ❌                                   |
-| Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                                  ❌                                   |
-| No telemetry                             |   ✅    |      ❌       |                                  ✅                                   |
+| No telemetry                             |   ✅    |      ✅️ [^4]  |                                  ✅                                   |
 | Type-safety                              |   ✅    |      ✅       |                                  ❌                                   |
 | Inno setup detection                     | ✅ [^2] |      ✅       |                                ✅ [^3]                                |
 | Nullsoft detection                       | ✅ [^2] |      ✅       |                                ✅ [^3]                                |
@@ -112,6 +111,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 [^1]: If all installers have the same value, that value is put at the root of the manifest to reduce redundancy.
 [^2]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
 [^3]: The logic for this was contributed by me :) Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request this feature for YamlCreate.
+[^4]: Enabled by default. Use `wingetcreate settings` to manually disable telemetry.
 
 ## Usage with GitHub Actions: [WinGet Releaser](https://github.com/vedantmgoyal2009/winget-releaser) 🌟
 
