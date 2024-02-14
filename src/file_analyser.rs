@@ -122,7 +122,6 @@ impl<'a> FileAnalyser<'a> {
         let mut zip = if nested {
             None
         } else {
-            // File Analyser can be called from within a zip making this function asynchronously recursive
             match extension.as_str() {
                 ZIP => Some(Zip::new(Cursor::new(map.as_ref()))?),
                 _ => None,

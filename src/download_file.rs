@@ -14,6 +14,7 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::File;
 use std::future::Future;
+use std::path::Path;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
@@ -29,7 +30,7 @@ async fn download_file(
         .wrap_err_with(|| format!("Failed to GET from '{url}'"))?;
 
     let content_disposition = res.headers().get(CONTENT_DISPOSITION);
-    let file_name = get_file_name(&url, content_disposition);
+    let file_name = get_file_name(&url, res.url(), content_disposition);
     let total_size = res
         .content_length()
         .ok_or_else(|| eyre!("Failed to get content length from '{url}'"))?;
@@ -76,7 +77,11 @@ async fn download_file(
     })
 }
 
-fn get_file_name(url: &Url, content_disposition: Option<&HeaderValue>) -> String {
+fn get_file_name(
+    url: &Url,
+    final_url: &url::Url,
+    content_disposition: Option<&HeaderValue>,
+) -> String {
     if let Some(content_disposition) = content_disposition.and_then(|value| value.to_str().ok()) {
         let mut sections = content_disposition.split(';');
         let _disposition = sections.next();
@@ -97,6 +102,8 @@ fn get_file_name(url: &Url, content_disposition: Option<&HeaderValue>) -> String
     }
     url.path_segments()
         .and_then(Iterator::last)
+        .filter(|last_segment| Path::new(last_segment).extension().is_some())
+        .or_else(|| final_url.path_segments().and_then(Iterator::last))
         .map_or_else(|| Uuid::new_v4().to_string(), str::to_owned)
 }
 

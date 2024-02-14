@@ -48,7 +48,7 @@ impl ReleaseNotes {
                     }
                     Tag::Item => {
                         level += 1;
-                        buffer.push_str("- ")
+                        buffer.push_str("- ");
                     }
                     _ => (),
                 },
