@@ -33,6 +33,8 @@ impl Msi {
         let architecture = match msi.summary_info().arch() {
             Some("x64" | "Intel64" | "AMD64") => Architecture::X64,
             Some("Intel") => Architecture::X86,
+            Some("Arm64") => Architecture::Arm64,
+            Some("Arm") => Architecture::Arm,
             _ => bail!("No architecture was found in the MSI"),
         };
 
