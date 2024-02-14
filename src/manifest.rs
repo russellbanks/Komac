@@ -10,7 +10,7 @@ use std::io::StdoutLock;
 use std::io::Write;
 use std::{env, io};
 
-pub const MANIFEST_VERSION: &str = "1.5.0";
+pub const MANIFEST_VERSION: &str = "1.6.0";
 
 const INSTALLER_SCHEMA: &str =
     formatcp!("https://aka.ms/winget-manifest.installer.{MANIFEST_VERSION}.schema.json");

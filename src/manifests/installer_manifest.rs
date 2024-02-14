@@ -62,6 +62,7 @@ pub struct InstallerManifest {
     pub apps_and_features_entries: Option<BTreeSet<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
+    pub download_command_prohibited: Option<bool>,
     pub installers: BTreeSet<Installer>,
     pub manifest_type: ManifestType,
     #[serde(default)]
@@ -210,6 +211,7 @@ pub enum ReturnResponse {
 pub enum UpgradeBehavior {
     Install,
     UninstallPrevious,
+    Deny,
 }
 
 impl UpgradeBehavior {
@@ -351,4 +353,5 @@ pub struct Installer {
     pub apps_and_features_entries: Option<BTreeSet<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
+    pub download_command_prohibited: Option<bool>,
 }
