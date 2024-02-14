@@ -100,7 +100,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 | Get information from GitHub              |   ✅    |      ❌       |                                  ❌                                   |
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                                  ❌                                   |
 | Release date identification              |   ✅    |      ❌       |                                  ❌                                   |
-| No telemetry                             |   ✅    |      ✅️ [^4]  |                                  ✅                                   |
+| No telemetry                             |   ✅    |      ⭕ [^4]  |                                  ✅                                   |
 | Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                                  ❌                                   |
 | Type-safety                              |   ✅    |      ✅       |                                  ❌                                   |
 | Inno setup detection                     | ✅ [^2] |      ✅       |                                ✅ [^3]                                |
