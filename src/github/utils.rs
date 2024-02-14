@@ -90,9 +90,8 @@ pub fn get_pull_request_body(
     if let Some(resolves) = issue_resolves {
         if !resolves.is_empty() {
             let _ = writeln!(body);
-            let _ = writeln!(body, "Resolves:");
             for resolve in resolves.into_iter().collect::<BTreeSet<_>>() {
-                let _ = writeln!(body, "- #{resolve}");
+                let _ = writeln!(body, "- Resolves #{resolve}");
             }
         }
     }
