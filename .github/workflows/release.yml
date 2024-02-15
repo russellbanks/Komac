@@ -186,3 +186,25 @@ jobs:
             ${{ steps.rename_binary.outputs.name }}.tar.gz
             ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/Output/*
+
+  publish-winget:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ github.event_name != 'workflow_run' }}
+        uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: RussellBanks.Komac
+          installers-regex: 'KomacSetup.*\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
+
+  publish-homebrew-tap:
+    needs: release
+    if: ${{ github.event_name != 'workflow_run' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger update formula workflow (homebrew-tap)
+        run: gh workflow run komac.yml -f version=$($env:GITHUB_REF_NAME.TrimStart('v')) -R russellbanks/homebrew-tap
+        env:
+          GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        shell: pwsh
