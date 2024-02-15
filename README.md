@@ -88,30 +88,31 @@ komac update -i Package.Identifier -v 1.2.3 --urls https://www.firstUrl.com http
 While other manifest creation tools have made remarkable strides in the winget-pkgs community, their development pace is
 notably slow and lacks the advanced detection capabilities that come with Komac.
 
-|                                          | Komac  | WinGetCreate |                              YamlCreate                              |
-|------------------------------------------|:------:|:------------:|:--------------------------------------------------------------------:|
-| Parameters                               |   ✅    |      ✅       |                                  ❌                                   |
-| Works without Git                        |   ✅    |      ✅       |                                  ❌                                   |
-| Optimised manifest ordering [^1]         |   ✅    |      ❌       |                                  ✅                                   |
-| Fully cross-platform                     |   ✅    |      ❌       |                               Limited                                |
-| Full MSI value retrieval                 |   ✅    |   Partial    |                               Partial                                |
-| Linux & macOS MSI support                |   ✅    |      ❌       |                                  ❌                                   |
-| Full MSIX value retrieval                |   ✅    |   Partial    |      Partial - https://github.com/Trenly/winget-pkgs/issues/180      |
-| Get information from GitHub              |   ✅    |      ❌       |                                  ❌                                   |
-| Formatted GitHub release notes retrieval |   ✅    |      ❌       |                                  ❌                                   |
-| Release date identification              |   ✅    |      ❌       |                                  ❌                                   |
-| Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                                  ❌                                   |
-| No telemetry                             |   ✅    |      ❌       |                                  ✅                                   |
-| Type-safety                              |   ✅    |      ✅       |                                  ❌                                   |
-| Inno setup detection                     | ✅ [^2] |      ✅       |                                ✅ [^3]                                |
-| Nullsoft detection                       | ✅ [^2] |      ✅       |                                ✅ [^3]                                |
-| Burn installer detection                 | ✅ [^2] |      ✅       | Opt-in feature [^2] (not enabled by default, due to slow processing) |
-| Progress bar & ETA while downloading     |   ✅    |      ❌       |                                  ❌                                   |
-| Programming Language                     |  Rust  |      C#      |                              PowerShell                              |
+|                                          | Komac  | WingetCreate |                           YamlCreate                           |
+|------------------------------------------|:------:|:------------:|:--------------------------------------------------------------:|
+| Parameters                               |   ✅    |      ✅       |                               ❌                                |
+| Works without Git                        |   ✅    |      ✅       |                               ❌                                |
+| Optimised manifest ordering [^1]         |   ✅    |      ✅️      |                               ✅                                |
+| Fully cross-platform                     |   ✅    |      ❌       |                            Limited                             |
+| Full MSI value retrieval                 |   ✅    |   Partial    |                            Partial                             |
+| Linux & macOS MSI support                |   ✅    |      ❌       |                               ❌                                |
+| Full MSIX value retrieval                |   ✅    |   Partial    |   Partial - https://github.com/Trenly/winget-pkgs/issues/180   |
+| Get information from GitHub              |   ✅    |      ❌       |                               ❌                                |
+| Formatted GitHub release notes retrieval |   ✅    |      ❌       |                               ❌                                |
+| Release date identification              |   ✅    |      ❌       |                               ❌                                |
+| No telemetry                             |   ✅    |    ⭕ [^2]    |                               ✅                                |
+| Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                               ❌                                |
+| Type-safety                              |   ✅    |      ✅       |                               ❌                                |
+| Inno setup detection                     | ✅ [^3] |      ✅       |                             ✅ [^4]                             |
+| Nullsoft detection                       | ✅ [^3] |      ✅       |                             ✅ [^4]                             |
+| Burn installer detection                 | ✅ [^3] |      ✅       | Opt-in feature (not enabled by default due to slow processing) |
+| Progress bar & ETA while downloading     |   ✅    |      ❌       |                               ❌                                |
+| Programming Language                     |  Rust  |      C#      |                           PowerShell                           |
 
 [^1]: If all installers have the same value, that value is put at the root of the manifest to reduce redundancy.
-[^2]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
-[^3]: The logic for this was contributed by me :) Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request this feature for YamlCreate.
+[^2]: Telemetry is enabled by default in WingetCreate. Use `wingetcreate settings` to manually disable telemetry.
+[^3]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
+[^4]: The logic for this was contributed by me :) Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request this feature for YamlCreate.
 
 ## Usage with GitHub Actions: [WinGet Releaser](https://github.com/vedantmgoyal2009/winget-releaser) 🌟
 
