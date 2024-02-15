@@ -136,7 +136,9 @@ jobs:
           # installers-regex: '\.exe$' # Only .exe files
 ```
 
-If you just want to run Komac manually, you can use the [michidk/run-komac](https://github.com/michidk/run-komac/) action.
+### Alternative actions 🔄
+
+- Run Komac manually: [michidk/run-komac](https://github.com/michidk/run-komac)
 
 ## How can I support Komac? ❤️
 
