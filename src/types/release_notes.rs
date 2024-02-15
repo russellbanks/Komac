@@ -61,8 +61,12 @@ impl ReleaseNotes {
                     | TagEnd::CodeBlock => buffer.push('\n'),
                     TagEnd::Item => {
                         level -= 1;
-                        if &buffer[buffer.len() - 2..] == "- " {
-                            buffer.drain(buffer.len() - 2..);
+                        let second_last_char_pos = buffer
+                            .char_indices()
+                            .nth_back(1)
+                            .map_or(buffer.len(), |(pos, _)| pos);
+                        if &buffer[second_last_char_pos..] == "- " {
+                            buffer.drain(second_last_char_pos..);
                         } else {
                             buffer.push('\n');
                         }
