@@ -111,6 +111,8 @@ impl ReleaseNotes {
                                 }
                                 result.push('#');
                                 result.push_str(issue_number);
+                            } else if issue_type == "compare" {
+                                result.push_str(url);
                             }
                         }
 
@@ -188,7 +190,16 @@ mod tests {
         let value = "- No issue link";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new("- No issue link").ok()
+            ReleaseNotes::new(value).ok()
+        )
+    }
+
+    #[test]
+    fn test_full_changelog_url() {
+        let value = "Full Changelog: https://github.com/owner/repo/compare/v1.0.0...v1.1.0";
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::new(value).ok()
         )
     }
 
