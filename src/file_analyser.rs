@@ -36,7 +36,7 @@ pub const ZIP: &str = "zip";
 pub struct FileAnalyser<'a> {
     pub platform: Option<BTreeSet<Platform>>,
     pub minimum_os_version: Option<MinimumOSVersion>,
-    pub architecture: Architecture,
+    pub architecture: Option<Architecture>,
     pub installer_type: InstallerType,
     pub installer_sha_256: String,
     pub signature_sha_256: Option<String>,
@@ -53,7 +53,12 @@ pub struct FileAnalyser<'a> {
 }
 
 impl<'a> FileAnalyser<'a> {
-    pub fn new(file: &File, file_name: Cow<'a, str>, nested: bool) -> Result<Self> {
+    pub fn new(
+        file: &File,
+        file_name: Cow<'a, str>,
+        nested: bool,
+        zip_relative_file_path: Option<&str>,
+    ) -> Result<Self> {
         let extension = Path::new(file_name.as_ref())
             .extension()
             .and_then(OsStr::to_str)
@@ -123,7 +128,7 @@ impl<'a> FileAnalyser<'a> {
             None
         } else {
             match extension.as_str() {
-                ZIP => Some(Zip::new(Cursor::new(map.as_ref()))?),
+                ZIP => Some(Zip::new(Cursor::new(map.as_ref()), zip_relative_file_path)?),
                 _ => None,
             }
         };
@@ -145,10 +150,9 @@ impl<'a> FileAnalyser<'a> {
                 .map(|msi| msi.architecture)
                 .or_else(|| msix.as_ref().map(|msix| msix.processor_architecture))
                 .or(pe_arch)
-                .unwrap_or_else(|| {
+                .or_else(|| {
                     zip.as_mut()
                         .and_then(|zip| mem::take(&mut zip.architecture))
-                        .unwrap()
                 }),
             installer_type: installer_type.unwrap(),
             installer_sha_256: String::new(),

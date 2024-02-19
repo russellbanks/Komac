@@ -118,18 +118,30 @@ impl UpdateVersion {
                     parts[4..parts.len() - 1].join("/"),
                 )
             });
-        let download_results = process_files(files).await?;
+        let manifests = manifests.await?;
+        let download_results = process_files(
+            files,
+            manifests
+                .installer_manifest
+                .nested_installer_files
+                .as_ref()
+                .and_then(|nested_installer_files| {
+                    nested_installer_files.first().map(|nested_installer_file| {
+                        nested_installer_file.relative_file_path.as_str()
+                    })
+                }),
+        )
+        .await?;
         let installer_results = download_results
             .iter()
             .map(|(url, download)| Installer {
-                architecture: download.architecture,
+                architecture: download.architecture.unwrap(),
                 installer_type: Some(download.installer_type),
                 scope: Scope::find_from_url(url.as_str()),
                 installer_url: url.clone(),
                 ..Installer::default()
             })
             .collect::<Vec<_>>();
-        let manifests = manifests.await?;
         let mut previous_installer_manifest = manifests.installer_manifest;
         let previous_installers = mem::take(&mut previous_installer_manifest.installers)
             .into_iter()

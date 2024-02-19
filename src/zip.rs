@@ -19,7 +19,7 @@ pub struct Zip {
 }
 
 impl Zip {
-    pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
+    pub fn new<R: Read + Seek>(reader: R, relative_file_path: Option<&str>) -> Result<Self> {
         let mut zip = ZipArchive::new(reader)?;
 
         let mut identified_files = zip
@@ -50,6 +50,9 @@ impl Zip {
             })
             .collect::<HashMap<_, _>>();
 
+        let mut nested_installer_type = None;
+        let mut architecture = None;
+
         // If there's only one valid file in the zip, extract and analyse it
         if installer_type_counts
             .values()
@@ -57,16 +60,14 @@ impl Zip {
             .count()
             == 1
         {
-            let mut nested_installer_type = None;
-            let mut architecture = None;
             let chosen_file_name = (*identified_files.swap_remove(0)).to_string();
             if let Ok(mut chosen_file) = zip.by_name(&chosen_file_name) {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
                 let file_analyser =
-                    FileAnalyser::new(&temp_file, Cow::Borrowed(&chosen_file_name), true)?;
+                    FileAnalyser::new(&temp_file, Cow::Borrowed(&chosen_file_name), true, None)?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
-                architecture = Some(file_analyser.architecture);
+                architecture = file_analyser.architecture;
             }
             return Ok(Self {
                 nested_installer_type,
@@ -79,10 +80,29 @@ impl Zip {
             });
         }
 
+        if let Some(path) = relative_file_path {
+            if let Ok(mut chosen_file) = zip.by_name(path) {
+                let mut temp_file = tempfile::tempfile()?;
+                io::copy(&mut chosen_file, &mut temp_file)?;
+                let file_analyser = FileAnalyser::new(&temp_file, Cow::Borrowed(path), true, None)?;
+                nested_installer_type = file_analyser.installer_type.to_nested();
+                architecture = file_analyser.architecture;
+            }
+            return Ok(Self {
+                nested_installer_type,
+                nested_installer_files: Some(BTreeSet::from([NestedInstallerFiles {
+                    relative_file_path: path.to_string(),
+                    portable_command_alias: None,
+                }])),
+                architecture,
+                identified_files: Vec::new(),
+            });
+        }
+
         Ok(Self {
-            nested_installer_type: None,
+            nested_installer_type,
             nested_installer_files: None,
-            architecture: None,
+            architecture,
             identified_files,
         })
     }

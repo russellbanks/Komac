@@ -215,7 +215,7 @@ impl NewVersion {
                     parts[4..parts.len() - 1].join("/"),
                 )
             });
-        let mut download_results = process_files(files).await?;
+        let mut download_results = process_files(files, None).await?;
         let mut installers = BTreeSet::new();
         for (url, analyser) in &mut download_results {
             if analyser.installer_type == InstallerType::Exe
@@ -239,7 +239,7 @@ impl NewVersion {
                 installer_locale: mem::take(&mut analyser.product_language),
                 platform: mem::take(&mut analyser.platform),
                 minimum_os_version: mem::take(&mut analyser.minimum_os_version),
-                architecture: analyser.architecture,
+                architecture: analyser.architecture.unwrap(),
                 installer_type: Some(analyser.installer_type),
                 nested_installer_type: analyser
                     .zip

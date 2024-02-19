@@ -127,6 +127,7 @@ pub struct DownloadedFile {
 
 pub async fn process_files<'a>(
     files: Vec<DownloadedFile>,
+    zip_relative_file_path: Option<&str>,
 ) -> Result<HashMap<Url, FileAnalyser<'a>>> {
     stream::iter(files.into_iter().map(
         |DownloadedFile {
@@ -136,9 +137,10 @@ pub async fn process_files<'a>(
              file_name,
              last_modified,
          }| async move {
-            let mut file_analyser = FileAnalyser::new(&file, Cow::Owned(file_name), false)?;
+            let mut file_analyser =
+                FileAnalyser::new(&file, Cow::Owned(file_name), false, zip_relative_file_path)?;
             file_analyser.architecture =
-                find_architecture(url.as_str()).unwrap_or(file_analyser.architecture);
+                find_architecture(url.as_str()).or(file_analyser.architecture);
             file_analyser.installer_sha_256 = sha_256;
             file_analyser.last_modified = last_modified;
             Ok((url, file_analyser))
