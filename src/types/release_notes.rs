@@ -47,6 +47,9 @@ impl ReleaseNotes {
                         }
                     }
                     Tag::Item => {
+                        for _ in 0..level {
+                            buffer.push_str("    ");
+                        }
                         level += 1;
                         buffer.push_str("- ");
                     }
@@ -59,6 +62,11 @@ impl ReleaseNotes {
                     | TagEnd::Heading(..)
                     | TagEnd::BlockQuote
                     | TagEnd::CodeBlock => buffer.push('\n'),
+                    TagEnd::List(_) => {
+                        if level >= 1 && buffer.chars().next_back().unwrap_or_default() == '\n' {
+                            buffer.pop();
+                        }
+                    }
                     TagEnd::Item => {
                         level -= 1;
                         let second_last_char_pos = buffer
@@ -188,20 +196,17 @@ mod tests {
     fn test_nested_list_items() {
         let value = indoc! {"
         - Bullet point 1
-            - Nested bullet point 1
-            - Nested bullet point 2
-        - Bullet point 2
-        "};
-        let expected = indoc! {"
-        - Bullet point 1
-        - Nested bullet point 1
-        - Nested bullet point 2
-
+            - 2nd level nested bullet point 1
+            - 2nd level nested bullet point 2
+                - 3rd level nested bullet point 1
+                - 3rd level nested bullet point 2
+                    - 4th level nested bullet point 1
+                    - 4th level nested bullet point 2
         - Bullet point 2
         "};
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new(expected).ok()
+            ReleaseNotes::new(value).ok()
         )
     }
 
