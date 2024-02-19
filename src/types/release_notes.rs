@@ -193,6 +193,56 @@ mod tests {
     }
 
     #[test]
+    fn test_header_syntax_removed() {
+        let value = indoc! {"
+        # Header 1
+        ## Header 2
+        ### Header 3
+        "};
+        let expected = indoc! {"
+        Header 1
+        Header 2
+        Header 3
+        "};
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::new(expected).ok()
+        )
+    }
+
+    #[test]
+    fn test_strikethrough_removed() {
+        assert_eq!(
+            ReleaseNotes::format("~~Strikethrough text~~", "owner", "repo"),
+            ReleaseNotes::new("Strikethrough text").ok()
+        )
+    }
+
+    #[test]
+    fn test_bold_removed() {
+        assert_eq!(
+            ReleaseNotes::format("**Bold text**", "owner", "repo"),
+            ReleaseNotes::new("Bold text").ok()
+        )
+    }
+
+    #[test]
+    fn test_asterisk_bullet_points() {
+        let value = indoc! {"
+        * Bullet point 1
+        * Bullet point 2
+        "};
+        let expected = indoc! {"
+        - Bullet point 1
+        - Bullet point 2
+        "};
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::new(expected).ok()
+        )
+    }
+
+    #[test]
     fn test_nested_list_items() {
         let value = indoc! {"
         - Bullet point 1
