@@ -137,6 +137,11 @@ jobs:
           # installers-regex: '\.exe$' # Only .exe files
 ```
 
+### Alternative actions 🔄
+
+- Run Komac manually: [michidk/run-komac](https://github.com/michidk/run-komac)
+- Automate releases for external repositories: [michidk/winget-updater](https://github.com/michidk/winget-updater)
+
 ## How can I support Komac? ❤️
 
 - 🤝 Sponsor this project through [GitHub Sponsors](https://github.com/sponsors/russellbanks)
