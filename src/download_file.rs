@@ -103,9 +103,13 @@ fn get_file_name(
         }
     }
     url.path_segments()
-        .and_then(Iterator::last)
+        .and_then(|mut segments| segments.next_back())
         .filter(|last_segment| Path::new(last_segment).extension().is_some())
-        .or_else(|| final_url.path_segments().and_then(Iterator::last))
+        .or_else(|| {
+            final_url
+                .path_segments()
+                .and_then(|mut segments| segments.next_back())
+        })
         .map_or_else(|| Uuid::new_v4().to_string(), str::to_owned)
 }
 
