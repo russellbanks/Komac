@@ -189,10 +189,10 @@ jobs:
 
   publish-winget:
     needs: release
+    if: ${{ github.event_name != 'workflow_run' }}
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event_name != 'workflow_run' }}
-        uses: vedantmgoyal2009/winget-releaser@v2
+      - uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: RussellBanks.Komac
           installers-regex: 'KomacSetup.*\.exe$'
