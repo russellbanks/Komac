@@ -136,9 +136,9 @@ fn remove_sha1(input: &str) -> String {
     let mut buffer = heapless::String::<SHA1_LEN>::new();
 
     for character in input.chars() {
-        if character.is_ascii_hexdigit() {
+        if character.is_ascii_hexdigit() && buffer.len() < SHA1_LEN {
             buffer.push(character).unwrap();
-        } else if buffer.len() == SHA1_LEN {
+        } else if !character.is_ascii_hexdigit() && buffer.len() == SHA1_LEN {
             buffer.clear();
         } else {
             result.push_str(&buffer);
