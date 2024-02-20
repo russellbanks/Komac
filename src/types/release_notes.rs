@@ -83,7 +83,7 @@ impl ReleaseNotes {
                 },
                 Text(text) => {
                     let mut result = String::new();
-                    let mut rest = &*text;
+                    let mut rest = &*remove_sha1(&*text);
                     let prefix = "https://github.com/";
 
                     while let Some(start) = rest.find(prefix) {
@@ -128,6 +128,30 @@ impl ReleaseNotes {
         }
         Self::new(buffer).ok()
     }
+}
+
+fn remove_sha1(input: &str) -> String {
+    const SHA1_LEN: usize = 40;
+    let mut result = String::new();
+    let mut buffer = heapless::String::<SHA1_LEN>::new();
+
+    for character in input.chars() {
+        if character.is_ascii_hexdigit() {
+            buffer.push(character).unwrap();
+        } else if buffer.len() == SHA1_LEN {
+            buffer.clear();
+        } else {
+            result.push_str(&buffer);
+            buffer.clear();
+            result.push(character);
+        }
+    }
+
+    if buffer.len() != SHA1_LEN {
+        result.push_str(&buffer);
+    }
+
+    result
 }
 
 fn truncate_with_lines(input: &str, char_limit: usize) -> Cow<str> {
@@ -268,6 +292,19 @@ mod tests {
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
             ReleaseNotes::new(value).ok()
+        )
+    }
+
+    #[test]
+    fn test_sha1_removed() {
+        use rand::random;
+        use sha1::{Digest, Sha1};
+
+        let random_hash = base16ct::lower::encode_string(&Sha1::digest(random::<[u8; 1 << 4]>()));
+        let value = format!("- {random_hash} Bullet point 1 {random_hash}");
+        assert_eq!(
+            ReleaseNotes::format(&value, "owner", "repo"),
+            ReleaseNotes::new("- Bullet point 1").ok()
         )
     }
 

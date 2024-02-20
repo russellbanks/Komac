@@ -1,6 +1,6 @@
 [package]
 name = "komac"
-version = "2.1.0"
+version = "2.1.1"
 authors = ["Russell Banks"]
 edition = "2021"
 description = "A manifest creator for winget-pkgs"
@@ -30,6 +30,7 @@ cynic = { version = "3.4.3", features = ["http-reqwest"] }
 derive_more = "0.99.17"
 futures = "0.3.30"
 futures-util = "0.3.30"
+heapless = "0.8.0"
 indexmap = "2.2.3"
 indicatif = "0.17.8"
 inquire = "0.6.2"
@@ -75,3 +76,4 @@ windows_exe_info = { version = "0.4.2", features = ["manifest"] }
 [dev-dependencies]
 indoc = "2.0.4"
 rstest = "0.18.2"
+sha1 = "0.10.6"
