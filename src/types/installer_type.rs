@@ -27,7 +27,6 @@ pub enum InstallerType {
 
 impl InstallerType {
     pub fn get<'data, Pe, R>(
-        data: &[u8],
         pe: Option<&PeFile<'data, Pe, R>>,
         extension: &str,
         msi: Option<&Msi>,
@@ -47,7 +46,7 @@ impl InstallerType {
             ZIP => return Ok(Self::Zip),
             EXE => {
                 return match () {
-                    () if pe.is_some_and(|pe| Self::is_inno(pe, data)) => Ok(Self::Inno),
+                    () if pe.is_some_and(|pe| Self::is_inno(pe)) => Ok(Self::Inno),
                     () if pe
                         .and_then(|pe| Self::is_nullsoft(pe).ok())
                         .unwrap_or(false) =>
@@ -124,7 +123,7 @@ impl InstallerType {
     }
 
     /// Checks the String File Info of the exe for whether its comment states that it was built with Inno Setup
-    fn is_inno<'data, Pe, R>(pe: &PeFile<'data, Pe, R>, data: &[u8]) -> bool
+    fn is_inno<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> bool
     where
         Pe: ImageNtHeaders,
         R: ReadRef<'data>,
@@ -132,7 +131,7 @@ impl InstallerType {
         const COMMENTS: &str = "Comments";
         const INNO_COMMENT: &str = "This installation was built with Inno Setup.";
 
-        VSVersionInfo::parse(pe, data)
+        VSVersionInfo::parse(pe)
             .ok()
             .and_then(|info| info.string_file_info)
             .is_some_and(|mut string_info| {

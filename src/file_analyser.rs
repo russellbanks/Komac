@@ -13,15 +13,13 @@ use crate::types::publisher::Publisher;
 use crate::zip::Zip;
 use chrono::NaiveDate;
 use color_eyre::eyre::{OptionExt, Result};
-use memmap2::Mmap;
 use object::pe::{ImageNtHeaders64, RT_RCDATA};
 use object::read::pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64, ResourceDirectoryEntryData};
-use object::{FileKind, LittleEndian, ReadRef};
+use object::{FileKind, LittleEndian, ReadCache, ReadRef};
 use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::ffi::OsStr;
-use std::fs::File;
-use std::io::Cursor;
+use std::io::{Cursor, Read, Seek};
 use std::mem;
 use std::path::Path;
 
@@ -53,8 +51,8 @@ pub struct FileAnalyser<'a> {
 }
 
 impl<'a> FileAnalyser<'a> {
-    pub fn new(
-        file: &File,
+    pub fn new<R: Read + Seek>(
+        mut reader: R,
         file_name: Cow<'a, str>,
         nested: bool,
         zip_relative_file_path: Option<&str>,
@@ -65,21 +63,20 @@ impl<'a> FileAnalyser<'a> {
             .unwrap_or_default()
             .to_lowercase();
         let mut installer_type = None;
-        let map = unsafe { Mmap::map(file) }?;
         let mut msi = match extension.as_str() {
-            MSI => Some(Msi::new(Cursor::new(map.as_ref()))?),
+            MSI => Some(Msi::new(&mut reader)?),
             _ => None,
         };
         let mut pe_arch = None;
         let mut string_map = None;
+        let read_ref = ReadCache::new(&mut reader);
         match (extension == EXE)
-            .then(|| FileKind::parse(map.as_ref()).ok())
+            .then(|| FileKind::parse(&read_ref).ok())
             .flatten()
         {
             Some(FileKind::Pe32) => {
-                let pe_file = PeFile32::parse(map.as_ref())?;
+                let pe_file = PeFile32::parse(&read_ref)?;
                 installer_type = Some(InstallerType::get(
-                    map.as_ref(),
                     Some(&pe_file),
                     &extension,
                     msi.as_ref(),
@@ -88,7 +85,7 @@ impl<'a> FileAnalyser<'a> {
                     msi = Some(extract_msi(&pe_file)?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
-                string_map = VSVersionInfo::parse(&pe_file, map.as_ref())
+                string_map = VSVersionInfo::parse(&pe_file)
                     .ok()
                     .and_then(|vs_version_info| vs_version_info.string_file_info)
                     .map(|mut string_file_info| {
@@ -96,9 +93,8 @@ impl<'a> FileAnalyser<'a> {
                     });
             }
             Some(FileKind::Pe64) => {
-                let pe_file = PeFile64::parse(map.as_ref())?;
+                let pe_file = PeFile64::parse(&read_ref)?;
                 installer_type = Some(InstallerType::get(
-                    map.as_ref(),
                     Some(&pe_file),
                     &extension,
                     msi.as_ref(),
@@ -107,7 +103,7 @@ impl<'a> FileAnalyser<'a> {
                     msi = Some(extract_msi(&pe_file)?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
-                string_map = VSVersionInfo::parse(&pe_file, map.as_ref())
+                string_map = VSVersionInfo::parse(&pe_file)
                     .ok()
                     .and_then(|vs_version_info| vs_version_info.string_file_info)
                     .map(|mut string_file_info| {
@@ -117,24 +113,23 @@ impl<'a> FileAnalyser<'a> {
             _ => {}
         }
         let mut msix = match extension.as_str() {
-            MSIX | APPX => Some(Msix::new(Cursor::new(map.as_ref()))?),
+            MSIX | APPX => Some(Msix::new(&mut reader)?),
             _ => None,
         };
         let mut msix_bundle = match extension.as_str() {
-            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(Cursor::new(map.as_ref()))?),
+            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(&mut reader)?),
             _ => None,
         };
         let mut zip = if nested {
             None
         } else {
             match extension.as_str() {
-                ZIP => Some(Zip::new(Cursor::new(map.as_ref()), zip_relative_file_path)?),
+                ZIP => Some(Zip::new(reader, zip_relative_file_path)?),
                 _ => None,
             }
         };
         if installer_type.is_none() {
             installer_type = Some(InstallerType::get::<ImageNtHeaders64, &[u8]>(
-                map.as_ref(),
                 None::<&PeFile<'_, ImageNtHeaders64, &[u8]>>,
                 &extension,
                 msi.as_ref(),

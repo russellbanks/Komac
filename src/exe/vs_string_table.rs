@@ -2,6 +2,7 @@ use crate::exe::utils::align;
 use crate::exe::vs_header::VSHeader;
 use crate::exe::vs_string::VSString;
 use color_eyre::eyre::Result;
+use object::ReadRef;
 use std::collections::HashMap;
 
 /// Represents a [`StringTable`](https://docs.microsoft.com/en-us/windows/win32/menurc/stringtable) structure.
@@ -11,17 +12,17 @@ pub struct VSStringTable<'data> {
 }
 impl<'data> VSStringTable<'data> {
     /// Parse a `VSStringTable` structure at the given RVA.
-    pub fn parse(data: &'data [u8], base_offset: usize) -> Result<Self> {
+    pub fn parse<R: ReadRef<'data>>(data: R, base_offset: u64) -> Result<Self> {
         let (mut offset, header) = VSHeader::parse(data, base_offset)?;
         let mut consumed = offset - base_offset;
         offset = align(offset, 4);
 
         let mut children = Vec::<VSString>::new();
 
-        while consumed < *header.length as usize {
+        while consumed < u64::from(*header.length) {
             let child = VSString::parse(data, offset)?;
 
-            offset += *child.header.length as usize;
+            offset += u64::from(*child.header.length);
             offset = align(offset, 4);
             consumed = offset - base_offset;
             children.push(child);

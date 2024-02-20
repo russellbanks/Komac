@@ -6,6 +6,7 @@ use color_eyre::eyre::{eyre, Result, WrapErr};
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
+use memmap2::Mmap;
 use reqwest::header::{HeaderValue, CONTENT_DISPOSITION, LAST_MODIFIED};
 use reqwest::Client;
 use sha2::{Digest, Sha256};
@@ -14,6 +15,7 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::File;
 use std::future::Future;
+use std::io::Cursor;
 use std::path::Path;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
@@ -137,8 +139,13 @@ pub async fn process_files<'a>(
              file_name,
              last_modified,
          }| async move {
-            let mut file_analyser =
-                FileAnalyser::new(&file, Cow::Owned(file_name), false, zip_relative_file_path)?;
+            let map = unsafe { Mmap::map(&file) }?;
+            let mut file_analyser = FileAnalyser::new(
+                Cursor::new(map.as_ref()),
+                Cow::Owned(file_name),
+                false,
+                zip_relative_file_path,
+            )?;
             file_analyser.architecture =
                 find_architecture(url.as_str()).or(file_analyser.architecture);
             file_analyser.installer_sha_256 = sha_256;

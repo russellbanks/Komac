@@ -7,7 +7,6 @@ use color_eyre::eyre::{bail, OptionExt, Result};
 use object::pe::RT_VERSION;
 use object::read::pe::{ImageNtHeaders, PeFile};
 use object::{LittleEndian, ReadRef};
-use std::mem;
 
 /// Represents a [`VS_VERSIONINFO`](https://docs.microsoft.com/en-us/windows/win32/menurc/vs-versioninfo) structure.
 pub struct VSVersionInfo<'data> {
@@ -18,14 +17,15 @@ pub struct VSVersionInfo<'data> {
 }
 impl<'data> VSVersionInfo<'data> {
     /// Parse a `VSVersionInfo` structure from the given [`PE`](PE)'s resource directory.
-    pub fn parse<'pe_data, Pe, R>(pe: &PeFile<'pe_data, Pe, R>, data: &'data [u8]) -> Result<Self>
+    pub fn parse<Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<Self>
     where
         Pe: ImageNtHeaders,
-        R: ReadRef<'pe_data>,
+        R: ReadRef<'data>,
     {
+        let data = pe.data();
         let resource_directory = pe
             .data_directories()
-            .resource_directory(pe.data(), &pe.section_table())?
+            .resource_directory(data, &pe.section_table())?
             .ok_or_eyre("No resource directory was found in the exe")?;
         let rt_version = resource_directory
             .root()?
@@ -58,7 +58,7 @@ impl<'data> VSVersionInfo<'data> {
             let mut rva = manifest_entry.offset_to_data.get(LittleEndian);
             rva -= section.virtual_address.get(LittleEndian);
             rva += section.pointer_to_raw_data.get(LittleEndian);
-            rva as usize
+            u64::from(rva)
         };
         let (mut offset, header) = VSHeader::parse(data, base_offset)?;
         let mut consumed = offset;
@@ -69,9 +69,7 @@ impl<'data> VSVersionInfo<'data> {
         if *header.value_length == 0 {
             value = None;
         } else {
-            let struct_size = mem::size_of::<VSFixedFileInfo>();
-            value = Some(data.read_at(offset as u64).unwrap());
-            offset += struct_size;
+            value = Some(data.read(&mut offset).unwrap());
             consumed = offset - base_offset;
         }
 
@@ -79,22 +77,21 @@ impl<'data> VSVersionInfo<'data> {
         let mut string_file_info = None;
         let mut var_file_info = None;
 
-        if consumed < *header.length as usize {
+        if consumed < u64::from(*header.length) {
             let (_, header_check) = VSHeader::parse(data, offset)?;
-
             let header_str = String::from_utf16_lossy(header_check.key);
 
             if header_str == "StringFileInfo" {
                 let string_file_info_tmp = VSStringFileInfo::parse(data, offset)?;
 
-                offset += *string_file_info_tmp.header.length as usize;
+                offset += u64::from(*string_file_info_tmp.header.length);
                 consumed = offset - base_offset;
 
                 string_file_info = Some(string_file_info_tmp);
             } else if header_str == "VarFileInfo" {
                 let var_file_info_tmp = VSVarFileInfo::parse(data, offset)?;
 
-                offset += *var_file_info_tmp.header.length as usize;
+                offset += u64::from(*var_file_info_tmp.header.length);
                 consumed = offset - base_offset;
 
                 var_file_info = Some(var_file_info_tmp);
@@ -105,7 +102,7 @@ impl<'data> VSVersionInfo<'data> {
 
         offset = align(offset, 4);
 
-        if consumed < *header.length as usize {
+        if consumed < u64::from(*header.length) {
             let (_, header_check) = VSHeader::parse(data, offset)?;
             let header_str = String::from_utf16_lossy(header_check.key);
 

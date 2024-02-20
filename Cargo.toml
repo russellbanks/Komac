@@ -20,7 +20,6 @@ strip = true
 base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
 bitflags = "2.4.2"
-byteorder = "1.5.0"
 chrono = { version = "0.4.34", features = ["serde"] }
 clap = { version = "4.5.1", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.2", default-features = false }
@@ -38,6 +37,7 @@ itertools = "0.12.1"
 keyring = "2.3.2"
 memmap2 = "0.9.4"
 msi = "0.7.0"
+num-traits = "0.2.18"
 num_cpus = "1.16.0"
 nutype = { version = "0.4.0", features = ["serde"] }
 object = "0.32.2"
@@ -60,7 +60,6 @@ tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "fs"] }
 url = { version = "2.5.0", features = ["serde"] }
 uuid = { version = "1.7.0", features = ["v4"] }
 versions = "6.1.0"
-zerocopy = "0.7.32"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]

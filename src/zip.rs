@@ -4,9 +4,10 @@ use crate::types::architecture::Architecture;
 use crate::url_utils::VALID_FILE_EXTENSIONS;
 use color_eyre::eyre::Result;
 use inquire::{min_length, MultiSelect};
+use memmap2::Mmap;
 use std::borrow::Cow;
 use std::collections::{BTreeSet, HashMap};
-use std::io::{Read, Seek};
+use std::io::{Cursor, Read, Seek};
 use std::path::Path;
 use std::{io, mem};
 use zip::ZipArchive;
@@ -64,8 +65,10 @@ impl Zip {
             if let Ok(mut chosen_file) = zip.by_name(&chosen_file_name) {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
+                let map = unsafe { Mmap::map(&temp_file) }?;
+                let cursor = Cursor::new(map.as_ref());
                 let file_analyser =
-                    FileAnalyser::new(&temp_file, Cow::Borrowed(&chosen_file_name), true, None)?;
+                    FileAnalyser::new(cursor, Cow::Borrowed(&chosen_file_name), true, None)?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
                 architecture = file_analyser.architecture;
             }
@@ -84,7 +87,9 @@ impl Zip {
             if let Ok(mut chosen_file) = zip.by_name(path) {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
-                let file_analyser = FileAnalyser::new(&temp_file, Cow::Borrowed(path), true, None)?;
+                let map = unsafe { Mmap::map(&temp_file) }?;
+                let cursor = Cursor::new(map.as_ref());
+                let file_analyser = FileAnalyser::new(cursor, Cow::Borrowed(path), true, None)?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
                 architecture = file_analyser.architecture;
             }

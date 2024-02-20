@@ -83,7 +83,7 @@ impl ReleaseNotes {
                 },
                 Text(text) => {
                     let mut result = String::new();
-                    let mut rest = &*remove_sha1(&*text);
+                    let mut rest = &*remove_sha1(&text);
                     let prefix = "https://github.com/";
 
                     while let Some(start) = rest.find(prefix) {
