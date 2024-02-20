@@ -174,10 +174,12 @@ impl UpdateVersion {
                         Some(InstallerType::Portable) => previous_installer.installer_type,
                         _ => new_installer.installer_type,
                     },
-                    scope: new_installer
-                        .scope
-                        .or(previous_installer.scope)
-                        .or(previous_installer_manifest.scope),
+                    nested_installer_files: analyser
+                        .zip
+                        .as_ref()
+                        .and_then(|zip| zip.nested_installer_files.clone())
+                        .or(previous_installer.nested_installer_files),
+                    scope: new_installer.scope.or(previous_installer.scope),
                     installer_url: new_installer.installer_url.clone(),
                     installer_sha_256: analyser.installer_sha_256.clone(),
                     signature_sha_256: analyser.signature_sha_256.clone(),
