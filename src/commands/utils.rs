@@ -2,12 +2,12 @@ use crate::github::graphql::get_existing_pull_request::PullRequest;
 use crate::github::graphql::get_pull_request_from_branch::PullRequestState;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
+use camino::Utf8Path;
 use color_eyre::Result;
 use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::Confirm;
 use std::env;
-use std::path::Path;
 use std::str::FromStr;
 use tokio::fs;
 use tokio::fs::File;
@@ -37,11 +37,11 @@ pub fn prompt_existing_pull_request(
     Ok(proceed)
 }
 
-pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Path) -> Result<()> {
+pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Utf8Path) -> Result<()> {
     fs::create_dir_all(output).await?;
     stream::iter(changes.iter())
         .map(|(path, content)| async move {
-            if let Some(file_name) = Path::new(path).file_name() {
+            if let Some(file_name) = Utf8Path::new(path).file_name() {
                 let mut file = File::create(output.join(file_name)).await?;
                 file.write_all(content.as_bytes()).await?;
             }

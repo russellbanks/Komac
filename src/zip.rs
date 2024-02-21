@@ -2,13 +2,13 @@ use crate::file_analyser::FileAnalyser;
 use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
 use crate::types::architecture::Architecture;
 use crate::url_utils::VALID_FILE_EXTENSIONS;
+use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::{OptionExt, Result};
 use inquire::{min_length, MultiSelect};
 use memmap2::Mmap;
 use std::borrow::Cow;
 use std::collections::{BTreeSet, HashMap};
 use std::io::{Cursor, Read, Seek};
-use std::path::Path;
 use std::{io, mem};
 use zip::ZipArchive;
 
@@ -16,18 +16,19 @@ pub struct Zip {
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub architecture: Option<Architecture>,
-    identified_files: Vec<String>,
+    identified_files: Vec<Utf8PathBuf>,
 }
 
 impl Zip {
-    pub fn new<R: Read + Seek>(reader: R, relative_file_path: Option<&str>) -> Result<Self> {
+    pub fn new<R: Read + Seek>(reader: R, relative_file_path: Option<&Utf8Path>) -> Result<Self> {
         let mut zip = ZipArchive::new(reader)?;
 
         let mut identified_files = zip
             .file_names()
+            .map(Utf8Path::new)
             .filter(|file_name| {
                 VALID_FILE_EXTENSIONS.iter().any(|file_extension| {
-                    Path::new(file_name).extension().map_or(false, |extension| {
+                    file_name.extension().map_or(false, |extension| {
                         extension.eq_ignore_ascii_case(file_extension)
                     })
                 })
@@ -41,9 +42,11 @@ impl Zip {
                     file_extension,
                     zip.file_names()
                         .filter(|file_name| {
-                            Path::new(file_name).extension().map_or(false, |extension| {
-                                extension.eq_ignore_ascii_case(file_extension)
-                            })
+                            Utf8Path::new(file_name)
+                                .extension()
+                                .map_or(false, |extension| {
+                                    extension.eq_ignore_ascii_case(file_extension)
+                                })
                         })
                         .count(),
                 )
@@ -60,14 +63,18 @@ impl Zip {
             .count()
             == 1
         {
-            let chosen_file_name = (*identified_files.swap_remove(0)).to_string();
-            if let Ok(mut chosen_file) = zip.by_name(&chosen_file_name) {
+            let chosen_file_name = identified_files.swap_remove(0).to_path_buf();
+            if let Ok(mut chosen_file) = zip.by_name(chosen_file_name.as_str()) {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
                 let map = unsafe { Mmap::map(&temp_file) }?;
                 let cursor = Cursor::new(map.as_ref());
-                let file_analyser =
-                    FileAnalyser::new(cursor, Cow::Borrowed(&chosen_file_name), true, None)?;
+                let file_analyser = FileAnalyser::new(
+                    cursor,
+                    Cow::Borrowed(chosen_file_name.as_str()),
+                    true,
+                    None,
+                )?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
                 architecture = file_analyser.architecture;
             }
@@ -82,25 +89,23 @@ impl Zip {
             });
         }
 
-        if let Some(previous_path) = relative_file_path {
+        if let Some(previous_path) = relative_file_path.map(Utf8Path::new) {
             let path = if identified_files.contains(&previous_path) {
-                Some(previous_path.to_string())
+                Some(previous_path.to_path_buf())
             } else {
                 identified_files
                     .iter()
-                    .find(|file_path| {
-                        Path::new(file_path).file_name() == Path::new(previous_path).file_name()
-                    })
-                    .map(|path| (*path).to_string())
+                    .find(|file_path| file_path.file_name() == previous_path.file_name())
+                    .map(|path| path.to_path_buf())
             };
-            let zip_file = path.as_deref().map(|name| zip.by_name(name));
+            let zip_file = path.as_ref().map(|name| zip.by_name(name.as_str()));
             if let Some(Ok(mut chosen_file)) = zip_file {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
                 let map = unsafe { Mmap::map(&temp_file) }?;
                 let cursor = Cursor::new(map.as_ref());
                 let file_analyser =
-                    FileAnalyser::new(cursor, Cow::Borrowed(previous_path), true, None)?;
+                    FileAnalyser::new(cursor, Cow::Borrowed(previous_path.as_str()), true, None)?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
                 architecture = file_analyser.architecture;
             }
@@ -119,7 +124,10 @@ impl Zip {
             nested_installer_type,
             nested_installer_files: None,
             architecture,
-            identified_files: identified_files.into_iter().map(str::to_owned).collect(),
+            identified_files: identified_files
+                .into_iter()
+                .map(Utf8Path::to_path_buf)
+                .collect(),
         })
     }
 

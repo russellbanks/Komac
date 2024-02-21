@@ -44,6 +44,7 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use camino::Utf8Path;
 use color_eyre::eyre::{bail, eyre, Result};
 use color_eyre::Report;
 use const_format::formatcp;
@@ -53,7 +54,6 @@ use reqwest::Client;
 use std::collections::BTreeSet;
 use std::env;
 use std::ops::Not;
-use std::path::Path;
 use std::str::FromStr;
 use url::Url;
 
@@ -155,7 +155,7 @@ impl GitHub {
             .filter(|file| {
                 file.name.starts_with(&format!("{identifier}.locale."))
                     && !file.name.contains(version_manifest.default_locale.as_str())
-                    && Path::new(&file.name)
+                    && Utf8Path::new(&file.name)
                         .extension()
                         .map_or(false, |ext| ext.eq_ignore_ascii_case("yaml"))
             })
@@ -222,7 +222,7 @@ impl GitHub {
                         return Some(GitHubFile {
                             name: entry.name,
                             text: blob.text.unwrap_or_default(),
-                        })
+                        });
                     }
                     None
                 })
@@ -234,7 +234,7 @@ impl GitHub {
                     .into_iter()
                     .fold(
                         eyre!("No directory content was returned when retrieving the directory content of {path}"),
-                        Report::wrap_err
+                        Report::wrap_err,
                     )
             })
     }
@@ -427,7 +427,7 @@ impl GitHub {
                     .into_iter()
                     .fold(
                         eyre!("No data was returned when getting an associated pull request for {branch_name} to {MICROSOFT}/{WINGET_PKGS}"),
-                        Report::wrap_err
+                        Report::wrap_err,
                     )
             })?;
 
@@ -513,7 +513,7 @@ impl GitHub {
                     .into_iter()
                     .fold(
                         eyre!("No pull request data was returned when creating a pull request from {fork_ref_name}"),
-                        Report::wrap_err
+                        Report::wrap_err,
                     )
             })
     }
@@ -582,7 +582,7 @@ impl GitHub {
         })?;
 
         let object = repository.object.ok_or_else(|| {
-            eyre!("No directory content was returned when getting root directory content for {owner}/{repo}") 
+            eyre!("No directory content was returned when getting root directory content for {owner}/{repo}")
         })?;
 
         let license_url = match object {

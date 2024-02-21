@@ -15,6 +15,7 @@ use crate::types::protocol::Protocol;
 use crate::types::silent_switch::SilentSwitch;
 use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::Url;
+use camino::Utf8PathBuf;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -99,7 +100,7 @@ pub enum NestedInstallerType {
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct NestedInstallerFiles {
-    pub relative_file_path: String,
+    pub relative_file_path: Utf8PathBuf,
     pub portable_command_alias: Option<String>,
 }
 

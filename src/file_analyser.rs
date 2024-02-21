@@ -11,6 +11,7 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
 use crate::zip::Zip;
+use camino::Utf8Path;
 use chrono::NaiveDate;
 use color_eyre::eyre::{OptionExt, Result};
 use object::pe::{ImageNtHeaders64, RT_RCDATA};
@@ -18,10 +19,8 @@ use object::read::pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64, ResourceDirec
 use object::{FileKind, LittleEndian, ReadCache, ReadRef};
 use std::borrow::Cow;
 use std::collections::BTreeSet;
-use std::ffi::OsStr;
 use std::io::{Cursor, Read, Seek};
 use std::mem;
-use std::path::Path;
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -55,11 +54,10 @@ impl<'a> FileAnalyser<'a> {
         mut reader: R,
         file_name: Cow<'a, str>,
         nested: bool,
-        zip_relative_file_path: Option<&str>,
+        zip_relative_file_path: Option<&Utf8Path>,
     ) -> Result<Self> {
-        let extension = Path::new(file_name.as_ref())
+        let extension = Utf8Path::new(file_name.as_ref())
             .extension()
-            .and_then(OsStr::to_str)
             .unwrap_or_default()
             .to_lowercase();
         let mut installer_type = None;

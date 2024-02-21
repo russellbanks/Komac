@@ -48,6 +48,7 @@ use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use base64ct::Encoding;
+use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::Result;
 use crossterm::style::Stylize;
@@ -60,7 +61,6 @@ use std::collections::BTreeSet;
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 use std::ops::Not;
-use std::path::PathBuf;
 use std::time::Duration;
 use strum::IntoEnumIterator;
 
@@ -75,7 +75,7 @@ pub struct NewVersion {
     package_version: Option<PackageVersion>,
 
     /// The list of package installers
-    #[arg(short, long, num_args=1..)]
+    #[arg(short, long, num_args = 1..)]
     urls: Vec<Url>,
 
     #[arg(long)]
@@ -134,7 +134,7 @@ pub struct NewVersion {
 
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
-    output: Option<PathBuf>,
+    output: Option<Utf8PathBuf>,
 
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -399,9 +399,8 @@ impl NewVersion {
         if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
-                "{} written all manifest files to {}",
-                "Successfully".green(),
-                output.display()
+                "{} written all manifest files to {output}",
+                "Successfully".green()
             );
         }
 

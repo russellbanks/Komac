@@ -21,6 +21,7 @@ use crate::types::package_version::PackageVersion;
 use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use base64ct::Encoding;
+use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::{Result, WrapErr};
 use crossterm::style::Stylize;
@@ -33,7 +34,6 @@ use std::collections::BTreeSet;
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 use std::ops::Not;
-use std::path::PathBuf;
 use std::time::Duration;
 
 #[derive(Parser)]
@@ -47,7 +47,7 @@ pub struct UpdateVersion {
     version: PackageVersion,
 
     /// The list of package installers
-    #[arg(short, long, num_args=1.., required = true)]
+    #[arg(short, long, num_args = 1.., required = true)]
     urls: Vec<Url>,
 
     /// Number of installers to download at the same time
@@ -64,7 +64,7 @@ pub struct UpdateVersion {
 
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
-    output: Option<PathBuf>,
+    output: Option<Utf8PathBuf>,
 
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -127,7 +127,7 @@ impl UpdateVersion {
                 .as_ref()
                 .and_then(|nested_installer_files| {
                     nested_installer_files.first().map(|nested_installer_file| {
-                        nested_installer_file.relative_file_path.as_str()
+                        nested_installer_file.relative_file_path.as_path()
                     })
                 }),
         )
@@ -311,9 +311,8 @@ impl UpdateVersion {
         if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
-                "{} written all manifest files to {}",
-                "Successfully".green(),
-                output.display()
+                "{} written all manifest files to {output}",
+                "Successfully".green()
             );
         }
 

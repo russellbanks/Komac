@@ -1,6 +1,7 @@
 use crate::file_analyser::FileAnalyser;
 use crate::types::urls::url::Url;
 use crate::url_utils::find_architecture;
+use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
 use color_eyre::eyre::{eyre, Result, WrapErr};
 use futures_util::{stream, StreamExt, TryStreamExt};
@@ -16,7 +17,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::future::Future;
 use std::io::Cursor;
-use std::path::Path;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
@@ -104,7 +104,7 @@ fn get_file_name(
     }
     url.path_segments()
         .and_then(|mut segments| segments.next_back())
-        .filter(|last_segment| Path::new(last_segment).extension().is_some())
+        .filter(|last_segment| Utf8Path::new(last_segment).extension().is_some())
         .or_else(|| {
             final_url
                 .path_segments()
@@ -133,7 +133,7 @@ pub struct DownloadedFile {
 
 pub async fn process_files<'a>(
     files: Vec<DownloadedFile>,
-    zip_relative_file_path: Option<&str>,
+    zip_relative_file_path: Option<&Utf8Path>,
 ) -> Result<HashMap<Url, FileAnalyser<'a>>> {
     stream::iter(files.into_iter().map(
         |DownloadedFile {
