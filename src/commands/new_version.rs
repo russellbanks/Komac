@@ -45,7 +45,6 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use base64ct::Encoding;
 use camino::Utf8PathBuf;
@@ -63,6 +62,7 @@ use std::num::{NonZeroU32, NonZeroU8};
 use std::ops::Not;
 use std::time::Duration;
 use strum::IntoEnumIterator;
+use url::Url;
 
 #[derive(Parser)]
 pub struct NewVersion {
@@ -250,7 +250,7 @@ impl NewVersion {
                     .as_mut()
                     .and_then(|zip| mem::take(&mut zip.nested_installer_files)),
                 scope: Scope::find_from_url(url.as_str()),
-                installer_url: url.clone(),
+                installer_url: url.clone().into(),
                 installer_sha_256: mem::take(&mut analyser.installer_sha_256),
                 signature_sha_256: mem::take(&mut analyser.signature_sha_256),
                 installer_switches: installer_switches

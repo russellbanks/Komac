@@ -1,5 +1,4 @@
 use crate::file_analyser::FileAnalyser;
-use crate::types::urls::url::Url;
 use crate::url_utils::find_architecture;
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
@@ -9,7 +8,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use memmap2::Mmap;
 use reqwest::header::{HeaderValue, CONTENT_DISPOSITION, LAST_MODIFIED};
-use reqwest::Client;
+use reqwest::{Client, Response};
 use sha2::{Digest, Sha256};
 use std::borrow::Cow;
 use std::cmp::min;
@@ -18,13 +17,27 @@ use std::fs::File;
 use std::future::Future;
 use std::io::Cursor;
 use tokio::io::AsyncWriteExt;
+use url::Url;
 use uuid::Uuid;
 
 async fn download_file(
     client: &Client,
-    url: Url,
+    mut url: Url,
     multi_progress: &MultiProgress,
 ) -> Result<DownloadedFile> {
+    if url.scheme() == "http" {
+        url.set_scheme("https").unwrap();
+        if client
+            .head(url.as_str())
+            .send()
+            .await
+            .and_then(Response::error_for_status)
+            .is_err()
+        {
+            url.set_scheme("http").unwrap();
+        }
+    }
+
     let res = client
         .get(url.as_str())
         .send()
@@ -79,11 +92,7 @@ async fn download_file(
     })
 }
 
-fn get_file_name(
-    url: &Url,
-    final_url: &url::Url,
-    content_disposition: Option<&HeaderValue>,
-) -> String {
+fn get_file_name(url: &Url, final_url: &Url, content_disposition: Option<&HeaderValue>) -> String {
     if let Some(content_disposition) = content_disposition.and_then(|value| value.to_str().ok()) {
         let mut sections = content_disposition.split(';');
         let _disposition = sections.next();

@@ -18,7 +18,6 @@ use crate::types::installer_type::InstallerType;
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
-use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use base64ct::Encoding;
 use camino::Utf8PathBuf;
@@ -35,6 +34,7 @@ use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 use std::ops::Not;
 use std::time::Duration;
+use url::Url;
 
 #[derive(Parser)]
 pub struct UpdateVersion {
@@ -138,7 +138,7 @@ impl UpdateVersion {
                 architecture: download.architecture.unwrap(),
                 installer_type: Some(download.installer_type),
                 scope: Scope::find_from_url(url.as_str()),
-                installer_url: url.clone(),
+                installer_url: url.clone().into(),
                 ..Installer::default()
             })
             .collect::<Vec<_>>();

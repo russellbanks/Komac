@@ -9,3 +9,9 @@ use percent_encoding::percent_decode_str;
     derive(Clone, Deref, FromStr, Display, Default, Deserialize, Serialize, Hash, Eq, PartialEq, Ord, PartialOrd, Debug)
 )]
 pub struct Url(url::Url);
+
+impl From<url::Url> for Url {
+    fn from(value: url::Url) -> Self {
+        Self::new(value)
+    }
+}
