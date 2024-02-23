@@ -119,7 +119,7 @@ jobs:
         shell: pwsh
         run: |
           $bin = if ($env:RUNNER_OS -eq 'Windows') { "komac.exe" } else { "komac" }
-          $newName = "KomacPortable"
+          $newName = "Komac"
           if ($env:RUNNER_OS -ne 'Windows') {
             $newName += "-${{ matrix.platform.os_name }}"
           }

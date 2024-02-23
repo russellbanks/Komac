@@ -10,6 +10,11 @@ documentation = "https://github.com/russellbanks/Komac/blob/main/README.md"
 categories = ["command-line-utilities", "development-tools"]
 keywords = ["winget", "winget-pkgs", "winget-cli", "windows"]
 build = "build.rs"
+exclude = [".github/", "assets/"]
+
+[[bin]]
+name = "komac"
+path = "src/main.rs"
 
 [profile.release]
 codegen-units = 1
