@@ -6,11 +6,12 @@ edition = "2021"
 description = "A manifest creator for winget-pkgs"
 license = "GPL-3.0"
 repository = "https://github.com/russellbanks/Komac"
+readme = "README.md"
 documentation = "https://github.com/russellbanks/Komac/blob/main/README.md"
 categories = ["command-line-utilities", "development-tools"]
 keywords = ["winget", "winget-pkgs", "winget-cli", "windows"]
 build = "build.rs"
-exclude = [".github/", "assets/"]
+include = ["**/*.rs", "assets/github.graphql", "assets/logo.ico"]
 
 [[bin]]
 name = "komac"
