@@ -64,9 +64,9 @@ fn print_manifest(lock: &mut StdoutLock, manifest: &str) {
     }
 }
 
-pub fn build_manifest_string(manifest: &Manifest) -> Result<String> {
+pub fn build_manifest_string(manifest: &Manifest, created_with: &Option<String>) -> Result<String> {
     let mut result = Vec::from("# Created with ");
-    if let Ok(created_with_tool) = env::var("KOMAC_CREATED_WITH") {
+    if let Some(created_with_tool) = created_with {
         write!(result, "{created_with_tool} using ")?;
     }
     writeln!(result, "{} v{}", crate_name!(), crate_version!())?;

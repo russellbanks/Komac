@@ -149,7 +149,7 @@ impl RemoveVersion {
                 &format!("{current_user}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,
-                &get_pull_request_body(self.resolves, Some(deletion_reason)),
+                &get_pull_request_body(self.resolves, Some(deletion_reason), None, None),
             )
             .await?;
 

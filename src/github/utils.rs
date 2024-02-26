@@ -7,6 +7,7 @@ use std::collections::BTreeSet;
 use std::env;
 use std::fmt::Write;
 use std::num::NonZeroU32;
+use url::Url;
 use uuid::Uuid;
 
 pub fn get_package_path(
@@ -36,6 +37,8 @@ pub fn get_package_path(
 pub fn get_pull_request_body(
     issue_resolves: Option<Vec<NonZeroU32>>,
     alternative_text: Option<String>,
+    created_with: Option<String>,
+    created_with_url: Option<Url>,
 ) -> String {
     const FRUITS: [&str; 16] = [
         "apple",
@@ -56,20 +59,6 @@ pub fn get_pull_request_body(
         "watermelon",
     ];
 
-    let custom_tool_info = if let (Ok(tool_name), Ok(tool_url)) = (
-        env::var("KOMAC_CREATED_WITH"),
-        env::var("KOMAC_CREATED_WITH_URL"),
-    ) {
-        format!("[{tool_name}]({tool_url})")
-    } else {
-        format!(
-            "[{}]({}) v{}",
-            crate_name!(),
-            env!("CARGO_PKG_REPOSITORY"),
-            crate_version!()
-        )
-    };
-
     let mut body = String::new();
     if let Some(alternative_text) = alternative_text {
         let _ = writeln!(body, "### {alternative_text}");
@@ -82,10 +71,21 @@ pub fn get_pull_request_body(
             "rocket"
         };
 
-        let _ = writeln!(
-            body,
-            "### Pull request has been created with {custom_tool_info} :{emoji}:"
-        );
+        body.push_str("### Pull request has been created with ");
+
+        if let (Some(tool_name), Some(tool_url)) = (created_with, created_with_url) {
+            let _ = write!(body, "[{tool_name}]({tool_url})");
+        } else {
+            let _ = write!(
+                body,
+                "[{}]({}) v{}",
+                crate_name!(),
+                env!("CARGO_PKG_REPOSITORY"),
+                crate_version!()
+            );
+        };
+
+        let _ = writeln!(body, " :{emoji}:");
     }
     if let Some(resolves) = issue_resolves {
         if !resolves.is_empty() {

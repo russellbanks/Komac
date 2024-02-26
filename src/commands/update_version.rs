@@ -62,6 +62,14 @@ pub struct UpdateVersion {
     #[arg(short, long)]
     submit: bool,
 
+    /// Name of external tool that invoked Komac
+    #[arg(long, env = "KOMAC_CREATED_WITH")]
+    created_with: Option<String>,
+
+    /// URL to external tool that invoked Komac
+    #[arg(long, env = "KOMAC_CREATED_WITH_URL")]
+    created_with_url: Option<Url>,
+
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
     output: Option<Utf8PathBuf>,
@@ -271,14 +279,20 @@ impl UpdateVersion {
             let mut path_content_map = Vec::new();
             path_content_map.push((
                 format!("{full_package_path}/{}.installer.yaml", self.identifier),
-                build_manifest_string(&Manifest::Installer(&installer_manifest))?,
+                build_manifest_string(
+                    &Manifest::Installer(&installer_manifest),
+                    &self.created_with,
+                )?,
             ));
             path_content_map.push((
                 format!(
                     "{full_package_path}/{}.locale.{}.yaml",
                     self.identifier, version_manifest.default_locale
                 ),
-                build_manifest_string(&Manifest::DefaultLocale(&default_locale_manifest))?,
+                build_manifest_string(
+                    &Manifest::DefaultLocale(&default_locale_manifest),
+                    &self.created_with,
+                )?,
             ));
             manifests
                 .locale_manifests
@@ -289,7 +303,10 @@ impl UpdateVersion {
                     ..locale_manifest
                 })
                 .for_each(|locale_manifest| {
-                    if let Ok(yaml) = build_manifest_string(&Manifest::Locale(&locale_manifest)) {
+                    if let Ok(yaml) = build_manifest_string(
+                        &Manifest::Locale(&locale_manifest),
+                        &self.created_with,
+                    ) {
                         path_content_map.push((
                             format!(
                                 "{full_package_path}/{}.locale.{}.yaml",
@@ -301,7 +318,7 @@ impl UpdateVersion {
                 });
             path_content_map.push((
                 format!("{full_package_path}/{}.yaml", self.identifier),
-                build_manifest_string(&Manifest::Version(&version_manifest))?,
+                build_manifest_string(&Manifest::Version(&version_manifest), &self.created_with)?,
             ));
             path_content_map
         };
@@ -374,7 +391,12 @@ impl UpdateVersion {
                 &format!("{current_user}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,
-                &get_pull_request_body(self.resolves, None),
+                &get_pull_request_body(
+                    self.resolves,
+                    None,
+                    self.created_with,
+                    self.created_with_url,
+                ),
             )
             .await?;
 
