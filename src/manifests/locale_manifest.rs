@@ -14,6 +14,7 @@ use crate::types::publisher::Publisher;
 use crate::types::release_notes::ReleaseNotes;
 use crate::types::short_description::ShortDescription;
 use crate::types::tag::Tag;
+use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::BTreeSet;
@@ -42,7 +43,7 @@ pub struct LocaleManifest {
     pub tags: Option<BTreeSet<Tag>>,
     pub agreements: Option<BTreeSet<Agreement>>,
     pub release_notes: Option<ReleaseNotes>,
-    pub release_notes_url: Option<Url>,
+    pub release_notes_url: Option<ReleaseNotesUrl>,
     pub purchase_url: Option<Url>,
     pub installation_notes: Option<InstallationNotes>,
     pub documentations: Option<BTreeSet<Documentation>>,

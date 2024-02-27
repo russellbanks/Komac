@@ -263,7 +263,9 @@ impl UpdateVersion {
             release_notes: github_values
                 .as_mut()
                 .and_then(|values| mem::take(&mut values.release_notes)),
-            release_notes_url: github_values.map(|values| values.release_notes_url),
+            release_notes_url: github_values
+                .as_ref()
+                .map(|values| values.release_notes_url.clone()),
             manifest_version: ManifestVersion::default(),
             ..previous_default_locale_manifest
         };
@@ -299,6 +301,9 @@ impl UpdateVersion {
                 .into_iter()
                 .map(|locale_manifest| LocaleManifest {
                     package_version: self.version.clone(),
+                    release_notes_url: github_values
+                        .as_ref()
+                        .map(|values| values.release_notes_url.clone()),
                     manifest_version: ManifestVersion::default(),
                     ..locale_manifest
                 })
