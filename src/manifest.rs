@@ -120,7 +120,7 @@ mod tests {
     fn test_build_manifest_string_crlf() {
         let binding = InstallerManifest::default();
         let installer_manifest = Manifest::Installer(&binding);
-        let manifest_string = build_manifest_string(&installer_manifest).unwrap();
+        let manifest_string = build_manifest_string(&installer_manifest, &None).unwrap();
         assert!(!contains_newline_not_preceded_by_carriage_return(
             &manifest_string
         ));
