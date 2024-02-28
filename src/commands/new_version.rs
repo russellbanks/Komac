@@ -1,5 +1,4 @@
-use crate::commands::update_version::reorder_keys;
-use crate::commands::utils::{prompt_existing_pull_request, write_changes_to_dir};
+use crate::commands::utils::{prompt_existing_pull_request, reorder_keys, write_changes_to_dir};
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -223,7 +222,7 @@ impl NewVersion {
                     parts[4..parts.len() - 1].join("/"),
                 )
             });
-        let mut download_results = process_files(files, None).await?;
+        let mut download_results = process_files(files).await?;
         let mut installers = BTreeSet::new();
         for (url, analyser) in &mut download_results {
             if analyser.installer_type == InstallerType::Exe

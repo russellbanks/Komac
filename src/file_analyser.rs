@@ -54,7 +54,6 @@ impl<'a> FileAnalyser<'a> {
         mut reader: R,
         file_name: Cow<'a, str>,
         nested: bool,
-        zip_relative_file_path: Option<&Utf8Path>,
     ) -> Result<Self> {
         let extension = Utf8Path::new(file_name.as_ref())
             .extension()
@@ -122,7 +121,7 @@ impl<'a> FileAnalyser<'a> {
             None
         } else {
             match extension.as_str() {
-                ZIP => Some(Zip::new(reader, zip_relative_file_path)?),
+                ZIP => Some(Zip::new(reader)?),
                 _ => None,
             }
         };

@@ -1,4 +1,4 @@
-use crate::commands::utils::{prompt_existing_pull_request, write_changes_to_dir};
+use crate::commands::utils::{prompt_existing_pull_request, reorder_keys, write_changes_to_dir};
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -9,7 +9,7 @@ use crate::github::utils::{
 use crate::manifest::{build_manifest_string, print_changes, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, Installer, InstallerManifest, Scope, UpgradeBehavior,
+    AppsAndFeaturesEntry, Installer, NestedInstallerFiles, Scope, UpgradeBehavior,
 };
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
@@ -19,6 +19,7 @@ use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::update_state::UpdateState;
+use crate::zip::Zip;
 use base64ct::Encoding;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -27,12 +28,10 @@ use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::Confirm;
-use itertools::Itertools;
 use reqwest::Client;
 use std::collections::BTreeSet;
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
-use std::ops::Not;
 use std::time::Duration;
 use url::Url;
 
@@ -127,23 +126,11 @@ impl UpdateVersion {
                 )
             });
         let manifests = manifests.await?;
-        let download_results = process_files(
-            files,
-            manifests
-                .installer_manifest
-                .nested_installer_files
-                .as_ref()
-                .and_then(|nested_installer_files| {
-                    nested_installer_files.first().map(|nested_installer_file| {
-                        nested_installer_file.relative_file_path.as_path()
-                    })
-                }),
-        )
-        .await?;
+        let download_results = process_files(files).await?;
         let installer_results = download_results
             .iter()
             .map(|(url, download)| Installer {
-                architecture: download.architecture.unwrap(),
+                architecture: download.architecture.unwrap_or_default(),
                 installer_type: Some(download.installer_type),
                 scope: Scope::find_from_url(url.as_str()),
                 installer_url: url.clone().into(),
@@ -182,11 +169,12 @@ impl UpdateVersion {
                         Some(InstallerType::Portable) => previous_installer.installer_type,
                         _ => new_installer.installer_type,
                     },
-                    nested_installer_files: analyser
-                        .zip
-                        .as_ref()
-                        .and_then(|zip| zip.nested_installer_files.clone())
-                        .or(previous_installer.nested_installer_files),
+                    nested_installer_files: previous_installer
+                        .nested_installer_files
+                        .or_else(|| previous_installer_manifest.nested_installer_files.clone())
+                        .map(|nested_installer_files| {
+                            validate_relative_paths(nested_installer_files, &analyser.zip)
+                        }),
                     scope: new_installer.scope.or(previous_installer.scope),
                     installer_url: new_installer.installer_url.clone(),
                     installer_sha_256: analyser.installer_sha_256.clone(),
@@ -417,118 +405,33 @@ impl UpdateVersion {
     }
 }
 
-fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Installer> {
-    macro_rules! installer_key {
-        ($item: expr, $field: ident) => {
-            installers
-                .iter()
-                .map(|installer| &installer.$field)
-                .all_equal()
-                .not()
-                .then_some($item.$field)
-                .flatten()
-        };
-    }
-    installers
-        .iter()
-        .cloned()
-        .map(|installer| Installer {
-            installer_locale: installer_key!(installer, installer_locale),
-            platform: installer_key!(installer, platform),
-            minimum_os_version: installer_key!(installer, minimum_os_version),
-            installer_type: installer_key!(installer, installer_type),
-            nested_installer_type: installer_key!(installer, nested_installer_type),
-            nested_installer_files: installer_key!(installer, nested_installer_files),
-            scope: installer_key!(installer, scope),
-            install_modes: installer_key!(installer, install_modes),
-            installer_switches: installer_key!(installer, installer_switches),
-            installer_success_codes: installer_key!(installer, installer_success_codes),
-            expected_return_codes: installer_key!(installer, expected_return_codes),
-            upgrade_behavior: installer_key!(installer, upgrade_behavior),
-            commands: installer_key!(installer, commands),
-            protocols: installer_key!(installer, protocols),
-            file_extensions: installer_key!(installer, file_extensions),
-            dependencies: installer_key!(installer, dependencies),
-            package_family_name: installer_key!(installer, package_family_name),
-            product_code: installer_key!(installer, product_code),
-            capabilities: installer_key!(installer, capabilities),
-            restricted_capabilities: installer_key!(installer, restricted_capabilities),
-            markets: installer_key!(installer, markets),
-            installer_aborts_terminal: installer_key!(installer, installer_aborts_terminal),
-            release_date: installer_key!(installer, release_date),
-            installer_location_required: installer_key!(installer, installer_location_required),
-            require_explicit_upgrade: installer_key!(installer, require_explicit_upgrade),
-            display_install_warnings: installer_key!(installer, display_install_warnings),
-            unsupported_os_architectures: installer_key!(installer, unsupported_os_architectures),
-            unsupported_arguments: installer_key!(installer, unsupported_arguments),
-            apps_and_features_entries: installer_key!(installer, apps_and_features_entries),
-            elevation_requirement: installer_key!(installer, elevation_requirement),
-            installation_metadata: installer_key!(installer, installation_metadata),
-            ..installer
+fn validate_relative_paths(
+    nested_installer_files: BTreeSet<NestedInstallerFiles>,
+    zip: &Option<Zip>,
+) -> BTreeSet<NestedInstallerFiles> {
+    nested_installer_files
+        .into_iter()
+        .filter_map(|nested_installer_files| {
+            if let Some(zip) = zip {
+                return if zip
+                    .identified_files
+                    .contains(&nested_installer_files.relative_file_path)
+                {
+                    Some(nested_installer_files)
+                } else {
+                    zip.identified_files
+                        .iter()
+                        .find(|file_path| {
+                            file_path.file_name()
+                                == nested_installer_files.relative_file_path.file_name()
+                        })
+                        .map(|path| NestedInstallerFiles {
+                            relative_file_path: path.to_path_buf(),
+                            ..nested_installer_files
+                        })
+                };
+            }
+            None
         })
         .collect()
-}
-
-pub fn reorder_keys(
-    package_identifier: PackageIdentifier,
-    package_version: PackageVersion,
-    installers: BTreeSet<Installer>,
-    installer_manifest: InstallerManifest,
-) -> InstallerManifest {
-    macro_rules! root_manifest_key {
-        ($field:ident) => {
-            installers
-                .iter()
-                .all(|installer| installer.$field.is_none())
-                .then_some(installer_manifest.$field)
-                .or_else(|| {
-                    installers
-                        .iter()
-                        .map(|installer| installer.$field.as_ref())
-                        .all_equal_value()
-                        .ok()
-                        .map(|value| value.cloned())
-                })
-                .flatten()
-        };
-    }
-
-    InstallerManifest {
-        package_identifier,
-        package_version,
-        installer_locale: root_manifest_key!(installer_locale),
-        platform: root_manifest_key!(platform),
-        minimum_os_version: root_manifest_key!(minimum_os_version),
-        installer_type: root_manifest_key!(installer_type),
-        nested_installer_type: root_manifest_key!(nested_installer_type),
-        nested_installer_files: root_manifest_key!(nested_installer_files),
-        scope: root_manifest_key!(scope),
-        install_modes: root_manifest_key!(install_modes),
-        installer_switches: root_manifest_key!(installer_switches),
-        installer_success_codes: root_manifest_key!(installer_success_codes),
-        expected_return_codes: root_manifest_key!(expected_return_codes),
-        upgrade_behavior: root_manifest_key!(upgrade_behavior),
-        commands: root_manifest_key!(commands),
-        protocols: root_manifest_key!(protocols),
-        file_extensions: root_manifest_key!(file_extensions),
-        dependencies: root_manifest_key!(dependencies),
-        package_family_name: root_manifest_key!(package_family_name),
-        product_code: root_manifest_key!(product_code),
-        capabilities: root_manifest_key!(capabilities),
-        restricted_capabilities: root_manifest_key!(restricted_capabilities),
-        markets: root_manifest_key!(markets),
-        installer_aborts_terminal: root_manifest_key!(installer_aborts_terminal),
-        release_date: root_manifest_key!(release_date),
-        installer_location_required: root_manifest_key!(installer_location_required),
-        require_explicit_upgrade: root_manifest_key!(require_explicit_upgrade),
-        display_install_warnings: root_manifest_key!(display_install_warnings),
-        unsupported_os_architectures: root_manifest_key!(unsupported_os_architectures),
-        unsupported_arguments: root_manifest_key!(unsupported_arguments),
-        apps_and_features_entries: root_manifest_key!(apps_and_features_entries),
-        elevation_requirement: root_manifest_key!(elevation_requirement),
-        installation_metadata: root_manifest_key!(installation_metadata),
-        installers: remove_non_distinct_keys(installers),
-        manifest_version: ManifestVersion::default(),
-        ..installer_manifest
-    }
 }

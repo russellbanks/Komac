@@ -3,7 +3,7 @@ use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstaller
 use crate::types::architecture::Architecture;
 use crate::url_utils::VALID_FILE_EXTENSIONS;
 use camino::{Utf8Path, Utf8PathBuf};
-use color_eyre::eyre::{OptionExt, Result};
+use color_eyre::eyre::Result;
 use inquire::{min_length, MultiSelect};
 use memmap2::Mmap;
 use std::borrow::Cow;
@@ -16,11 +16,11 @@ pub struct Zip {
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub architecture: Option<Architecture>,
-    identified_files: Vec<Utf8PathBuf>,
+    pub identified_files: Vec<Utf8PathBuf>,
 }
 
 impl Zip {
-    pub fn new<R: Read + Seek>(reader: R, relative_file_path: Option<&Utf8Path>) -> Result<Self> {
+    pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
         let mut zip = ZipArchive::new(reader)?;
 
         let mut identified_files = zip
@@ -69,12 +69,8 @@ impl Zip {
                 io::copy(&mut chosen_file, &mut temp_file)?;
                 let map = unsafe { Mmap::map(&temp_file) }?;
                 let cursor = Cursor::new(map.as_ref());
-                let file_analyser = FileAnalyser::new(
-                    cursor,
-                    Cow::Borrowed(chosen_file_name.as_str()),
-                    true,
-                    None,
-                )?;
+                let file_analyser =
+                    FileAnalyser::new(cursor, Cow::Borrowed(chosen_file_name.as_str()), true)?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
                 architecture = file_analyser.architecture;
             }
@@ -82,37 +78,6 @@ impl Zip {
                 nested_installer_type,
                 nested_installer_files: Some(BTreeSet::from([NestedInstallerFiles {
                     relative_file_path: chosen_file_name,
-                    portable_command_alias: None,
-                }])),
-                architecture,
-                identified_files: Vec::new(),
-            });
-        }
-
-        if let Some(previous_path) = relative_file_path.map(Utf8Path::new) {
-            let path = if identified_files.contains(&previous_path) {
-                Some(previous_path.to_path_buf())
-            } else {
-                identified_files
-                    .iter()
-                    .find(|file_path| file_path.file_name() == previous_path.file_name())
-                    .map(|path| path.to_path_buf())
-            };
-            let zip_file = path.as_ref().map(|name| zip.by_name(name.as_str()));
-            if let Some(Ok(mut chosen_file)) = zip_file {
-                let mut temp_file = tempfile::tempfile()?;
-                io::copy(&mut chosen_file, &mut temp_file)?;
-                let map = unsafe { Mmap::map(&temp_file) }?;
-                let cursor = Cursor::new(map.as_ref());
-                let file_analyser =
-                    FileAnalyser::new(cursor, Cow::Borrowed(previous_path.as_str()), true, None)?;
-                nested_installer_type = file_analyser.installer_type.to_nested();
-                architecture = file_analyser.architecture;
-            }
-            return Ok(Self {
-                nested_installer_type,
-                nested_installer_files: Some(BTreeSet::from([NestedInstallerFiles {
-                    relative_file_path: path.ok_or_eyre("Failed to find new installer in zip")?,
                     portable_command_alias: None,
                 }])),
                 architecture,
