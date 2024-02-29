@@ -39,10 +39,10 @@ impl Manifest<'_> {
     }
 }
 
-pub fn print_changes(changes: &Vec<(String, String)>) {
+pub fn print_changes<'a>(contents: impl Iterator<Item = &'a str>) {
     let mut lock = io::stdout().lock();
 
-    for (_, content) in changes {
+    for content in contents {
         print_manifest(&mut lock, content);
         let _ = writeln!(lock);
     }

@@ -21,6 +21,7 @@ use crate::commands::cleanup::Cleanup;
 use crate::commands::list_versions::ListVersions;
 use crate::commands::new_version::NewVersion;
 use crate::commands::remove_version::RemoveVersion;
+use crate::commands::show_version::ShowVersion;
 use crate::commands::token::token::{TokenArgs, TokenCommands};
 use crate::commands::update_version::UpdateVersion;
 use clap::{Parser, Subcommand};
@@ -41,6 +42,7 @@ async fn main() -> Result<()> {
             TokenCommands::Update(update_token) => update_token.run().await,
         },
         Commands::ListVersions(list_versions) => list_versions.run().await,
+        Commands::Show(show_version) => show_version.run().await,
     }
 }
 
@@ -61,4 +63,5 @@ enum Commands {
     Cleanup(Cleanup),
     Token(TokenArgs),
     ListVersions(ListVersions),
+    Show(ShowVersion),
 }

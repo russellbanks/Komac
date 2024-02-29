@@ -17,7 +17,7 @@ pub struct ListVersions {
     #[command(flatten)]
     output_type: OutputType,
 
-    /// GitHub personal access token with the public_repo
+    /// GitHub personal access token with the public_repo scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }

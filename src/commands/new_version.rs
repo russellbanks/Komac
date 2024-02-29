@@ -409,7 +409,7 @@ impl NewVersion {
             path_content_map
         };
 
-        print_changes(&changes);
+        print_changes(changes.iter().map(|(_, content)| content.as_str()));
 
         if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
