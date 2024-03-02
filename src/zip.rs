@@ -23,7 +23,7 @@ impl Zip {
     pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
         let mut zip = ZipArchive::new(reader)?;
 
-        let mut identified_files = zip
+        let identified_files = zip
             .file_names()
             .map(Utf8Path::new)
             .filter(|file_name| {
@@ -33,6 +33,7 @@ impl Zip {
                     })
                 })
             })
+            .map(Utf8Path::to_path_buf)
             .collect::<Vec<_>>();
 
         let installer_type_counts = VALID_FILE_EXTENSIONS
@@ -63,7 +64,7 @@ impl Zip {
             .count()
             == 1
         {
-            let chosen_file_name = identified_files.swap_remove(0).to_path_buf();
+            let chosen_file_name = identified_files.first().unwrap();
             if let Ok(mut chosen_file) = zip.by_name(chosen_file_name.as_str()) {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
@@ -77,11 +78,11 @@ impl Zip {
             return Ok(Self {
                 nested_installer_type,
                 nested_installer_files: Some(BTreeSet::from([NestedInstallerFiles {
-                    relative_file_path: chosen_file_name,
+                    relative_file_path: chosen_file_name.clone(),
                     portable_command_alias: None,
                 }])),
                 architecture,
-                identified_files: Vec::new(),
+                identified_files,
             });
         }
 
@@ -89,10 +90,7 @@ impl Zip {
             nested_installer_type,
             nested_installer_files: None,
             architecture,
-            identified_files: identified_files
-                .into_iter()
-                .map(Utf8Path::to_path_buf)
-                .collect(),
+            identified_files,
         })
     }
 
