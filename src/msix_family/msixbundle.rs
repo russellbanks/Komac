@@ -20,7 +20,7 @@ pub struct IndividualPackage {
     pub version: String,
     pub target_device_family: Platform,
     pub min_version: String,
-    pub processor_architecture: Architecture,
+    pub processor_architecture: Option<Architecture>,
 }
 
 const APPX_BUNDLE_MANIFEST_PATH: &str = "AppxMetadata/AppxBundleManifest.xml";
@@ -52,7 +52,10 @@ impl MsixBundle {
                     )
                     .unwrap(),
                     min_version: package.dependencies.target_device_family.min_version,
-                    processor_architecture: Architecture::from_str(&package.architecture).unwrap(),
+                    processor_architecture: package
+                        .architecture
+                        .as_deref()
+                        .and_then(|architecture| Architecture::from_str(architecture).ok()),
                 })
                 .collect(),
         })
@@ -89,7 +92,7 @@ struct Package {
     #[serde(rename = "@Version")]
     version: String,
     #[serde(rename = "@Architecture")]
-    architecture: String,
+    architecture: Option<String>,
     #[serde(rename = "Dependencies")]
     dependencies: msix::Dependencies,
 }

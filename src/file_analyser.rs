@@ -141,6 +141,14 @@ impl<'a> FileAnalyser<'a> {
                 .as_ref()
                 .map(|msi| msi.architecture)
                 .or_else(|| msix.as_ref().map(|msix| msix.processor_architecture))
+                .or_else(|| {
+                    msix_bundle.as_ref().and_then(|bundle| {
+                        bundle
+                            .packages
+                            .iter()
+                            .find_map(|package| package.processor_architecture)
+                    })
+                })
                 .or(pe_arch)
                 .or_else(|| {
                     zip.as_mut()
