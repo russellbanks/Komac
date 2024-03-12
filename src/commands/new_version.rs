@@ -44,6 +44,7 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use base64ct::Encoding;
 use camino::Utf8PathBuf;
@@ -61,7 +62,6 @@ use std::num::{NonZeroU32, NonZeroU8};
 use std::ops::Not;
 use std::time::Duration;
 use strum::IntoEnumIterator;
-use url::Url;
 
 #[derive(Parser)]
 pub struct NewVersion {
@@ -142,6 +142,10 @@ pub struct NewVersion {
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
     output: Option<Utf8PathBuf>,
+
+    /// Open pull request link automatically
+    #[arg(long, env = "OPEN_PR")]
+    open_pr: bool,
 
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -257,7 +261,7 @@ impl NewVersion {
                     .as_mut()
                     .and_then(|zip| mem::take(&mut zip.nested_installer_files)),
                 scope: Scope::find_from_url(url.as_str()),
-                installer_url: url.clone().into(),
+                installer_url: url.clone(),
                 installer_sha_256: mem::take(&mut analyser.installer_sha_256),
                 signature_sha_256: mem::take(&mut analyser.signature_sha_256),
                 installer_switches: installer_switches
@@ -491,6 +495,10 @@ impl NewVersion {
             "Successfully".green()
         );
         println!("{}", pull_request_url.as_str());
+
+        if self.open_pr {
+            open::that(pull_request_url.as_str())?;
+        }
 
         Ok(())
     }

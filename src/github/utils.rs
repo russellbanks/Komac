@@ -1,5 +1,6 @@
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
+use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use clap::{crate_name, crate_version};
 use rand::{thread_rng, Rng};
@@ -7,7 +8,6 @@ use std::collections::BTreeSet;
 use std::env;
 use std::fmt::Write;
 use std::num::NonZeroU32;
-use url::Url;
 use uuid::Uuid;
 
 pub fn get_package_path(

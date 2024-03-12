@@ -1,3 +1,18 @@
+use std::collections::BTreeSet;
+use std::mem;
+use std::num::{NonZeroU32, NonZeroU8};
+use std::time::Duration;
+
+use base64ct::Encoding;
+use camino::Utf8PathBuf;
+use clap::Parser;
+use color_eyre::eyre::{Result, WrapErr};
+use crossterm::style::Stylize;
+use futures_util::{stream, StreamExt, TryStreamExt};
+use indicatif::{MultiProgress, ProgressBar};
+use inquire::Confirm;
+use reqwest::Client;
+
 use crate::commands::utils::{prompt_existing_pull_request, reorder_keys, write_changes_to_dir};
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
@@ -18,22 +33,9 @@ use crate::types::installer_type::InstallerType;
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
+use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use crate::zip::Zip;
-use base64ct::Encoding;
-use camino::Utf8PathBuf;
-use clap::Parser;
-use color_eyre::eyre::{Result, WrapErr};
-use crossterm::style::Stylize;
-use futures_util::{stream, StreamExt, TryStreamExt};
-use indicatif::{MultiProgress, ProgressBar};
-use inquire::Confirm;
-use reqwest::Client;
-use std::collections::BTreeSet;
-use std::mem;
-use std::num::{NonZeroU32, NonZeroU8};
-use std::time::Duration;
-use url::Url;
 
 #[derive(Parser)]
 pub struct UpdateVersion {
@@ -72,6 +74,10 @@ pub struct UpdateVersion {
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
     output: Option<Utf8PathBuf>,
+
+    /// Open pull request link automatically
+    #[arg(long, env = "OPEN_PR")]
+    open_pr: bool,
 
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -133,7 +139,7 @@ impl UpdateVersion {
                 architecture: download.architecture.unwrap_or_default(),
                 installer_type: Some(download.installer_type),
                 scope: Scope::find_from_url(url.as_str()),
-                installer_url: url.clone().into(),
+                installer_url: url.clone(),
                 ..Installer::default()
             })
             .collect::<Vec<_>>();
@@ -400,6 +406,10 @@ impl UpdateVersion {
             "Successfully".green()
         );
         println!("{}", pull_request_url.as_str());
+
+        if self.open_pr {
+            open::that(pull_request_url.as_str())?;
+        }
 
         Ok(())
     }

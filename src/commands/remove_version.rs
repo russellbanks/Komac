@@ -36,6 +36,10 @@ pub struct RemoveVersion {
     #[arg(short, long)]
     submit: bool,
 
+    /// Open pull request link automatically
+    #[arg(long, env = "OPEN_PR")]
+    open_pr: bool,
+
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -162,6 +166,10 @@ impl RemoveVersion {
             self.package_version
         );
         println!("{}", pull_request_url.as_str());
+
+        if self.open_pr {
+            open::that(pull_request_url.as_str())?;
+        }
 
         Ok(())
     }

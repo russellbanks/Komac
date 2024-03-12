@@ -1,5 +1,10 @@
-use crate::file_analyser::FileAnalyser;
-use crate::url_utils::find_architecture;
+use std::borrow::Cow;
+use std::cmp::min;
+use std::collections::HashMap;
+use std::fs::File;
+use std::future::Future;
+use std::io::Cursor;
+
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
 use color_eyre::eyre::{eyre, Result, WrapErr};
@@ -10,19 +15,16 @@ use memmap2::Mmap;
 use reqwest::header::{HeaderValue, CONTENT_DISPOSITION, LAST_MODIFIED};
 use reqwest::{Client, Response};
 use sha2::{Digest, Sha256};
-use std::borrow::Cow;
-use std::cmp::min;
-use std::collections::HashMap;
-use std::fs::File;
-use std::future::Future;
-use std::io::Cursor;
 use tokio::io::AsyncWriteExt;
-use url::Url;
 use uuid::Uuid;
+
+use crate::file_analyser::FileAnalyser;
+use crate::types::urls::url::Url;
+use crate::url_utils::find_architecture;
 
 async fn download_file(
     client: &Client,
-    mut url: Url,
+    mut url: url::Url,
     multi_progress: &MultiProgress,
 ) -> Result<DownloadedFile> {
     if url.scheme() == "http" {
@@ -84,7 +86,7 @@ async fn download_file(
     pb.finish_and_clear();
 
     Ok(DownloadedFile {
-        url,
+        url: url.into(),
         file: temp_file,
         sha_256: base16ct::upper::encode_string(&hasher.finalize()),
         file_name,
@@ -92,7 +94,11 @@ async fn download_file(
     })
 }
 
-fn get_file_name(url: &Url, final_url: &Url, content_disposition: Option<&HeaderValue>) -> String {
+fn get_file_name(
+    url: &url::Url,
+    final_url: &url::Url,
+    content_disposition: Option<&HeaderValue>,
+) -> String {
     if let Some(content_disposition) = content_disposition.and_then(|value| value.to_str().ok()) {
         let mut sections = content_disposition.split(';');
         let _disposition = sections.next();
@@ -129,7 +135,7 @@ pub fn download_urls<'a>(
 ) -> impl Iterator<Item = impl Future<Output = Result<DownloadedFile>> + 'a> {
     urls.into_iter()
         .unique()
-        .map(|url| download_file(client, url, multi_progress))
+        .map(|url| download_file(client, url.into_inner(), multi_progress))
 }
 
 pub struct DownloadedFile {
