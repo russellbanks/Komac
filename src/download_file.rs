@@ -159,7 +159,7 @@ pub async fn process_files<'a>(
          }| async move {
             let map = unsafe { Mmap::map(&file) }?;
             let mut file_analyser =
-                FileAnalyser::new(Cursor::new(map.as_ref()), Cow::Owned(file_name), false)?;
+                FileAnalyser::new(Cursor::new(map.as_ref()), Cow::Owned(file_name))?;
             file_analyser.architecture =
                 find_architecture(url.as_str()).or(file_analyser.architecture);
             file_analyser.installer_sha_256 = sha_256;

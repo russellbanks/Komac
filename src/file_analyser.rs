@@ -52,11 +52,7 @@ pub struct FileAnalyser<'a> {
 }
 
 impl<'a> FileAnalyser<'a> {
-    pub fn new<R: Read + Seek>(
-        mut reader: R,
-        file_name: Cow<'a, str>,
-        nested: bool,
-    ) -> Result<Self> {
+    pub fn new<R: Read + Seek>(mut reader: R, file_name: Cow<'a, str>) -> Result<Self> {
         let extension = Utf8Path::new(file_name.as_ref())
             .extension()
             .unwrap_or_default()
@@ -121,13 +117,9 @@ impl<'a> FileAnalyser<'a> {
             MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(&mut reader)?),
             _ => None,
         };
-        let mut zip = if nested {
-            None
-        } else {
-            match extension.as_str() {
-                ZIP => Some(Zip::new(reader)?),
-                _ => None,
-            }
+        let mut zip = match extension.as_str() {
+            ZIP => Some(Zip::new(reader)?),
+            _ => None,
         };
         if installer_type.is_none() {
             installer_type = Some(InstallerType::get::<ImageNtHeaders64, &[u8]>(

@@ -1,7 +1,6 @@
 use crate::file_analyser::FileAnalyser;
 use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
 use crate::types::architecture::Architecture;
-use crate::url_utils::VALID_FILE_EXTENSIONS;
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::Result;
 use inquire::{min_length, MultiSelect};
@@ -11,6 +10,9 @@ use std::collections::{BTreeSet, HashMap};
 use std::io::{Cursor, Read, Seek};
 use std::{io, mem};
 use zip::ZipArchive;
+
+const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
+    ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];
 
 pub struct Zip {
     pub nested_installer_type: Option<NestedInstallerType>,
@@ -27,7 +29,7 @@ impl Zip {
             .file_names()
             .map(Utf8Path::new)
             .filter(|file_name| {
-                VALID_FILE_EXTENSIONS.iter().any(|file_extension| {
+                VALID_NESTED_FILE_EXTENSIONS.iter().any(|file_extension| {
                     file_name.extension().map_or(false, |extension| {
                         extension.eq_ignore_ascii_case(file_extension)
                     })
@@ -36,7 +38,7 @@ impl Zip {
             .map(Utf8Path::to_path_buf)
             .collect::<Vec<_>>();
 
-        let installer_type_counts = VALID_FILE_EXTENSIONS
+        let installer_type_counts = VALID_NESTED_FILE_EXTENSIONS
             .iter()
             .map(|file_extension| {
                 (
@@ -71,7 +73,7 @@ impl Zip {
                 let map = unsafe { Mmap::map(&temp_file) }?;
                 let cursor = Cursor::new(map.as_ref());
                 let file_analyser =
-                    FileAnalyser::new(cursor, Cow::Borrowed(chosen_file_name.as_str()), true)?;
+                    FileAnalyser::new(cursor, Cow::Borrowed(chosen_file_name.as_str()))?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
                 architecture = file_analyser.architecture;
             }
