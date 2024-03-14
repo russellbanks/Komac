@@ -178,7 +178,7 @@ impl UpdateVersion {
                     nested_installer_files: previous_installer
                         .nested_installer_files
                         .or_else(|| previous_installer_manifest.nested_installer_files.clone())
-                        .map(|nested_installer_files| {
+                        .and_then(|nested_installer_files| {
                             validate_relative_paths(nested_installer_files, &analyser.zip)
                         }),
                     scope: new_installer.scope.or(previous_installer.scope),
@@ -418,8 +418,8 @@ impl UpdateVersion {
 fn validate_relative_paths(
     nested_installer_files: BTreeSet<NestedInstallerFiles>,
     zip: &Option<Zip>,
-) -> BTreeSet<NestedInstallerFiles> {
-    nested_installer_files
+) -> Option<BTreeSet<NestedInstallerFiles>> {
+    let relative_paths = nested_installer_files
         .into_iter()
         .filter_map(|nested_installer_files| {
             if let Some(zip) = zip {
@@ -443,5 +443,11 @@ fn validate_relative_paths(
             }
             None
         })
-        .collect()
+        .collect::<BTreeSet<_>>();
+
+    if relative_paths.is_empty() {
+        None
+    } else {
+        Some(relative_paths)
+    }
 }
