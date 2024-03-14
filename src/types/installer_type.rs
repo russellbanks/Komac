@@ -1,13 +1,14 @@
+use color_eyre::eyre::{bail, OptionExt, Result};
+use object::pe::RT_MANIFEST;
+use object::read::pe::{ImageNtHeaders, PeFile, ResourceDirectoryEntryData};
+use object::{LittleEndian, Object, ReadRef};
+use quick_xml::de::from_reader;
+use serde::{Deserialize, Serialize};
+
 use crate::exe::vs_version_info::VSVersionInfo;
 use crate::file_analyser::{APPX, APPX_BUNDLE, EXE, MSI, MSIX, MSIX_BUNDLE, ZIP};
 use crate::manifests::installer_manifest::NestedInstallerType;
 use crate::msi::Msi;
-use color_eyre::eyre::{bail, OptionExt, Result};
-use object::pe::{RT_MANIFEST, RT_RCDATA};
-use object::read::pe::{ImageNtHeaders, PeFile, ResourceDirectoryEntryData};
-use object::{LittleEndian, ReadRef};
-use quick_xml::de::from_reader;
-use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "lowercase")]
@@ -53,9 +54,7 @@ impl InstallerType {
                     {
                         Ok(Self::Nullsoft)
                     }
-                    () if pe.and_then(|pe| Self::is_burn(pe).ok()).unwrap_or(false) => {
-                        Ok(Self::Burn)
-                    }
+                    () if pe.is_some_and(|pe| Self::is_burn(pe)) => Ok(Self::Burn),
                     () => Ok(Self::Exe),
                 };
             }
@@ -147,35 +146,14 @@ impl InstallerType {
             })
     }
 
-    fn is_burn<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<bool>
+    fn is_burn<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> bool
     where
         Pe: ImageNtHeaders,
         R: ReadRef<'data>,
     {
-        let resource_directory = pe
-            .data_directories()
-            .resource_directory(pe.data(), &pe.section_table())?
-            .ok_or_eyre("No resource directory was found")?;
-        let rc_data = resource_directory
-            .root()?
-            .entries
-            .iter()
-            .find(|entry| entry.name_or_id().id() == Some(RT_RCDATA))
-            .ok_or_eyre("No RT_RCDATA was found")?;
-        Ok(rc_data
-            .data(resource_directory)?
-            .table()
-            .and_then(|table| {
-                table.entries.iter().find(|entry| {
-                    entry
-                        .name_or_id()
-                        .name()
-                        .and_then(|name| name.to_string_lossy(resource_directory).ok())
-                        .as_deref()
-                        == Some("MSI")
-                })
-            })
-            .is_some())
+        const WIXBURN_HEADER: &str = ".wixburn";
+
+        pe.section_by_name(WIXBURN_HEADER).is_some()
     }
 
     pub const fn to_nested(self) -> Option<NestedInstallerType> {
