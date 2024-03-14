@@ -46,8 +46,9 @@ impl InstallerType {
             APPX | APPX_BUNDLE => return Ok(Self::Appx),
             ZIP => return Ok(Self::Zip),
             EXE => {
+                let vs_version_info = pe.and_then(|pe| VSVersionInfo::parse(pe).ok());
                 return match () {
-                    () if pe.is_some_and(|pe| Self::is_inno(pe)) => Ok(Self::Inno),
+                    () if Self::is_inno(vs_version_info.as_ref()) => Ok(Self::Inno),
                     () if pe
                         .and_then(|pe| Self::is_nullsoft(pe).ok())
                         .unwrap_or(false) =>
@@ -55,7 +56,8 @@ impl InstallerType {
                         Ok(Self::Nullsoft)
                     }
                     () if pe.is_some_and(|pe| Self::is_burn(pe)) => Ok(Self::Burn),
-                    () => Ok(Self::Exe),
+                    () if Self::is_basic_installer(vs_version_info.as_ref()) => Ok(Self::Exe),
+                    () => Ok(Self::Portable),
                 };
             }
             _ => {}
@@ -122,27 +124,22 @@ impl InstallerType {
     }
 
     /// Checks the String File Info of the exe for whether its comment states that it was built with Inno Setup
-    fn is_inno<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> bool
-    where
-        Pe: ImageNtHeaders,
-        R: ReadRef<'data>,
-    {
+    fn is_inno(vs_version_info: Option<&VSVersionInfo>) -> bool {
         const COMMENTS: &str = "Comments";
         const INNO_COMMENT: &str = "This installation was built with Inno Setup.";
 
-        VSVersionInfo::parse(pe)
-            .ok()
-            .and_then(|info| info.string_file_info)
-            .is_some_and(|mut string_info| {
-                string_info
-                    .children
-                    .swap_remove(0)
-                    .children
-                    .into_iter()
-                    .find(|entry| String::from_utf16_lossy(entry.header.key) == COMMENTS)
-                    .map(|entry| String::from_utf16_lossy(entry.value))
-                    .as_deref()
-                    == Some(INNO_COMMENT)
+        vs_version_info
+            .and_then(|info| info.string_file_info.as_ref())
+            .is_some_and(|string_info| {
+                string_info.children.first().is_some_and(|vs_string_table| {
+                    vs_string_table
+                        .children
+                        .iter()
+                        .find(|entry| String::from_utf16_lossy(entry.header.key) == COMMENTS)
+                        .map(|entry| String::from_utf16_lossy(entry.value))
+                        .as_deref()
+                        == Some(INNO_COMMENT)
+                })
             })
     }
 
@@ -154,6 +151,28 @@ impl InstallerType {
         const WIXBURN_HEADER: &str = ".wixburn";
 
         pe.section_by_name(WIXBURN_HEADER).is_some()
+    }
+
+    fn is_basic_installer(vs_version_info: Option<&VSVersionInfo>) -> bool {
+        const FILE_DESCRIPTION: &str = "FileDescription";
+
+        vs_version_info
+            .and_then(|info| info.string_file_info.as_ref())
+            .is_some_and(|string_info| {
+                string_info.children.first().is_some_and(|vs_string_table| {
+                    vs_string_table
+                        .children
+                        .iter()
+                        .find(|entry| {
+                            String::from_utf16_lossy(entry.header.key) == FILE_DESCRIPTION
+                        })
+                        .map(|entry| String::from_utf16_lossy(entry.value))
+                        .is_some_and(|mut description| {
+                            description.make_ascii_lowercase();
+                            description.contains("installer") || description.contains("setup")
+                        })
+                })
+            })
     }
 
     pub const fn to_nested(self) -> Option<NestedInstallerType> {
