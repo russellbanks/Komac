@@ -2,8 +2,8 @@ name: Release
 
 on:
   workflow_run:
-    workflows: ["Cargo Build & Test"]
-    branches: [main]
+    workflows: [ "Cargo Build & Test" ]
+    branches: [ main ]
     types:
       - completed
   push:
@@ -112,7 +112,12 @@ jobs:
 
       - name: Create Deb package
         if: ${{ matrix.platform.os_name == 'linux' }}
-        run: cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip
+        run: |
+          if [ ${{ github.event_name }} == 'workflow_run' ]; then
+            cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip --deb-version="nightly"
+          else
+            cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip
+          fi
 
       - name: Rename binary
         id: rename_binary
