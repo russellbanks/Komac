@@ -154,6 +154,7 @@ impl InstallerType {
     }
 
     fn is_basic_installer(vs_version_info: Option<&VSVersionInfo>) -> bool {
+        const ORIGINAL_FILENAME: &str = "OriginalFilename";
         const FILE_DESCRIPTION: &str = "FileDescription";
 
         vs_version_info
@@ -163,14 +164,16 @@ impl InstallerType {
                     vs_string_table
                         .children
                         .iter()
-                        .find(|entry| {
-                            String::from_utf16_lossy(entry.header.key) == FILE_DESCRIPTION
+                        .filter(|entry| {
+                            let key = String::from_utf16_lossy(entry.header.key);
+                            key == FILE_DESCRIPTION || key == ORIGINAL_FILENAME
                         })
-                        .map(|entry| String::from_utf16_lossy(entry.value))
-                        .is_some_and(|mut description| {
-                            description.make_ascii_lowercase();
-                            description.contains("installer") || description.contains("setup")
+                        .map(|entry| {
+                            let mut value = String::from_utf16_lossy(entry.value);
+                            value.make_ascii_lowercase();
+                            value
                         })
+                        .any(|value| value.contains("installer") || value.contains("setup"))
                 })
             })
     }
