@@ -60,7 +60,7 @@ tempfile = "3.10.1"
 thiserror = "1.0.58"
 tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "fs"] }
 url = { version = "2.5.0", features = ["serde"] }
-uuid = { version = "1.7.0", features = ["v4"] }
+uuid = { version = "1.8.0", features = ["v4"] }
 versions = "6.2.0"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
