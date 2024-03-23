@@ -75,6 +75,6 @@ cynic-codegen = { version = "3.4.3", features = ["rkyv"] }
 windows_exe_info = { version = "0.4.2", features = ["manifest"] }
 
 [dev-dependencies]
-indoc = "2.0.4"
+indoc = "2.0.5"
 rstest = "0.18.2"
 sha1 = "0.10.6"
