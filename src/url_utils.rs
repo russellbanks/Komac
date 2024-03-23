@@ -1,6 +1,6 @@
 use crate::types::architecture::Architecture;
 
-const VALID_FILE_EXTENSIONS: [&str; 7] = [
+pub const VALID_FILE_EXTENSIONS: [&str; 7] = [
     "msix",
     "msi",
     "appx",

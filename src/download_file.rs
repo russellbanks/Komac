@@ -20,7 +20,7 @@ use uuid::Uuid;
 
 use crate::file_analyser::FileAnalyser;
 use crate::types::urls::url::Url;
-use crate::url_utils::find_architecture;
+use crate::url_utils::{find_architecture, VALID_FILE_EXTENSIONS};
 
 async fn download_file(
     client: &Client,
@@ -119,7 +119,13 @@ fn get_file_name(
     }
     url.path_segments()
         .and_then(|mut segments| segments.next_back())
-        .filter(|last_segment| Utf8Path::new(last_segment).extension().is_some())
+        .filter(|last_segment| {
+            if let Some(extension) = Utf8Path::new(last_segment).extension() {
+                VALID_FILE_EXTENSIONS.contains(&extension)
+            } else {
+                false
+            }
+        })
         .or_else(|| {
             final_url
                 .path_segments()
