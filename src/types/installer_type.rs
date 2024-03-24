@@ -156,6 +156,7 @@ impl InstallerType {
     fn is_basic_installer(vs_version_info: Option<&VSVersionInfo>) -> bool {
         const ORIGINAL_FILENAME: &str = "OriginalFilename";
         const FILE_DESCRIPTION: &str = "FileDescription";
+        const BASIC_INSTALLER_KEYWORDS: [&str; 3] = ["installer", "setup", "7zs.sfx"];
 
         vs_version_info
             .and_then(|info| info.string_file_info.as_ref())
@@ -173,7 +174,11 @@ impl InstallerType {
                             value.make_ascii_lowercase();
                             value
                         })
-                        .any(|value| value.contains("installer") || value.contains("setup"))
+                        .any(|value| {
+                            BASIC_INSTALLER_KEYWORDS
+                                .iter()
+                                .any(|keyword| value.contains(keyword))
+                        })
                 })
             })
     }
