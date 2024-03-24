@@ -7,7 +7,7 @@ use std::io::Cursor;
 
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
-use color_eyre::eyre::{eyre, Result, WrapErr};
+use color_eyre::eyre::{bail, eyre, Result};
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
@@ -40,11 +40,15 @@ async fn download_file(
         }
     }
 
-    let res = client
-        .get(url.as_str())
-        .send()
-        .await
-        .wrap_err_with(|| format!("Failed to GET from '{url}'"))?;
+    let res = client.get(url.as_str()).send().await?;
+
+    if let Err(err) = res.error_for_status_ref() {
+        bail!(
+            "{} returned {}",
+            err.url().unwrap().as_str(),
+            err.status().unwrap()
+        )
+    }
 
     let content_disposition = res.headers().get(CONTENT_DISPOSITION);
     let file_name = get_file_name(&url, res.url(), content_disposition);
