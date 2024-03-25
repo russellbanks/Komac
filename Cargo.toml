@@ -25,21 +25,21 @@ strip = true
 [dependencies]
 base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
-bitflags = "2.4.2"
+bitflags = "2.5.0"
 camino = { version = "1.1.6", features = ["serde1"] }
-chrono = { version = "0.4.34", features = ["serde"] }
-clap = { version = "4.5.1", features = ["derive", "cargo", "env"] }
-color-eyre = { version = "0.6.2", default-features = false }
+chrono = { version = "0.4.35", features = ["serde"] }
+clap = { version = "4.5.3", features = ["derive", "cargo", "env"] }
+color-eyre = { version = "0.6.3", default-features = false }
 const_format = "0.2.32"
 crossterm = "0.27.0"
-cynic = { version = "3.4.3", features = ["http-reqwest"] }
+cynic = { version = "3.5.0", features = ["http-reqwest"] }
 derive_more = "0.99.17"
 futures = "0.3.30"
 futures-util = "0.3.30"
 heapless = "0.8.0"
-indexmap = "2.2.3"
+indexmap = "2.2.6"
 indicatif = "0.17.8"
-inquire = "0.6.2"
+inquire = "0.7.4"
 itertools = "0.12.1"
 keyring = "2.3.2"
 memmap2 = "0.9.4"
@@ -47,39 +47,59 @@ msi = "0.7.0"
 num-traits = "0.2.18"
 num_cpus = "1.16.0"
 nutype = { version = "0.4.0", features = ["serde"] }
-object = "0.32.2"
+object = "0.34.0"
+open = "5.1.2"
 ordinal = "0.3.2"
-oxilangtag = { version = "0.1.3", features = ["serde"] }
+oxilangtag = { version = "0.1.5", features = ["serde"] }
 package-family-name = "1.1.0"
 percent-encoding = "2.3.1"
 pulldown-cmark = "0.10.0"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
 rand = "0.8.5"
+reqwest = { version = "0.12.2", features = ["stream"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
-serde_with = { version = "3.6.1", features = ["macros"] }
-serde_yaml = "0.9.32"
+serde_with = { version = "3.7.0", features = ["macros"] }
+serde_yaml = "0.9.34"
 sha2 = "0.10.8"
-strum = { version = "0.26.1", features = ["derive"] }
-tempfile = "3.10.0"
-thiserror = "1.0.57"
+strum = { version = "0.26.2", features = ["derive"] }
+tempfile = "3.10.1"
+thiserror = "1.0.58"
 tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "fs"] }
 url = { version = "2.5.0", features = ["serde"] }
-uuid = { version = "1.7.0", features = ["v4"] }
-versions = "6.1.0"
+uuid = { version = "1.8.0", features = ["v4"] }
+versions = "6.2.0"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
-[target.'cfg(any(windows, target_os = "macos"))'.dependencies]
-reqwest = { version = "0.11.24", features = ["stream"] }
-
-[target.'cfg(not(any(windows, target_os = "macos")))'.dependencies]
-reqwest = { version = "0.11.24", default-features = false, features = ["stream", "rustls-tls"] }
-
 [build-dependencies]
-cynic-codegen = { version = "3.4.3", features = ["rkyv"] }
+cynic-codegen = { version = "3.5.0", features = ["rkyv"] }
 windows_exe_info = { version = "0.4.2", features = ["manifest"] }
 
 [dev-dependencies]
-indoc = "2.0.4"
+indoc = "2.0.5"
 rstest = "0.18.2"
 sha1 = "0.10.6"
+
+[package.metadata.cross.target.x86_64-unknown-linux-gnu]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
+]
+
+[package.metadata.cross.target.i686-unknown-linux-gnu]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
+]
+
+[package.metadata.cross.target.aarch64-unknown-linux-gnu]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
+]
+
+[package.metadata.cross.target.armv7-unknown-linux-gnueabihf]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
+]

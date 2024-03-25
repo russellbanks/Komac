@@ -1,5 +1,4 @@
-use crate::commands::update_version::reorder_keys;
-use crate::commands::utils::{prompt_existing_pull_request, write_changes_to_dir};
+use crate::commands::utils::{prompt_existing_pull_request, reorder_keys, write_changes_to_dir};
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -45,6 +44,7 @@ use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use base64ct::Encoding;
 use camino::Utf8PathBuf;
@@ -62,7 +62,6 @@ use std::num::{NonZeroU32, NonZeroU8};
 use std::ops::Not;
 use std::time::Duration;
 use strum::IntoEnumIterator;
-use url::Url;
 
 #[derive(Parser)]
 pub struct NewVersion {
@@ -132,9 +131,21 @@ pub struct NewVersion {
     #[arg(short, long)]
     submit: bool,
 
+    /// Name of external tool that invoked Komac
+    #[arg(long, env = "KOMAC_CREATED_WITH")]
+    created_with: Option<String>,
+
+    /// URL to external tool that invoked Komac
+    #[arg(long, env = "KOMAC_CREATED_WITH_URL")]
+    created_with_url: Option<Url>,
+
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
     output: Option<Utf8PathBuf>,
+
+    /// Open pull request link automatically
+    #[arg(long, env = "OPEN_PR")]
+    open_pr: bool,
 
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -215,7 +226,7 @@ impl NewVersion {
                     parts[4..parts.len() - 1].join("/"),
                 )
             });
-        let mut download_results = process_files(files, None).await?;
+        let mut download_results = process_files(files).await?;
         let mut installers = BTreeSet::new();
         for (url, analyser) in &mut download_results {
             if analyser.installer_type == InstallerType::Exe
@@ -250,7 +261,7 @@ impl NewVersion {
                     .as_mut()
                     .and_then(|zip| mem::take(&mut zip.nested_installer_files)),
                 scope: Scope::find_from_url(url.as_str()),
-                installer_url: url.clone().into(),
+                installer_url: url.clone(),
                 installer_sha_256: mem::take(&mut analyser.installer_sha_256),
                 signature_sha_256: mem::take(&mut analyser.signature_sha_256),
                 installer_switches: installer_switches
@@ -357,14 +368,20 @@ impl NewVersion {
             let mut path_content_map = Vec::new();
             path_content_map.push((
                 format!("{full_package_path}/{package_identifier}.installer.yaml"),
-                build_manifest_string(&Manifest::Installer(&installer_manifest))?,
+                build_manifest_string(
+                    &Manifest::Installer(&installer_manifest),
+                    &self.created_with,
+                )?,
             ));
             path_content_map.push((
                 format!(
                     "{full_package_path}/{}.locale.{}.yaml",
                     package_identifier, version_manifest.default_locale
                 ),
-                build_manifest_string(&Manifest::DefaultLocale(&default_locale_manifest))?,
+                build_manifest_string(
+                    &Manifest::DefaultLocale(&default_locale_manifest),
+                    &self.created_with,
+                )?,
             ));
             if let Some(locale_manifests) = manifests.map(|manifests| manifests.locale_manifests) {
                 locale_manifests
@@ -375,8 +392,10 @@ impl NewVersion {
                         ..locale_manifest
                     })
                     .for_each(|locale_manifest| {
-                        if let Ok(yaml) = build_manifest_string(&Manifest::Locale(&locale_manifest))
-                        {
+                        if let Ok(yaml) = build_manifest_string(
+                            &Manifest::Locale(&locale_manifest),
+                            &self.created_with,
+                        ) {
                             path_content_map.push((
                                 format!(
                                     "{full_package_path}/{}.locale.{}.yaml",
@@ -389,12 +408,12 @@ impl NewVersion {
             }
             path_content_map.push((
                 format!("{full_package_path}/{package_identifier}.yaml"),
-                build_manifest_string(&Manifest::Version(&version_manifest))?,
+                build_manifest_string(&Manifest::Version(&version_manifest), &self.created_with)?,
             ));
             path_content_map
         };
 
-        print_changes(&changes);
+        print_changes(changes.iter().map(|(_, content)| content.as_str()));
 
         if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
@@ -460,7 +479,12 @@ impl NewVersion {
                 &format!("{current_user}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,
-                &get_pull_request_body(self.resolves, None),
+                &get_pull_request_body(
+                    self.resolves,
+                    None,
+                    self.created_with,
+                    self.created_with_url,
+                ),
             )
             .await?;
 
@@ -471,6 +495,10 @@ impl NewVersion {
             "Successfully".green()
         );
         println!("{}", pull_request_url.as_str());
+
+        if self.open_pr {
+            open::that(pull_request_url.as_str())?;
+        }
 
         Ok(())
     }

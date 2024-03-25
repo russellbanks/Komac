@@ -39,10 +39,10 @@ impl Manifest<'_> {
     }
 }
 
-pub fn print_changes(changes: &Vec<(String, String)>) {
+pub fn print_changes<'a>(contents: impl Iterator<Item = &'a str>) {
     let mut lock = io::stdout().lock();
 
-    for (_, content) in changes {
+    for content in contents {
         print_manifest(&mut lock, content);
         let _ = writeln!(lock);
     }
@@ -64,9 +64,9 @@ fn print_manifest(lock: &mut StdoutLock, manifest: &str) {
     }
 }
 
-pub fn build_manifest_string(manifest: &Manifest) -> Result<String> {
+pub fn build_manifest_string(manifest: &Manifest, created_with: &Option<String>) -> Result<String> {
     let mut result = Vec::from("# Created with ");
-    if let Ok(created_with_tool) = env::var("KOMAC_CREATED_WITH") {
+    if let Some(created_with_tool) = created_with {
         write!(result, "{created_with_tool} using ")?;
     }
     writeln!(result, "{} v{}", crate_name!(), crate_version!())?;
@@ -120,7 +120,7 @@ mod tests {
     fn test_build_manifest_string_crlf() {
         let binding = InstallerManifest::default();
         let installer_manifest = Manifest::Installer(&binding);
-        let manifest_string = build_manifest_string(&installer_manifest).unwrap();
+        let manifest_string = build_manifest_string(&installer_manifest, &None).unwrap();
         assert!(!contains_newline_not_preceded_by_carriage_return(
             &manifest_string
         ));

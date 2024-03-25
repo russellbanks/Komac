@@ -1,8 +1,13 @@
-use crate::file_analyser::FileAnalyser;
-use crate::url_utils::find_architecture;
+use std::borrow::Cow;
+use std::cmp::min;
+use std::collections::HashMap;
+use std::fs::File;
+use std::future::Future;
+use std::io::Cursor;
+
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
-use color_eyre::eyre::{eyre, Result, WrapErr};
+use color_eyre::eyre::{bail, eyre, Result};
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
@@ -10,19 +15,16 @@ use memmap2::Mmap;
 use reqwest::header::{HeaderValue, CONTENT_DISPOSITION, LAST_MODIFIED};
 use reqwest::{Client, Response};
 use sha2::{Digest, Sha256};
-use std::borrow::Cow;
-use std::cmp::min;
-use std::collections::HashMap;
-use std::fs::File;
-use std::future::Future;
-use std::io::Cursor;
 use tokio::io::AsyncWriteExt;
-use url::Url;
 use uuid::Uuid;
+
+use crate::file_analyser::FileAnalyser;
+use crate::types::urls::url::Url;
+use crate::url_utils::{find_architecture, VALID_FILE_EXTENSIONS};
 
 async fn download_file(
     client: &Client,
-    mut url: Url,
+    mut url: url::Url,
     multi_progress: &MultiProgress,
 ) -> Result<DownloadedFile> {
     if url.scheme() == "http" {
@@ -38,11 +40,15 @@ async fn download_file(
         }
     }
 
-    let res = client
-        .get(url.as_str())
-        .send()
-        .await
-        .wrap_err_with(|| format!("Failed to GET from '{url}'"))?;
+    let res = client.get(url.as_str()).send().await?;
+
+    if let Err(err) = res.error_for_status_ref() {
+        bail!(
+            "{} returned {}",
+            err.url().unwrap().as_str(),
+            err.status().unwrap()
+        )
+    }
 
     let content_disposition = res.headers().get(CONTENT_DISPOSITION);
     let file_name = get_file_name(&url, res.url(), content_disposition);
@@ -84,7 +90,7 @@ async fn download_file(
     pb.finish_and_clear();
 
     Ok(DownloadedFile {
-        url,
+        url: url.into(),
         file: temp_file,
         sha_256: base16ct::upper::encode_string(&hasher.finalize()),
         file_name,
@@ -92,7 +98,11 @@ async fn download_file(
     })
 }
 
-fn get_file_name(url: &Url, final_url: &Url, content_disposition: Option<&HeaderValue>) -> String {
+fn get_file_name(
+    url: &url::Url,
+    final_url: &url::Url,
+    content_disposition: Option<&HeaderValue>,
+) -> String {
     if let Some(content_disposition) = content_disposition.and_then(|value| value.to_str().ok()) {
         let mut sections = content_disposition.split(';');
         let _disposition = sections.next();
@@ -113,7 +123,13 @@ fn get_file_name(url: &Url, final_url: &Url, content_disposition: Option<&Header
     }
     url.path_segments()
         .and_then(|mut segments| segments.next_back())
-        .filter(|last_segment| Utf8Path::new(last_segment).extension().is_some())
+        .filter(|last_segment| {
+            if let Some(extension) = Utf8Path::new(last_segment).extension() {
+                VALID_FILE_EXTENSIONS.contains(&extension)
+            } else {
+                false
+            }
+        })
         .or_else(|| {
             final_url
                 .path_segments()
@@ -129,7 +145,7 @@ pub fn download_urls<'a>(
 ) -> impl Iterator<Item = impl Future<Output = Result<DownloadedFile>> + 'a> {
     urls.into_iter()
         .unique()
-        .map(|url| download_file(client, url, multi_progress))
+        .map(|url| download_file(client, url.into_inner(), multi_progress))
 }
 
 pub struct DownloadedFile {
@@ -142,7 +158,6 @@ pub struct DownloadedFile {
 
 pub async fn process_files<'a>(
     files: Vec<DownloadedFile>,
-    zip_relative_file_path: Option<&Utf8Path>,
 ) -> Result<HashMap<Url, FileAnalyser<'a>>> {
     stream::iter(files.into_iter().map(
         |DownloadedFile {
@@ -153,12 +168,8 @@ pub async fn process_files<'a>(
              last_modified,
          }| async move {
             let map = unsafe { Mmap::map(&file) }?;
-            let mut file_analyser = FileAnalyser::new(
-                Cursor::new(map.as_ref()),
-                Cow::Owned(file_name),
-                false,
-                zip_relative_file_path,
-            )?;
+            let mut file_analyser =
+                FileAnalyser::new(Cursor::new(map.as_ref()), Cow::Owned(file_name))?;
             file_analyser.architecture =
                 find_architecture(url.as_str()).or(file_analyser.architecture);
             file_analyser.installer_sha_256 = sha_256;

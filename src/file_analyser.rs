@@ -13,9 +13,11 @@ use crate::types::publisher::Publisher;
 use crate::zip::Zip;
 use camino::Utf8Path;
 use chrono::NaiveDate;
-use color_eyre::eyre::{OptionExt, Result};
-use object::pe::{ImageNtHeaders64, RT_RCDATA};
-use object::read::pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64, ResourceDirectoryEntryData};
+use color_eyre::eyre::{Error, OptionExt, Result};
+use object::pe::{ImageNtHeaders64, ImageResourceDirectoryEntry, RT_RCDATA};
+use object::read::pe::{
+    ImageNtHeaders, PeFile, PeFile32, PeFile64, ResourceDirectory, ResourceDirectoryEntryData,
+};
 use object::{FileKind, LittleEndian, ReadCache, ReadRef};
 use std::borrow::Cow;
 use std::collections::BTreeSet;
@@ -50,12 +52,7 @@ pub struct FileAnalyser<'a> {
 }
 
 impl<'a> FileAnalyser<'a> {
-    pub fn new<R: Read + Seek>(
-        mut reader: R,
-        file_name: Cow<'a, str>,
-        nested: bool,
-        zip_relative_file_path: Option<&Utf8Path>,
-    ) -> Result<Self> {
+    pub fn new<R: Read + Seek>(mut reader: R, file_name: Cow<'a, str>) -> Result<Self> {
         let extension = Utf8Path::new(file_name.as_ref())
             .extension()
             .unwrap_or_default()
@@ -79,8 +76,9 @@ impl<'a> FileAnalyser<'a> {
                     &extension,
                     msi.as_ref(),
                 )?);
-                if installer_type == Some(InstallerType::Burn) {
-                    msi = Some(extract_msi(&pe_file)?);
+                if let Ok((msi_resource, resource_directory)) = get_msi_resource(&pe_file) {
+                    installer_type = Some(InstallerType::Burn);
+                    msi = Some(extract_msi(&pe_file, msi_resource, resource_directory)?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
                 string_map = VSVersionInfo::parse(&pe_file)
@@ -97,8 +95,9 @@ impl<'a> FileAnalyser<'a> {
                     &extension,
                     msi.as_ref(),
                 )?);
-                if installer_type == Some(InstallerType::Burn) {
-                    msi = Some(extract_msi(&pe_file)?);
+                if let Ok((msi_resource, resource_directory)) = get_msi_resource(&pe_file) {
+                    installer_type = Some(InstallerType::Burn);
+                    msi = Some(extract_msi(&pe_file, msi_resource, resource_directory)?);
                 }
                 pe_arch = Some(Architecture::get_from_exe(&pe_file)?);
                 string_map = VSVersionInfo::parse(&pe_file)
@@ -118,13 +117,9 @@ impl<'a> FileAnalyser<'a> {
             MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(&mut reader)?),
             _ => None,
         };
-        let mut zip = if nested {
-            None
-        } else {
-            match extension.as_str() {
-                ZIP => Some(Zip::new(reader, zip_relative_file_path)?),
-                _ => None,
-            }
+        let mut zip = match extension.as_str() {
+            ZIP => Some(Zip::new(reader)?),
+            _ => None,
         };
         if installer_type.is_none() {
             installer_type = Some(InstallerType::get::<ImageNtHeaders64, &[u8]>(
@@ -142,6 +137,14 @@ impl<'a> FileAnalyser<'a> {
                 .as_ref()
                 .map(|msi| msi.architecture)
                 .or_else(|| msix.as_ref().map(|msix| msix.processor_architecture))
+                .or_else(|| {
+                    msix_bundle.as_ref().and_then(|bundle| {
+                        bundle
+                            .packages
+                            .iter()
+                            .find_map(|package| package.processor_architecture)
+                    })
+                })
                 .or(pe_arch)
                 .or_else(|| {
                     zip.as_mut()
@@ -173,7 +176,9 @@ impl<'a> FileAnalyser<'a> {
     }
 }
 
-pub fn extract_msi<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<Msi>
+fn get_msi_resource<'data, Pe, R>(
+    pe: &PeFile<'data, Pe, R>,
+) -> Result<(&'data ImageResourceDirectoryEntry, ResourceDirectory<'data>)>
 where
     Pe: ImageNtHeaders,
     R: ReadRef<'data>,
@@ -181,32 +186,42 @@ where
     let resource_directory = pe
         .data_directories()
         .resource_directory(pe.data(), &pe.section_table())?
-        .ok_or_eyre("No resource directory")?;
+        .ok_or_eyre("No resource directory was found")?;
+
     let rc_data = resource_directory
         .root()?
         .entries
         .iter()
         .find(|entry| entry.name_or_id().id() == Some(RT_RCDATA))
         .ok_or_eyre("No RT_RCDATA was found")?;
-    let msi = rc_data
-        .data(resource_directory)?
-        .table()
-        .and_then(|table| {
-            table.entries.iter().find(|entry| {
-                entry
-                    .name_or_id()
-                    .name()
-                    .and_then(|name| name.to_string_lossy(resource_directory).ok())
-                    .map(|mut name| {
-                        name.make_ascii_lowercase();
-                        name
-                    })
-                    .as_deref()
-                    == Some(MSI)
-            })
+
+    let msi_resource = rc_data.data(resource_directory)?.table().and_then(|table| {
+        table.entries.iter().find(|entry| {
+            entry
+                .name_or_id()
+                .name()
+                .and_then(|name| name.to_string_lossy(resource_directory).ok())
+                .as_deref()
+                == Some("MSI")
         })
-        .ok_or_eyre("No MSI resource was found")?;
-    let msi_entry = msi
+    });
+
+    msi_resource.map_or_else(
+        || Err(Error::msg("No MSI resource was found")),
+        |entry| Ok((entry, resource_directory)),
+    )
+}
+
+pub fn extract_msi<'data, Pe, R>(
+    pe: &PeFile<'data, Pe, R>,
+    msi_resource: &'data ImageResourceDirectoryEntry,
+    resource_directory: ResourceDirectory,
+) -> Result<Msi>
+where
+    Pe: ImageNtHeaders,
+    R: ReadRef<'data>,
+{
+    let msi_entry = msi_resource
         .data(resource_directory)?
         .table()
         .and_then(|table| table.entries.first())

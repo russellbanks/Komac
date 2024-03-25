@@ -1,0 +1,27 @@
+name: Update local copy of Inno Setup Dependency Installer script
+
+on:
+  schedule:
+    - cron: '0 9 1 * *'
+
+jobs:
+  update-schema:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Download latest Inno Setup Dependency Installer script
+        run: curl -L https://github.com/DomGries/InnoDependencyInstaller/raw/HEAD/CodeDependencies.iss -o assets/CodeDependencies.iss
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Update Inno Setup Dependency Installer script"
+          branch: update-inno-dependencies-script
+          title: "Update Inno Setup Dependency Installer script"
+          body: "This is an automated pull request to update the Inno Setup Dependency Installer script from [DomGries/InnoDependencyInstaller](https://github.com/DomGries/InnoDependencyInstaller)"

@@ -36,6 +36,10 @@ pub struct RemoveVersion {
     #[arg(short, long)]
     submit: bool,
 
+    /// Open pull request link automatically
+    #[arg(long, env = "OPEN_PR")]
+    open_pr: bool,
+
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -149,7 +153,7 @@ impl RemoveVersion {
                 &format!("{current_user}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,
-                &get_pull_request_body(self.resolves, Some(deletion_reason)),
+                &get_pull_request_body(self.resolves, Some(deletion_reason), None, None),
             )
             .await?;
 
@@ -162,6 +166,10 @@ impl RemoveVersion {
             self.package_version
         );
         println!("{}", pull_request_url.as_str());
+
+        if self.open_pr {
+            open::that(pull_request_url.as_str())?;
+        }
 
         Ok(())
     }

@@ -108,7 +108,7 @@ impl Cleanup {
                 "Please select branches to delete",
                 pull_requests.keys().collect(),
             )
-            .with_default(&(0..pull_requests.len()).collect::<Vec<_>>())
+            .with_all_selected_by_default()
             .with_page_size(10)
             .prompt()?
         };
