@@ -138,7 +138,9 @@ impl UpdateVersion {
             .map(|(url, download)| Installer {
                 architecture: download.architecture.unwrap_or_default(),
                 installer_type: Some(download.installer_type),
-                scope: Scope::find_from_url(url.as_str()),
+                scope: download
+                    .scope
+                    .or_else(|| Scope::find_from_url(url.as_str())),
                 installer_url: url.clone(),
                 ..Installer::default()
             })

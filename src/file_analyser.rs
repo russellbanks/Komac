@@ -1,5 +1,5 @@
 use crate::exe::vs_version_info::VSVersionInfo;
-use crate::manifests::installer_manifest::Platform;
+use crate::manifests::installer_manifest::{Platform, Scope};
 use crate::msi::Msi;
 use crate::msix_family::msix::Msix;
 use crate::msix_family::msixbundle::MsixBundle;
@@ -37,6 +37,7 @@ pub struct FileAnalyser<'a> {
     pub minimum_os_version: Option<MinimumOSVersion>,
     pub architecture: Option<Architecture>,
     pub installer_type: InstallerType,
+    pub scope: Option<Scope>,
     pub installer_sha_256: String,
     pub signature_sha_256: Option<String>,
     pub package_family_name: Option<String>,
@@ -151,6 +152,7 @@ impl<'a> FileAnalyser<'a> {
                         .and_then(|zip| mem::take(&mut zip.architecture))
                 }),
             installer_type: installer_type.unwrap(),
+            scope: msi.as_ref().and_then(|msi| msi.all_users),
             installer_sha_256: String::new(),
             signature_sha_256: msix
                 .as_mut()

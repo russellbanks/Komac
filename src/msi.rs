@@ -1,3 +1,4 @@
+use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
 use crate::types::language_tag::LanguageTag;
 use color_eyre::eyre::{bail, Result};
@@ -14,6 +15,7 @@ pub struct Msi {
     pub product_version: String,
     pub manufacturer: String,
     pub product_language: LanguageTag,
+    pub all_users: Option<Scope>,
     pub is_wix: bool,
 }
 
@@ -24,6 +26,7 @@ const PRODUCT_NAME: &str = "ProductName";
 const PRODUCT_VERSION: &str = "ProductVersion";
 const MANUFACTURER: &str = "Manufacturer";
 const UPGRADE_CODE: &str = "UpgradeCode";
+const ALL_USERS: &str = "ALLUSERS";
 const WIX: &str = "wix";
 
 impl Msi {
@@ -62,6 +65,12 @@ impl Msi {
                 Language::from_code(u16::from_str(property_map.get(PRODUCT_LANGUAGE).unwrap())?)
                     .tag(),
             )?,
+            // https://learn.microsoft.com/windows/win32/msi/allusers
+            all_users: match property_map.remove(ALL_USERS).unwrap_or_default().as_str() {
+                "1" => Some(Scope::Machine),
+                "2" => None, // Installs depending on installation context and user privileges
+                _ => Some(Scope::User), // No value or an empty string specifies per-user context
+            },
             is_wix: property_map.into_keys().any(|mut property| {
                 property.make_ascii_lowercase();
                 property.contains(WIX)
