@@ -113,7 +113,7 @@ fn get_file_name(
             let value = parts.next().map(str::trim);
             if let (Some(key), Some(value)) = (key, value) {
                 if key.starts_with("filename") {
-                    let trimmed = value.trim_matches('"');
+                    let trimmed = value.trim_matches('"').trim();
                     if !trimmed.is_empty() {
                         return trimmed.to_owned();
                     }
