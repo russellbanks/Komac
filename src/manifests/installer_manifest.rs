@@ -114,8 +114,8 @@ pub enum Scope {
 impl Scope {
     pub fn find_from_url(url: &str) -> Option<Self> {
         match url.to_ascii_lowercase() {
+            url if url.contains("all-users") || url.contains("machine") => Some(Self::Machine),
             url if url.contains("user") => Some(Self::User),
-            url if url.contains("machine") => Some(Self::Machine),
             _ => None,
         }
     }
