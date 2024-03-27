@@ -266,7 +266,7 @@ impl NewVersion {
                 installer_sha_256: mem::take(&mut analyser.installer_sha_256),
                 signature_sha_256: mem::take(&mut analyser.signature_sha_256),
                 installer_switches: installer_switches
-                    .are_all_some()
+                    .is_any_some()
                     .then_some(installer_switches),
                 package_family_name: mem::take(&mut analyser.package_family_name),
                 product_code: mem::take(&mut analyser.product_code),

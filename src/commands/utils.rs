@@ -122,7 +122,7 @@ pub fn reorder_keys(
             upgrade: root_installer_switch_key!(upgrade),
             custom: root_installer_switch_key!(custom),
         })
-        .filter(InstallerSwitches::are_all_some),
+        .filter(InstallerSwitches::is_any_some),
         installer_success_codes: root_manifest_key!(installer_success_codes),
         expected_return_codes: root_manifest_key!(expected_return_codes),
         upgrade_behavior: root_manifest_key!(upgrade_behavior),
@@ -206,7 +206,7 @@ fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Install
                 upgrade: installer_switch_key!(installer, upgrade),
                 custom: installer_switch_key!(installer, custom),
             })
-            .filter(InstallerSwitches::are_all_some),
+            .filter(InstallerSwitches::is_any_some),
             installer_success_codes: installer_key!(installer, installer_success_codes),
             expected_return_codes: installer_key!(installer, expected_return_codes),
             upgrade_behavior: installer_key!(installer, upgrade_behavior),

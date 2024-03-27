@@ -145,27 +145,14 @@ pub struct InstallerSwitches {
 }
 
 impl InstallerSwitches {
-    pub const fn are_all_some(&self) -> bool {
-        matches!(
-            (
-                &self.silent,
-                &self.silent_with_progress,
-                &self.interactive,
-                &self.install_location,
-                &self.log,
-                &self.upgrade,
-                &self.custom,
-            ),
-            (
-                Some(_),
-                Some(_),
-                Some(_),
-                Some(_),
-                Some(_),
-                Some(_),
-                Some(_)
-            )
-        )
+    pub const fn is_any_some(&self) -> bool {
+        self.silent.is_some()
+            || self.silent_with_progress.is_some()
+            || self.interactive.is_some()
+            || self.install_location.is_some()
+            || self.log.is_some()
+            || self.upgrade.is_some()
+            || self.custom.is_some()
     }
 }
 
