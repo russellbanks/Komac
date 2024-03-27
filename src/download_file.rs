@@ -8,6 +8,7 @@ use std::io::Cursor;
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
 use color_eyre::eyre::{bail, eyre, Result};
+use const_format::formatcp;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
@@ -98,37 +99,64 @@ async fn download_file(
     })
 }
 
+/// Gets the filename from a URL given the URL, a final redirected URL, and an optional
+/// Content-Disposition header.
+///
+/// This works by getting the filename from the Content-Disposition header. It aims to mimic
+/// Firefox's functionality whereby the filename* parameter is prioritised over filename even if
+/// both are provided. See [Content-Disposition](https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Disposition).
+///
+/// If there is no Content-Disposition header or no filenames in the Content-Disposition, it falls
+/// back to getting the last part of the initial URL and then the final redirected URL if the
+/// initial URL does not have a valid file extension at the end.
 fn get_file_name(
     url: &url::Url,
     final_url: &url::Url,
     content_disposition: Option<&HeaderValue>,
 ) -> String {
+    const FILENAME: &str = "filename";
+    const FILENAME_EXT: &str = formatcp!("{FILENAME}*");
+
     if let Some(content_disposition) = content_disposition.and_then(|value| value.to_str().ok()) {
         let mut sections = content_disposition.split(';');
-        let _disposition = sections.next();
-        for section in sections {
-            let mut parts = section.splitn(2, '=');
-
-            let key = parts.next().map(str::trim);
-            let value = parts.next().map(str::trim);
-            if let (Some(key), Some(value)) = (key, value) {
-                if key.starts_with("filename") {
-                    let trimmed = value.trim_matches('"').trim();
-                    if !trimmed.is_empty() {
-                        return trimmed.to_owned();
+        let _disposition = sections.next(); // Skip the disposition type
+        let filenames = sections
+            .filter_map(|section| {
+                let mut parts = section.splitn(2, '=').map(str::trim);
+                if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+                    if key.starts_with(FILENAME) {
+                        let value = value.trim_matches('"').trim();
+                        if !value.is_empty() {
+                            return Some((key, value));
+                        }
                     }
                 }
-            }
+                None
+            })
+            .collect::<Vec<_>>();
+
+        let filename = filenames
+            .iter()
+            .find_map(|&(key, value)| (key == FILENAME_EXT).then_some(value))
+            .or_else(|| {
+                filenames
+                    .into_iter()
+                    .find_map(|(key, value)| (key == FILENAME).then_some(value))
+            });
+        if let Some(filename) = filename {
+            return filename.to_owned();
         }
     }
+
+    // Fallback if there is no Content-Disposition header or no filenames in Content-Disposition
     url.path_segments()
         .and_then(|mut segments| segments.next_back())
         .filter(|last_segment| {
-            if let Some(extension) = Utf8Path::new(last_segment).extension() {
-                VALID_FILE_EXTENSIONS.contains(&extension)
-            } else {
-                false
-            }
+            Utf8Path::new(last_segment)
+                .extension()
+                .map_or(false, |extension| {
+                    VALID_FILE_EXTENSIONS.contains(&extension)
+                })
         })
         .or_else(|| {
             final_url
