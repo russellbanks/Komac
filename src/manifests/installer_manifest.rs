@@ -145,7 +145,7 @@ pub struct InstallerSwitches {
 }
 
 impl InstallerSwitches {
-    pub const fn are_all_none(&self) -> bool {
+    pub const fn are_all_some(&self) -> bool {
         matches!(
             (
                 &self.silent,
@@ -156,7 +156,15 @@ impl InstallerSwitches {
                 &self.upgrade,
                 &self.custom,
             ),
-            (None, None, None, None, None, None, None)
+            (
+                Some(_),
+                Some(_),
+                Some(_),
+                Some(_),
+                Some(_),
+                Some(_),
+                Some(_)
+            )
         )
     }
 }

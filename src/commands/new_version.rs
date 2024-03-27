@@ -1,3 +1,20 @@
+use std::collections::BTreeSet;
+use std::mem;
+use std::num::{NonZeroU32, NonZeroU8};
+use std::time::Duration;
+
+use base64ct::Encoding;
+use camino::Utf8PathBuf;
+use clap::Parser;
+use color_eyre::eyre::Result;
+use crossterm::style::Stylize;
+use futures_util::{stream, StreamExt, TryStreamExt};
+use indicatif::{MultiProgress, ProgressBar};
+use inquire::{Confirm, CustomType};
+use ordinal::Ordinal;
+use reqwest::Client;
+use strum::IntoEnumIterator;
+
 use crate::commands::utils::{prompt_existing_pull_request, reorder_keys, write_changes_to_dir};
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
@@ -46,22 +63,6 @@ use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
-use base64ct::Encoding;
-use camino::Utf8PathBuf;
-use clap::Parser;
-use color_eyre::eyre::Result;
-use crossterm::style::Stylize;
-use futures_util::{stream, StreamExt, TryStreamExt};
-use indicatif::{MultiProgress, ProgressBar};
-use inquire::{Confirm, CustomType};
-use ordinal::Ordinal;
-use reqwest::Client;
-use std::collections::BTreeSet;
-use std::mem;
-use std::num::{NonZeroU32, NonZeroU8};
-use std::ops::Not;
-use std::time::Duration;
-use strum::IntoEnumIterator;
 
 #[derive(Parser)]
 pub struct NewVersion {
@@ -265,8 +266,7 @@ impl NewVersion {
                 installer_sha_256: mem::take(&mut analyser.installer_sha_256),
                 signature_sha_256: mem::take(&mut analyser.signature_sha_256),
                 installer_switches: installer_switches
-                    .are_all_none()
-                    .not()
+                    .are_all_some()
                     .then_some(installer_switches),
                 package_family_name: mem::take(&mut analyser.package_family_name),
                 product_code: mem::take(&mut analyser.product_code),

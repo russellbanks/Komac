@@ -1,6 +1,6 @@
 use crate::github::graphql::get_existing_pull_request::PullRequest;
 use crate::github::graphql::get_pull_request_from_branch::PullRequestState;
-use crate::manifests::installer_manifest::{Installer, InstallerManifest};
+use crate::manifests::installer_manifest::{Installer, InstallerManifest, InstallerSwitches};
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -11,9 +11,9 @@ use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::Confirm;
 use itertools::Itertools;
 use std::collections::BTreeSet;
-use std::env;
 use std::ops::Not;
 use std::str::FromStr;
+use std::{env, mem};
 use tokio::fs;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -61,7 +61,7 @@ pub fn reorder_keys(
     package_identifier: PackageIdentifier,
     package_version: PackageVersion,
     installers: BTreeSet<Installer>,
-    installer_manifest: InstallerManifest,
+    mut installer_manifest: InstallerManifest,
 ) -> InstallerManifest {
     macro_rules! root_manifest_key {
         ($field:ident) => {
@@ -81,6 +81,27 @@ pub fn reorder_keys(
         };
     }
 
+    macro_rules! root_installer_switch_key {
+        ($field:ident) => {
+            installers
+                .iter()
+                .all(|installer| {
+                    installer
+                        .installer_switches
+                        .as_ref()
+                        .and_then(|switches| switches.$field.as_ref())
+                        .is_none()
+                })
+                .then(|| {
+                    installer_manifest
+                        .installer_switches
+                        .as_mut()
+                        .and_then(|switches| mem::take(&mut switches.$field))
+                })
+                .flatten()
+        };
+    }
+
     InstallerManifest {
         package_identifier,
         package_version,
@@ -92,7 +113,16 @@ pub fn reorder_keys(
         nested_installer_files: root_manifest_key!(nested_installer_files),
         scope: root_manifest_key!(scope),
         install_modes: root_manifest_key!(install_modes),
-        installer_switches: root_manifest_key!(installer_switches),
+        installer_switches: Option::from(InstallerSwitches {
+            silent: root_installer_switch_key!(silent),
+            silent_with_progress: root_installer_switch_key!(silent_with_progress),
+            interactive: root_installer_switch_key!(interactive),
+            install_location: root_installer_switch_key!(install_location),
+            log: root_installer_switch_key!(log),
+            upgrade: root_installer_switch_key!(upgrade),
+            custom: root_installer_switch_key!(custom),
+        })
+        .filter(InstallerSwitches::are_all_some),
         installer_success_codes: root_manifest_key!(installer_success_codes),
         expected_return_codes: root_manifest_key!(expected_return_codes),
         upgrade_behavior: root_manifest_key!(upgrade_behavior),
@@ -133,10 +163,32 @@ fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Install
                 .flatten()
         };
     }
+    macro_rules! installer_switch_key {
+        ($item: expr, $field: ident) => {
+            installers
+                .iter()
+                .map(|installer| {
+                    installer
+                        .installer_switches
+                        .as_ref()
+                        .and_then(|switches| switches.$field.as_ref())
+                })
+                .all_equal()
+                .not()
+                .then(|| {
+                    $item
+                        .installer_switches
+                        .as_mut()
+                        .and_then(|switches| mem::take(&mut switches.$field))
+                })
+                .flatten()
+        };
+    }
+
     installers
         .iter()
         .cloned()
-        .map(|installer| Installer {
+        .map(|mut installer| Installer {
             installer_locale: installer_key!(installer, installer_locale),
             platform: installer_key!(installer, platform),
             minimum_os_version: installer_key!(installer, minimum_os_version),
@@ -145,7 +197,16 @@ fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Install
             nested_installer_files: installer_key!(installer, nested_installer_files),
             scope: installer_key!(installer, scope),
             install_modes: installer_key!(installer, install_modes),
-            installer_switches: installer_key!(installer, installer_switches),
+            installer_switches: Option::from(InstallerSwitches {
+                silent: installer_switch_key!(installer, silent),
+                silent_with_progress: installer_switch_key!(installer, silent_with_progress),
+                interactive: installer_switch_key!(installer, interactive),
+                install_location: installer_switch_key!(installer, install_location),
+                log: installer_switch_key!(installer, log),
+                upgrade: installer_switch_key!(installer, upgrade),
+                custom: installer_switch_key!(installer, custom),
+            })
+            .filter(InstallerSwitches::are_all_some),
             installer_success_codes: installer_key!(installer, installer_success_codes),
             expected_return_codes: installer_key!(installer, expected_return_codes),
             upgrade_behavior: installer_key!(installer, upgrade_behavior),
