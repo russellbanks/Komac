@@ -39,7 +39,7 @@ pub fn match_installers(
                     score += 1;
                 }
                 if new_installer.installer_type == previous_installer.installer_type {
-                    score += 1;
+                    score += 3;
                 }
                 if new_installer.scope == previous_installer.scope {
                     score += 1;
