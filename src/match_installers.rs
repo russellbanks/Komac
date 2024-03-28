@@ -1,5 +1,6 @@
 use crate::manifests::installer_manifest::{Installer, Scope};
-use crate::url_utils::find_architecture;
+use crate::url_utils::{find_architecture, VALID_FILE_EXTENSIONS};
+use camino::Utf8Path;
 use std::collections::HashMap;
 
 pub fn match_installers(
@@ -43,6 +44,17 @@ pub fn match_installers(
                 }
                 if new_installer.scope == previous_installer.scope {
                     score += 1;
+                }
+                let new_extension = Utf8Path::new(new_installer.installer_url.as_str())
+                    .extension()
+                    .filter(|extension| VALID_FILE_EXTENSIONS.contains(extension))
+                    .unwrap_or_default();
+                let previous_extension = Utf8Path::new(previous_installer.installer_url.as_str())
+                    .extension()
+                    .filter(|extension| VALID_FILE_EXTENSIONS.contains(extension))
+                    .unwrap_or_default();
+                if new_extension != previous_extension {
+                    score = 0;
                 }
 
                 let is_new_architecture = !found_architectures.is_empty()
