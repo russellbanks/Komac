@@ -59,7 +59,7 @@ sha2 = "0.10.8"
 strum = { version = "0.26.2", features = ["derive"] }
 tempfile = "3.10.1"
 thiserror = "1.0.58"
-tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros", "fs"] }
+tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros", "fs"] }
 url = { version = "2.5.0", features = ["serde"] }
 uuid = { version = "1.8.0", features = ["v4"] }
 versions = "6.2.0"
