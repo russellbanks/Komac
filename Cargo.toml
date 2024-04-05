@@ -72,7 +72,7 @@ versions = "6.2.0"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
-cynic-codegen = { version = "3.5.0", features = ["rkyv"] }
+cynic-codegen = { version = "3.5.1", features = ["rkyv"] }
 windows_exe_info = { version = "0.4.2", features = ["manifest"] }
 
 [dev-dependencies]
