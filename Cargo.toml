@@ -32,7 +32,7 @@ clap = { version = "4.5.4", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.3", default-features = false }
 const_format = "0.2.32"
 crossterm = "0.27.0"
-cynic = { version = "3.5.0", features = ["http-reqwest"] }
+cynic = { version = "3.5.1", features = ["http-reqwest"] }
 derive_more = "0.99.17"
 futures = "0.3.30"
 futures-util = "0.3.30"
