@@ -46,7 +46,7 @@ memmap2 = "0.9.4"
 msi = "0.7.0"
 num-traits = "0.2.18"
 num_cpus = "1.16.0"
-nutype = { version = "0.4.0", features = ["serde"] }
+nutype = { version = "0.4.2", features = ["serde"] }
 object = "0.34.0"
 open = "5.1.2"
 ordinal = "0.3.2"
