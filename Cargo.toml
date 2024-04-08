@@ -79,27 +79,3 @@ windows_exe_info = { version = "0.4.2", features = ["manifest"] }
 indoc = "2.0.5"
 rstest = "0.18.2"
 sha1 = "0.10.6"
-
-[package.metadata.cross.target.x86_64-unknown-linux-gnu]
-pre-build = [
-    "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
-]
-
-[package.metadata.cross.target.i686-unknown-linux-gnu]
-pre-build = [
-    "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
-]
-
-[package.metadata.cross.target.aarch64-unknown-linux-gnu]
-pre-build = [
-    "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
-]
-
-[package.metadata.cross.target.armv7-unknown-linux-gnueabihf]
-pre-build = [
-    "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get install --assume-yes libssl-dev:$CROSS_DEB_ARCH"
-]
