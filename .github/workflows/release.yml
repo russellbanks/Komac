@@ -6,9 +6,8 @@ on:
     branches: [ main ]
     types:
       - completed
-  push:
-    tags:
-      - "v*.*.*"
+  release:
+    types: [ released ]
 
 permissions:
   contents: write
