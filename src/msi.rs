@@ -71,9 +71,12 @@ impl Msi {
                 "2" => None, // Installs depending on installation context and user privileges
                 _ => Some(Scope::User), // No value or an empty string specifies per-user context
             },
-            is_wix: property_map.into_keys().any(|mut property| {
+            is_wix: property_map.into_iter().any(|(mut property, mut value)| {
                 property.make_ascii_lowercase();
-                property.contains(WIX)
+                property.contains(WIX) || {
+                    value.make_ascii_lowercase();
+                    value.contains(WIX)
+                }
             }),
         })
     }

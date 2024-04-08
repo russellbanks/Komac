@@ -138,6 +138,10 @@ impl UpdateVersion {
             .map(|(url, download)| Installer {
                 architecture: download.architecture.unwrap_or_default(),
                 installer_type: Some(download.installer_type),
+                nested_installer_type: download
+                    .zip
+                    .as_ref()
+                    .and_then(|zip| zip.nested_installer_type),
                 scope: download
                     .scope
                     .or_else(|| Scope::find_from_url(url.as_str())),
@@ -152,6 +156,9 @@ impl UpdateVersion {
                 installer_type: previous_installer_manifest
                     .installer_type
                     .or(installer.installer_type),
+                nested_installer_type: previous_installer_manifest
+                    .nested_installer_type
+                    .or(installer.nested_installer_type),
                 scope: previous_installer_manifest.scope.or(installer.scope),
                 ..installer
             })
@@ -177,8 +184,17 @@ impl UpdateVersion {
                         Some(InstallerType::Portable) => previous_installer.installer_type,
                         _ => new_installer.installer_type,
                     },
-                    nested_installer_files: previous_installer
-                        .nested_installer_files
+                    nested_installer_type: analyser
+                        .zip
+                        .as_ref()
+                        .and_then(|zip| zip.nested_installer_type)
+                        .or(previous_installer.nested_installer_type)
+                        .or(previous_installer_manifest.nested_installer_type),
+                    nested_installer_files: analyser
+                        .zip
+                        .as_ref()
+                        .and_then(|zip| zip.nested_installer_files.clone())
+                        .or(previous_installer.nested_installer_files)
                         .or_else(|| previous_installer_manifest.nested_installer_files.clone())
                         .and_then(|nested_installer_files| {
                             validate_relative_paths(nested_installer_files, &analyser.zip)
