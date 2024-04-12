@@ -70,11 +70,13 @@ pub async fn validate_token<'a>(client: &Client, token: &'a str) -> Result<&'a s
 
 const MICROSOFT_DELIVERY_OPTIMIZATION: HeaderValue =
     HeaderValue::from_static("Microsoft-Delivery-Optimization/10.1");
+const SEC_GPC: &str = "Sec-GPC";
 
 pub fn get_default_headers(github_token: Option<&str>) -> HeaderMap {
     let mut default_headers = HeaderMap::new();
     default_headers.insert(USER_AGENT, MICROSOFT_DELIVERY_OPTIMIZATION);
     default_headers.insert(DNT, HeaderValue::from(1));
+    default_headers.insert(SEC_GPC, HeaderValue::from(1));
     if let Some(token) = github_token {
         if let Ok(bearer_auth) = HeaderValue::from_str(&format!("Bearer {token}")) {
             default_headers.insert(AUTHORIZATION, bearer_auth);
