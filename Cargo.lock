@@ -740,9 +740,9 @@ dependencies = [
 
 [[package]]
 name = "cynic-codegen"
-version = "3.6.0"
+version = "3.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b5555213d6ad8e9929da77f58d3fbce8924dd1866cc2e9a3d0b61059abaf9f3"
+checksum = "90c1a4d93489285aee1ac751cceeeb3e10507b87c20df6d6231d3a6644ae0f40"
 dependencies = [
  "counter",
  "cynic-parser",
@@ -759,9 +759,9 @@ dependencies = [
 
 [[package]]
 name = "cynic-parser"
-version = "0.2.2"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3898389f11c668b72ddbc9c2d842ed36fe25ac613d3a095a10c60cc08777a664"
+checksum = "46ee97b80d5b3a4957644122b5d467b38fd35dd9ba4e8e65ff1b3ac6ae784fe3"
 dependencies = [
  "indexmap 2.2.6",
  "lalrpop-util",
