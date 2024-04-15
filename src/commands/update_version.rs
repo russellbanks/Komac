@@ -33,6 +33,7 @@ use crate::types::installer_type::InstallerType;
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
+use crate::types::path::NormalizePath;
 use crate::types::urls::url::Url;
 use crate::update_state::UpdateState;
 use crate::zip::Zip;
@@ -190,12 +191,15 @@ impl UpdateVersion {
                         .and_then(|zip| zip.nested_installer_type)
                         .or(previous_installer.nested_installer_type)
                         .or(previous_installer_manifest.nested_installer_type),
-                    nested_installer_files: analyser
-                        .zip
-                        .as_ref()
-                        .and_then(|zip| zip.nested_installer_files.clone())
-                        .or(previous_installer.nested_installer_files)
+                    nested_installer_files: previous_installer
+                        .nested_installer_files
                         .or_else(|| previous_installer_manifest.nested_installer_files.clone())
+                        .or_else(|| {
+                            analyser
+                                .zip
+                                .as_ref()
+                                .and_then(|zip| zip.nested_installer_files.clone())
+                        })
                         .and_then(|nested_installer_files| {
                             validate_relative_paths(nested_installer_files, &analyser.zip)
                         }),
@@ -443,7 +447,7 @@ fn validate_relative_paths(
             if let Some(zip) = zip {
                 return if zip
                     .identified_files
-                    .contains(&nested_installer_files.relative_file_path)
+                    .contains(&nested_installer_files.relative_file_path.normalize())
                 {
                     Some(nested_installer_files)
                 } else {

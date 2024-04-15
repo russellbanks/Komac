@@ -18,6 +18,7 @@ pub mod moniker;
 pub mod package_identifier;
 pub mod package_name;
 pub mod package_version;
+pub mod path;
 pub mod protocol;
 pub mod publisher;
 pub mod release_notes;
