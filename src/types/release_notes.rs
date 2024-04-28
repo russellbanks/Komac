@@ -24,7 +24,7 @@ impl ReleaseNotes {
         for event in parser {
             match event {
                 Start(tag) => match tag {
-                    Tag::CodeBlock(_info) => buffer.push_str("\n\n"),
+                    Tag::CodeBlock(_info) => buffer.push('\n'),
                     Tag::Link {
                         link_type: _,
                         dest_url: _,
@@ -111,7 +111,7 @@ impl ReleaseNotes {
                                 }
                                 result.push('#');
                                 result.push_str(issue_number);
-                            } else if issue_type == "compare" {
+                            } else if issue_type == "compare" || issue_type == "releases" {
                                 result.push_str(url);
                             }
                         }
