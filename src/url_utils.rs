@@ -10,7 +10,7 @@ pub const VALID_FILE_EXTENSIONS: [&str; 7] = [
     "appxbundle",
 ];
 
-const DELIMITERS: [char; 6] = [',', '/', '\\', '.', '_', '-'];
+const DELIMITERS: [char; 8] = [',', '/', '\\', '.', '_', '-', '(', ')'];
 
 const ARCHITECTURES: [(&str, Architecture); 31] = [
     ("x86-64", Architecture::X64),
@@ -109,7 +109,7 @@ mod tests {
             "x86-64", "x86_64", "x64", "64-bit", "64bit", "Win64", "Winx64", "ia64", "amd64"
         )]
         architecture: &str,
-        #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
+        #[values(',', '/', '\\', '.', '_', '-', '(', ')')] delimiter: char,
     ) {
         assert_eq!(
             find_architecture(&format!(
@@ -140,7 +140,7 @@ mod tests {
             "i686", "386", "486", "586", "686"
         )]
         architecture: &str,
-        #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
+        #[values(',', '/', '\\', '.', '_', '-', '(', ')')] delimiter: char,
     ) {
         assert_eq!(
             find_architecture(&format!(
@@ -163,7 +163,7 @@ mod tests {
     #[rstest]
     fn test_arm64_architectures_delimited(
         #[values("arm64ec", "arm64", "aarch64")] architecture: &str,
-        #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
+        #[values(',', '/', '\\', '.', '_', '-', '(', ')')] delimiter: char,
     ) {
         assert_eq!(
             find_architecture(&format!(
@@ -184,7 +184,7 @@ mod tests {
     #[rstest]
     fn test_arm_architectures_delimited(
         #[values("arm", "armv7", "aarch")] architecture: &str,
-        #[values(',', '/', '\\', '.', '_', '-')] delimiter: char,
+        #[values(',', '/', '\\', '.', '_', '-', '(', ')')] delimiter: char,
     ) {
         assert_eq!(
             find_architecture(&format!(
