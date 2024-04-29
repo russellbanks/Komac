@@ -1,6 +1,6 @@
 [package]
 name = "komac"
-version = "2.2.1"
+version = "2.3.0"
 authors = ["Russell Banks"]
 edition = "2021"
 description = "A manifest creator for winget-pkgs"
