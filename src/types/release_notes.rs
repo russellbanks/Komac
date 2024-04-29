@@ -2,6 +2,7 @@ use nutype::nutype;
 use pulldown_cmark::Event::{Code, End, Start, Text};
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::num::NonZeroU32;
 
 #[nutype(
@@ -20,11 +21,16 @@ impl ReleaseNotes {
         let parser = Parser::new_ext(body, options);
         let mut buffer = String::new();
 
-        let mut level = 0;
+        let mut ordered_list_map = HashMap::new();
+        let mut list_item_level = 0;
         for event in parser {
             match event {
                 Start(tag) => match tag {
-                    Tag::CodeBlock(_info) => buffer.push('\n'),
+                    Tag::BlockQuote | Tag::CodeBlock(_) => {
+                        if !buffer.ends_with('\n') {
+                            buffer.push('\n');
+                        }
+                    }
                     Tag::Link {
                         link_type: _,
                         dest_url: _,
@@ -41,34 +47,42 @@ impl ReleaseNotes {
                             buffer.push_str(&title);
                         }
                     }
-                    Tag::List(_) => {
-                        if level >= 1 {
+                    Tag::List(first_index) => {
+                        if let Some(index) = first_index {
+                            ordered_list_map.insert(list_item_level, index);
+                        }
+                        if !buffer.ends_with('\n') {
                             buffer.push('\n');
                         }
                     }
                     Tag::Item => {
-                        for _ in 0..level {
+                        for _ in 0..list_item_level {
                             buffer.push_str("    ");
                         }
-                        level += 1;
-                        buffer.push_str("- ");
+                        if let Some(index) = ordered_list_map.get_mut(&list_item_level) {
+                            buffer.push_str(&format!("{index}. "));
+                            *index += 1;
+                        } else {
+                            buffer.push_str("- ");
+                        }
+                        list_item_level += 1;
                     }
                     _ => (),
                 },
                 End(tag) => match tag {
-                    TagEnd::Table
-                    | TagEnd::TableHead
-                    | TagEnd::TableRow
-                    | TagEnd::Heading(..)
+                    TagEnd::Heading(_)
                     | TagEnd::BlockQuote
-                    | TagEnd::CodeBlock => buffer.push('\n'),
+                    | TagEnd::CodeBlock
+                    | TagEnd::Table
+                    | TagEnd::TableHead
+                    | TagEnd::TableRow => buffer.push('\n'),
                     TagEnd::List(_) => {
-                        if level >= 1 && buffer.chars().next_back().unwrap_or_default() == '\n' {
+                        ordered_list_map.remove(&list_item_level);
+                        if list_item_level >= 1 && buffer.ends_with('\n') {
                             buffer.pop();
                         }
                     }
                     TagEnd::Item => {
-                        level -= 1;
                         let second_last_char_pos = buffer
                             .char_indices()
                             .nth_back(1)
@@ -78,6 +92,7 @@ impl ReleaseNotes {
                         } else {
                             buffer.push('\n');
                         }
+                        list_item_level -= 1;
                     }
                     _ => (),
                 },
@@ -228,6 +243,15 @@ mod tests {
     }
 
     #[test]
+    fn test_release_url() {
+        let value = "Previous release: https://github.com/owner/repo/releases/tag/1.2.3";
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::new(value).ok()
+        )
+    }
+
+    #[test]
     fn test_header_syntax_removed() {
         let value = indoc! {"
         # Header 1
@@ -278,6 +302,25 @@ mod tests {
     }
 
     #[test]
+    fn test_ordered_list() {
+        let value = indoc! {"
+        1. Item number 1
+            1. Item number 1.1
+            2. Item number 1.2
+                1. Item number 1.2.1
+                2. Item number 1.2.2
+                3. Item number 1.2.3
+        2. Item number 2
+            1. Item number 2.1
+            2. Item number 2.2
+        "};
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::new(value).ok()
+        )
+    }
+
+    #[test]
     fn test_nested_list_items() {
         let value = indoc! {"
         - Bullet point 1
@@ -315,10 +358,10 @@ mod tests {
         const CHAR_LIMIT: usize = 100;
 
         let mut buffer = String::new();
-        let mut line_count = 1;
+        let mut line_count = 0;
         while buffer.chars().count() <= CHAR_LIMIT {
-            writeln!(buffer, "Line {line_count}").unwrap();
             line_count += 1;
+            writeln!(buffer, "Line {line_count}").unwrap();
         }
         let formatted = truncate_with_lines(&buffer, CHAR_LIMIT);
         let formatted_char_count = formatted.chars().count();
