@@ -1,5 +1,5 @@
 use crate::manifests::installer_manifest::{Installer, Scope};
-use crate::url_utils::{find_architecture, VALID_FILE_EXTENSIONS};
+use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
 use camino::Utf8Path;
 use std::collections::HashMap;
 
@@ -11,7 +11,7 @@ pub fn match_installers(
         .iter()
         .filter_map(|installer| {
             let url = &installer.installer_url;
-            find_architecture(url.as_str()).map(|architecture| (url, architecture))
+            Architecture::get_from_url(url.as_str()).map(|architecture| (url, architecture))
         })
         .collect::<HashMap<_, _>>();
 
@@ -19,7 +19,7 @@ pub fn match_installers(
         .iter()
         .filter_map(|installer| {
             let url = &installer.installer_url;
-            Scope::find_from_url(url.as_str()).map(|scope| (url, scope))
+            Scope::get_from_url(url.as_str()).map(|scope| (url, scope))
         })
         .collect::<HashMap<_, _>>();
 

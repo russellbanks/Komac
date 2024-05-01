@@ -143,9 +143,7 @@ impl UpdateVersion {
                     .zip
                     .as_ref()
                     .and_then(|zip| zip.nested_installer_type),
-                scope: download
-                    .scope
-                    .or_else(|| Scope::find_from_url(url.as_str())),
+                scope: download.scope.or_else(|| Scope::get_from_url(url.as_str())),
                 installer_url: url.clone(),
                 ..Installer::default()
             })

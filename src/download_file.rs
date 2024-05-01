@@ -20,8 +20,8 @@ use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 use crate::file_analyser::FileAnalyser;
+use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
 use crate::types::urls::url::Url;
-use crate::url_utils::{find_architecture, VALID_FILE_EXTENSIONS};
 
 async fn download_file(
     client: &Client,
@@ -199,7 +199,7 @@ pub async fn process_files<'a>(
             let mut file_analyser =
                 FileAnalyser::new(Cursor::new(map.as_ref()), Cow::Owned(file_name))?;
             file_analyser.architecture =
-                find_architecture(url.as_str()).or(file_analyser.architecture);
+                Architecture::get_from_url(url.as_str()).or(file_analyser.architecture);
             file_analyser.installer_sha_256 = sha_256;
             file_analyser.last_modified = last_modified;
             Ok((url, file_analyser))

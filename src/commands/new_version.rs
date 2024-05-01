@@ -261,8 +261,7 @@ impl NewVersion {
                     .zip
                     .as_mut()
                     .and_then(|zip| mem::take(&mut zip.nested_installer_files)),
-                scope: mem::take(&mut analyser.scope)
-                    .or_else(|| Scope::find_from_url(url.as_str())),
+                scope: mem::take(&mut analyser.scope).or_else(|| Scope::get_from_url(url.as_str())),
                 installer_url: url.clone(),
                 installer_sha_256: mem::take(&mut analyser.installer_sha_256),
                 signature_sha_256: mem::take(&mut analyser.signature_sha_256),
