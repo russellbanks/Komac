@@ -28,35 +28,24 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             arch: x64
-            os_name: windows
           - os: windows-latest
             target: i686-pc-windows-msvc
             arch: x86
-            os_name: windows
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             arch: arm64
-            os_name: windows
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            arch: x64
-            os_name: linux
             deb_arch: amd64
             bins: cargo-deb
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
-            arch: x86
-            os_name: linux
             deb_arch: i386
             bins: cargo-deb
           - os: macos-latest
             target: x86_64-apple-darwin
-            arch: x64
-            os_name: macos
           - os: macos-latest
             target: aarch64-apple-darwin
-            arch: arm64
-            os_name: macos
 
     runs-on: ${{ matrix.platform.os }}
     steps:
@@ -83,7 +72,7 @@ jobs:
         run: cargo build --target ${{ matrix.platform.target }} --release --locked
 
       - name: Create Deb package
-        if: ${{ matrix.platform.os_name == 'linux' }}
+        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
         run: |
           if [ ${{ github.event_name }} == 'workflow_run' ]; then
             cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip --deb-version="nightly"
@@ -96,25 +85,24 @@ jobs:
         shell: pwsh
         run: |
           $bin = if ($env:RUNNER_OS -eq 'Windows') { "komac.exe" } else { "komac" }
-          $newName = "KomacPortable"
-          if ($env:RUNNER_OS -ne 'Windows') {
-            $newName += "-${{ matrix.platform.os_name }}"
-          }
+          $newName = "komac"
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
             $newName += "-nightly"
+          } else {
+            $newName += "-$($env:GITHUB_REF_NAME.TrimStart('v'))"
           }
-          $newName += "-${{ matrix.platform.arch }}"
+          $newName += "-${{ matrix.platform.target }}"
           if ($env:RUNNER_OS -eq 'Windows') {
             $newName += ".exe"
+            Rename-Item -Path "target/${{ matrix.platform.target }}/release/$bin" -NewName "$newName"
           }
-          Rename-Item -Path "target/${{ matrix.platform.target }}/release/$bin" -NewName "$newName"
           "name=$newName" >> $env:GITHUB_OUTPUT
 
       - name: Create Tar archive
         if: ${{ matrix.platform.os != 'windows-latest' }}
         run: |
-          tar -czvf ${{ steps.rename_binary.outputs.name }}.tar.gz -C target/${{ matrix.platform.target }}/release ${{ steps.rename_binary.outputs.name }}
-          rm target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
+          tar -czvf ${{ steps.rename_binary.outputs.name }}.tar.gz -C target/${{ matrix.platform.target }}/release komac
+          rm target/${{ matrix.platform.target }}/release/komac
 
       - name: Create Inno Installer
         if: ${{ matrix.platform.os == 'windows-latest' }}
@@ -124,7 +112,7 @@ jobs:
           iscc.exe assets/installer.iss `
             /DInputExecutable=$input `
             /DArchitecture=${{ matrix.platform.arch }} `
-            /F$("${{ steps.rename_binary.outputs.name }}".Replace("Portable", "Setup").TrimEnd(".exe"))
+            /F$("${{ steps.rename_binary.outputs.name }}".Replace("komac", "komac-setup").TrimEnd(".exe"))
 
       - name: Compute SHA256 checksum
         shell: pwsh

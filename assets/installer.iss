@@ -2,7 +2,7 @@
 #define Version GetFileProductVersion(InputExecutable)
 #define Publisher "Russell Banks"
 #define URL "https://github.com/russellbanks/Komac"
-#define ExeName "Komac.exe"
+#define ExeName GetFileOriginalFilename(InputExecutable)
 
 #include "CodeDependencies.iss"
 
