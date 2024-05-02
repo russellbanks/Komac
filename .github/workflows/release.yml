@@ -117,7 +117,7 @@ jobs:
       - name: Compute SHA256 checksum
         shell: pwsh
         run: |
-          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*" -Include "KomacPortable*","KomacSetup*","komac*.deb" | ForEach-Object {
+          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*" -Include "komac-*", "komac*.deb" | ForEach-Object {
             $FileHash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
             New-Item -Force -ItemType File -Path $_.DirectoryName -Name "$($_.Name).sha256" -Value "$FileHash *$($_.Name)`n"
           }
