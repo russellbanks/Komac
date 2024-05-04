@@ -44,7 +44,7 @@ itertools = "0.12.1"
 keyring = "2.3.3"
 memmap2 = "0.9.4"
 msi = "0.7.0"
-num-traits = "0.2.18"
+num-traits = "0.2.19"
 num_cpus = "1.16.0"
 nutype = { version = "0.4.2", features = ["serde"] }
 object = "0.35.0"
