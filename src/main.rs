@@ -22,7 +22,7 @@ use crate::commands::list_versions::ListVersions;
 use crate::commands::new_version::NewVersion;
 use crate::commands::remove_version::RemoveVersion;
 use crate::commands::show_version::ShowVersion;
-use crate::commands::token::token::{TokenArgs, TokenCommands};
+use crate::commands::token::commands::{TokenArgs, TokenCommands};
 use crate::commands::update_version::UpdateVersion;
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::Result;

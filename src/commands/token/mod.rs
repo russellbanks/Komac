@@ -1,3 +1,3 @@
+pub mod commands;
 pub mod remove;
-pub mod token;
 pub mod update;

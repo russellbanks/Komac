@@ -46,7 +46,7 @@ pub fn prompt_existing_pull_request(
 }
 
 pub fn prompt_submit_option(
-    changes: &mut Vec<(String, String)>,
+    changes: &mut [(String, String)],
     submit: bool,
     identifier: &PackageIdentifier,
     version: &PackageVersion,

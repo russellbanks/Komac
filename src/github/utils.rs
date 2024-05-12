@@ -1,14 +1,16 @@
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
-use crate::types::urls::url::Url;
-use crate::update_state::UpdateState;
-use clap::{crate_name, crate_version};
-use rand::{thread_rng, Rng};
 use std::collections::BTreeSet;
 use std::env;
 use std::fmt::Write;
 use std::num::NonZeroU32;
+
+use clap::{crate_name, crate_version};
+use rand::{thread_rng, Rng};
 use uuid::Uuid;
+
+use crate::types::package_identifier::PackageIdentifier;
+use crate::types::package_version::PackageVersion;
+use crate::types::urls::url::Url;
+use crate::update_state::UpdateState;
 
 pub fn get_package_path(
     identifier: &PackageIdentifier,
@@ -90,7 +92,7 @@ pub fn get_pull_request_body(
     if let Some(resolves) = issue_resolves {
         if !resolves.is_empty() {
             let _ = writeln!(body);
-            for resolve in resolves.into_iter().collect::<BTreeSet<_>>() {
+            for resolve in BTreeSet::from_iter(resolves) {
                 let _ = writeln!(body, "- Resolves #{resolve}");
             }
         }

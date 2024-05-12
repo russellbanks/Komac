@@ -126,10 +126,10 @@ impl Architecture {
         // If the architecture has not been found, check for {architecture}.{extension}
         let extensions = VALID_FILE_EXTENSIONS
             .iter()
-            .filter(|&extension| url.contains(extension));
+            .filter(|&extension| url.ends_with(extension));
         for extension in extensions {
             for (arch_name, arch) in ARCHITECTURES {
-                if url.contains(&format!("{arch_name}.{extension}")) {
+                if url.ends_with(&format!("{arch_name}.{extension}")) {
                     return Some(arch);
                 }
             }
