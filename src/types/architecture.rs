@@ -100,7 +100,7 @@ impl Architecture {
         )
     }
 
-    pub fn get_from_url(url: &str) -> Option<Architecture> {
+    pub fn get_from_url(url: &str) -> Option<Self> {
         // Ignore the casing of the URL
         let url = url.to_lowercase();
 

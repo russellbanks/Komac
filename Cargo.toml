@@ -67,6 +67,8 @@ strum = { version = "0.26.2", features = ["derive"] }
 tempfile = "3.10.1"
 thiserror = "1.0.60"
 tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros", "fs"] }
+tree-sitter-highlight = "0.22.6"
+tree-sitter-yaml = "0.6.1"
 tui-textarea = { version = "0.4.0", features = ["search"] }
 url = { version = "2.5.0", features = ["serde"] }
 uuid = { version = "1.8.0", features = ["v4"] }

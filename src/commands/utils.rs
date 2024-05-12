@@ -74,7 +74,7 @@ pub fn prompt_submit_option(
     Ok(submit_option)
 }
 
-#[derive(Display, EnumIter, PartialEq)]
+#[derive(Display, EnumIter, Eq, PartialEq)]
 pub enum SubmitOption {
     Submit,
     Edit,

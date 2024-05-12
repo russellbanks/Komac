@@ -1,14 +1,17 @@
+use std::io::StdoutLock;
+use std::io::Write;
+use std::{env, io};
+
+use clap::{crate_name, crate_version};
+use color_eyre::eyre::{Error, Result};
+use const_format::formatcp;
+use crossterm::style::{style, Color, Stylize};
+use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
+
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
-use clap::{crate_name, crate_version};
-use color_eyre::eyre::{Error, Result};
-use const_format::formatcp;
-use crossterm::style::Stylize;
-use std::io::StdoutLock;
-use std::io::Write;
-use std::{env, io};
 
 pub const MANIFEST_VERSION: &str = "1.6.0";
 
@@ -49,17 +52,58 @@ pub fn print_changes<'a>(contents: impl Iterator<Item = &'a str>) {
 }
 
 fn print_manifest(lock: &mut StdoutLock, manifest: &str) {
-    for line in manifest.lines() {
-        if line.starts_with('#') {
-            let _ = writeln!(lock, "{}", line.green());
-        } else if let Some((prefix, suffix)) = line.split_once(':') {
-            if let Some((before_dash, after_dash)) = prefix.split_once('-') {
-                let _ = writeln!(lock, "{before_dash}-{}:{suffix}", after_dash.blue());
-            } else {
-                let _ = writeln!(lock, "{}:{suffix}", prefix.blue());
+    const COMMENT: &str = "comment";
+    const PROPERTY: &str = "property";
+    const STRING: &str = "string";
+    const HIGHLIGHT_NAMES: [&str; 3] = [COMMENT, STRING, PROPERTY];
+
+    let mut highlighter = Highlighter::new();
+
+    let mut yaml_config = HighlightConfiguration::new(
+        tree_sitter_yaml::language(),
+        "yaml",
+        tree_sitter_yaml::HIGHLIGHTS_QUERY,
+        <&str>::default(),
+        <&str>::default(),
+    )
+    .unwrap();
+    yaml_config.configure(&HIGHLIGHT_NAMES);
+    let highlights = highlighter
+        .highlight(&yaml_config, manifest.as_bytes(), None, |_| None)
+        .unwrap();
+
+    let mut current_highlight = None;
+    for event in highlights {
+        match event.unwrap() {
+            HighlightEvent::Source { start, end } => {
+                let source = &manifest[start..end];
+                let _ = write!(
+                    lock,
+                    "{}",
+                    style(source).with(
+                        current_highlight
+                            .and_then(|value: Highlight| {
+                                match HIGHLIGHT_NAMES[value.0] {
+                                    COMMENT => Some(Color::DarkGrey),
+                                    PROPERTY => Some(Color::Green),
+                                    STRING => {
+                                        if source.chars().all(|char| {
+                                            char.is_ascii_digit() || char.is_ascii_punctuation()
+                                        }) {
+                                            Some(Color::Blue)
+                                        } else {
+                                            None
+                                        }
+                                    }
+                                    _ => None,
+                                }
+                            })
+                            .unwrap_or(Color::Reset)
+                    )
+                );
             }
-        } else {
-            let _ = writeln!(lock, "{line}");
+            HighlightEvent::HighlightStart(highlight) => current_highlight = Some(highlight),
+            HighlightEvent::HighlightEnd => current_highlight = None,
         }
     }
 }

@@ -41,7 +41,7 @@ impl<'a> SearchBox<'a> {
         self.textarea.delete_line_by_head();
     }
 
-    fn height(&self) -> u16 {
+    const fn height(&self) -> u16 {
         if self.open {
             3
         } else {
@@ -67,14 +67,15 @@ impl<'a> SearchBox<'a> {
     }
 
     fn set_error(&mut self, err: Option<impl Display>) {
-        let b = if let Some(err) = err {
-            Block::default()
-                .borders(Borders::ALL)
-                .title(format!("Search: {}", err))
-                .style(Style::default().fg(Color::Red))
-        } else {
-            Block::default().borders(Borders::ALL).title("Search")
-        };
+        let b = err.map_or_else(
+            || Block::default().borders(Borders::ALL).title("Search"),
+            |err| {
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(format!("Search: {err}"))
+                    .style(Style::default().fg(Color::Red))
+            },
+        );
         self.textarea.set_block(b);
     }
 }
@@ -88,7 +89,7 @@ struct Buffer<'a> {
 
 impl<'a> Buffer<'a> {
     fn new(path: &'a String, content: &'a mut String) -> Self {
-        let mut textarea = TextArea::from_iter(content.lines());
+        let mut textarea = content.lines().collect::<TextArea>();
         textarea.set_line_number_style(Style::default().fg(Color::DarkGray));
         Self {
             textarea,
@@ -117,7 +118,7 @@ pub struct Editor<'a> {
 }
 
 impl<'a> Editor<'a> {
-    pub fn new(content: &'a mut Vec<(String, String)>) -> io::Result<Self> {
+    pub fn new(content: &'a mut [(String, String)]) -> io::Result<Self> {
         let buffers = content
             .iter_mut()
             .map(|(path, content)| Buffer::new(path, content))
@@ -173,9 +174,9 @@ impl<'a> Editor<'a> {
                     .direction(Direction::Horizontal)
                     .constraints(
                         [
-                            Constraint::Length(slot.len() as u16),
+                            Constraint::Length(u16::try_from(slot.len()).unwrap_or_default()),
                             Constraint::Min(1),
-                            Constraint::Length(cursor.len() as u16),
+                            Constraint::Length(u16::try_from(cursor.len()).unwrap_or_default()),
                         ]
                         .as_ref(),
                     )
@@ -186,39 +187,45 @@ impl<'a> Editor<'a> {
                 f.render_widget(Paragraph::new(cursor).style(status_style), status_chunks[2]);
 
                 // Render message at bottom
-                let message = if let Some(message) = self.message.take() {
-                    Line::from(Span::raw(message))
-                } else if search_height > 0 {
-                    Line::from(vec![
-                        Span::raw("Press "),
-                        Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to jump to first match and close, "),
-                        Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to close, "),
-                        Span::styled(
-                            "^G or ↓ or ^N",
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ),
-                        Span::raw(" to search next, "),
-                        Span::styled(
-                            "M-G or ↑ or ^P",
-                            Style::default().add_modifier(Modifier::BOLD),
-                        ),
-                        Span::raw(" to search previous"),
-                    ])
-                } else {
-                    Line::from(vec![
-                        Span::raw("Press "),
-                        Span::styled("^Q", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to quit, "),
-                        Span::styled("^S", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to save, "),
-                        Span::styled("^G", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to search, "),
-                        Span::styled("^T", Style::default().add_modifier(Modifier::BOLD)),
-                        Span::raw(" to switch buffer"),
-                    ])
-                };
+                let message = self.message.take().map_or_else(
+                    || {
+                        if search_height > 0 {
+                            Line::from(vec![
+                                Span::raw("Press "),
+                                Span::styled(
+                                    "Enter",
+                                    Style::default().add_modifier(Modifier::BOLD),
+                                ),
+                                Span::raw(" to jump to first match and close, "),
+                                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
+                                Span::raw(" to close, "),
+                                Span::styled(
+                                    "^G or ↓ or ^N",
+                                    Style::default().add_modifier(Modifier::BOLD),
+                                ),
+                                Span::raw(" to search next, "),
+                                Span::styled(
+                                    "M-G or ↑ or ^P",
+                                    Style::default().add_modifier(Modifier::BOLD),
+                                ),
+                                Span::raw(" to search previous"),
+                            ])
+                        } else {
+                            Line::from(vec![
+                                Span::raw("Press "),
+                                Span::styled("^Q", Style::default().add_modifier(Modifier::BOLD)),
+                                Span::raw(" to quit, "),
+                                Span::styled("^S", Style::default().add_modifier(Modifier::BOLD)),
+                                Span::raw(" to save, "),
+                                Span::styled("^G", Style::default().add_modifier(Modifier::BOLD)),
+                                Span::raw(" to search, "),
+                                Span::styled("^T", Style::default().add_modifier(Modifier::BOLD)),
+                                Span::raw(" to switch buffer"),
+                            ])
+                        }
+                    },
+                    |message| Line::from(Span::raw(message)),
+                );
                 f.render_widget(Paragraph::new(message), chunks[3]);
             })?;
 
