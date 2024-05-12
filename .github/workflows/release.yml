@@ -35,16 +35,16 @@ jobs:
             arch: arm64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            bins: cargo-deb
+            bins: cargo-deb, cargo-generate-rpm
           - os: ubuntu-latest
             target: i686-unknown-linux-gnu
-            bins: cross, cargo-deb
+            bins: cross, cargo-deb, cargo-generate-rpm
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            bins: cross, cargo-deb
+            bins: cross, cargo-deb, cargo-generate-rpm
           - os: ubuntu-latest
             target: armv7-unknown-linux-gnueabihf
-            bins: cross, cargo-deb
+            bins: cross, cargo-deb, cargo-generate-rpm
           - os: ubuntu-latest
             target: x86_64-unknown-freebsd
             bins: cross
@@ -80,6 +80,13 @@ jobs:
           $nightly = if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') { "--deb-version=nightly" } else { "" }
           cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip $nightly
 
+      - name: Create RPM package
+        if: contains(matrix.platform.bins, 'cargo-generate-rpm')
+        shell: pwsh
+        run: |
+          $nightly = if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') { "--set-metadata=version=`"nightly`"" } else { "" }
+          cargo generate-rpm --target ${{ matrix.platform.target }} $nightly
+
       - name: Rename binary
         id: rename_binary
         shell: pwsh
@@ -99,13 +106,13 @@ jobs:
           "name=$newName" >> $env:GITHUB_OUTPUT
 
       - name: Create Tar archive
-        if: ${{ matrix.platform.os != 'windows-latest' }}
+        if: ${{ runner.os != 'Windows' }}
         run: |
           tar -czvf ${{ steps.rename_binary.outputs.name }}.tar.gz -C target/${{ matrix.platform.target }}/release komac
           rm target/${{ matrix.platform.target }}/release/komac
 
       - name: Create Inno Installer
-        if: ${{ matrix.platform.os == 'windows-latest' }}
+        if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           $input = "../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
@@ -117,7 +124,7 @@ jobs:
       - name: Compute SHA256 checksum
         shell: pwsh
         run: |
-          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*" -Include "komac-*", "komac*.deb" | ForEach-Object {
+          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*","target/${{ matrix.platform.target }}/generate-rpm/*" -Include "komac-*", "komac*.deb", "komac*.rpm" | ForEach-Object {
             $FileHash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
             New-Item -Force -ItemType File -Path $_.DirectoryName -Name "$($_.Name).sha256" -Value "$FileHash *$($_.Name)`n"
           }
@@ -148,6 +155,8 @@ jobs:
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}.sha256
             target/${{ matrix.platform.target }}/debian/*.deb
             target/${{ matrix.platform.target }}/debian/*.sha256
+            target/${{ matrix.platform.target }}/generate-rpm/*.rpm
+            target/${{ matrix.platform.target }}/generate-rpm/*.sha256
             ${{ steps.rename_binary.outputs.name }}.tar.gz
             ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/Output/*
@@ -187,6 +196,7 @@ jobs:
           files: |
             .exe$
             .deb$
+            .rpm$
             .tar.gz$
 
   publish-crates-io:
