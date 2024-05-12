@@ -1765,6 +1765,7 @@ dependencies = [
  "num_cpus",
  "nutype",
  "object 0.35.0",
+ "once_cell",
  "open",
  "ordinal",
  "oxilangtag",

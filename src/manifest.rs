@@ -6,6 +6,7 @@ use clap::{crate_name, crate_version};
 use color_eyre::eyre::{Error, Result};
 use const_format::formatcp;
 use crossterm::style::{style, Color, Stylize};
+use once_cell::sync::Lazy;
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
 
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
@@ -56,26 +57,30 @@ fn print_manifest(lock: &mut StdoutLock, manifest: &str) {
     const PROPERTY: &str = "property";
     const STRING: &str = "string";
     const HIGHLIGHT_NAMES: [&str; 3] = [COMMENT, STRING, PROPERTY];
+    const YAML: &str = "yaml";
+
+    static YAML_CONFIG: Lazy<HighlightConfiguration> = Lazy::new(|| {
+        let mut config = HighlightConfiguration::new(
+            tree_sitter_yaml::language(),
+            YAML,
+            tree_sitter_yaml::HIGHLIGHTS_QUERY,
+            <&str>::default(),
+            <&str>::default(),
+        )
+        .unwrap();
+        config.configure(&HIGHLIGHT_NAMES);
+        config
+    });
 
     let mut highlighter = Highlighter::new();
-
-    let mut yaml_config = HighlightConfiguration::new(
-        tree_sitter_yaml::language(),
-        "yaml",
-        tree_sitter_yaml::HIGHLIGHTS_QUERY,
-        <&str>::default(),
-        <&str>::default(),
-    )
-    .unwrap();
-    yaml_config.configure(&HIGHLIGHT_NAMES);
     let highlights = highlighter
-        .highlight(&yaml_config, manifest.as_bytes(), None, |_| None)
+        .highlight(&YAML_CONFIG, manifest.as_bytes(), None, |_| None)
         .unwrap();
 
     let mut current_highlight = None;
     for event in highlights {
-        match event.unwrap() {
-            HighlightEvent::Source { start, end } => {
+        match event {
+            Ok(HighlightEvent::Source { start, end }) => {
                 let source = &manifest[start..end];
                 let _ = write!(
                     lock,
@@ -102,8 +107,9 @@ fn print_manifest(lock: &mut StdoutLock, manifest: &str) {
                     )
                 );
             }
-            HighlightEvent::HighlightStart(highlight) => current_highlight = Some(highlight),
-            HighlightEvent::HighlightEnd => current_highlight = None,
+            Ok(HighlightEvent::HighlightStart(highlight)) => current_highlight = Some(highlight),
+            Ok(HighlightEvent::HighlightEnd) => current_highlight = None,
+            Err(_) => continue,
         }
     }
 }
