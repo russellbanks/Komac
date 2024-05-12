@@ -10,10 +10,12 @@ use color_eyre::eyre::{Result, WrapErr};
 use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
-use inquire::Confirm;
 use reqwest::Client;
 
-use crate::commands::utils::{prompt_existing_pull_request, reorder_keys, write_changes_to_dir};
+use crate::commands::utils::{
+    prompt_existing_pull_request, prompt_submit_option, reorder_keys, write_changes_to_dir,
+    SubmitOption,
+};
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
@@ -21,7 +23,7 @@ use crate::github::graphql::create_commit::{Base64String, FileAddition};
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
-use crate::manifest::{build_manifest_string, print_changes, Manifest};
+use crate::manifest::{build_manifest_string, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, Installer, NestedInstallerFiles, Scope, UpgradeBehavior,
@@ -291,7 +293,7 @@ impl UpdateVersion {
         };
 
         let full_package_path = get_package_path(&self.identifier, Some(&self.version));
-        let changes = {
+        let mut changes = {
             let mut path_content_map = Vec::new();
             path_content_map.push((
                 format!("{full_package_path}/{}.installer.yaml", self.identifier),
@@ -342,7 +344,8 @@ impl UpdateVersion {
             path_content_map
         };
 
-        print_changes(changes.iter().map(|(_, content)| content.as_str()));
+        let submit_option =
+            prompt_submit_option(&mut changes, self.submit, &self.identifier, &self.version)?;
 
         if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
@@ -352,16 +355,7 @@ impl UpdateVersion {
             );
         }
 
-        let should_remove_manifest = if self.submit {
-            true
-        } else {
-            Confirm::new(&format!(
-                "Would you like to make a pull request for {} {}?",
-                self.identifier, self.version
-            ))
-            .prompt()?
-        };
-        if !should_remove_manifest {
+        if submit_option == SubmitOption::Exit {
             return Ok(());
         }
 

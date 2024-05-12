@@ -1,5 +1,7 @@
+use crate::editor::Editor;
 use crate::github::graphql::get_existing_pull_request::PullRequest;
 use crate::github::graphql::get_pull_request_from_branch::PullRequestState;
+use crate::manifest::print_changes;
 use crate::manifests::installer_manifest::{Installer, InstallerManifest, InstallerSwitches};
 use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
@@ -8,12 +10,13 @@ use camino::Utf8Path;
 use color_eyre::Result;
 use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
-use inquire::Confirm;
+use inquire::{Confirm, Select};
 use itertools::Itertools;
 use std::collections::BTreeSet;
 use std::ops::Not;
 use std::str::FromStr;
 use std::{env, mem};
+use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::fs;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -40,6 +43,42 @@ pub fn prompt_existing_pull_request(
         Confirm::new("Would you like to proceed?").prompt()?
     };
     Ok(proceed)
+}
+
+pub fn prompt_submit_option(
+    changes: &mut Vec<(String, String)>,
+    submit: bool,
+    identifier: &PackageIdentifier,
+    version: &PackageVersion,
+) -> Result<SubmitOption> {
+    let mut submit_option;
+    loop {
+        print_changes(changes.iter().map(|(_, content)| content.as_str()));
+
+        submit_option = if submit {
+            SubmitOption::Submit
+        } else {
+            Select::new(
+                &format!("What would you like to do with {identifier} {version}?"),
+                SubmitOption::iter().collect(),
+            )
+            .prompt()?
+        };
+
+        if submit_option == SubmitOption::Edit {
+            Editor::new(changes)?.run()?;
+        } else {
+            break;
+        }
+    }
+    Ok(submit_option)
+}
+
+#[derive(Display, EnumIter, PartialEq)]
+pub enum SubmitOption {
+    Submit,
+    Edit,
+    Exit,
 }
 
 pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Utf8Path) -> Result<()> {

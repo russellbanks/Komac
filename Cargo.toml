@@ -56,6 +56,7 @@ percent-encoding = "2.3.1"
 pulldown-cmark = "0.10.3"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
 rand = "0.8.5"
+ratatui = "0.26.2"
 reqwest = { version = "0.12.4", features = ["native-tls-vendored", "stream"] }
 serde = { version = "1.0.201", features = ["derive"] }
 serde_json = "1.0.117"
@@ -66,6 +67,7 @@ strum = { version = "0.26.2", features = ["derive"] }
 tempfile = "3.10.1"
 thiserror = "1.0.60"
 tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros", "fs"] }
+tui-textarea = { version = "0.4.0", features = ["search"] }
 url = { version = "2.5.0", features = ["serde"] }
 uuid = { version = "1.8.0", features = ["v4"] }
 versions = "6.2.0"
