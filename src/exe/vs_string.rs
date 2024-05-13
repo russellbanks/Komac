@@ -1,7 +1,8 @@
+use color_eyre::eyre::{eyre, Result};
+use object::ReadRef;
+
 use crate::exe::utils::{align, get_widestring_size};
 use crate::exe::vs_header::VSHeader;
-use color_eyre::eyre::Result;
-use object::ReadRef;
 
 /// Represents a [`String`](https://docs.microsoft.com/en-us/windows/win32/menurc/string-str) structure.
 pub struct VSString<'data> {
@@ -17,7 +18,9 @@ impl<'data> VSString<'data> {
         let widestring_size = get_widestring_size(data, offset);
         let value = data
             .read_slice_at(offset, usize::try_from(widestring_size)?)
-            .unwrap();
+            .map_err(|_| {
+                eyre!("Failed to read widestring slice of length {widestring_size} at offset {offset}")
+            })?;
 
         Ok(Self { header, value })
     }
