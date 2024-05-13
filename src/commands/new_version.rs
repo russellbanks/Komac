@@ -151,6 +151,10 @@ pub struct NewVersion {
     #[arg(long, env = "OPEN_PR")]
     open_pr: bool,
 
+    /// Run without submitting
+    #[arg(long, env = "DRY_RUN")]
+    dry_run: bool,
+
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -186,7 +190,12 @@ impl NewVersion {
             .get_existing_pull_request(&package_identifier, &package_version)
             .await?
         {
-            if !prompt_existing_pull_request(&package_identifier, &package_version, &pull_request)?
+            if !self.dry_run
+                && !prompt_existing_pull_request(
+                    &package_identifier,
+                    &package_version,
+                    &pull_request,
+                )?
             {
                 return Ok(());
             }
@@ -421,6 +430,7 @@ impl NewVersion {
             self.submit,
             &package_identifier,
             &package_version,
+            self.dry_run,
         )?;
 
         if let Some(output) = self.output.map(|out| out.join(full_package_path)) {

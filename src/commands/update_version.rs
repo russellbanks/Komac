@@ -82,6 +82,10 @@ pub struct UpdateVersion {
     #[arg(long, env = "OPEN_PR")]
     open_pr: bool,
 
+    /// Run without submitting
+    #[arg(long, env = "DRY_RUN")]
+    dry_run: bool,
+
     /// GitHub personal access token with the public_repo and read_org scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -111,7 +115,9 @@ impl UpdateVersion {
         println!("Latest version of {}: {latest_version}", self.identifier);
 
         if let Some(pull_request) = existing_pr_future.await? {
-            if !prompt_existing_pull_request(&self.identifier, &self.version, &pull_request)? {
+            if !self.dry_run
+                && !prompt_existing_pull_request(&self.identifier, &self.version, &pull_request)?
+            {
                 return Ok(());
             }
         }
@@ -344,8 +350,13 @@ impl UpdateVersion {
             path_content_map
         };
 
-        let submit_option =
-            prompt_submit_option(&mut changes, self.submit, &self.identifier, &self.version)?;
+        let submit_option = prompt_submit_option(
+            &mut changes,
+            self.submit,
+            &self.identifier,
+            &self.version,
+            self.dry_run,
+        )?;
 
         if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;

@@ -50,12 +50,15 @@ pub fn prompt_submit_option(
     submit: bool,
     identifier: &PackageIdentifier,
     version: &PackageVersion,
+    dry_run: bool,
 ) -> Result<SubmitOption> {
     let mut submit_option;
     loop {
         print_changes(changes.iter().map(|(_, content)| content.as_str()));
 
-        submit_option = if submit {
+        submit_option = if dry_run {
+            SubmitOption::Exit
+        } else if submit {
             SubmitOption::Submit
         } else {
             Select::new(
