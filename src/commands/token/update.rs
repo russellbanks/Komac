@@ -20,10 +20,7 @@ impl UpdateToken {
             .build()?;
 
         let token = match self.token {
-            Some(token) => match validate_token(&client, &token).await {
-                Ok(_) => Ok(token),
-                Err(err) => Err(err),
-            }?,
+            Some(token) => validate_token(&client, &token).await.map(|()| token)?,
             None => token_prompt(client, Some("Please enter the new token to set"))?,
         };
 

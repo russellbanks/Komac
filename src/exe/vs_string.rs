@@ -18,7 +18,7 @@ impl<'data> VSString<'data> {
         let widestring_size = get_widestring_size(data, offset);
         let value = data
             .read_slice_at(offset, usize::try_from(widestring_size)?)
-            .map_err(|_| {
+            .map_err(|()| {
                 eyre!("Failed to read widestring slice of length {widestring_size} at offset {offset}")
             })?;
 
