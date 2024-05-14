@@ -32,7 +32,7 @@ clap = { version = "4.5.4", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.3", default-features = false }
 const_format = "0.2.32"
 crossterm = "0.27.0"
-cynic = { version = "3.7.0", features = ["http-reqwest"] }
+cynic = { version = "3.7.1", features = ["http-reqwest"] }
 derive_more = "0.99.17"
 futures = "0.3.30"
 futures-util = "0.3.30"
@@ -61,7 +61,7 @@ ratatui = "0.26.2"
 reqwest = { version = "0.12.4", features = ["native-tls-vendored", "stream"] }
 serde = { version = "1.0.201", features = ["derive"] }
 serde_json = "1.0.117"
-serde_with = { version = "3.8.1", features = ["macros"] }
+serde_with = { version = "3.8.1", default-features = false, features = ["macros"] }
 serde_yaml = "0.9.34"
 sha2 = "0.10.8"
 strum = { version = "0.26.2", features = ["derive"] }
@@ -77,7 +77,7 @@ versions = "6.2.0"
 zip = { version = "1.2.3", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
-cynic-codegen = { version = "3.7.0", features = ["rkyv"] }
+cynic-codegen = { version = "3.7.1", features = ["rkyv"] }
 windows_exe_info = { version = "0.4.2", features = ["manifest"] }
 
 [dev-dependencies]
