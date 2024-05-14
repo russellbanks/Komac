@@ -141,25 +141,25 @@ fn convert_to_crlf(buf: &mut Vec<u8>) {
     const CARRIAGE_RETURN: u8 = b'\r';
 
     let mut prev_char: Option<u8> = None;
-    let mut i = 0;
-    while i < buf.len() {
+    let mut index = 0;
+    while index < buf.len() {
         // Check whether the character is a newline and is not preceded by a carriage return
-        if buf[i] == NEWLINE && prev_char != Some(CARRIAGE_RETURN) {
+        if buf[index] == NEWLINE && prev_char != Some(CARRIAGE_RETURN) {
             // Insert a carriage return before the newline
-            buf.insert(i, CARRIAGE_RETURN);
-            i += 1; // Move to the next character to avoid infinite loop
+            buf.insert(index, CARRIAGE_RETURN);
+            index += 1; // Move to the next character to avoid infinite loop
         }
-        prev_char = Some(buf[i]);
-        i += 1;
+        prev_char = Some(buf[index]);
+        index += 1;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::manifest::{build_manifest_string, Manifest};
-    use crate::manifests::installer_manifest::InstallerManifest;
+    use crate::manifest::convert_to_crlf;
+    use std::io::Write;
 
-    fn contains_newline_not_preceded_by_carriage_return(value: &str) -> bool {
+    fn is_line_feed(value: &str) -> bool {
         value
             .chars()
             .zip(value.chars().skip(1))
@@ -167,12 +167,15 @@ mod tests {
     }
 
     #[test]
-    fn test_build_manifest_string_crlf() {
-        let binding = InstallerManifest::default();
-        let installer_manifest = Manifest::Installer(&binding);
-        let manifest_string = build_manifest_string(&installer_manifest, &None).unwrap();
-        assert!(!contains_newline_not_preceded_by_carriage_return(
-            &manifest_string
-        ));
+    fn test_convert_to_crlf() {
+        let mut buffer = Vec::new();
+        for index in 0..10 {
+            let _ = writeln!(buffer, "Line {index}");
+        }
+        let lf_string = String::from_utf8_lossy(&buffer);
+        assert!(is_line_feed(&lf_string));
+        convert_to_crlf(&mut buffer);
+        let crlf_string = String::from_utf8_lossy(&buffer);
+        assert!(!is_line_feed(&crlf_string));
     }
 }
