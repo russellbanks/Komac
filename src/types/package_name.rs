@@ -10,9 +10,9 @@ use std::collections::HashMap;
 pub struct PackageName(String);
 
 impl PackageName {
-    pub fn get_from_exe(string_map: &mut HashMap<String, String>) -> Option<Self> {
+    pub fn get_from_exe(string_map: &HashMap<String, String>) -> Option<Self> {
         string_map
-            .remove("ProductName")
+            .get("ProductName")
             .and_then(|product_name| Self::new(product_name.trim()).ok())
     }
 }

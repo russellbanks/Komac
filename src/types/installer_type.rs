@@ -1,11 +1,11 @@
-use color_eyre::eyre::{bail, OptionExt, Result};
-use object::pe::RT_MANIFEST;
-use object::read::pe::{ImageNtHeaders, PeFile, ResourceDirectoryEntryData};
-use object::{LittleEndian, Object, ReadRef};
+use std::collections::HashMap;
+
+use color_eyre::eyre::{bail, Result};
 use quick_xml::de::from_reader;
 use serde::{Deserialize, Serialize};
+use yara_x::mods::pe::ResourceType;
+use yara_x::mods::PE;
 
-use crate::exe::vs_version_info::VSVersionInfo;
 use crate::file_analyser::{APPX, APPX_BUNDLE, EXE, MSI, MSIX, MSIX_BUNDLE, ZIP};
 use crate::manifests::installer_manifest::NestedInstallerType;
 use crate::msi::Msi;
@@ -27,15 +27,12 @@ pub enum InstallerType {
 }
 
 impl InstallerType {
-    pub fn get<'data, Pe, R>(
-        pe: Option<&PeFile<'data, Pe, R>>,
+    pub fn get(
+        data: &[u8],
+        pe: Option<&Box<PE>>,
         extension: &str,
         msi: Option<&Msi>,
-    ) -> Result<Self>
-    where
-        Pe: ImageNtHeaders,
-        R: ReadRef<'data>,
-    {
+    ) -> Result<Self> {
         match extension {
             MSI => {
                 if let Some(msi) = msi {
@@ -46,17 +43,14 @@ impl InstallerType {
             APPX | APPX_BUNDLE => return Ok(Self::Appx),
             ZIP => return Ok(Self::Zip),
             EXE => {
-                let vs_version_info = pe.and_then(|pe| VSVersionInfo::parse(pe).ok());
+                let vs_version_info = pe.map(|pe| &pe.version_info);
                 return match () {
-                    () if Self::is_inno(vs_version_info.as_ref()) => Ok(Self::Inno),
-                    () if pe
-                        .and_then(|pe| Self::is_nullsoft(pe).ok())
-                        .unwrap_or(false) =>
-                    {
-                        Ok(Self::Nullsoft)
-                    }
+                    () if pe.is_some_and(|pe| Self::is_nullsoft(data, pe)) => Ok(Self::Nullsoft),
+                    () if vs_version_info.is_some_and(|map| Self::is_inno(map)) => Ok(Self::Inno),
                     () if pe.is_some_and(|pe| Self::is_burn(pe)) => Ok(Self::Burn),
-                    () if Self::is_basic_installer(vs_version_info.as_ref()) => Ok(Self::Exe),
+                    () if vs_version_info.is_some_and(|map| Self::is_basic_installer(map)) => {
+                        Ok(Self::Exe)
+                    }
                     () => Ok(Self::Portable),
                 };
             }
@@ -66,11 +60,7 @@ impl InstallerType {
     }
 
     /// Checks if the file is Nullsoft from the executable's manifest
-    fn is_nullsoft<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<bool>
-    where
-        Pe: ImageNtHeaders,
-        R: ReadRef<'data>,
-    {
+    fn is_nullsoft(data: &[u8], pe: &Box<PE>) -> bool {
         #[derive(Default, Deserialize)]
         #[serde(default, rename_all = "camelCase")]
         struct Assembly {
@@ -86,100 +76,49 @@ impl InstallerType {
 
         const NULLSOFT_MANIFEST_NAME: &str = "Nullsoft.NSIS.exehead";
 
-        let resource_directory = pe
-            .data_directories()
-            .resource_directory(pe.data(), &pe.section_table())?
-            .ok_or_eyre("No resource directory was found")?;
-        let rt_manifest = resource_directory
-            .root()?
-            .entries
+        pe.resources
             .iter()
-            .find(|entry| entry.name_or_id().id() == Some(RT_MANIFEST))
-            .ok_or_eyre("No RT_MANIFEST was found")?
-            .data(resource_directory)?
-            .table()
-            .and_then(|table| table.entries.first())
-            .and_then(|entry| entry.data(resource_directory).ok())
-            .and_then(ResourceDirectoryEntryData::table)
-            .and_then(|table| table.entries.first())
-            .and_then(|entry| entry.data(resource_directory).ok())
-            .and_then(ResourceDirectoryEntryData::data)
-            .unwrap();
-        let section = pe
-            .section_table()
-            .section_containing(rt_manifest.offset_to_data.get(LittleEndian))
-            .unwrap();
-        let offset = {
-            let mut rva = rt_manifest.offset_to_data.get(LittleEndian);
-            rva -= section.virtual_address.get(LittleEndian);
-            rva += section.pointer_to_raw_data.get(LittleEndian);
-            rva as usize
-        };
-        let manifest = pe
-            .data()
-            .read_bytes_at(offset as u64, u64::from(rt_manifest.size.get(LittleEndian)))
-            .unwrap();
-        let assembly: Assembly = from_reader(manifest)?;
-        Ok(assembly.assembly_identity.name == NULLSOFT_MANIFEST_NAME)
+            .find(|resource| resource.type_() == ResourceType::RESOURCE_TYPE_MANIFEST)
+            .and_then(|manifest| {
+                let offset = manifest.offset() as usize;
+                data.get(offset..offset + manifest.length() as usize)
+            })
+            .and_then(|manifest_data| from_reader::<_, Assembly>(manifest_data).ok())
+            .is_some_and(|assembly| assembly.assembly_identity.name == NULLSOFT_MANIFEST_NAME)
     }
 
     /// Checks the String File Info of the exe for whether its comment states that it was built with Inno Setup
-    fn is_inno(vs_version_info: Option<&VSVersionInfo>) -> bool {
+    fn is_inno(vs_version_info: &HashMap<String, String>) -> bool {
         const COMMENTS: &str = "Comments";
         const INNO_COMMENT: &str = "This installation was built with Inno Setup.";
 
-        vs_version_info
-            .and_then(|info| info.string_file_info.as_ref())
-            .is_some_and(|string_info| {
-                string_info.children.first().is_some_and(|vs_string_table| {
-                    vs_string_table
-                        .children
-                        .iter()
-                        .find(|entry| String::from_utf16_lossy(entry.header.key) == COMMENTS)
-                        .map(|entry| String::from_utf16_lossy(entry.value))
-                        .as_deref()
-                        == Some(INNO_COMMENT)
-                })
-            })
+        vs_version_info.get(COMMENTS).map(String::as_ref) == Some(INNO_COMMENT)
     }
 
-    fn is_burn<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> bool
-    where
-        Pe: ImageNtHeaders,
-        R: ReadRef<'data>,
-    {
-        const WIXBURN_HEADER: &str = ".wixburn";
+    fn is_burn(pe: &Box<PE>) -> bool {
+        const WIXBURN_HEADER: &[u8] = b".wixburn";
 
-        pe.section_by_name(WIXBURN_HEADER).is_some()
+        pe.sections
+            .iter()
+            .find(|section| section.name() == WIXBURN_HEADER)
+            .is_some()
     }
 
-    fn is_basic_installer(vs_version_info: Option<&VSVersionInfo>) -> bool {
+    fn is_basic_installer(vs_version_info: &HashMap<String, String>) -> bool {
         const ORIGINAL_FILENAME: &str = "OriginalFilename";
         const FILE_DESCRIPTION: &str = "FileDescription";
         const BASIC_INSTALLER_KEYWORDS: [&str; 3] = ["installer", "setup", "7zs.sfx"];
 
         vs_version_info
-            .and_then(|info| info.string_file_info.as_ref())
-            .is_some_and(|string_info| {
-                string_info.children.first().is_some_and(|vs_string_table| {
-                    vs_string_table
-                        .children
-                        .iter()
-                        .filter(|entry| {
-                            let key = String::from_utf16_lossy(entry.header.key);
-                            key == FILE_DESCRIPTION || key == ORIGINAL_FILENAME
-                        })
-                        .map(|entry| {
-                            let mut value = String::from_utf16_lossy(entry.value);
-                            value.make_ascii_lowercase();
-                            value
-                        })
-                        .any(|value| {
-                            BASIC_INSTALLER_KEYWORDS
-                                .iter()
-                                .any(|keyword| value.contains(keyword))
-                        })
-                })
+            .iter()
+            .filter_map(|(key, value)| {
+                (key == FILE_DESCRIPTION || key == ORIGINAL_FILENAME)
+                    .then(|| value.to_ascii_lowercase())
+            })
+            .any(|value| {
+                BASIC_INSTALLER_KEYWORDS
+                    .iter()
+                    .any(|keyword| value.contains(keyword))
             })
     }
 

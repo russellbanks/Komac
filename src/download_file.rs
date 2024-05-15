@@ -3,7 +3,6 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::File;
 use std::future::Future;
-use std::io::Cursor;
 
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
@@ -196,8 +195,7 @@ pub async fn process_files<'a>(
              last_modified,
          }| async move {
             let map = unsafe { Mmap::map(&file) }?;
-            let mut file_analyser =
-                FileAnalyser::new(Cursor::new(map.as_ref()), Cow::Owned(file_name))?;
+            let mut file_analyser = FileAnalyser::new(map.as_ref(), Cow::Owned(file_name))?;
             file_analyser.architecture =
                 Architecture::get_from_url(url.as_str()).or(file_analyser.architecture);
             file_analyser.installer_sha_256 = sha_256;

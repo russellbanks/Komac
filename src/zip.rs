@@ -1,15 +1,17 @@
-use crate::file_analyser::FileAnalyser;
-use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
-use crate::types::architecture::Architecture;
+use std::borrow::Cow;
+use std::collections::{BTreeSet, HashMap};
+use std::io::{Read, Seek};
+use std::{io, mem};
+
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::Result;
 use inquire::{min_length, MultiSelect};
 use memmap2::Mmap;
-use std::borrow::Cow;
-use std::collections::{BTreeSet, HashMap};
-use std::io::{Cursor, Read, Seek};
-use std::{io, mem};
 use zip::ZipArchive;
+
+use crate::file_analyser::FileAnalyser;
+use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
+use crate::types::architecture::Architecture;
 
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
     ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];
@@ -71,9 +73,8 @@ impl Zip {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
                 let map = unsafe { Mmap::map(&temp_file) }?;
-                let cursor = Cursor::new(map.as_ref());
                 let file_analyser =
-                    FileAnalyser::new(cursor, Cow::Borrowed(chosen_file_name.as_str()))?;
+                    FileAnalyser::new(map.as_ref(), Cow::Borrowed(chosen_file_name.as_str()))?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
                 architecture = file_analyser.architecture;
             }

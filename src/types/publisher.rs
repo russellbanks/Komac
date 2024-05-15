@@ -10,9 +10,9 @@ use std::collections::HashMap;
 pub struct Publisher(String);
 
 impl Publisher {
-    pub fn get_from_exe(string_map: &mut HashMap<String, String>) -> Option<Self> {
+    pub fn get_from_exe(string_map: &HashMap<String, String>) -> Option<Self> {
         string_map
-            .remove("CompanyName")
+            .get("CompanyName")
             .and_then(|company_name| Self::new(company_name.trim()).ok())
     }
 }

@@ -1,13 +1,8 @@
 use color_eyre::eyre::{bail, Result};
-use object::pe::{
-    IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_ARM, IMAGE_FILE_MACHINE_ARM64,
-    IMAGE_FILE_MACHINE_ARMNT, IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_THUMB,
-    IMAGE_FILE_MACHINE_UNKNOWN,
-};
-use object::read::pe::{ImageNtHeaders, PeFile};
-use object::{LittleEndian, ReadRef};
 use serde::{Deserialize, Serialize};
 use strum::EnumString;
+use yara_x::mods::pe::Machine;
+use yara_x::mods::PE;
 
 #[derive(
     Clone,
@@ -81,23 +76,15 @@ const ARCHITECTURES: [(&str, Architecture); 31] = [
 ];
 
 impl Architecture {
-    pub fn get_from_exe<'data, Pe, R>(pe: &PeFile<'data, Pe, R>) -> Result<Self>
-    where
-        Pe: ImageNtHeaders,
-        R: ReadRef<'data>,
-    {
-        Ok(
-            match pe.nt_headers().file_header().machine.get(LittleEndian) {
-                IMAGE_FILE_MACHINE_AMD64 => Self::X64,
-                IMAGE_FILE_MACHINE_I386 => Self::X86,
-                IMAGE_FILE_MACHINE_ARM64 => Self::Arm64,
-                IMAGE_FILE_MACHINE_ARM | IMAGE_FILE_MACHINE_THUMB | IMAGE_FILE_MACHINE_ARMNT => {
-                    Self::Arm
-                }
-                IMAGE_FILE_MACHINE_UNKNOWN => Self::Neutral,
-                machine => bail!("Unexpected architecture: {:04x}", machine),
-            },
-        )
+    pub fn get_from_exe(pe: &Box<PE>) -> Result<Self> {
+        Ok(match pe.machine() {
+            Machine::MACHINE_AMD64 | Machine::MACHINE_IA64 => Self::X64,
+            Machine::MACHINE_I386 => Self::X86,
+            Machine::MACHINE_ARM64 => Self::Arm64,
+            Machine::MACHINE_ARM | Machine::MACHINE_THUMB | Machine::MACHINE_ARMNT => Self::Arm,
+            Machine::MACHINE_UNKNOWN => Self::Neutral,
+            machine => bail!("Unexpected architecture: {:?}", machine),
+        })
     }
 
     pub fn get_from_url(url: &str) -> Option<Self> {
