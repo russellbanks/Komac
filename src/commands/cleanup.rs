@@ -30,7 +30,7 @@ pub struct Cleanup {
     #[arg(short, long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
     concurrent_calls: NonZeroUsize,
 
-    /// GitHub personal access token with the public_repo and read_org scope
+    /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
@@ -38,7 +38,7 @@ pub struct Cleanup {
 impl Cleanup {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
-        let github = GitHub::new(token)?;
+        let github = GitHub::new(&token)?;
 
         // Get all winget-pkgs branches from the user's fork except the default one
         let (branches, default_branch) = github.get_branches(&github.get_username().await?).await?;

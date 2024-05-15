@@ -17,7 +17,7 @@ pub struct ListVersions {
     #[command(flatten)]
     output_type: OutputType,
 
-    /// GitHub personal access token with the public_repo scope
+    /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
@@ -41,7 +41,7 @@ struct OutputType {
 impl ListVersions {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
-        let github = GitHub::new(token)?;
+        let github = GitHub::new(&token)?;
 
         let versions = github
             .get_versions(&get_package_path(&self.package_identifier, None))

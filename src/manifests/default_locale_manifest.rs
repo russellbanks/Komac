@@ -79,11 +79,16 @@ pub struct Documentation {
 #[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Icon {
-    pub icon_url: Url,
-    pub icon_file_type: Option<IconFileType>,
-    pub icon_resolution: Option<IconResolution>,
-    pub icon_theme: Option<IconTheme>,
-    pub icon_sha_256: Option<String>,
+    #[serde(rename = "IconUrl")]
+    pub url: Url,
+    #[serde(rename = "IconFileType")]
+    pub file_type: Option<IconFileType>,
+    #[serde(rename = "IconResolution")]
+    pub resolution: Option<IconResolution>,
+    #[serde(rename = "IconTheme")]
+    pub theme: Option<IconTheme>,
+    #[serde(rename = "IconSha256")]
+    pub sha_256: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]

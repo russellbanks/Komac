@@ -34,7 +34,7 @@ pub struct ShowVersion {
     #[arg(long)]
     version_manifest: bool,
 
-    /// GitHub personal access token with the public_repo scope
+    /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
@@ -42,7 +42,7 @@ pub struct ShowVersion {
 impl ShowVersion {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
-        let github = GitHub::new(token)?;
+        let github = GitHub::new(&token)?;
 
         // Get a list of all versions for the given package
         let versions = github

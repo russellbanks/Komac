@@ -155,7 +155,7 @@ pub struct NewVersion {
     #[arg(long, env = "DRY_RUN")]
     dry_run: bool,
 
-    /// GitHub personal access token with the public_repo and read_org scope
+    /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
@@ -163,7 +163,7 @@ pub struct NewVersion {
 impl NewVersion {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
-        let github = GitHub::new(token)?;
+        let github = GitHub::new(&token)?;
         let client = Client::builder()
             .default_headers(get_default_headers(None))
             .build()?;

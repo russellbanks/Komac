@@ -65,10 +65,10 @@ const GITHUB_GRAPHQL_URL: &str = "https://api.github.com/graphql";
 pub struct GitHub(Client);
 
 impl GitHub {
-    pub fn new(token: String) -> Result<Self> {
+    pub fn new(token: &str) -> Result<Self> {
         Ok(Self(
             Client::builder()
-                .default_headers(get_default_headers(Some(&token)))
+                .default_headers(get_default_headers(Some(token)))
                 .build()?,
         ))
     }

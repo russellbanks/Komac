@@ -102,7 +102,7 @@ pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Utf8Pat
 pub fn reorder_keys(
     package_identifier: PackageIdentifier,
     package_version: PackageVersion,
-    installers: BTreeSet<Installer>,
+    mut installers: BTreeSet<Installer>,
     mut installer_manifest: InstallerManifest,
 ) -> InstallerManifest {
     macro_rules! root_manifest_key {
@@ -187,13 +187,16 @@ pub fn reorder_keys(
         apps_and_features_entries: root_manifest_key!(apps_and_features_entries),
         elevation_requirement: root_manifest_key!(elevation_requirement),
         installation_metadata: root_manifest_key!(installation_metadata),
-        installers: remove_non_distinct_keys(installers),
+        installers: {
+            remove_non_distinct_keys(&mut installers);
+            installers
+        },
         manifest_version: ManifestVersion::default(),
         ..installer_manifest
     }
 }
 
-fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Installer> {
+fn remove_non_distinct_keys(installers: &mut BTreeSet<Installer>) {
     macro_rules! installer_key {
         ($item: expr, $field: ident) => {
             installers
@@ -227,7 +230,7 @@ fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Install
         };
     }
 
-    installers
+    *installers = installers
         .iter()
         .cloned()
         .map(|mut installer| Installer {
@@ -273,5 +276,5 @@ fn remove_non_distinct_keys(installers: BTreeSet<Installer>) -> BTreeSet<Install
             installation_metadata: installer_key!(installer, installation_metadata),
             ..installer
         })
-        .collect()
+        .collect();
 }
