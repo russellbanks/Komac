@@ -72,7 +72,7 @@ tui-textarea = { version = "0.4.0", features = ["search"] }
 url = { version = "2.5.0", features = ["serde"] }
 uuid = { version = "1.8.0", features = ["v4"] }
 versions = "6.2.0"
-yara-x = { version = "0.2.1", default-features = false, features = ["pe-module"], git = "https://github.com/VirusTotal/yara-x.git" }
+yara-x = { version = "0.3.0", default-features = false, features = ["pe-module"] }
 zip = { version = "1.2.3", default-features = false, features = ["deflate"] }
 
 [build-dependencies]

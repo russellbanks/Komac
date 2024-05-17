@@ -1857,15 +1857,15 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "816ec7294445779408f36fe57bc5b7fc1cf59664059096c65f905c1c61f58069"
+checksum = "fa82e28a107a8cc405f0839610bdc9b15f1e25ec7d696aa5cf173edbcb1486ab"
 dependencies = [
+ "atomic-waker",
  "bytes",
  "fnv",
  "futures-core",
  "futures-sink",
- "futures-util",
  "http",
  "indexmap 2.2.6",
  "slab",
@@ -5634,8 +5634,9 @@ checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yara-x"
-version = "0.2.1"
-source = "git+https://github.com/VirusTotal/yara-x.git#43a3f37091dd4404cde945ffe484ed530624e884"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b23afc9e22d403f12e8fdd6451ae155cf10500f299de993b71c761433acc9b95"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -5691,8 +5692,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-macros"
-version = "0.2.1"
-source = "git+https://github.com/VirusTotal/yara-x.git#43a3f37091dd4404cde945ffe484ed530624e884"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02976b0ad9eec42f779b51ae861034be90ec0e5a9543ff8e3d11ac85ad821d2e"
 dependencies = [
  "convert_case 0.6.0",
  "darling 0.14.4",
@@ -5703,8 +5705,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-parser"
-version = "0.2.1"
-source = "git+https://github.com/VirusTotal/yara-x.git#43a3f37091dd4404cde945ffe484ed530624e884"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e6179afd15082d5fbbc22c8231afe8e6b1b40c837a901d6bbe9421fa096d7f8"
 dependencies = [
  "annotate-snippets",
  "base64 0.22.1",
@@ -5722,8 +5725,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-proto"
-version = "0.2.1"
-source = "git+https://github.com/VirusTotal/yara-x.git#43a3f37091dd4404cde945ffe484ed530624e884"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a27576e92be2902c0fa8ab250bc405ffe6718915f362320c4881f33fc109e2f9"
 dependencies = [
  "protobuf",
  "protobuf-codegen",
@@ -5824,9 +5828,9 @@ checksum = "525b4ec142c6b68a2d10f01f7bbf6755599ca3f81ea53b8431b7dd348f5fdb2d"
 
 [[package]]
 name = "zip"
-version = "1.2.3"
+version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c700ea425e148de30c29c580c1f9508b93ca57ad31c9f4e96b83c194c37a7a8f"
+checksum = "f1f4a27345eb6f7aa7bd015ba7eb4175fa4e1b462a29874b779e0bbcf96c6ac7"
 dependencies = [
  "arbitrary",
  "crc32fast",
