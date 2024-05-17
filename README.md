@@ -5,7 +5,8 @@
 ![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
 ![License](https://img.shields.io/github/license/russellbanks/Komac)
 
-Komac is an advanced CLI designed to create manifests for the [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
+Komac is an advanced CLI designed to create manifests for
+the [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
 
 Komac is both blazingly fast 🔥 and incredibly low on memory, using just ~3.5MB of memory on my machine.
 
@@ -13,7 +14,21 @@ Komac is both blazingly fast 🔥 and incredibly low on memory, using just ~3.5M
 
 ## Installation
 
-Komac is cross-platform and binaries are built for Windows, Linux, and macOS.
+Komac is cross-platform and binaries are built for Windows, Linux, macOS, and FreeBSD.
+
+### All platforms
+
+If you have cargo installed, you can compile Rust for any platform
+
+```bash
+cargo install komac
+```
+
+Komac also supports [cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
+
+```bash
+cargo binstall komac
+```
 
 ### Windows
 
@@ -33,8 +48,8 @@ scoop install komac
 
 ### Linux
 
-Portable binaries are available from the [releases](https://github.com/russellbanks/Komac/releases). Debian installers
-(`.deb`) are also available.
+Portable binaries are available from the [releases](https://github.com/russellbanks/Komac/releases). Debian (`.deb`) and
+Red Hat (`.rpm`) installers are also available.
 
 ### macOS
 
@@ -112,7 +127,9 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 [^1]: If all installers have the same value, that value is put at the root of the manifest to reduce redundancy.
 [^2]: Telemetry is enabled by default in WingetCreate. Use `wingetcreate settings` to manually disable telemetry.
 [^3]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
-[^4]: The logic for this was contributed by me :) Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request this feature for YamlCreate.
+[^4]: The logic for this was contributed by me :)
+Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request
+this feature for YamlCreate.
 
 ## Usage with GitHub Actions: [WinGet Releaser](https://github.com/vedantmgoyal2009/winget-releaser) 🌟
 
@@ -125,7 +142,7 @@ publishing to WinGet.
 name: Publish to WinGet
 on:
   release:
-    types: [released]
+    types: [ released ]
 jobs:
   publish:
     runs-on: windows-latest
