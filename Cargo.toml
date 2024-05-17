@@ -52,7 +52,7 @@ ordinal = "0.3.2"
 oxilangtag = { version = "0.1.5", features = ["serde"] }
 package-family-name = "1.1.0"
 percent-encoding = "2.3.1"
-pulldown-cmark = "0.10.3"
+pulldown-cmark = "0.11.0"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
 rand = "0.8.5"
 ratatui = "0.26.2"
