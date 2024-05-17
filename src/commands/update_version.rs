@@ -189,7 +189,10 @@ impl UpdateVersion {
                     architecture: previous_installer.architecture,
                     installer_type: match previous_installer.installer_type {
                         Some(InstallerType::Portable) => previous_installer.installer_type,
-                        _ => new_installer.installer_type,
+                        _ => match new_installer.installer_type {
+                            Some(InstallerType::Portable) => previous_installer.installer_type,
+                            _ => new_installer.installer_type,
+                        },
                     },
                     nested_installer_type: analyser
                         .zip
