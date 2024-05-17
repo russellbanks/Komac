@@ -26,7 +26,7 @@ impl ReleaseNotes {
         for event in parser {
             match event {
                 Start(tag) => match tag {
-                    Tag::BlockQuote | Tag::CodeBlock(_) => {
+                    Tag::BlockQuote(_) | Tag::CodeBlock(_) => {
                         if !buffer.ends_with('\n') {
                             buffer.push('\n');
                         }
