@@ -33,6 +33,7 @@ use crate::manifests::version_manifest::VersionManifest;
 use crate::match_installers::match_installers;
 use crate::types::installer_type::InstallerType;
 use crate::types::manifest_version::ManifestVersion;
+use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::path::NormalizePath;
@@ -185,7 +186,9 @@ impl UpdateVersion {
                         .minimum_os_version
                         .clone()
                         .or(previous_installer.minimum_os_version)
-                        .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0"),
+                        .filter(|minimum_os_version| {
+                            *minimum_os_version != MinimumOSVersion::removable()
+                        }),
                     architecture: previous_installer.architecture,
                     installer_type: match previous_installer.installer_type {
                         Some(InstallerType::Portable) => previous_installer.installer_type,
@@ -258,7 +261,7 @@ impl UpdateVersion {
         );
         installer_manifest.minimum_os_version = installer_manifest
             .minimum_os_version
-            .filter(|minimum_os_version| &**minimum_os_version != "10.0.0.0");
+            .filter(|minimum_os_version| *minimum_os_version != MinimumOSVersion::removable());
         let previous_default_locale_manifest = manifests.default_locale_manifest;
         let mut github_values = match github_values {
             Some(future) => Some(future.await?),

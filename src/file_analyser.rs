@@ -98,8 +98,8 @@ impl<'a> FileAnalyser<'a> {
         }
         Ok(Self {
             platform: msix
-                .as_ref()
-                .map(|msix| BTreeSet::from([msix.target_device_family])),
+                .as_mut()
+                .map(|msix| mem::take(&mut msix.target_device_family)),
             minimum_os_version: msix.as_mut().map(|msix| mem::take(&mut msix.min_version)),
             architecture: msi
                 .as_ref()
@@ -109,8 +109,8 @@ impl<'a> FileAnalyser<'a> {
                     msix_bundle.as_ref().and_then(|bundle| {
                         bundle
                             .packages
-                            .iter()
-                            .find_map(|package| package.processor_architecture)
+                            .first()
+                            .map(|package| package.processor_architecture)
                     })
                 })
                 .or(pe_arch)

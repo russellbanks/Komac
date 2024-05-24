@@ -1,24 +1,39 @@
-use nutype::nutype;
 use std::str::FromStr;
 
-#[nutype(
-    validate(predicate = is_minimum_os_version_valid),
-    default = "0.0.0.0",
-    derive(Clone, FromStr, Debug, Default, Deref, Display, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)
-)]
-pub struct MinimumOSVersion(String);
+use color_eyre::eyre::Error;
+use derive_more::{Display, FromStr};
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use versions::Version;
 
-fn is_minimum_os_version_valid(input: &str) -> bool {
-    let parts = input.split('.').collect::<Vec<_>>();
+#[derive(Clone, Debug, Default, Display, Eq, FromStr, Hash, Ord, PartialEq, PartialOrd)]
+pub struct MinimumOSVersion(Version);
 
-    let parts_count = parts.len();
-    if !(1..=4).contains(&parts_count) {
-        return false;
+impl MinimumOSVersion {
+    pub fn new(input: &str) -> color_eyre::Result<Self> {
+        Ok(Self(Version::from_str(input).map_err(Error::msg)?))
     }
 
-    if parts.into_iter().any(|part| u16::from_str(part).is_err()) {
-        return false;
+    pub fn removable() -> Self {
+        Self::new("10.0.0.0").unwrap()
     }
+}
 
-    true
+impl Serialize for MinimumOSVersion {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for MinimumOSVersion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
+    }
 }

@@ -1,14 +1,16 @@
-use crate::manifests::installer_manifest::Platform;
-use crate::msix_family::utils::{hash_signature, read_manifest};
-use crate::types::architecture::Architecture;
-use crate::types::minimum_os_version::MinimumOSVersion;
+use std::collections::BTreeSet;
+use std::io::{Read, Seek};
+
 use color_eyre::eyre::Result;
 use package_family_name::get_package_family_name;
 use quick_xml::de::from_str;
 use serde::Deserialize;
-use std::io::{Read, Seek};
-use std::str::FromStr;
 use zip::ZipArchive;
+
+use crate::manifests::installer_manifest::Platform;
+use crate::msix_family::utils::{hash_signature, read_manifest};
+use crate::types::architecture::Architecture;
+use crate::types::minimum_os_version::MinimumOSVersion;
 
 pub struct Msix {
     pub display_name: String,
@@ -16,7 +18,7 @@ pub struct Msix {
     pub version: String,
     pub signature_sha_256: String,
     pub package_family_name: String,
-    pub target_device_family: Platform,
+    pub target_device_family: BTreeSet<Platform>,
     pub min_version: MinimumOSVersion,
     pub processor_architecture: Architecture,
 }
@@ -43,58 +45,66 @@ impl Msix {
                 &manifest.identity.name,
                 &manifest.identity.publisher,
             ),
-            target_device_family: Platform::from_str(
-                &manifest.dependencies.target_device_family.name,
-            )?,
-            min_version: MinimumOSVersion::new(
-                manifest.dependencies.target_device_family.min_version,
-            )?,
-            processor_architecture: Architecture::from_str(
-                &manifest.identity.processor_architecture,
-            )?,
+            target_device_family: manifest
+                .dependencies
+                .target_device_family
+                .iter()
+                .map(|target_device_family| target_device_family.name)
+                .collect(),
+            min_version: manifest
+                .dependencies
+                .target_device_family
+                .into_iter()
+                .map(|target_device_family| target_device_family.min_version)
+                .min()
+                .unwrap(),
+            processor_architecture: manifest.identity.processor_architecture,
         })
     }
 }
 
-#[derive(Default, Deserialize)]
-#[serde(default, rename_all = "PascalCase")]
+/// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-package>
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct Package {
     identity: Identity,
     properties: Properties,
     dependencies: Dependencies,
 }
 
-#[derive(Default, Deserialize)]
-#[serde(default)]
+/// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-identity>
+#[derive(Deserialize)]
 struct Identity {
     #[serde(rename = "@Name")]
     name: String,
-    #[serde(rename = "@Version")]
-    version: String,
+    #[serde(default, rename = "@ProcessorArchitecture")]
+    processor_architecture: Architecture,
     #[serde(rename = "@Publisher")]
     publisher: String,
-    #[serde(rename = "@ProcessorArchitecture")]
-    processor_architecture: String,
+    #[serde(rename = "@Version")]
+    version: String,
 }
 
-#[derive(Default, Deserialize)]
-#[serde(default, rename_all = "PascalCase")]
+/// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-properties>
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct Properties {
     display_name: String,
     publisher_display_name: String,
 }
 
-#[derive(Default, Deserialize)]
-#[serde(default, rename_all = "PascalCase")]
+/// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-dependencies>
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub(super) struct Dependencies {
-    pub target_device_family: TargetDeviceFamily,
+    pub target_device_family: BTreeSet<TargetDeviceFamily>,
 }
 
-#[derive(Default, Deserialize)]
-#[serde(default)]
+/// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-targetdevicefamily>
+#[derive(Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 pub(super) struct TargetDeviceFamily {
     #[serde(rename = "@Name")]
-    pub name: String,
+    pub name: Platform,
     #[serde(rename = "@MinVersion")]
-    pub min_version: String,
+    pub min_version: MinimumOSVersion,
 }
