@@ -91,7 +91,7 @@ impl<'a> FileAnalyser<'a> {
         if installer_type.is_none() {
             installer_type = Some(InstallerType::get(
                 data,
-                pe.as_ref(),
+                pe.as_deref(),
                 &extension,
                 msi.as_ref(),
             )?);
@@ -151,7 +151,7 @@ impl<'a> FileAnalyser<'a> {
     }
 }
 
-fn get_msi_resource(pe: &Box<PE>) -> Option<&Resource> {
+fn get_msi_resource(pe: &PE) -> Option<&Resource> {
     const MSI: &[u8] = b"M\0S\0I\0";
 
     pe.resources

@@ -76,7 +76,7 @@ const ARCHITECTURES: [(&str, Architecture); 31] = [
 ];
 
 impl Architecture {
-    pub fn get_from_exe(pe: &Box<PE>) -> Result<Self> {
+    pub fn get_from_exe(pe: &PE) -> Result<Self> {
         Ok(match pe.machine() {
             Machine::MACHINE_AMD64 | Machine::MACHINE_IA64 => Self::X64,
             Machine::MACHINE_I386 => Self::X86,

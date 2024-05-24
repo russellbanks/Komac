@@ -27,12 +27,7 @@ pub enum InstallerType {
 }
 
 impl InstallerType {
-    pub fn get(
-        data: &[u8],
-        pe: Option<&Box<PE>>,
-        extension: &str,
-        msi: Option<&Msi>,
-    ) -> Result<Self> {
+    pub fn get(data: &[u8], pe: Option<&PE>, extension: &str, msi: Option<&Msi>) -> Result<Self> {
         match extension {
             MSI => {
                 if let Some(msi) = msi {
@@ -46,11 +41,9 @@ impl InstallerType {
                 let vs_version_info = pe.map(|pe| &pe.version_info);
                 return match () {
                     () if pe.is_some_and(|pe| Self::is_nullsoft(data, pe)) => Ok(Self::Nullsoft),
-                    () if vs_version_info.is_some_and(|map| Self::is_inno(map)) => Ok(Self::Inno),
-                    () if pe.is_some_and(|pe| Self::is_burn(pe)) => Ok(Self::Burn),
-                    () if vs_version_info.is_some_and(|map| Self::is_basic_installer(map)) => {
-                        Ok(Self::Exe)
-                    }
+                    () if vs_version_info.is_some_and(Self::is_inno) => Ok(Self::Inno),
+                    () if pe.is_some_and(Self::is_burn) => Ok(Self::Burn),
+                    () if vs_version_info.is_some_and(Self::is_basic_installer) => Ok(Self::Exe),
                     () => Ok(Self::Portable),
                 };
             }
@@ -60,7 +53,7 @@ impl InstallerType {
     }
 
     /// Checks if the file is Nullsoft from the executable's manifest
-    fn is_nullsoft(data: &[u8], pe: &Box<PE>) -> bool {
+    fn is_nullsoft(data: &[u8], pe: &PE) -> bool {
         #[derive(Default, Deserialize)]
         #[serde(default, rename_all = "camelCase")]
         struct Assembly {
@@ -95,13 +88,12 @@ impl InstallerType {
         vs_version_info.get(COMMENTS).map(String::as_ref) == Some(INNO_COMMENT)
     }
 
-    fn is_burn(pe: &Box<PE>) -> bool {
+    fn is_burn(pe: &PE) -> bool {
         const WIXBURN_HEADER: &[u8] = b".wixburn";
 
         pe.sections
             .iter()
-            .find(|section| section.name() == WIXBURN_HEADER)
-            .is_some()
+            .any(|section| section.name() == WIXBURN_HEADER)
     }
 
     fn is_basic_installer(vs_version_info: &HashMap<String, String>) -> bool {
@@ -111,10 +103,8 @@ impl InstallerType {
 
         vs_version_info
             .iter()
-            .filter_map(|(key, value)| {
-                (key == FILE_DESCRIPTION || key == ORIGINAL_FILENAME)
-                    .then(|| value.to_ascii_lowercase())
-            })
+            .filter(|&(key, _value)| key == FILE_DESCRIPTION || key == ORIGINAL_FILENAME)
+            .map(|(_key, value)| value.to_ascii_lowercase())
             .any(|value| {
                 BASIC_INSTALLER_KEYWORDS
                     .iter()
