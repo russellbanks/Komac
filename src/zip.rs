@@ -1,30 +1,31 @@
-use std::borrow::Cow;
 use std::collections::{BTreeSet, HashMap};
 use std::io::{Read, Seek};
 use std::{io, mem};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::Result;
-use inquire::{min_length, MultiSelect};
+use inquire::{min_length, MultiSelect, Text};
 use memmap2::Mmap;
 use zip::ZipArchive;
 
 use crate::file_analyser::FileAnalyser;
 use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
 use crate::types::architecture::Architecture;
+use crate::types::installer_type::InstallerType;
 
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
     ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];
 
-pub struct Zip {
+pub struct Zip<R: Read + Seek> {
+    archive: ZipArchive<R>,
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub architecture: Option<Architecture>,
     pub identified_files: Vec<Utf8PathBuf>,
 }
 
-impl Zip {
-    pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
+impl<R: Read + Seek> Zip<R> {
+    pub fn new(reader: R) -> Result<Self> {
         let mut zip = ZipArchive::new(reader)?;
 
         let identified_files = zip
@@ -73,12 +74,12 @@ impl Zip {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
                 let map = unsafe { Mmap::map(&temp_file) }?;
-                let file_analyser =
-                    FileAnalyser::new(map.as_ref(), Cow::Borrowed(chosen_file_name.as_str()))?;
+                let file_analyser = FileAnalyser::new(&map, chosen_file_name.as_str())?;
                 nested_installer_type = file_analyser.installer_type.to_nested();
                 architecture = file_analyser.architecture;
             }
             return Ok(Self {
+                archive: zip,
                 nested_installer_type,
                 nested_installer_files: Some(BTreeSet::from([NestedInstallerFiles {
                     relative_file_path: chosen_file_name.clone(),
@@ -90,6 +91,7 @@ impl Zip {
         }
 
         Ok(Self {
+            archive: zip,
             nested_installer_type,
             nested_installer_files: None,
             architecture,
@@ -105,15 +107,33 @@ impl Zip {
             )
             .with_validator(min_length!(1))
             .prompt()?;
+            let first_choice = chosen.first().unwrap();
+            let mut temp_file = tempfile::tempfile()?;
+            io::copy(
+                &mut self.archive.by_name(first_choice.as_str())?,
+                &mut temp_file,
+            )?;
+            let map = unsafe { Mmap::map(&temp_file) }?;
+            let file_analyser = FileAnalyser::new(&map, first_choice.file_name().unwrap())?;
             self.nested_installer_files = Some(
                 chosen
                     .into_iter()
                     .map(|path| NestedInstallerFiles {
+                        portable_command_alias: if file_analyser.installer_type
+                            == InstallerType::Portable
+                        {
+                            Text::new(&format!("Portable command alias for {}:", path.as_str()))
+                                .prompt()
+                                .ok()
+                        } else {
+                            None
+                        },
                         relative_file_path: path,
-                        portable_command_alias: None, // Prompt if portable
                     })
                     .collect(),
             );
+            self.architecture = file_analyser.architecture;
+            self.nested_installer_type = file_analyser.installer_type.to_nested();
         }
         Ok(())
     }

@@ -1,8 +1,8 @@
-use std::borrow::Cow;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::File;
 use std::future::Future;
+use std::mem;
 
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
@@ -92,6 +92,7 @@ async fn download_file(
     Ok(DownloadedFile {
         url: url.into(),
         file: temp_file,
+        mmap: unsafe { Mmap::map(&file) }?,
         sha_256: base16ct::upper::encode_string(&hasher.finalize()),
         file_name,
         last_modified,
@@ -178,29 +179,29 @@ pub fn download_urls<'a>(
 pub struct DownloadedFile {
     pub url: Url,
     pub file: File,
+    pub mmap: Mmap,
     pub sha_256: String,
     pub file_name: String,
     pub last_modified: Option<NaiveDate>,
 }
 
-pub async fn process_files<'a>(
-    files: Vec<DownloadedFile>,
-) -> Result<HashMap<Url, FileAnalyser<'a>>> {
-    stream::iter(files.into_iter().map(
+pub async fn process_files(files: &mut [DownloadedFile]) -> Result<HashMap<Url, FileAnalyser>> {
+    stream::iter(files.iter_mut().map(
         |DownloadedFile {
              url,
-             file,
+             file: _,
+             mmap,
              sha_256,
              file_name,
              last_modified,
          }| async move {
-            let map = unsafe { Mmap::map(&file) }?;
-            let mut file_analyser = FileAnalyser::new(map.as_ref(), Cow::Owned(file_name))?;
+            let mut file_analyser = FileAnalyser::new(mmap, file_name)?;
             file_analyser.architecture =
                 Architecture::get_from_url(url.as_str()).or(file_analyser.architecture);
-            file_analyser.installer_sha_256 = sha_256;
-            file_analyser.last_modified = last_modified;
-            Ok((url, file_analyser))
+            file_analyser.installer_sha_256 = mem::take(sha_256);
+            file_analyser.last_modified = mem::take(last_modified);
+            file_analyser.file_name = mem::take(file_name);
+            Ok((mem::take(url), file_analyser))
         },
     ))
     .buffered(num_cpus::get())

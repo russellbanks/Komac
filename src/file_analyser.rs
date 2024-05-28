@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::io::Cursor;
 use std::mem;
@@ -6,6 +5,7 @@ use std::mem;
 use camino::Utf8Path;
 use chrono::NaiveDate;
 use color_eyre::eyre::Result;
+use memmap2::Mmap;
 use yara_x::mods::pe::{Resource, ResourceType};
 use yara_x::mods::PE;
 
@@ -30,7 +30,7 @@ pub const MSIX_BUNDLE: &str = "msixbundle";
 pub const APPX_BUNDLE: &str = "appxbundle";
 pub const ZIP: &str = "zip";
 
-pub struct FileAnalyser<'a> {
+pub struct FileAnalyser<'data> {
     pub platform: Option<BTreeSet<Platform>>,
     pub minimum_os_version: Option<MinimumOSVersion>,
     pub architecture: Option<Architecture>,
@@ -42,55 +42,55 @@ pub struct FileAnalyser<'a> {
     pub product_code: Option<String>,
     pub product_language: Option<LanguageTag>,
     pub last_modified: Option<NaiveDate>,
-    pub file_name: Cow<'a, str>,
+    pub file_name: String,
     pub copyright: Option<Copyright>,
     pub package_name: Option<PackageName>,
     pub publisher: Option<Publisher>,
     pub msi: Option<Msi>,
-    pub zip: Option<Zip>,
+    pub zip: Option<Zip<Cursor<&'data [u8]>>>,
 }
 
-impl<'a> FileAnalyser<'a> {
-    pub fn new(data: &[u8], file_name: Cow<'a, str>) -> Result<Self> {
-        let extension = Utf8Path::new(file_name.as_ref())
+impl<'data> FileAnalyser<'data> {
+    pub fn new(data: &'data Mmap, file_name: &str) -> Result<Self> {
+        let extension = Utf8Path::new(file_name)
             .extension()
             .unwrap_or_default()
             .to_lowercase();
         let mut msi = match extension.as_str() {
-            MSI => Some(Msi::new(Cursor::new(data))?),
+            MSI => Some(Msi::new(Cursor::new(data.as_ref()))?),
             _ => None,
         };
         let mut installer_type = None;
         let mut pe_arch = None;
-        let pe = yara_x::mods::invoke::<PE>(data);
+        let pe = yara_x::mods::invoke::<PE>(data.as_ref());
         if let Some(ref pe) = pe {
             pe_arch = Some(Architecture::get_from_exe(pe)?);
             installer_type = Some(InstallerType::get(
-                data,
+                data.as_ref(),
                 Some(pe),
                 &extension,
                 msi.as_ref(),
             )?);
             if let Some(msi_resource) = get_msi_resource(pe) {
                 installer_type = Some(InstallerType::Burn);
-                msi = Some(extract_msi(data, msi_resource)?);
+                msi = Some(extract_msi(data.as_ref(), msi_resource)?);
             }
         }
         let mut msix = match extension.as_str() {
-            MSIX | APPX => Some(Msix::new(Cursor::new(data))?),
+            MSIX | APPX => Some(Msix::new(Cursor::new(data.as_ref()))?),
             _ => None,
         };
         let mut msix_bundle = match extension.as_str() {
-            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(Cursor::new(data))?),
+            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(Cursor::new(data.as_ref()))?),
             _ => None,
         };
         let mut zip = match extension.as_str() {
-            ZIP => Some(Zip::new(Cursor::new(data))?),
+            ZIP => Some(Zip::new(Cursor::new(data.as_ref()))?),
             _ => None,
         };
         if installer_type.is_none() {
             installer_type = Some(InstallerType::get(
-                data,
+                data.as_ref(),
                 pe.as_deref(),
                 &extension,
                 msi.as_ref(),
@@ -135,7 +135,7 @@ impl<'a> FileAnalyser<'a> {
             product_code: msi.as_mut().map(|msi| mem::take(&mut msi.product_code)),
             product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
             last_modified: None,
-            file_name,
+            file_name: String::new(),
             copyright: pe
                 .as_ref()
                 .and_then(|pe| Copyright::get_from_exe(&pe.version_info)),

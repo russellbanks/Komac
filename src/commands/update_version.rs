@@ -1,4 +1,5 @@
 use std::collections::BTreeSet;
+use std::io::{Read, Seek};
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 use std::time::Duration;
@@ -125,7 +126,7 @@ impl UpdateVersion {
 
         let manifests = github.get_manifests(&self.identifier, latest_version);
         let multi_progress = MultiProgress::new();
-        let files = stream::iter(download_urls(&client, self.urls, &multi_progress))
+        let mut files = stream::iter(download_urls(&client, self.urls, &multi_progress))
             .buffer_unordered(self.concurrent_downloads.get() as usize)
             .try_collect::<Vec<_>>()
             .await?;
@@ -142,7 +143,7 @@ impl UpdateVersion {
                 )
             });
         let manifests = manifests.await?;
-        let download_results = process_files(files).await?;
+        let download_results = process_files(&mut files).await?;
         let installer_results = download_results
             .iter()
             .map(|(url, download)| Installer {
@@ -446,9 +447,9 @@ impl UpdateVersion {
     }
 }
 
-fn validate_relative_paths(
+fn validate_relative_paths<R: Read + Seek>(
     nested_installer_files: BTreeSet<NestedInstallerFiles>,
-    zip: &Option<Zip>,
+    zip: &Option<Zip<R>>,
 ) -> Option<BTreeSet<NestedInstallerFiles>> {
     let relative_paths = nested_installer_files
         .into_iter()
