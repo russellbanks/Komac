@@ -924,7 +924,7 @@ dependencies = [
  "cranelift-codegen",
  "cranelift-entity",
  "cranelift-frontend",
- "itertools",
+ "itertools 0.12.1",
  "log",
  "smallvec",
  "wasmparser 0.201.0",
@@ -2267,6 +2267,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2368,7 +2377,7 @@ dependencies = [
  "indicatif",
  "indoc",
  "inquire",
- "itertools",
+ "itertools 0.12.1",
  "keyring",
  "memmap2",
  "msi",
@@ -3022,7 +3031,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39b0deead1528fd0e5947a8546a9642a9777c25f6e1e26f34c97b204bbb465bd"
 dependencies = [
  "heck 0.4.1",
- "itertools",
+ "itertools 0.12.1",
  "proc-macro2",
  "proc-macro2-diagnostics",
  "quote",
@@ -3529,7 +3538,7 @@ dependencies = [
  "cassowary",
  "compact_str",
  "crossterm 0.27.0",
- "itertools",
+ "itertools 0.12.1",
  "lru",
  "paste",
  "stability",
@@ -4724,7 +4733,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5fbabedabe362c618c714dbefda9927b5afc8e2a8102f47f081089a9019226"
 dependencies = [
- "itertools",
+ "itertools 0.12.1",
  "unicode-width",
 ]
 
@@ -4797,7 +4806,7 @@ version = "6.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38a8931f8d167b6448076020e70b9de46dcf5ea1731212481a092d0071c4ac5b"
 dependencies = [
- "itertools",
+ "itertools 0.12.1",
  "nom",
 ]
 
@@ -5647,9 +5656,9 @@ checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yara-x"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b23afc9e22d403f12e8fdd6451ae155cf10500f299de993b71c761433acc9b95"
+checksum = "2d4dc3334f9ef8b1be806b719c904e8ca6aeaf0d41db7be50ee44203086cc261"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -5669,7 +5678,7 @@ dependencies = [
  "globwalk",
  "indexmap 2.2.6",
  "intaglio",
- "itertools",
+ "itertools 0.13.0",
  "lazy_static",
  "linkme",
  "md-5",
@@ -5705,9 +5714,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-macros"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02976b0ad9eec42f779b51ae861034be90ec0e5a9543ff8e3d11ac85ad821d2e"
+checksum = "d0ad20e7223e308a2681e65fa367689c5a46e97934e0fb3e01635459f758d545"
 dependencies = [
  "convert_case 0.6.0",
  "darling 0.14.4",
@@ -5718,15 +5727,15 @@ dependencies = [
 
 [[package]]
 name = "yara-x-parser"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e6179afd15082d5fbbc22c8231afe8e6b1b40c837a901d6bbe9421fa096d7f8"
+checksum = "3c0b542b964a4dedb4f3c0f184448eeec5bace4fe1d8f61d8a76ff41733c6eda"
 dependencies = [
  "annotate-snippets",
  "base64 0.22.1",
  "bitmask",
  "bstr",
- "itertools",
+ "itertools 0.13.0",
  "lazy_static",
  "num-traits",
  "pest",
@@ -5738,9 +5747,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-proto"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a27576e92be2902c0fa8ab250bc405ffe6718915f362320c4881f33fc109e2f9"
+checksum = "4556aa31c1a51517cb2efab0c1480b24026e0f2ca980755871fc6c7f12da9524"
 dependencies = [
  "protobuf",
  "protobuf-codegen",
