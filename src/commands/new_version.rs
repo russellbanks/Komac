@@ -70,7 +70,7 @@ use crate::update_state::UpdateState;
 #[derive(Parser)]
 pub struct NewVersion {
     /// The package's unique identifier
-    #[arg(short = 'i', long = "identifier")]
+    #[arg()]
     package_identifier: Option<PackageIdentifier>,
 
     /// The package's version

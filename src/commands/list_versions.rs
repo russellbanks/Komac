@@ -11,7 +11,7 @@ use std::io::Write;
 
 #[derive(Parser)]
 pub struct ListVersions {
-    #[arg(short = 'i', long = "identifier")]
+    #[arg()]
     package_identifier: PackageIdentifier,
 
     #[command(flatten)]

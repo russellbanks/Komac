@@ -19,7 +19,7 @@ use std::time::Duration;
 #[derive(Parser)]
 pub struct RemoveVersion {
     /// The package's unique identifier
-    #[arg(short = 'i', long = "identifier")]
+    #[arg()]
     package_identifier: PackageIdentifier,
 
     /// The package's version

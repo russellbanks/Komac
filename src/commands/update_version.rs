@@ -45,12 +45,12 @@ use crate::zip::Zip;
 #[derive(Parser)]
 pub struct UpdateVersion {
     /// The package's unique identifier
-    #[arg(id = "package_identifier", short = 'i', long = "identifier")]
-    identifier: PackageIdentifier,
+    #[arg()]
+    package_identifier: PackageIdentifier,
 
     /// The package's version
-    #[arg(id = "package_version", short = 'v', long = "version")]
-    version: PackageVersion,
+    #[arg(short = 'v', long = "version")]
+    package_version: PackageVersion,
 
     /// The list of package installers
     #[arg(short, long, num_args = 1.., required = true)]
@@ -101,30 +101,38 @@ impl UpdateVersion {
             .default_headers(get_default_headers(None))
             .build()?;
 
-        let existing_pr_future = github.get_existing_pull_request(&self.identifier, &self.version);
+        let existing_pr_future =
+            github.get_existing_pull_request(&self.package_identifier, &self.package_version);
 
         let versions = github
-            .get_versions(&get_package_path(&self.identifier, None))
+            .get_versions(&get_package_path(&self.package_identifier, None))
             .await
             .wrap_err_with(|| {
                 format!(
                     "{} does not exist in {WINGET_PKGS_FULL_NAME}",
-                    self.identifier
+                    self.package_identifier
                 )
             })?;
 
         let latest_version = versions.iter().max().unwrap();
-        println!("Latest version of {}: {latest_version}", self.identifier);
+        println!(
+            "Latest version of {}: {latest_version}",
+            self.package_identifier
+        );
 
         if let Some(pull_request) = existing_pr_future.await? {
             if !self.dry_run
-                && !prompt_existing_pull_request(&self.identifier, &self.version, &pull_request)?
+                && !prompt_existing_pull_request(
+                    &self.package_identifier,
+                    &self.package_version,
+                    &pull_request,
+                )?
             {
                 return Ok(());
             }
         }
 
-        let manifests = github.get_manifests(&self.identifier, latest_version);
+        let manifests = github.get_manifests(&self.package_identifier, latest_version);
         let multi_progress = MultiProgress::new();
         let mut files = stream::iter(download_urls(&client, self.urls, &multi_progress))
             .buffer_unordered(self.concurrent_downloads.get() as usize)
@@ -240,7 +248,9 @@ impl UpdateVersion {
                             } else {
                                 Some(msi.product_name.clone())
                             },
-                            display_version: if msi.product_version == self.version.to_string() {
+                            display_version: if msi.product_version
+                                == self.package_version.to_string()
+                            {
                                 None
                             } else {
                                 Some(msi.product_version.clone())
@@ -255,8 +265,8 @@ impl UpdateVersion {
             .collect::<BTreeSet<_>>();
 
         let mut installer_manifest = reorder_keys(
-            self.identifier.clone(),
-            self.version.clone(),
+            self.package_identifier.clone(),
+            self.package_version.clone(),
             installers,
             previous_installer_manifest,
         );
@@ -269,8 +279,8 @@ impl UpdateVersion {
             None => None,
         };
         let default_locale_manifest = DefaultLocaleManifest {
-            package_identifier: self.identifier.clone(),
-            package_version: self.version.clone(),
+            package_identifier: self.package_identifier.clone(),
+            package_version: self.package_version.clone(),
             publisher_url: previous_default_locale_manifest.publisher_url.or_else(|| {
                 github_values
                     .as_mut()
@@ -299,17 +309,21 @@ impl UpdateVersion {
             ..previous_default_locale_manifest
         };
         let version_manifest = VersionManifest {
-            package_identifier: self.identifier.clone(),
-            package_version: self.version.clone(),
+            package_identifier: self.package_identifier.clone(),
+            package_version: self.package_version.clone(),
             manifest_version: ManifestVersion::default(),
             ..manifests.version_manifest
         };
 
-        let full_package_path = get_package_path(&self.identifier, Some(&self.version));
+        let full_package_path =
+            get_package_path(&self.package_identifier, Some(&self.package_version));
         let mut changes = {
             let mut path_content_map = Vec::new();
             path_content_map.push((
-                format!("{full_package_path}/{}.installer.yaml", self.identifier),
+                format!(
+                    "{full_package_path}/{}.installer.yaml",
+                    self.package_identifier
+                ),
                 build_manifest_string(
                     &Manifest::Installer(&installer_manifest),
                     &self.created_with,
@@ -318,7 +332,7 @@ impl UpdateVersion {
             path_content_map.push((
                 format!(
                     "{full_package_path}/{}.locale.{}.yaml",
-                    self.identifier, version_manifest.default_locale
+                    self.package_identifier, version_manifest.default_locale
                 ),
                 build_manifest_string(
                     &Manifest::DefaultLocale(&default_locale_manifest),
@@ -329,7 +343,7 @@ impl UpdateVersion {
                 .locale_manifests
                 .into_iter()
                 .map(|locale_manifest| LocaleManifest {
-                    package_version: self.version.clone(),
+                    package_version: self.package_version.clone(),
                     release_notes_url: github_values
                         .as_ref()
                         .map(|values| values.release_notes_url.clone()),
@@ -344,14 +358,14 @@ impl UpdateVersion {
                         path_content_map.push((
                             format!(
                                 "{full_package_path}/{}.locale.{}.yaml",
-                                self.identifier, locale_manifest.package_locale
+                                self.package_identifier, locale_manifest.package_locale
                             ),
                             yaml,
                         ));
                     }
                 });
             path_content_map.push((
-                format!("{full_package_path}/{}.yaml", self.identifier),
+                format!("{full_package_path}/{}.yaml", self.package_identifier),
                 build_manifest_string(&Manifest::Version(&version_manifest), &self.created_with)?,
             ));
             path_content_map
@@ -360,8 +374,8 @@ impl UpdateVersion {
         let submit_option = prompt_submit_option(
             &mut changes,
             self.submit,
-            &self.identifier,
-            &self.version,
+            &self.package_identifier,
+            &self.package_version,
             self.dry_run,
         )?;
 
@@ -380,21 +394,21 @@ impl UpdateVersion {
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
             "Creating a pull request for {} version {}",
-            self.identifier, self.version
+            self.package_identifier, self.package_version
         ));
         pr_progress.enable_steady_tick(Duration::from_millis(50));
 
         let current_user = github.get_username().await?;
         let winget_pkgs = github.get_winget_pkgs(None).await?;
         let fork = github.get_winget_pkgs(Some(&current_user)).await?;
-        let branch_name = get_branch_name(&self.identifier, &self.version);
+        let branch_name = get_branch_name(&self.package_identifier, &self.package_version);
         let pull_request_branch = github
             .create_branch(&fork.id, &branch_name, &winget_pkgs.default_branch_oid.0)
             .await?;
         let commit_title = get_commit_title(
-            &self.identifier,
-            &self.version,
-            &UpdateState::get(&self.version, Some(&versions), Some(latest_version)),
+            &self.package_identifier,
+            &self.package_version,
+            &UpdateState::get(&self.package_version, Some(&versions), Some(latest_version)),
         );
         let changes = changes
             .iter()
