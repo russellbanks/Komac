@@ -12,6 +12,7 @@ use zip::ZipArchive;
 use crate::manifests::installer_manifest::Platform;
 use crate::msix_family::utils::{hash_signature, read_manifest};
 use crate::types::architecture::Architecture;
+use crate::types::file_extension::FileExtension;
 use crate::types::minimum_os_version::MinimumOSVersion;
 
 pub struct Msix {
@@ -25,6 +26,7 @@ pub struct Msix {
     pub processor_architecture: Architecture,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
+    pub file_extensions: Option<BTreeSet<FileExtension>>,
 }
 
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
@@ -102,6 +104,18 @@ impl Msix {
                                 });
                         }
                     }
+                    b"FileType" => {
+                        if let Ok(extension) = FileExtension::from_str(
+                            reader
+                                .read_text(event.to_end().name())?
+                                .trim_start_matches('.'),
+                        ) {
+                            manifest
+                                .file_type_association
+                                .supported_file_types
+                                .insert(extension);
+                        }
+                    }
                     b"Capability" => {
                         let _ = event
                             .attributes()
@@ -154,6 +168,8 @@ impl Msix {
                 .filter(|capabilities| !capabilities.is_empty()),
             restricted_capabilities: Option::from(manifest.capabilities.restricted)
                 .filter(|restricted| !restricted.is_empty()),
+            file_extensions: Option::from(manifest.file_type_association.supported_file_types)
+                .filter(|supported_file_types| !supported_file_types.is_empty()),
         })
     }
 }
@@ -165,6 +181,7 @@ struct Package {
     properties: Properties,
     dependencies: Dependencies,
     capabilities: Capabilities,
+    file_type_association: FileTypeAssociation,
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-identity>
@@ -200,8 +217,14 @@ pub(super) struct TargetDeviceFamily {
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-capabilities>
-#[derive(Deserialize, Default)]
+#[derive(Default)]
 struct Capabilities {
     restricted: BTreeSet<String>,
     unrestricted: BTreeSet<String>,
+}
+
+/// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-uap-filetypeassociation>
+#[derive(Default)]
+struct FileTypeAssociation {
+    supported_file_types: BTreeSet<FileExtension>,
 }

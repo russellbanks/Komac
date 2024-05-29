@@ -198,7 +198,6 @@ impl UpdateVersion {
                         .filter(|minimum_os_version| {
                             *minimum_os_version != MinimumOSVersion::removable()
                         }),
-                    architecture: previous_installer.architecture,
                     installer_type: match previous_installer.installer_type {
                         Some(InstallerType::Portable) => previous_installer.installer_type,
                         _ => match new_installer.installer_type {
@@ -227,14 +226,19 @@ impl UpdateVersion {
                     installer_url: new_installer.installer_url.clone(),
                     installer_sha_256: analyser.installer_sha_256.clone(),
                     signature_sha_256: analyser.signature_sha_256.clone(),
-                    install_modes: previous_installer.install_modes,
-                    installer_switches: previous_installer.installer_switches,
-                    installer_success_codes: previous_installer.installer_success_codes,
                     upgrade_behavior: UpgradeBehavior::get(analyser.installer_type)
                         .or(previous_installer.upgrade_behavior),
-                    commands: previous_installer.commands,
-                    protocols: previous_installer.protocols,
-                    file_extensions: previous_installer.file_extensions,
+                    file_extensions: previous_installer
+                        .file_extensions
+                        .map(|mut extensions| {
+                            if let Some(mut identified_extensions) =
+                                analyser.file_extensions.clone()
+                            {
+                                extensions.append(&mut identified_extensions);
+                            }
+                            extensions
+                        })
+                        .or_else(|| analyser.file_extensions.clone()),
                     package_family_name: analyser.package_family_name.clone(),
                     product_code: analyser.product_code.clone(),
                     capabilities: analyser

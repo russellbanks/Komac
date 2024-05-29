@@ -15,6 +15,7 @@ use crate::msix_family::msix::Msix;
 use crate::msix_family::msixbundle::MsixBundle;
 use crate::types::architecture::Architecture;
 use crate::types::copyright::Copyright;
+use crate::types::file_extension::FileExtension;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::minimum_os_version::MinimumOSVersion;
@@ -42,6 +43,7 @@ pub struct FileAnalyser<'data> {
     pub product_code: Option<String>,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
+    pub file_extensions: Option<BTreeSet<FileExtension>>,
     pub product_language: Option<LanguageTag>,
     pub last_modified: Option<NaiveDate>,
     pub file_name: String,
@@ -139,7 +141,10 @@ impl<'data> FileAnalyser<'data> {
             capabilities: msix
                 .as_mut()
                 .and_then(|msix| mem::take(&mut msix.capabilities)),
-            restricted_capabilities: msix.and_then(|msix| msix.restricted_capabilities),
+            restricted_capabilities: msix
+                .as_mut()
+                .and_then(|msix| mem::take(&mut msix.restricted_capabilities)),
+            file_extensions: msix.and_then(|msix| msix.file_extensions),
             product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
             last_modified: None,
             file_name: String::new(),

@@ -281,6 +281,7 @@ impl NewVersion {
                 installer_switches: installer_switches
                     .is_any_some()
                     .then_some(installer_switches),
+                file_extensions: mem::take(&mut analyser.file_extensions),
                 package_family_name: mem::take(&mut analyser.package_family_name),
                 product_code: mem::take(&mut analyser.product_code),
                 capabilities: mem::take(&mut analyser.capabilities),
@@ -320,7 +321,14 @@ impl NewVersion {
             upgrade_behavior: Some(radio_prompt::<UpgradeBehavior>()?),
             commands: list_prompt::<Command>()?,
             protocols: list_prompt::<Protocol>()?,
-            file_extensions: list_prompt::<FileExtension>()?,
+            file_extensions: if installers
+                .iter()
+                .all(|installer| installer.file_extensions.is_none())
+            {
+                list_prompt::<FileExtension>()?
+            } else {
+                None
+            },
             manifest_type: ManifestType::Installer,
             ..InstallerManifest::default()
         };
