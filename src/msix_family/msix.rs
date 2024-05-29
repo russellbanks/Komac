@@ -1,9 +1,11 @@
 use std::collections::BTreeSet;
 use std::io::{Read, Seek};
+use std::str::FromStr;
 
 use color_eyre::eyre::Result;
 use package_family_name::get_package_family_name;
-use quick_xml::de::from_str;
+use quick_xml::events::Event;
+use quick_xml::Reader;
 use serde::Deserialize;
 use zip::ZipArchive;
 
@@ -21,6 +23,8 @@ pub struct Msix {
     pub target_device_family: BTreeSet<Platform>,
     pub min_version: MinimumOSVersion,
     pub processor_architecture: Architecture,
+    pub capabilities: Option<BTreeSet<String>>,
+    pub restricted_capabilities: Option<BTreeSet<String>>,
 }
 
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
@@ -34,7 +38,94 @@ impl Msix {
 
         let signature_sha_256 = hash_signature(&mut zip)?;
 
-        let manifest = from_str::<Package>(&appx_manifest)?;
+        let mut manifest = Package::default();
+
+        let mut reader = Reader::from_str(&appx_manifest);
+        reader.expand_empty_elements(true);
+        reader.trim_text(true);
+
+        loop {
+            match reader.read_event()? {
+                Event::Start(event) => match event.local_name().as_ref() {
+                    b"Identity" => {
+                        for attribute in event.attributes().flatten() {
+                            match attribute.key.as_ref() {
+                                b"Name" => {
+                                    manifest.identity.name =
+                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                }
+                                b"Version" => {
+                                    manifest.identity.version =
+                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                }
+                                b"Publisher" => {
+                                    manifest.identity.publisher =
+                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                }
+                                b"ProcessorArchitecture" => {
+                                    manifest.identity.processor_architecture =
+                                        Architecture::from_str(&String::from_utf8_lossy(
+                                            &attribute.value,
+                                        ))?;
+                                }
+                                _ => continue,
+                            }
+                        }
+                    }
+                    b"DisplayName" => {
+                        manifest.properties.display_name =
+                            reader.read_text(event.to_end().name())?.into_owned();
+                    }
+                    b"PublisherDisplayName" => {
+                        manifest.properties.publisher_display_name =
+                            reader.read_text(event.to_end().name())?.into_owned();
+                    }
+                    b"TargetDeviceFamily" => {
+                        let attributes = event.attributes().flatten().collect::<Vec<_>>();
+                        let platform = attributes
+                            .iter()
+                            .find(|attribute| attribute.key.as_ref() == b"Name")
+                            .map(|platform| String::from_utf8_lossy(&platform.value))
+                            .and_then(|platform| Platform::from_str(&platform).ok());
+                        let min_version = attributes
+                            .iter()
+                            .find(|attribute| attribute.key.as_ref() == b"MinVersion")
+                            .map(|min_version| String::from_utf8_lossy(&min_version.value))
+                            .and_then(|min_version| MinimumOSVersion::from_str(&min_version).ok());
+                        if let (Some(platform), Some(min_version)) = (platform, min_version) {
+                            manifest
+                                .dependencies
+                                .target_device_family
+                                .insert(TargetDeviceFamily {
+                                    name: platform,
+                                    min_version,
+                                });
+                        }
+                    }
+                    b"Capability" => {
+                        let _ = event
+                            .attributes()
+                            .flatten()
+                            .find(|attribute| attribute.key.as_ref() == b"Name")
+                            .map(|attribute| String::from_utf8_lossy(&attribute.value).into_owned())
+                            .is_some_and(|capability| {
+                                if event
+                                    .name()
+                                    .prefix()
+                                    .is_some_and(|prefix| prefix.as_ref() == b"rescap")
+                                {
+                                    manifest.capabilities.restricted.insert(capability)
+                                } else {
+                                    manifest.capabilities.unrestricted.insert(capability)
+                                }
+                            });
+                    }
+                    _ => continue,
+                },
+                Event::Eof => break,
+                _ => (),
+            }
+        }
 
         Ok(Self {
             display_name: manifest.properties.display_name,
@@ -59,42 +150,41 @@ impl Msix {
                 .min()
                 .unwrap(),
             processor_architecture: manifest.identity.processor_architecture,
+            capabilities: Option::from(manifest.capabilities.unrestricted)
+                .filter(|capabilities| !capabilities.is_empty()),
+            restricted_capabilities: Option::from(manifest.capabilities.restricted)
+                .filter(|restricted| !restricted.is_empty()),
         })
     }
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-package>
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Default)]
 struct Package {
     identity: Identity,
     properties: Properties,
     dependencies: Dependencies,
+    capabilities: Capabilities,
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-identity>
-#[derive(Deserialize)]
+#[derive(Default)]
 struct Identity {
-    #[serde(rename = "@Name")]
     name: String,
-    #[serde(default, rename = "@ProcessorArchitecture")]
     processor_architecture: Architecture,
-    #[serde(rename = "@Publisher")]
     publisher: String,
-    #[serde(rename = "@Version")]
     version: String,
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-properties>
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Default)]
 struct Properties {
     display_name: String,
     publisher_display_name: String,
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-dependencies>
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub(super) struct Dependencies {
     pub target_device_family: BTreeSet<TargetDeviceFamily>,
@@ -107,4 +197,11 @@ pub(super) struct TargetDeviceFamily {
     pub name: Platform,
     #[serde(rename = "@MinVersion")]
     pub min_version: MinimumOSVersion,
+}
+
+/// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-capabilities>
+#[derive(Deserialize, Default)]
+struct Capabilities {
+    restricted: BTreeSet<String>,
+    unrestricted: BTreeSet<String>,
 }

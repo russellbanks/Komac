@@ -283,6 +283,8 @@ impl NewVersion {
                     .then_some(installer_switches),
                 package_family_name: mem::take(&mut analyser.package_family_name),
                 product_code: mem::take(&mut analyser.product_code),
+                capabilities: mem::take(&mut analyser.capabilities),
+                restricted_capabilities: mem::take(&mut analyser.restricted_capabilities),
                 release_date: analyser.last_modified,
                 apps_and_features_entries: analyser.msi.as_mut().map(|msi| {
                     BTreeSet::from([AppsAndFeaturesEntry {

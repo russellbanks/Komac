@@ -210,8 +210,7 @@ impl UpdateVersion {
                         .zip
                         .as_ref()
                         .and_then(|zip| zip.nested_installer_type)
-                        .or(previous_installer.nested_installer_type)
-                        .or(previous_installer_manifest.nested_installer_type),
+                        .or(previous_installer.nested_installer_type),
                     nested_installer_files: previous_installer
                         .nested_installer_files
                         .or_else(|| previous_installer_manifest.nested_installer_files.clone())
@@ -238,6 +237,14 @@ impl UpdateVersion {
                     file_extensions: previous_installer.file_extensions,
                     package_family_name: analyser.package_family_name.clone(),
                     product_code: analyser.product_code.clone(),
+                    capabilities: analyser
+                        .capabilities
+                        .clone()
+                        .or(previous_installer.capabilities),
+                    restricted_capabilities: analyser
+                        .restricted_capabilities
+                        .clone()
+                        .or(previous_installer.restricted_capabilities),
                     release_date: analyser.last_modified,
                     apps_and_features_entries: analyser.msi.as_ref().map(|msi| {
                         BTreeSet::from([AppsAndFeaturesEntry {
