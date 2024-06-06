@@ -1030,9 +1030,9 @@ dependencies = [
 
 [[package]]
 name = "cynic"
-version = "3.7.2"
+version = "3.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae6b0725e67c937e2005f05c6da426f3a490a1f36e76f87cdfba8ea3c895133f"
+checksum = "478c02b53607e3f21c374f024c2cfc2154e554905bba478e8e09409f10ce3726"
 dependencies = [
  "cynic-proc-macros",
  "ref-cast",
@@ -1045,9 +1045,9 @@ dependencies = [
 
 [[package]]
 name = "cynic-codegen"
-version = "3.7.2"
+version = "3.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f3f1953f4590381034d75c49a568665567f19ee393d4292835d35bac9724dca"
+checksum = "7c0ec86f960a00ce087e96ff6f073f6ff28b6876d69ce8caa06c03fb4143981c"
 dependencies = [
  "counter",
  "cynic-parser",
@@ -1064,9 +1064,9 @@ dependencies = [
 
 [[package]]
 name = "cynic-parser"
-version = "0.4.0"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cdd04fb7248e4ef439cc373564fcdec5b14140b8240e727c264fb85a6f729ee"
+checksum = "11ac6fe3f275572a06ab37e7a3b363eb581381f124e689fbe48aa9d6a2b897a2"
 dependencies = [
  "indexmap 2.2.6",
  "lalrpop-util",
@@ -1075,9 +1075,9 @@ dependencies = [
 
 [[package]]
 name = "cynic-proc-macros"
-version = "3.7.2"
+version = "3.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8c91cdcec0d56aedd760f3cec277a7d2f43c52c9a6d61cb7852be38a2fc8426"
+checksum = "25a69ecdf4aa110fed1c0c8de290bc8ccb2835388733cf2f418f0abdf6ff3899"
 dependencies = [
  "cynic-codegen",
  "darling 0.20.9",
