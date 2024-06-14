@@ -43,8 +43,9 @@ impl Msix {
         let mut manifest = Package::default();
 
         let mut reader = Reader::from_str(&appx_manifest);
-        reader.expand_empty_elements(true);
-        reader.trim_text(true);
+        let config = reader.config_mut();
+        config.expand_empty_elements = true;
+        config.trim_text(true);
 
         loop {
             match reader.read_event()? {
