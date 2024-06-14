@@ -12,6 +12,7 @@ use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use reqwest::Client;
+use strsim::levenshtein;
 
 use crate::commands::utils::{
     prompt_existing_pull_request, prompt_submit_option, reorder_keys, write_changes_to_dir,
@@ -488,9 +489,11 @@ fn validate_relative_paths<R: Read + Seek>(
                 } else {
                     zip.identified_files
                         .iter()
-                        .find(|file_path| {
-                            file_path.file_name()
-                                == nested_installer_files.relative_file_path.file_name()
+                        .min_by_key(|file_path| {
+                            levenshtein(
+                                file_path.as_str(),
+                                nested_installer_files.relative_file_path.as_str(),
+                            )
                         })
                         .map(|path| NestedInstallerFiles {
                             relative_file_path: path.to_path_buf(),

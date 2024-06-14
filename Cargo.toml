@@ -62,6 +62,7 @@ serde_json = "1.0.117"
 serde_with = { version = "3.8.1", default-features = false, features = ["macros"] }
 serde_yaml = "0.9.34"
 sha2 = "0.10.8"
+strsim = "0.11.1"
 strum = { version = "0.26.2", features = ["derive"] }
 tempfile = "3.10.1"
 thiserror = "1.0.61"
