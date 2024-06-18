@@ -72,8 +72,11 @@ jobs:
         if: contains(matrix.platform.bins, 'cargo-generate-rpm')
         shell: pwsh
         run: |
-          $nightly = if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') { "--set-metadata=version=`"nightly`"" } else { "" }
-          cargo generate-rpm --target ${{ matrix.platform.target }} $nightly
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
+            cargo generate-rpm --target ${{ matrix.platform.target }} --set-metadata='version="nightly"'
+          } else {
+            cargo generate-rpm --target ${{ matrix.platform.target }}
+          }
 
       - name: Rename binary
         id: rename_binary
