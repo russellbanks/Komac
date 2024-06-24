@@ -86,17 +86,17 @@ A classic token with the `public_repo` scope.
 
 ### Update an existing package with a new version
 
-```bash
-komac update -i Package.Identifier -v 1.2.3 --urls https://www.firstUrl.com https://www.secondUrl.com --submit
+```
+komac update Package.Identifier --version 1.2.3 --urls https://www.firstUrl.com https://www.secondUrl.com --submit
 ```
 
-| Parameter                            | Usage          | Notes                                                      |
-|--------------------------------------|----------------|------------------------------------------------------------|
-| Package Identifier                   | `--identifier` |                                                            |
-| Version                              | `--version`    |                                                            |
-| URLs                                 | `--urls`       | URLs are delimited by a space                              |
-| Automatically submit                 | `--submit`     |                                                            |
-| Token (if one is not already stored) | `--token`      | Komac will check for a `GITHUB_TOKEN` environment variable |
+| Parameter                            | Usage                             | Notes                                                      |
+|--------------------------------------|-----------------------------------|------------------------------------------------------------|
+| Package Identifier                   | `komac update Package.Identifier` |                                                            |
+| Version                              | `--version`                       |                                                            |
+| URLs                                 | `--urls`                          | URLs are delimited by a space                              |
+| Automatically submit                 | `--submit`                        |                                                            |
+| Token (if one is not already stored) | `--token`                         | Komac will check for a `GITHUB_TOKEN` environment variable |
 
 ## Komac vs other tools 🏆
 
