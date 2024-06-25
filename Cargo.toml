@@ -53,7 +53,7 @@ oxilangtag = { version = "0.1.5", features = ["serde"] }
 package-family-name = "1.1.0"
 percent-encoding = "2.3.1"
 pulldown-cmark = "0.11.0"
-quick-xml = { version = "0.33.0", features = ["serialize"] }
+quick-xml = { version = "0.34.0", features = ["serialize"] }
 rand = "0.8.5"
 ratatui = "0.26.3"
 reqwest = { version = "0.12.5", features = ["native-tls-vendored", "stream"] }
