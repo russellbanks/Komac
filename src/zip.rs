@@ -125,6 +125,7 @@ impl<R: Read + Seek> Zip<R> {
                             Text::new(&format!("Portable command alias for {}:", path.as_str()))
                                 .prompt()
                                 .ok()
+                                .filter(|alias| !alias.trim().is_empty())
                         } else {
                             None
                         },
