@@ -3634,7 +3634,7 @@ checksum = "ad156d539c879b7a24a363a2016d77961786e71f48f2e2fc8302a92abd2429a6"
 dependencies = [
  "hashbrown 0.13.2",
  "log",
- "rustc-hash",
+ "rustc-hash 1.1.0",
  "slice-group-by",
  "smallvec",
 ]
@@ -3849,6 +3849,12 @@ name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
+name = "rustc-hash"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "583034fd73374156e66797ed8e5b0d5690409c9226b22d87cb7f19821c05d152"
 
 [[package]]
 name = "rustc_version"
@@ -5743,9 +5749,9 @@ checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yara-x"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d4dc3334f9ef8b1be806b719c904e8ca6aeaf0d41db7be50ee44203086cc261"
+checksum = "45471570bb3f338c60ec3b42b579ae5d7e0f78cc55bed76ad95fa811dcc35917"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -5783,7 +5789,7 @@ dependencies = [
  "regex-automata",
  "regex-syntax 0.8.4",
  "rsa",
- "rustc-hash",
+ "rustc-hash 2.0.0",
  "serde",
  "serde_json",
  "sha1",
@@ -5801,9 +5807,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-macros"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0ad20e7223e308a2681e65fa367689c5a46e97934e0fb3e01635459f758d545"
+checksum = "39c14492cf23188b283ffbf8ba16683439a87ece2196c74924ec59f4d31af5cf"
 dependencies = [
  "convert_case 0.6.0",
  "darling 0.14.4",
@@ -5814,9 +5820,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-parser"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c0b542b964a4dedb4f3c0f184448eeec5bace4fe1d8f61d8a76ff41733c6eda"
+checksum = "11c782eb5bc34d395eca8d2ebfaf8188d0af260b5b7d3b86ab83c33688db7075"
 dependencies = [
  "annotate-snippets",
  "base64 0.22.1",
@@ -5834,9 +5840,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-proto"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4556aa31c1a51517cb2efab0c1480b24026e0f2ca980755871fc6c7f12da9524"
+checksum = "71ec1933e265323b945ce0d5e9caca6432afe173009b518336566ca0a76fb30b"
 dependencies = [
  "protobuf",
  "protobuf-codegen",
