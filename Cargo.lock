@@ -4745,9 +4745,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tui-textarea"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3e38ced1f941a9cfc923fbf2fe6858443c42cc5220bfd35bdd3648371e7bd8e"
+checksum = "6b28768e9fa0560469d49bc37cad4b282b2f887c64da154f1205274e118a9f73"
 dependencies = [
  "crossterm 0.27.0",
  "ratatui",
