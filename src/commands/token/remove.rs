@@ -29,7 +29,7 @@ impl RemoveToken {
         };
 
         if confirm {
-            credential.delete_password()?;
+            credential.delete_credential()?;
             println!(
                 "{} deleted the stored token from the platform's secure storage",
                 "Successfully".green()
