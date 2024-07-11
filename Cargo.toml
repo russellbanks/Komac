@@ -40,7 +40,7 @@ indexmap = "2.2.6"
 indicatif = "0.17.8"
 inquire = "0.7.5"
 itertools = "0.13.0"
-keyring = "3.0.0"
+keyring = { version = "3.0.1", features = ["apple-native", "async-secret-service", "crypto-openssl", "tokio", "vendored", "windows-native"] }
 memmap2 = "0.9.4"
 msi = "0.7.0"
 num_cpus = "1.16.0"
