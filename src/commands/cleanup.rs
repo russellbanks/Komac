@@ -41,7 +41,8 @@ impl Cleanup {
         let github = GitHub::new(&token)?;
 
         // Get all winget-pkgs branches from the user's fork except the default one
-        let (branches, default_branch) = github.get_branches(&github.get_username().await?).await?;
+        let (branches, repository_id, default_branch) =
+            github.get_branches(&github.get_username().await?).await?;
 
         let merge_state = match (self.only_merged, self.only_closed) {
             (true, false) => "merged",
@@ -67,7 +68,7 @@ impl Cleanup {
                     .get_pull_request_from_branch(&default_branch, &branch.name)
                     .await
                 {
-                    Some((pull_request, &branch.id))
+                    Some((pull_request, branch.name.as_str()))
                 } else {
                     None
                 }
@@ -100,7 +101,7 @@ impl Cleanup {
             return Ok(());
         }
 
-        let to_delete = if self.all {
+        let chosen_pr_branches = if self.all {
             pull_requests.keys().collect()
         } else {
             // Show a multi-selection prompt for which branches to delete, with all options pre-selected
@@ -113,18 +114,16 @@ impl Cleanup {
             .prompt()?
         };
 
+        let branches_to_delete = chosen_pr_branches
+            .into_iter()
+            .filter_map(|pull_request| pull_requests.get(pull_request).copied())
+            .collect::<Vec<_>>();
+
         // Delete all selected branches
-        let pb = ProgressBar::new(to_delete.len() as u64)
-            .with_style(pb_style)
-            .with_message("Deleting selected branches");
-        stream::iter(to_delete)
-            .map(|pull_request| {
-                pb.inc(1);
-                github.delete_branch(pull_requests[pull_request])
-            })
-            .buffered(self.concurrent_calls.get())
-            .collect::<Vec<_>>()
-            .await;
+        let pb = ProgressBar::new_spinner().with_message("Deleting selected branches");
+        github
+            .delete_branches(&repository_id, branches_to_delete)
+            .await?;
         pb.finish_and_clear();
 
         Ok(())

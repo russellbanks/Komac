@@ -7,7 +7,6 @@ use crate::github::graphql::create_pull_request::{
     CreatePullRequest, CreatePullRequestInput, CreatePullRequestVariables,
 };
 use crate::github::graphql::create_ref::{CreateRef, CreateRefVariables, Ref as CreateBranchRef};
-use crate::github::graphql::delete_ref::{DeleteRef, DeleteRefVariables};
 use crate::github::graphql::get_all_values::{
     GetAllValues, GetAllValuesGitObject, GetAllValuesVariables,
 };
@@ -30,6 +29,7 @@ use crate::github::graphql::get_pull_request_from_branch::{
 use crate::github::graphql::get_repository_info::{
     GetRepositoryInfo, GitObjectId, RepositoryVariables,
 };
+use crate::github::graphql::update_refs::{GitRefname, RefUpdate, UpdateRefs, UpdateRefsVariables};
 use crate::github::utils::get_package_path;
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
@@ -47,7 +47,7 @@ use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use camino::Utf8Path;
 use color_eyre::eyre::{bail, eyre, Result};
 use color_eyre::Report;
-use const_format::formatcp;
+use const_format::{formatcp, str_repeat};
 use cynic::http::ReqwestExt;
 use cynic::{Id, MutationBuilder, QueryBuilder};
 use reqwest::Client;
@@ -438,7 +438,7 @@ impl GitHub {
         }
     }
 
-    pub async fn get_branches(&self, user: &str) -> Result<(Vec<GetBranchRef>, String)> {
+    pub async fn get_branches(&self, user: &str) -> Result<(Vec<GetBranchRef>, Id, String)> {
         let repository = self
             .0
             .post(GITHUB_GRAPHQL_URL)
@@ -471,7 +471,7 @@ impl GitHub {
             .filter(|branch| branch.name != default_branch_name)
             .collect();
 
-        Ok((branches, default_branch_name))
+        Ok((branches, repository.id, default_branch_name))
     }
 
     pub async fn create_pull_request(
@@ -518,19 +518,33 @@ impl GitHub {
             })
     }
 
-    pub async fn delete_branch(&self, branch_id: &Id) -> Result<()> {
+    pub async fn delete_branches(&self, repository_id: &Id, branch_names: Vec<&str>) -> Result<()> {
+        const DELETE_ID: &str = str_repeat!("0", 40);
+
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
-            .run_graphql(DeleteRef::build(DeleteRefVariables { ref_: branch_id }))
+            .run_graphql(UpdateRefs::build(UpdateRefsVariables {
+                ref_updates: branch_names
+                    .into_iter()
+                    .map(|branch_name| RefUpdate {
+                        after_oid: GitObjectId(DELETE_ID.to_string()),
+                        before_oid: None,
+                        force: None,
+                        name: GitRefname(format!("refs/heads/{branch_name}")),
+                    })
+                    .collect(),
+                repository_id,
+            }))
             .await?;
         if response.data.is_some() {
             Ok(())
         } else {
-            Err(response.errors.unwrap_or_default().into_iter().fold(
-                eyre!("Failed to delete ref with id {:?}", branch_id),
-                Report::wrap_err,
-            ))
+            Err(response
+                .errors
+                .unwrap_or_default()
+                .into_iter()
+                .fold(eyre!("Failed to delete branch refs"), Report::wrap_err))
         }
     }
 
