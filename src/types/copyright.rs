@@ -12,7 +12,7 @@ impl Copyright {
     pub fn get_from_exe(string_map: &HashMap<String, String>) -> Option<Self> {
         string_map
             .get("LegalCopyright")
-            .and_then(|legal_copyright| Self::new(legal_copyright.trim()).ok())
+            .and_then(|legal_copyright| Self::try_new(legal_copyright.trim()).ok())
     }
 }
 

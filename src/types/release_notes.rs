@@ -141,7 +141,7 @@ impl ReleaseNotes {
                 _ => (),
             }
         }
-        Self::new(buffer).ok()
+        Self::try_new(buffer).ok()
     }
 }
 

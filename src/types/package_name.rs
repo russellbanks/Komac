@@ -13,7 +13,7 @@ impl PackageName {
     pub fn get_from_exe(string_map: &HashMap<String, String>) -> Option<Self> {
         string_map
             .get("ProductName")
-            .and_then(|product_name| Self::new(product_name.trim()).ok())
+            .and_then(|product_name| Self::try_new(product_name.trim()).ok())
     }
 }
 

@@ -13,7 +13,7 @@ impl Publisher {
     pub fn get_from_exe(string_map: &HashMap<String, String>) -> Option<Self> {
         string_map
             .get("CompanyName")
-            .and_then(|company_name| Self::new(company_name.trim()).ok())
+            .and_then(|company_name| Self::try_new(company_name.trim()).ok())
     }
 }
 

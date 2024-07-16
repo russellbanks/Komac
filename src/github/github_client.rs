@@ -628,7 +628,7 @@ impl GitHub {
             .repository_topics
             .nodes
             .into_iter()
-            .filter_map(|topic_node| Tag::new(topic_node.topic.name).ok())
+            .filter_map(|topic_node| Tag::try_new(topic_node.topic.name).ok())
             .collect::<BTreeSet<_>>();
 
         let publisher_support_url = repository
@@ -649,7 +649,7 @@ impl GitHub {
                             info.key
                         }))
                 })
-                .and_then(|license| License::new(license).ok()),
+                .and_then(|license| License::try_new(license).ok()),
             license_url,
             package_url: PackageUrl::from_str(repository.url.as_str())?,
             release_notes: release
