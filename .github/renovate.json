@@ -3,5 +3,6 @@
   "extends": [
     "config:recommended",
     ":semanticCommitsDisabled"
-  ]
+  ],
+  "rangeStrategy": "bump"
 }
