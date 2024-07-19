@@ -1,5 +1,5 @@
-use crate::github::graphql::get_repository_info::GitObjectId;
 use crate::github::graphql::github_schema::github_schema as schema;
+use crate::github::graphql::types::{GitObjectId, GitRefName};
 
 /*
 mutation UpdateRefs($repositoryId: ID!, $refUpdates: [RefUpdate!]!) {
@@ -35,8 +35,5 @@ pub struct RefUpdate {
     pub after_oid: GitObjectId,
     pub before_oid: Option<GitObjectId>,
     pub force: Option<bool>,
-    pub name: GitRefname,
+    pub name: GitRefName,
 }
-
-#[derive(cynic::Scalar)]
-pub struct GitRefname(pub String);

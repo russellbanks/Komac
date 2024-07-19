@@ -1,5 +1,6 @@
 use crate::github::graphql::github_schema::github_schema as schema;
-
+use crate::github::graphql::types::GitObjectId;
+use url::Url;
 /*
 query GetRepositoryInfo($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
@@ -30,12 +31,15 @@ pub struct GetRepositoryInfo {
 #[derive(cynic::QueryFragment)]
 pub struct Repository {
     pub id: cynic::Id,
+    pub name_with_owner: String,
+    pub url: Url,
     pub default_branch_ref: Option<Ref>,
 }
 
 #[derive(cynic::QueryFragment)]
 pub struct Ref {
     pub name: String,
+    pub id: cynic::Id,
     pub target: Option<GitObject>,
 }
 
@@ -43,7 +47,3 @@ pub struct Ref {
 pub struct GitObject {
     pub oid: GitObjectId,
 }
-
-#[derive(cynic::Scalar)]
-#[cynic(graphql_type = "GitObjectID")]
-pub struct GitObjectId(pub String);

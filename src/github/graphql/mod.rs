@@ -11,4 +11,6 @@ pub mod get_existing_pull_request;
 pub mod get_pull_request_from_branch;
 pub mod get_repository_info;
 pub mod github_schema;
+pub mod merge_upstream;
+pub mod types;
 pub mod update_refs;

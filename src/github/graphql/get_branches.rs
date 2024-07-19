@@ -12,7 +12,6 @@ query GetBranches($owner: String!, $name: String!) {
     refs(first: 100, refPrefix: "refs/heads/") {
       nodes {
         name
-        id
       }
     }
   }
@@ -43,5 +42,4 @@ pub struct RefConnection {
 #[derive(cynic::QueryFragment)]
 pub struct Ref {
     pub name: String,
-    pub id: cynic::Id,
 }

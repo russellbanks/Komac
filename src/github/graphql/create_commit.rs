@@ -1,5 +1,5 @@
-use crate::github::graphql::get_repository_info::GitObjectId;
 use crate::github::graphql::github_schema::github_schema as schema;
+use crate::github::graphql::types::{Base64String, GitObjectId};
 use url::Url;
 
 /*
@@ -80,6 +80,3 @@ pub struct CommitMessage<'a> {
     pub body: Option<&'a str>,
     pub headline: &'a str,
 }
-
-#[derive(cynic::Scalar)]
-pub struct Base64String(pub String);

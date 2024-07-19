@@ -6,6 +6,7 @@ mod download_file;
 mod editor;
 mod file_analyser;
 mod github;
+mod hyperlink;
 mod manifest;
 mod manifests;
 mod match_installers;
@@ -18,6 +19,7 @@ mod zip;
 
 use crate::commands::cleanup::Cleanup;
 use crate::commands::list_versions::ListVersions;
+use crate::commands::merge_upstream::MergeUpstream;
 use crate::commands::new_version::NewVersion;
 use crate::commands::remove_version::RemoveVersion;
 use crate::commands::show_version::ShowVersion;
@@ -42,6 +44,7 @@ async fn main() -> Result<()> {
         },
         Commands::ListVersions(list_versions) => list_versions.run().await,
         Commands::Show(show_version) => show_version.run().await,
+        Commands::MergeUpstream(merge_upstream) => merge_upstream.run().await,
     }
 }
 
@@ -63,4 +66,5 @@ enum Commands {
     Token(TokenArgs),
     ListVersions(ListVersions),
     Show(ShowVersion),
+    MergeUpstream(MergeUpstream),
 }

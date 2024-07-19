@@ -26,10 +26,10 @@ use crate::github::graphql::get_existing_pull_request::{
 use crate::github::graphql::get_pull_request_from_branch::{
     GetPullRequestFromBranch, GetPullRequestFromBranchVariables, PullRequest,
 };
-use crate::github::graphql::get_repository_info::{
-    GetRepositoryInfo, GitObjectId, RepositoryVariables,
-};
-use crate::github::graphql::update_refs::{GitRefname, RefUpdate, UpdateRefs, UpdateRefsVariables};
+use crate::github::graphql::get_repository_info::{GetRepositoryInfo, RepositoryVariables};
+use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariables};
+use crate::github::graphql::types::{GitObjectId, GitRefName};
+use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
 use crate::github::utils::get_package_path;
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
@@ -288,8 +288,11 @@ impl GitHub {
 
         Ok(RepositoryData {
             id: repository.id,
+            full_name: repository.name_with_owner,
+            url: repository.url,
             default_branch_name: default_branch.name,
             default_branch_oid,
+            default_branch_ref_id: default_branch.id,
         })
     }
 
@@ -531,7 +534,7 @@ impl GitHub {
                         after_oid: GitObjectId(DELETE_ID.to_string()),
                         before_oid: None,
                         force: None,
-                        name: GitRefname(format!("refs/heads/{branch_name}")),
+                        name: GitRefName(format!("refs/heads/{branch_name}")),
                     })
                     .collect(),
                 repository_id,
@@ -660,6 +663,31 @@ impl GitHub {
             topics: Option::from(topics).filter(|topics| !topics.is_empty()),
         })
     }
+
+    pub async fn merge_upstream(
+        &self,
+        branch_ref_id: &Id,
+        upstream_target_oid: GitObjectId,
+        force: bool,
+    ) -> Result<()> {
+        let response = self
+            .0
+            .post(GITHUB_GRAPHQL_URL)
+            .run_graphql(MergeUpstream::build(MergeUpstreamVariables {
+                branch_ref_id,
+                upstream_target_oid,
+                force,
+            }))
+            .await?;
+        if response.data.is_some() {
+            Ok(())
+        } else {
+            Err(response.errors.unwrap_or_default().into_iter().fold(
+                eyre!("Failed to merge upstream branch into fork branch"),
+                Report::wrap_err,
+            ))
+        }
+    }
 }
 
 pub struct Manifests {
@@ -689,6 +717,9 @@ pub struct GitHubFile {
 
 pub struct RepositoryData {
     pub id: Id,
+    pub full_name: String,
+    pub url: Url,
     pub default_branch_name: String,
     pub default_branch_oid: GitObjectId,
+    pub default_branch_ref_id: Id,
 }

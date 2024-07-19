@@ -9,6 +9,7 @@ use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressStyle};
 use inquire::MultiSelect;
 use std::num::NonZeroUsize;
+use std::time::Duration;
 
 /// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to microsoft/winget-pkgs
 /// from them, prompting for which ones to delete
@@ -57,7 +58,7 @@ impl Cleanup {
 
         // Retrieve an associated pull request for each branch
         let pb = ProgressBar::new(branches.len() as u64)
-            .with_style(pb_style.clone())
+            .with_style(pb_style)
             .with_message(format!(
                 "Retrieving branches that have a {merge_state} pull request associated with them"
             ));
@@ -121,9 +122,12 @@ impl Cleanup {
 
         // Delete all selected branches
         let pb = ProgressBar::new_spinner().with_message("Deleting selected branches");
+        pb.enable_steady_tick(Duration::from_millis(50));
+
         github
             .delete_branches(&repository_id, branches_to_delete)
             .await?;
+
         pb.finish_and_clear();
 
         Ok(())
