@@ -51,9 +51,16 @@ impl MergeUpstream {
             return Ok(());
         }
 
+        // Calculate how many commits upstream is ahead of fork
+        let new_commits_count = winget_pkgs.commit_count - winget_pkgs_fork.commit_count;
+        let commit_label = match new_commits_count {
+            1 => "commit",
+            _ => "commits",
+        };
+
         // Show an indeterminate progress bar while upstream changes are being merged
         let pb = ProgressBar::new_spinner().with_message(format!(
-            "Merging upstream changes from {} into {}",
+            "Merging {new_commits_count} upstream {commit_label} from {} into {}",
             winget_pkgs.full_name.as_str().blue(),
             winget_pkgs_fork.full_name.as_str().blue(),
         ));
@@ -68,7 +75,7 @@ impl MergeUpstream {
             .await?;
 
         pb.finish_with_message(format!(
-            "{} merged upstream changes from {winget_pkgs_hyperlink} into {winget_pkgs_fork_hyperlink}",
+            "{} merged {new_commits_count} upstream {commit_label} from {winget_pkgs_hyperlink} into {winget_pkgs_fork_hyperlink}",
             "Successfully".green(),
         ));
 

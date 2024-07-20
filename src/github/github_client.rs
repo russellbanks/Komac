@@ -26,7 +26,9 @@ use crate::github::graphql::get_existing_pull_request::{
 use crate::github::graphql::get_pull_request_from_branch::{
     GetPullRequestFromBranch, GetPullRequestFromBranchVariables, PullRequest,
 };
-use crate::github::graphql::get_repository_info::{GetRepositoryInfo, RepositoryVariables};
+use crate::github::graphql::get_repository_info::{
+    GetRepositoryInfo, RepositoryVariables, TargetGitObject,
+};
 use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariables};
 use crate::github::graphql::types::{GitObjectId, GitRefName};
 use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
@@ -281,9 +283,12 @@ impl GitHub {
         let default_branch = repository.default_branch_ref
             .ok_or_else(|| eyre!("No default branch reference was returned when requesting repository information for {owner}/{name}"))?;
 
-        let default_branch_oid = default_branch
+        let commits = default_branch
             .target
-            .map(|target| target.oid)
+            .and_then(|target| match target {
+                TargetGitObject::Commit(commit) => Some(commit),
+                TargetGitObject::Unknown => None,
+            })
             .ok_or_else(|| eyre!("No default branch object was returned when requesting repository information for {owner}/{name}"))?;
 
         Ok(RepositoryData {
@@ -291,8 +296,9 @@ impl GitHub {
             full_name: repository.name_with_owner,
             url: repository.url,
             default_branch_name: default_branch.name,
-            default_branch_oid,
+            default_branch_oid: commits.oid,
             default_branch_ref_id: default_branch.id,
+            commit_count: commits.history.total_count,
         })
     }
 
@@ -722,4 +728,5 @@ pub struct RepositoryData {
     pub default_branch_name: String,
     pub default_branch_oid: GitObjectId,
     pub default_branch_ref_id: Id,
+    pub commit_count: i32,
 }

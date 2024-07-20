@@ -5,10 +5,18 @@ use url::Url;
 query GetRepositoryInfo($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     id
+    nameWithOwner
+    url
     defaultBranchRef {
       name
+      id
       target {
-        oid
+        ... on Commit {
+          oid
+          history {
+            totalCount
+          }
+        }
       }
     }
   }
@@ -40,10 +48,24 @@ pub struct Repository {
 pub struct Ref {
     pub name: String,
     pub id: cynic::Id,
-    pub target: Option<GitObject>,
+    pub target: Option<TargetGitObject>,
 }
 
 #[derive(cynic::QueryFragment)]
-pub struct GitObject {
+pub struct Commit {
     pub oid: GitObjectId,
+    pub history: CommitHistoryConnection,
+}
+
+#[derive(cynic::QueryFragment)]
+pub struct CommitHistoryConnection {
+    pub total_count: i32,
+}
+
+#[derive(cynic::InlineFragments)]
+#[cynic(graphql_type = "GitObject")]
+pub enum TargetGitObject {
+    Commit(Commit),
+    #[cynic(fallback)]
+    Unknown,
 }
