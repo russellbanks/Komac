@@ -11,7 +11,8 @@ use crate::hyperlink::Hyperlink;
 
 /// Merges changes from microsoft/winget-pkgs into the fork repository
 #[derive(Parser)]
-pub struct MergeUpstream {
+#[clap(alias = "merge-upstream")]
+pub struct SyncFork {
     /// Merges changes even if the fork's default branch is not fast-forward. This is not
     /// recommended as you should instead have a clean default branch that has not diverged from the
     /// upstream default branch
@@ -23,7 +24,7 @@ pub struct MergeUpstream {
     token: Option<String>,
 }
 
-impl MergeUpstream {
+impl SyncFork {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
         let github = GitHub::new(&token)?;
