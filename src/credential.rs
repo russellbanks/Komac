@@ -59,11 +59,18 @@ pub async fn validate_token(client: &Client, token: &str) -> Result<()> {
         .get(GITHUB_API_ENDPOINT)
         .bearer_auth(token)
         .send()
-        .await?
-        .status()
+        .await
     {
-        StatusCode::UNAUTHORIZED => bail!("GitHub token is invalid"),
-        _ => Ok(()),
+        Ok(response) => match response.status() {
+            StatusCode::UNAUTHORIZED => bail!("GitHub token is invalid"),
+            _ => Ok(()),
+        },
+        Err(error) => {
+            if error.is_connect() {
+                bail!("Failed to connect to GitHub. Please check your internet connection.");
+            }
+            Err(error.into())
+        }
     }
 }
 
