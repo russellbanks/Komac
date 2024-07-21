@@ -21,7 +21,7 @@ use crate::commands::utils::{
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
+use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
 use crate::github::graphql::create_commit::FileAddition;
 use crate::github::graphql::types::Base64String;
 use crate::github::utils::{
@@ -231,7 +231,7 @@ impl NewVersion {
         multi_progress.clear()?;
         let github_values = files
             .iter()
-            .find(|download| download.url.host_str() == Some("github.com"))
+            .find(|download| download.url.host_str() == Some(GITHUB_HOST))
             .map(|download| {
                 let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
                 github.get_all_values(

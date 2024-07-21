@@ -13,12 +13,14 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use memmap2::Mmap;
 use reqwest::header::{HeaderValue, CONTENT_DISPOSITION, LAST_MODIFIED};
-use reqwest::{Client, Response};
+use reqwest::redirect::Policy;
+use reqwest::{Client, ClientBuilder, Response};
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
 use crate::file_analyser::FileAnalyser;
+use crate::github::github_client::GITHUB_HOST;
 use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
 use crate::types::urls::url::Url;
 
@@ -27,18 +29,9 @@ async fn download_file(
     mut url: url::Url,
     multi_progress: &MultiProgress,
 ) -> Result<DownloadedFile> {
-    if url.scheme() == "http" {
-        url.set_scheme("https").unwrap();
-        if client
-            .head(url.as_str())
-            .send()
-            .await
-            .and_then(Response::error_for_status)
-            .is_err()
-        {
-            url.set_scheme("http").unwrap();
-        }
-    }
+    convert_github_latest_to_versioned(&mut url).await?;
+
+    upgrade_to_https_if_reachable(&mut url, client).await?;
 
     let res = client.get(url.as_str()).send().await?;
 
@@ -164,6 +157,58 @@ fn get_file_name(
                 .and_then(|mut segments| segments.next_back())
         })
         .map_or_else(|| Uuid::new_v4().to_string(), str::to_owned)
+}
+
+async fn upgrade_to_https_if_reachable(url: &mut url::Url, client: &Client) -> Result<()> {
+    if url.scheme() == "http" {
+        url.set_scheme("https").unwrap();
+        if client
+            .head(url.as_str())
+            .send()
+            .await
+            .and_then(Response::error_for_status)
+            .is_err()
+        {
+            url.set_scheme("http").unwrap();
+        }
+    }
+    Ok(())
+}
+
+/// Converts a vanity GitHub URL that always points to the latest release to its versioned URL like
+/// by following the redirect by one hop.
+///
+/// For example, github.com/owner/repo/releases/latest/download/file.exe to
+/// github.com/owner/repo/releases/download/v1.2.3/file.exe
+async fn convert_github_latest_to_versioned(url: &mut url::Url) -> Result<()> {
+    const LATEST: &str = "latest";
+    const DOWNLOAD: &str = "download";
+    const MAX_HOPS: u8 = 2;
+
+    if url.host_str() != Some(GITHUB_HOST) {
+        return Ok(());
+    }
+
+    if let Some(mut segments) = url.path_segments() {
+        // If the 4th and 5th segments are 'latest' and 'download', it's a vanity URL
+        if segments.nth(3) == Some(LATEST) && segments.next() == Some(DOWNLOAD) {
+            // Create a client that will redirect only once
+            let limited_redirect_client = ClientBuilder::new()
+                .redirect(Policy::limited(MAX_HOPS as usize))
+                .build()?;
+
+            // If there was a redirect error because max hops were reached, as intended, set the
+            // original vanity URL to the redirected versioned URL
+            if let Err(error) = limited_redirect_client.head(url.as_str()).send().await {
+                if error.is_redirect() {
+                    if let Some(final_url) = error.url() {
+                        *url = final_url.clone();
+                    }
+                }
+            };
+        }
+    }
+    Ok(())
 }
 
 pub fn download_urls<'a>(

@@ -20,7 +20,7 @@ use crate::commands::utils::{
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
+use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
 use crate::github::graphql::create_commit::FileAddition;
 use crate::github::graphql::types::Base64String;
 use crate::github::utils::{
@@ -103,7 +103,7 @@ impl UpdateVersion {
             .default_headers(get_default_headers(None))
             .build()?;
 
-        let existing_pr_future =
+        let existing_pr =
             github.get_existing_pull_request(&self.package_identifier, &self.package_version);
 
         let versions = github
@@ -122,7 +122,7 @@ impl UpdateVersion {
             self.package_identifier
         );
 
-        if let Some(pull_request) = existing_pr_future.await? {
+        if let Some(pull_request) = existing_pr.await? {
             if !self.dry_run
                 && !prompt_existing_pull_request(
                     &self.package_identifier,
@@ -143,7 +143,7 @@ impl UpdateVersion {
         multi_progress.clear()?;
         let github_values = files
             .iter()
-            .find(|download| download.url.host_str() == Some("github.com"))
+            .find(|download| download.url.host_str() == Some(GITHUB_HOST))
             .map(|download| {
                 let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
                 github.get_all_values(
@@ -152,7 +152,6 @@ impl UpdateVersion {
                     parts[4..parts.len() - 1].join("/"),
                 )
             });
-        let manifests = manifests.await?;
         let download_results = process_files(&mut files).await?;
         let installer_results = download_results
             .iter()
@@ -168,6 +167,7 @@ impl UpdateVersion {
                 ..Installer::default()
             })
             .collect::<Vec<_>>();
+        let manifests = manifests.await?;
         let mut previous_installer_manifest = manifests.installer_manifest;
         let previous_installers = mem::take(&mut previous_installer_manifest.installers)
             .into_iter()
