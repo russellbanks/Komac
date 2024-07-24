@@ -30,8 +30,8 @@ use crate::github::utils::{
 use crate::manifest::{build_manifest_string, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallModes, Installer, InstallerManifest, InstallerSwitches, Scope,
-    UpgradeBehavior,
+    AppsAndFeaturesEntry, InstallModes, InstallationMetadata, Installer, InstallerManifest,
+    InstallerSwitches, Scope, UpgradeBehavior,
 };
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
@@ -299,6 +299,12 @@ impl NewVersion {
                         ..AppsAndFeaturesEntry::default()
                     }])
                 }),
+                installation_metadata: mem::take(&mut analyser.default_install_location).map(
+                    |install_location| InstallationMetadata {
+                        default_install_location: Some(install_location),
+                        ..InstallationMetadata::default()
+                    },
+                ),
                 ..Installer::default()
             });
         }

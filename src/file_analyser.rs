@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::io::Cursor;
 use std::mem;
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use chrono::NaiveDate;
 use color_eyre::eyre::Result;
 use memmap2::Mmap;
@@ -50,6 +50,7 @@ pub struct FileAnalyser<'data> {
     pub copyright: Option<Copyright>,
     pub package_name: Option<PackageName>,
     pub publisher: Option<Publisher>,
+    pub default_install_location: Option<Utf8PathBuf>,
     pub msi: Option<Msi>,
     pub zip: Option<Zip<Cursor<&'data [u8]>>>,
 }
@@ -157,6 +158,9 @@ impl<'data> FileAnalyser<'data> {
             publisher: pe
                 .as_ref()
                 .and_then(|pe| Publisher::get_from_exe(&pe.version_info)),
+            default_install_location: msi
+                .as_mut()
+                .and_then(|msi| mem::take(&mut msi.install_location)),
             msi,
             zip,
         })

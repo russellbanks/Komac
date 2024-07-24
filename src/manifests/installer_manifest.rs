@@ -282,10 +282,10 @@ pub enum ElevationRequirement {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct InstallationMetadata {
-    pub default_install_location: Option<String>,
+    pub default_install_location: Option<Utf8PathBuf>,
     pub files: Option<BTreeSet<MetadataFiles>>,
 }
 
