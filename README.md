@@ -21,7 +21,7 @@ Komac is cross-platform and binaries are built for Windows, Linux, macOS, and Fr
 If you have cargo installed, you can compile Rust for any platform
 
 ```bash
-cargo install komac
+cargo install --locked komac
 ```
 
 Komac also supports [cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
