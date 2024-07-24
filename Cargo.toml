@@ -65,7 +65,7 @@ strsim = "0.11.1"
 strum = { version = "0.26.3", features = ["derive"] }
 tempfile = "3.10.1"
 thiserror = "1.0.63"
-tokio = { version = "1.38.1", features = ["rt-multi-thread", "macros", "fs"] }
+tokio = { version = "1.39.1", features = ["rt-multi-thread", "macros", "fs"] }
 tree-sitter-highlight = "0.22.6"
 tree-sitter-yaml = "0.6.1"
 tui-textarea = { version = "0.5.1", features = ["search"] }
