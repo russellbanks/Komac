@@ -19,8 +19,8 @@ pub struct Msi {
     pub manufacturer: String,
     pub product_language: LanguageTag,
     pub all_users: Option<Scope>,
-    pub is_wix: bool,
     pub install_location: Option<Utf8PathBuf>,
+    pub is_wix: bool,
 }
 
 const PRODUCT_CODE: &str = "ProductCode";
@@ -72,6 +72,10 @@ impl Msi {
                 "2" => None, // Installs depending on installation context and user privileges
                 _ => Some(Scope::User), // No value or an empty string specifies per-user context
             },
+            install_location: Self::find_install_directory(
+                &Self::get_directory_table(&mut msi)?,
+                &property_table,
+            ),
             is_wix: property_table.into_iter().any(|(mut property, mut value)| {
                 property.make_ascii_lowercase();
                 property.contains(WIX) || {
@@ -79,11 +83,6 @@ impl Msi {
                     value.contains(WIX)
                 }
             }),
-            install_location: Self::build_install_directory(
-                &Self::get_directory_table(&mut msi)?,
-                INSTALL_DIR,
-                TARGET_DIR,
-            ),
         })
     }
 
@@ -131,8 +130,24 @@ impl Msi {
             .collect::<HashMap<_, _>>())
     }
 
+    fn find_install_directory(
+        directory_table: &HashMap<String, (Option<String>, String)>,
+        property_table: &HashMap<String, String>,
+    ) -> Option<Utf8PathBuf> {
+        const WIX_UI_INSTALL_DIR: &str = "WIXUI_INSTALLDIR";
+
+        Self::build_directory(directory_table, INSTALL_DIR, TARGET_DIR).or_else(|| {
+            // If `INSTALLDIR` is not in directory table, check value of `WIXUI_INSTALLDIR` property
+            property_table
+                .get(WIX_UI_INSTALL_DIR)
+                .and_then(|wix_install_dir| {
+                    Self::build_directory(directory_table, wix_install_dir, TARGET_DIR)
+                })
+        })
+    }
+
     /// <https://learn.microsoft.com/windows/win32/msi/using-the-directory-table>
-    fn build_install_directory(
+    fn build_directory(
         directory_table: &HashMap<String, (Option<String>, String)>,
         current_dir: &str,
         target_dir: &str,
@@ -143,9 +158,7 @@ impl Msi {
         }
 
         if let Some((Some(parent), default_dir)) = directory_table.get(current_dir) {
-            if let Some(mut path) =
-                Self::build_install_directory(directory_table, parent, target_dir)
-            {
+            if let Some(mut path) = Self::build_directory(directory_table, parent, target_dir) {
                 path.push(Self::get_property_relative_path(current_dir).unwrap_or(default_dir));
                 return Some(path);
             }
