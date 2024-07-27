@@ -51,6 +51,10 @@ impl Msi {
 
         Ok(Self {
             architecture,
+            install_location: Self::find_install_directory(
+                &Self::get_directory_table(&mut msi)?,
+                &property_table,
+            ),
             product_code: property_table.remove(PRODUCT_CODE).unwrap(),
             upgrade_code: property_table.remove(UPGRADE_CODE).unwrap(),
             product_name: property_table.remove(PRODUCT_NAME).unwrap(),
@@ -72,10 +76,6 @@ impl Msi {
                 "2" => None, // Installs depending on installation context and user privileges
                 _ => Some(Scope::User), // No value or an empty string specifies per-user context
             },
-            install_location: Self::find_install_directory(
-                &Self::get_directory_table(&mut msi)?,
-                &property_table,
-            ),
             is_wix: property_table.into_iter().any(|(mut property, mut value)| {
                 property.make_ascii_lowercase();
                 property.contains(WIX) || {
@@ -134,19 +134,62 @@ impl Msi {
         directory_table: &HashMap<String, (Option<String>, String)>,
         property_table: &HashMap<String, String>,
     ) -> Option<Utf8PathBuf> {
-        const WIX_UI_INSTALL_DIR: &str = "WIXUI_INSTALLDIR";
+        Self::build_directory(directory_table, INSTALL_DIR, TARGET_DIR)
+            .or_else(|| {
+                // Fallback: check the value of the `WIXUI_INSTALLDIR` property
+                const WIX_UI_INSTALL_DIR: &str = "WIXUI_INSTALLDIR";
 
-        Self::build_directory(directory_table, INSTALL_DIR, TARGET_DIR).or_else(|| {
-            // If `INSTALLDIR` is not in directory table, check value of `WIXUI_INSTALLDIR` property
-            property_table
-                .get(WIX_UI_INSTALL_DIR)
-                .and_then(|wix_install_dir| {
-                    Self::build_directory(directory_table, wix_install_dir, TARGET_DIR)
-                })
-        })
+                property_table
+                    .get(WIX_UI_INSTALL_DIR)
+                    .and_then(|wix_install_dir| {
+                        Self::build_directory(directory_table, wix_install_dir, TARGET_DIR)
+                    })
+            })
+            .or_else(|| {
+                // Fallback: find a directory entry with `installdir` in its name
+                directory_table
+                    .keys()
+                    .find(|name| name.to_ascii_uppercase().contains(INSTALL_DIR))
+                    .and_then(|install_dir| {
+                        Self::build_directory(directory_table, install_dir, TARGET_DIR)
+                    })
+            })
+            .or_else(|| {
+                // Fallback: get the first directory with zero or multiple subdirectories
+                const SKIP_DIRECTORIES: [&str; 2] = ["DesktopFolder", "ProgramMenuFolder"];
+
+                let mut path = Utf8PathBuf::new();
+                let mut current_dir = TARGET_DIR;
+                loop {
+                    let sub_directories = directory_table
+                        .iter()
+                        .filter(|(directory, (directory_parent, _))| {
+                            !SKIP_DIRECTORIES.contains(&directory.as_str())
+                                && directory_parent.as_deref() == Some(current_dir)
+                        })
+                        .collect::<Vec<_>>();
+                    if sub_directories.len() == 1 {
+                        let (directory, (_directory_parent, default_dir)) = sub_directories[0];
+                        current_dir = directory;
+                        path.push(
+                            Self::get_property_relative_path(current_dir).unwrap_or(default_dir),
+                        );
+                    } else {
+                        break;
+                    }
+                }
+                Option::from(path).filter(|path| !path.as_str().is_empty())
+            })
     }
 
-    /// <https://learn.microsoft.com/windows/win32/msi/using-the-directory-table>
+    /// Constructs a path from the root directory to the target subdirectory based on the directory
+    /// table.
+    ///
+    /// This is deliberately recursive so that the function can start at the deepest directory,
+    /// traverse upwards, and then build the path sequentially as the stack is unwinding. Using a
+    /// loop would require the path components to be reversed at the end.
+    ///
+    /// [Using the Directory Table](https://learn.microsoft.com/windows/win32/msi/using-the-directory-table)
     fn build_directory(
         directory_table: &HashMap<String, (Option<String>, String)>,
         current_dir: &str,
