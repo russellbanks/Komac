@@ -12,29 +12,29 @@ Summary:        Manifest creator for winget-pkgs
 
 SourceLicense:  GPL-3.0-or-later
 %global _license %{shrink:
-(Apache-2.0 OR MIT) AND BSD-3-Clause
-(MIT OR Apache-2.0) AND Unicode-DFS-2016
-GPL-3.0-or-later
-0BSD OR Apache-2.0 OR MIT
-Apache-2.0
-Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
-Apache-2.0 OR BSD-2-Clause OR MIT
-Apache-2.0 OR BSL-1.0
-Apache-2.0 OR GPL-3.0
-Apache-2.0 OR ISC OR MIT
-Apache-2.0 OR MIT
-Apache-2.0 OR MIT OR Zlib
-Apache-2.0 WITH LLVM-exception
-BSD-2-Clause
-BSD-3-Clause
-BSD-3-Clause OR GPL-2.0-only
-BSL-1.0
-ISC AND MIT AND OpenSSL
-GPL-3.0-or-later
-ISC
-MIT
-MIT OR Unlicense
-MPL-2.0
+((Apache-2.0 OR MIT) AND BSD-3-Clause) AND
+((MIT OR Apache-2.0) AND Unicode-DFS-2016) AND
+(GPL-3.0-or-later) AND
+(0BSD OR Apache-2.0 OR MIT) AND
+(Apache-2.0) AND
+(Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT) AND
+(Apache-2.0 OR BSD-2-Clause OR MIT) AND
+(Apache-2.0 OR BSL-1.0) AND
+(Apache-2.0 OR GPL-3.0) AND
+(Apache-2.0 OR ISC OR MIT) AND
+(Apache-2.0 OR MIT) AND
+(Apache-2.0 OR MIT OR Zlib) AND
+(Apache-2.0 WITH LLVM-exception) AND
+(BSD-2-Clause) AND
+(BSD-3-Clause) AND
+(BSD-3-Clause OR GPL-2.0-only) AND
+(BSL-1.0) AND
+(ISC AND MIT AND OpenSSL) AND
+(GPL-3.0-or-later) AND
+(ISC) AND
+(MIT) AND
+(MIT OR Unlicense) AND
+(MPL-2.0) AND
 Zlib
 }
 License: %_license
