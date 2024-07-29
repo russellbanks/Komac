@@ -14,7 +14,6 @@ SourceLicense:  GPL-3.0-or-later
 %global _license %{shrink:
 ((Apache-2.0 OR MIT) AND BSD-3-Clause) AND
 ((MIT OR Apache-2.0) AND Unicode-DFS-2016) AND
-(GPL-3.0-or-later) AND
 (0BSD OR Apache-2.0 OR MIT) AND
 (Apache-2.0) AND
 (Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT) AND
