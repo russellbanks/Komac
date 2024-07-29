@@ -11,7 +11,33 @@ Release:        1%{?dist}
 Summary:        Manifest creator for winget-pkgs
 
 SourceLicense:  GPL-3.0-or-later
-License: %cargo_license
+%global _license %{shrink:
+(Apache-2.0 OR MIT) AND BSD-3-Clause
+(MIT OR Apache-2.0) AND Unicode-DFS-2016
+GPL-3.0-or-later
+0BSD OR Apache-2.0 OR MIT
+Apache-2.0
+Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT
+Apache-2.0 OR BSD-2-Clause OR MIT
+Apache-2.0 OR BSL-1.0
+Apache-2.0 OR GPL-3.0
+Apache-2.0 OR ISC OR MIT
+Apache-2.0 OR MIT
+Apache-2.0 OR MIT OR Zlib
+Apache-2.0 WITH LLVM-exception
+BSD-2-Clause
+BSD-3-Clause
+BSD-3-Clause OR GPL-2.0-only
+BSL-1.0
+ISC AND MIT AND OpenSSL
+GPL-3.0-or-later
+ISC
+MIT
+MIT OR Unlicense
+MPL-2.0
+Zlib
+}
+License: %_license
 
 
 URL:            https://github.com/russellbanks/Komac
