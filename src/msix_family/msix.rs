@@ -1,16 +1,16 @@
-use std::collections::BTreeSet;
-use std::io::{Read, Seek};
-use std::str::FromStr;
-
+use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
-use package_family_name::get_package_family_name;
+use package_family_name::PackageFamilyName;
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde::Deserialize;
+use std::collections::BTreeSet;
+use std::io::{Read, Seek};
+use std::str::FromStr;
 use zip::ZipArchive;
 
 use crate::manifests::installer_manifest::Platform;
-use crate::msix_family::utils::{hash_signature, read_manifest};
+use crate::msix_family::utils::{get_install_location, hash_signature, read_manifest};
 use crate::types::architecture::Architecture;
 use crate::types::file_extension::FileExtension;
 use crate::types::minimum_os_version::MinimumOSVersion;
@@ -20,13 +20,14 @@ pub struct Msix {
     pub publisher_display_name: String,
     pub version: String,
     pub signature_sha_256: String,
-    pub package_family_name: String,
+    pub package_family_name: PackageFamilyName,
     pub target_device_family: BTreeSet<Platform>,
     pub min_version: MinimumOSVersion,
     pub processor_architecture: Architecture,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
     pub file_extensions: Option<BTreeSet<FileExtension>>,
+    pub install_location: Utf8PathBuf,
 }
 
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
@@ -67,9 +68,11 @@ impl Msix {
                                 }
                                 b"ProcessorArchitecture" => {
                                     manifest.identity.processor_architecture =
-                                        Architecture::from_str(&String::from_utf8_lossy(
-                                            &attribute.value,
-                                        ))?;
+                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                }
+                                b"ResourceId" => {
+                                    manifest.identity.resource_id =
+                                        String::from_utf8_lossy(&attribute.value).into_owned();
                                 }
                                 _ => continue,
                             }
@@ -143,11 +146,18 @@ impl Msix {
         }
 
         Ok(Self {
+            install_location: get_install_location(
+                &manifest.identity.name,
+                &manifest.identity.publisher,
+                &manifest.identity.version,
+                &manifest.identity.processor_architecture,
+                &manifest.identity.resource_id,
+            ),
             display_name: manifest.properties.display_name,
             publisher_display_name: manifest.properties.publisher_display_name,
             version: manifest.identity.version,
             signature_sha_256,
-            package_family_name: get_package_family_name(
+            package_family_name: PackageFamilyName::new(
                 &manifest.identity.name,
                 &manifest.identity.publisher,
             ),
@@ -164,7 +174,9 @@ impl Msix {
                 .map(|target_device_family| target_device_family.min_version)
                 .min()
                 .unwrap(),
-            processor_architecture: manifest.identity.processor_architecture,
+            processor_architecture: Architecture::from_str(
+                &manifest.identity.processor_architecture,
+            )?,
             capabilities: Option::from(manifest.capabilities.unrestricted)
                 .filter(|capabilities| !capabilities.is_empty()),
             restricted_capabilities: Option::from(manifest.capabilities.restricted)
@@ -189,9 +201,10 @@ struct Package {
 #[derive(Default)]
 struct Identity {
     name: String,
-    processor_architecture: Architecture,
+    processor_architecture: String,
     publisher: String,
     version: String,
+    resource_id: String,
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-properties>

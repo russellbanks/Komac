@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::io::{Read, Seek};
 
 use color_eyre::eyre::Result;
-use package_family_name::get_package_family_name;
+use package_family_name::PackageFamilyName;
 use quick_xml::de::from_str;
 use serde::Deserialize;
 use zip::ZipArchive;
@@ -15,7 +15,7 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 
 pub struct MsixBundle {
     pub signature_sha_256: String,
-    pub package_family_name: String,
+    pub package_family_name: PackageFamilyName,
     pub packages: Vec<IndividualPackage>,
 }
 
@@ -40,7 +40,7 @@ impl MsixBundle {
 
         Ok(Self {
             signature_sha_256,
-            package_family_name: get_package_family_name(
+            package_family_name: PackageFamilyName::new(
                 &bundle_manifest.identity.name,
                 &bundle_manifest.identity.publisher,
             ),

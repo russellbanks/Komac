@@ -1,8 +1,13 @@
-use crate::msix_family::msix::APPX_SIGNATURE_P7X;
-use color_eyre::eyre::Result;
-use sha2::{Digest, Sha256};
 use std::io::{Read, Seek};
+
+use camino::Utf8PathBuf;
+use color_eyre::eyre::Result;
+use package_family_name::PackageFamilyName;
+use sha2::{Digest, Sha256};
 use zip::ZipArchive;
+
+use crate::msi::RELATIVE_PROGRAM_FILES_64;
+use crate::msix_family::msix::APPX_SIGNATURE_P7X;
 
 pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Result<String> {
     let mut appx_manifest_file = zip.by_name(path)?;
@@ -23,4 +28,22 @@ pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> Result<String>
         hasher.update(&buffer[..count]);
     }
     Ok(base16ct::upper::encode_string(&hasher.finalize()))
+}
+
+pub fn get_install_location(
+    name: &str,
+    publisher: &str,
+    version: &str,
+    architecture: &str,
+    resource_id: &str,
+) -> Utf8PathBuf {
+    const WINDOWS_APPS: &str = "WindowsApps";
+
+    let mut path = Utf8PathBuf::from(RELATIVE_PROGRAM_FILES_64);
+    path.push(WINDOWS_APPS);
+    path.push(format!(
+        "{name}_{version}_{architecture}_{resource_id}_{}",
+        PackageFamilyName::get_id(publisher)
+    ));
+    path
 }

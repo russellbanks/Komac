@@ -6,6 +6,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use chrono::NaiveDate;
 use color_eyre::eyre::Result;
 use memmap2::Mmap;
+use package_family_name::PackageFamilyName;
 use yara_x::mods::pe::{Resource, ResourceType};
 use yara_x::mods::PE;
 
@@ -39,7 +40,7 @@ pub struct FileAnalyser<'data> {
     pub scope: Option<Scope>,
     pub installer_sha_256: String,
     pub signature_sha_256: Option<String>,
-    pub package_family_name: Option<String>,
+    pub package_family_name: Option<PackageFamilyName>,
     pub product_code: Option<String>,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
@@ -145,7 +146,9 @@ impl<'data> FileAnalyser<'data> {
             restricted_capabilities: msix
                 .as_mut()
                 .and_then(|msix| mem::take(&mut msix.restricted_capabilities)),
-            file_extensions: msix.and_then(|msix| msix.file_extensions),
+            file_extensions: msix
+                .as_mut()
+                .and_then(|msix| mem::take(&mut msix.file_extensions)),
             product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
             last_modified: None,
             file_name: String::new(),
@@ -160,7 +163,8 @@ impl<'data> FileAnalyser<'data> {
                 .and_then(|pe| Publisher::get_from_exe(&pe.version_info)),
             default_install_location: msi
                 .as_mut()
-                .and_then(|msi| mem::take(&mut msi.install_location)),
+                .and_then(|msi| mem::take(&mut msi.install_location))
+                .or_else(|| msix.map(|msix| msix.install_location)),
             msi,
             zip,
         })

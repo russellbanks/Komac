@@ -23,6 +23,8 @@ pub struct Msi {
     pub is_wix: bool,
 }
 
+pub const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";
+
 const PRODUCT_CODE: &str = "ProductCode";
 const PRODUCT_LANGUAGE: &str = "ProductLanguage";
 const PRODUCT_NAME: &str = "ProductName";
@@ -212,7 +214,6 @@ impl Msi {
 
     fn get_property_relative_path(property: &str) -> Option<&str> {
         const PROGRAM_FILES_64_FOLDER: &str = "ProgramFiles64Folder";
-        const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";
 
         const PROGRAM_FILES_FOLDER: &str = "ProgramFilesFolder";
         const RELATIVE_PROGRAM_FILES_32: &str = "%ProgramFiles(x86)%";

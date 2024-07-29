@@ -17,6 +17,7 @@ use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::Url;
 use camino::Utf8PathBuf;
 use chrono::NaiveDate;
+use package_family_name::PackageFamilyName;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::BTreeSet;
@@ -47,7 +48,7 @@ pub struct InstallerManifest {
     pub protocols: Option<BTreeSet<Protocol>>,
     pub file_extensions: Option<BTreeSet<FileExtension>>,
     pub dependencies: Option<Dependencies>,
-    pub package_family_name: Option<String>,
+    pub package_family_name: Option<PackageFamilyName>,
     pub product_code: Option<String>,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
@@ -333,7 +334,7 @@ pub struct Installer {
     pub protocols: Option<BTreeSet<Protocol>>,
     pub file_extensions: Option<BTreeSet<FileExtension>>,
     pub dependencies: Option<Dependencies>,
-    pub package_family_name: Option<String>,
+    pub package_family_name: Option<PackageFamilyName>,
     pub product_code: Option<String>,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
