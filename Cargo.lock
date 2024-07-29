@@ -2985,9 +2985,9 @@ dependencies = [
 
 [[package]]
 name = "package-family-name"
-version = "1.1.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31b3054ee34b594bd311810b72b57c0b6255cf78ea0b0461d782b066ecd56568"
+checksum = "1b939f16394cfd6a678d38cef9f22de1f689957a58cb4b73926316318fe7245d"
 dependencies = [
  "fast32",
  "sha2",
