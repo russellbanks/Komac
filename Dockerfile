@@ -7,18 +7,22 @@ COPY ./ /usr/src
 # Install apt packages required for building the package dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends --no-install-suggests \
-    libssl-dev \
-    perl \
-    make
+      libssl-dev \
+      perl \
+      make
 
 # Build Komac from the source code
-# RUN cargo build --release --locked
-RUN cargo install komac --locked
+RUN cargo build --release
 
 # Create a new container for
 FROM debian:bookworm-slim as release 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends --no-install-suggests \
-    ca-certificates
-COPY --from=build /usr/local/cargo/bin/komac /usr/local/bin/
-# COPY --from=build /usr/src/target/release/komac /usr/local/bin/
+      ca-certificates \
+ && rm -rf  \
+      /var/lib/apt/lists/* \
+      /tmp/* \
+      /var/tmp/*
+
+COPY --from=build /usr/src/target/release/komac /usr/local/bin/
+WORKDIR /root
