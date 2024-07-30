@@ -1,3 +1,9 @@
+use std::collections::BTreeSet;
+
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
+use url::Url;
+
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
 use crate::types::description::Description;
@@ -17,12 +23,9 @@ use crate::types::tag::Tag;
 use crate::types::urls::copyright_url::CopyrightUrl;
 use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
+use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
-use std::collections::BTreeSet;
-use url::Url;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]
@@ -33,7 +36,7 @@ pub struct DefaultLocaleManifest {
     pub package_locale: LanguageTag,
     pub publisher: Publisher,
     pub publisher_url: Option<PublisherUrl>,
-    pub publisher_support_url: Option<Url>,
+    pub publisher_support_url: Option<PublisherSupportUrl>,
     pub privacy_url: Option<Url>,
     pub author: Option<Author>,
     pub package_name: PackageName,

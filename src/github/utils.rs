@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
-use crate::types::urls::url::Url;
+use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 
 pub fn get_package_path(
@@ -40,7 +40,7 @@ pub fn get_pull_request_body(
     issue_resolves: Option<Vec<NonZeroU32>>,
     alternative_text: Option<String>,
     created_with: Option<String>,
-    created_with_url: Option<Url>,
+    created_with_url: Option<DecodedUrl>,
 ) -> String {
     const FRUITS: [&str; 16] = [
         "apple",

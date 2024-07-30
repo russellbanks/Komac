@@ -16,7 +16,6 @@ pub struct Msi {
     pub upgrade_code: String,
     pub product_name: String,
     pub product_version: String,
-    pub manufacturer: String,
     pub product_language: LanguageTag,
     pub all_users: Option<Scope>,
     pub install_location: Option<Utf8PathBuf>,
@@ -29,7 +28,6 @@ const PRODUCT_CODE: &str = "ProductCode";
 const PRODUCT_LANGUAGE: &str = "ProductLanguage";
 const PRODUCT_NAME: &str = "ProductName";
 const PRODUCT_VERSION: &str = "ProductVersion";
-const MANUFACTURER: &str = "Manufacturer";
 const UPGRADE_CODE: &str = "UpgradeCode";
 const ALL_USERS: &str = "ALLUSERS";
 const WIX: &str = "wix";
@@ -61,7 +59,6 @@ impl Msi {
             upgrade_code: property_table.remove(UPGRADE_CODE).unwrap(),
             product_name: property_table.remove(PRODUCT_NAME).unwrap(),
             product_version: property_table.remove(PRODUCT_VERSION).unwrap(),
-            manufacturer: property_table.remove(MANUFACTURER).unwrap(),
             product_language: LanguageTag::from_str(
                 Language::from_code(u16::from_str(
                     property_table.get(PRODUCT_LANGUAGE).unwrap(),

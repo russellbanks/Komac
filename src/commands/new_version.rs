@@ -63,9 +63,10 @@ use crate::types::tag::Tag;
 use crate::types::urls::copyright_url::CopyrightUrl;
 use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
+use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use crate::types::urls::url::Url;
+use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 
 #[derive(Parser)]
@@ -80,7 +81,7 @@ pub struct NewVersion {
 
     /// The list of package installers
     #[arg(short, long, num_args = 1..)]
-    urls: Vec<Url>,
+    urls: Vec<DecodedUrl>,
 
     #[arg(long)]
     package_locale: Option<LanguageTag>,
@@ -90,6 +91,9 @@ pub struct NewVersion {
 
     #[arg(long)]
     publisher_url: Option<PublisherUrl>,
+
+    #[arg(long)]
+    publisher_support_url: Option<PublisherSupportUrl>,
 
     #[arg(long)]
     package_name: Option<PackageName>,
@@ -142,7 +146,7 @@ pub struct NewVersion {
 
     /// URL to external tool that invoked Komac
     #[arg(long, env = "KOMAC_CREATED_WITH_URL")]
-    created_with_url: Option<Url>,
+    created_with_url: Option<DecodedUrl>,
 
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
@@ -206,8 +210,8 @@ impl NewVersion {
         if urls.is_empty() {
             while urls.len() < 1024 {
                 let message = format!("{} Installer URL", Ordinal(urls.len() + 1));
-                let url_prompt =
-                    CustomType::<Url>::new(&message).with_error_message("Please enter a valid URL");
+                let url_prompt = CustomType::<DecodedUrl>::new(&message)
+                    .with_error_message("Please enter a valid URL");
                 let installer_url = if urls.len() + 1 == 1 {
                     Some(url_prompt.prompt()?)
                 } else {
@@ -359,6 +363,7 @@ impl NewVersion {
                 .and_then(|analyser| mem::take(&mut analyser.publisher))
                 .unwrap_or_else(|| required_prompt(self.publisher).unwrap_or_default()),
             publisher_url: optional_prompt(self.publisher_url)?,
+            publisher_support_url: optional_prompt(self.publisher_support_url)?,
             author: optional_prompt(self.author)?,
             package_name: download_results
                 .values_mut()

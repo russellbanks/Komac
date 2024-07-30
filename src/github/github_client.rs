@@ -1,3 +1,17 @@
+use std::collections::BTreeSet;
+use std::env;
+use std::ops::Not;
+use std::str::FromStr;
+
+use camino::Utf8Path;
+use color_eyre::eyre::{bail, eyre, Result};
+use color_eyre::Report;
+use const_format::{formatcp, str_repeat};
+use cynic::http::ReqwestExt;
+use cynic::{Id, MutationBuilder, QueryBuilder};
+use reqwest::Client;
+use url::Url;
+
 use crate::credential::get_default_headers;
 use crate::github::graphql::create_commit::{
     CommitMessage, CommittableBranch, CreateCommit, CreateCommitOnBranchInput,
@@ -44,20 +58,9 @@ use crate::types::release_notes::ReleaseNotes;
 use crate::types::tag::Tag;
 use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
+use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use camino::Utf8Path;
-use color_eyre::eyre::{bail, eyre, Result};
-use color_eyre::Report;
-use const_format::{formatcp, str_repeat};
-use cynic::http::ReqwestExt;
-use cynic::{Id, MutationBuilder, QueryBuilder};
-use reqwest::Client;
-use std::collections::BTreeSet;
-use std::env;
-use std::ops::Not;
-use std::str::FromStr;
-use url::Url;
 
 pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
@@ -643,7 +646,10 @@ impl GitHub {
 
         let publisher_support_url = repository
             .has_issues_enabled
-            .then(|| format!("https://github.com/{owner}/{repo}/issues"));
+            .then(|| {
+                PublisherSupportUrl::from_str(&format!("https://github.com/{owner}/{repo}/issues"))
+            })
+            .transpose()?;
 
         Ok(GitHubValues {
             publisher_url: PublisherUrl::from_str(repository.owner.url.as_str())?,
@@ -666,7 +672,6 @@ impl GitHub {
                 .description
                 .and_then(|body| ReleaseNotes::format(&body, &owner, &repo)),
             release_notes_url: ReleaseNotesUrl::from_str(release.url.as_str())?,
-            has_issues_enabled: repository.has_issues_enabled,
             topics: Option::from(topics).filter(|topics| !topics.is_empty()),
         })
     }
@@ -706,14 +711,13 @@ pub struct Manifests {
 
 pub struct GitHubValues {
     pub publisher_url: PublisherUrl,
-    pub publisher_support_url: Option<String>,
+    pub publisher_support_url: Option<PublisherSupportUrl>,
     pub short_description: String,
     pub license: Option<License>,
     pub license_url: Option<LicenseUrl>,
     pub package_url: PackageUrl,
     pub release_notes: Option<ReleaseNotes>,
     pub release_notes_url: ReleaseNotesUrl,
-    pub has_issues_enabled: bool,
     pub topics: Option<BTreeSet<Tag>>,
 }
 

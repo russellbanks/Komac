@@ -17,16 +17,17 @@ use reqwest::redirect::Policy;
 use reqwest::{Client, ClientBuilder, Response};
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
+use url::Url;
 use uuid::Uuid;
 
 use crate::file_analyser::FileAnalyser;
 use crate::github::github_client::GITHUB_HOST;
 use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
-use crate::types::urls::url::Url;
+use crate::types::urls::url::DecodedUrl;
 
 async fn download_file(
     client: &Client,
-    mut url: url::Url,
+    mut url: Url,
     multi_progress: &MultiProgress,
 ) -> Result<DownloadedFile> {
     convert_github_latest_to_versioned(&mut url).await?;
@@ -102,11 +103,7 @@ async fn download_file(
 /// If there is no Content-Disposition header or no filenames in the Content-Disposition, it falls
 /// back to getting the last part of the initial URL and then the final redirected URL if the
 /// initial URL does not have a valid file extension at the end.
-fn get_file_name(
-    url: &url::Url,
-    final_url: &url::Url,
-    content_disposition: Option<&HeaderValue>,
-) -> String {
+fn get_file_name(url: &Url, final_url: &Url, content_disposition: Option<&HeaderValue>) -> String {
     const FILENAME: &str = "filename";
     const FILENAME_EXT: &str = formatcp!("{FILENAME}*");
 
@@ -159,7 +156,7 @@ fn get_file_name(
         .map_or_else(|| Uuid::new_v4().to_string(), str::to_owned)
 }
 
-async fn upgrade_to_https_if_reachable(url: &mut url::Url, client: &Client) -> Result<()> {
+async fn upgrade_to_https_if_reachable(url: &mut Url, client: &Client) -> Result<()> {
     if url.scheme() == "http" {
         url.set_scheme("https").unwrap();
         if client
@@ -180,7 +177,7 @@ async fn upgrade_to_https_if_reachable(url: &mut url::Url, client: &Client) -> R
 ///
 /// For example, github.com/owner/repo/releases/latest/download/file.exe to
 /// github.com/owner/repo/releases/download/v1.2.3/file.exe
-async fn convert_github_latest_to_versioned(url: &mut url::Url) -> Result<()> {
+async fn convert_github_latest_to_versioned(url: &mut Url) -> Result<()> {
     const LATEST: &str = "latest";
     const DOWNLOAD: &str = "download";
     const MAX_HOPS: u8 = 2;
@@ -213,7 +210,7 @@ async fn convert_github_latest_to_versioned(url: &mut url::Url) -> Result<()> {
 
 pub fn download_urls<'a>(
     client: &'a Client,
-    urls: Vec<Url>,
+    urls: Vec<DecodedUrl>,
     multi_progress: &'a MultiProgress,
 ) -> impl Iterator<Item = impl Future<Output = Result<DownloadedFile>> + 'a> {
     urls.into_iter()
@@ -222,7 +219,11 @@ pub fn download_urls<'a>(
 }
 
 pub struct DownloadedFile {
-    pub url: Url,
+    pub url: DecodedUrl,
+    // As the downloaded file is a temporary file, it's stored here so that the reference stays
+    // alive and the file does not get deleted. This is necessary because the memory map needs the
+    // reference to the file.
+    #[allow(dead_code)]
     pub file: File,
     pub mmap: Mmap,
     pub sha_256: String,
@@ -230,7 +231,9 @@ pub struct DownloadedFile {
     pub last_modified: Option<NaiveDate>,
 }
 
-pub async fn process_files(files: &mut [DownloadedFile]) -> Result<HashMap<Url, FileAnalyser>> {
+pub async fn process_files(
+    files: &mut [DownloadedFile],
+) -> Result<HashMap<DecodedUrl, FileAnalyser>> {
     stream::iter(files.iter_mut().map(
         |DownloadedFile {
              url,

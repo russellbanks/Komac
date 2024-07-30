@@ -66,11 +66,6 @@ pub struct GetAllValues {
 }
 
 #[derive(cynic::QueryFragment)]
-pub struct User {
-    pub url: Url,
-}
-
-#[derive(cynic::QueryFragment)]
 #[cynic(variables = "GetAllValuesVariables")]
 pub struct Repository {
     pub description: Option<String>,

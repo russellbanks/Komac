@@ -14,7 +14,7 @@ use crate::types::package_version::PackageVersion;
 use crate::types::protocol::Protocol;
 use crate::types::silent_switch::SilentSwitch;
 use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
-use crate::types::urls::url::Url;
+use crate::types::urls::url::DecodedUrl;
 use camino::Utf8PathBuf;
 use chrono::NaiveDate;
 use package_family_name::PackageFamilyName;
@@ -163,7 +163,7 @@ impl InstallerSwitches {
 pub struct ExpectedReturnCodes {
     pub installer_return_code: Option<NonZeroI64>,
     pub return_response: ReturnResponse,
-    pub return_response_url: Option<Url>,
+    pub return_response_url: Option<DecodedUrl>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -322,7 +322,7 @@ pub struct Installer {
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub scope: Option<Scope>,
-    pub installer_url: Url,
+    pub installer_url: DecodedUrl,
     pub installer_sha_256: String,
     pub signature_sha_256: Option<String>,
     pub install_modes: Option<BTreeSet<InstallModes>>,

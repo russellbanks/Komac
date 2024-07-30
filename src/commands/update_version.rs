@@ -41,7 +41,7 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::path::NormalizePath;
-use crate::types::urls::url::Url;
+use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 use crate::zip::Zip;
 
@@ -57,7 +57,7 @@ pub struct UpdateVersion {
 
     /// The list of package installers
     #[arg(short, long, num_args = 1.., required = true)]
-    urls: Vec<Url>,
+    urls: Vec<DecodedUrl>,
 
     /// Number of installers to download at the same time
     #[arg(long, default_value_t = NonZeroU8::new(2).unwrap())]
@@ -77,7 +77,7 @@ pub struct UpdateVersion {
 
     /// URL to external tool that invoked Komac
     #[arg(long, env = "KOMAC_CREATED_WITH_URL")]
-    created_with_url: Option<Url>,
+    created_with_url: Option<DecodedUrl>,
 
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
@@ -306,6 +306,13 @@ impl UpdateVersion {
                     .as_mut()
                     .map(|values| mem::take(&mut values.publisher_url))
             }),
+            publisher_support_url: previous_default_locale_manifest
+                .publisher_support_url
+                .or_else(|| {
+                    github_values
+                        .as_mut()
+                        .and_then(|values| mem::take(&mut values.publisher_support_url))
+                }),
             license: github_values
                 .as_mut()
                 .and_then(|values| mem::take(&mut values.license))
