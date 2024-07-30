@@ -5,8 +5,7 @@
 %global cargo_install_lib 0
 
 Name:           komac
-# TODO: increment version number when preparing release
-Version:        2.4.0
+Version:
 Release:        1%{?dist}
 Summary:        Manifest creator for winget-pkgs
 
@@ -40,7 +39,6 @@ License: %_license
 
 
 URL:            https://github.com/russellbanks/Komac
-# TODO : download the source tarball for the verson, remove all .iss files in /assets and repackage it
 Source:         Komac
 
 BuildRequires:  cargo-rpm-macros >= 26
