@@ -1,4 +1,4 @@
-#! /bin/bash
+!# /bin/bash
 # grab version and tarball url
 version=$(gh release list --limit 1 --json "tagName" --jq ".[].tagName")
 tarball=$(gh api "/repos/russellbanks/Komac/releases/tags/$version" |grep "tarball_url" | cut -d '"' -f 4)
@@ -19,4 +19,4 @@ cp ./komac.tar.gz ~/rpmbuild/SOURCES
 popd
 
 #build the srpm
-rombuild -bs ./komac.spec
+rpmbuild -bs ./komac.spec
