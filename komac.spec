@@ -5,7 +5,7 @@
 %global cargo_install_lib 0
 
 Name:           komac
-Version:
+Version:        # to be injected by gen-spec.sh
 Release:        1%{?dist}
 Summary:        Manifest creator for winget-pkgs
 
@@ -39,7 +39,7 @@ License: %_license
 
 
 URL:            https://github.com/russellbanks/Komac
-Source:         Komac
+Source:         komac.tar.gz
 
 BuildRequires:  cargo-rpm-macros >= 26
 
