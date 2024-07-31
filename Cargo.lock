@@ -1000,7 +1000,7 @@ version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "718f6cd8c54ae5249fd42b0c86639df0100b8a86eea2e5f1b915cde2e1481453"
 dependencies = [
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "lalrpop-util",
  "logos",
 ]
@@ -1705,7 +1705,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 dependencies = [
  "fallible-iterator 0.3.0",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "stable_deref_trait",
 ]
 
@@ -1762,7 +1762,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "http",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "slab",
  "tokio",
  "tokio-util",
@@ -2075,9 +2075,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.2.6"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26"
+checksum = "de3fc2e30ba82dd1b3911c8de1ffc143c74a914a14e99514d7637e3099df5ea0"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.5",
@@ -2281,7 +2281,7 @@ dependencies = [
  "futures",
  "futures-util",
  "heapless",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "indicatif",
  "indoc",
  "inquire",
@@ -2820,7 +2820,7 @@ checksum = "3f203fa8daa7bb185f760ae12bd8e097f63d17041dcdcaf675ac54cdf863170e"
 dependencies = [
  "crc32fast",
  "hashbrown 0.14.5",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "memchr",
 ]
 
@@ -3268,7 +3268,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a16027030d4ec33e423385f73bb559821827e9ec18c50e7874e4d6de5a4e96f"
 dependencies = [
  "anyhow",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "log",
  "protobuf",
  "protobuf-support",
@@ -3978,7 +3978,7 @@ version = "0.9.34+deprecated"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
 dependencies = [
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "itoa",
  "ryu",
  "serde",
@@ -4454,7 +4454,7 @@ version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a8534fd7f78b5405e860340ad6575217ce99f38d4d5c8f2442cb5ecb50090e1"
 dependencies = [
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "toml_datetime",
  "winnow 0.5.40",
 ]
@@ -4465,7 +4465,7 @@ version = "0.22.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d9f8729f5aea9562aac1cc0441f5d6de3cff1ee0c5d67293eeca5eb36ee7c16"
 dependencies = [
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "serde",
  "serde_spanned",
  "toml_datetime",
@@ -4911,7 +4911,7 @@ dependencies = [
  "ahash 0.8.11",
  "bitflags 2.6.0",
  "hashbrown 0.14.5",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "semver",
  "serde",
 ]
@@ -4925,7 +4925,7 @@ dependencies = [
  "ahash 0.8.11",
  "bitflags 2.6.0",
  "hashbrown 0.14.5",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "semver",
  "serde",
 ]
@@ -4956,7 +4956,7 @@ dependencies = [
  "fxprof-processed-profile",
  "gimli 0.28.1",
  "hashbrown 0.14.5",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "ittapi",
  "libc",
  "libm",
@@ -5080,7 +5080,7 @@ dependencies = [
  "cpp_demangle",
  "cranelift-entity",
  "gimli 0.28.1",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "log",
  "object 0.36.2",
  "postcard",
@@ -5189,7 +5189,7 @@ checksum = "70dc077306b38288262e5ba01d4b21532a6987416cdc0aedf04bb06c22a68fdc"
 dependencies = [
  "anyhow",
  "heck 0.4.1",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "wit-parser",
 ]
 
@@ -5478,7 +5478,7 @@ checksum = "3e79b9e3c0b6bb589dec46317e645851e0db2734c44e2be5e251b03ff4a51269"
 dependencies = [
  "anyhow",
  "id-arena",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "log",
  "semver",
  "serde",
@@ -5553,7 +5553,7 @@ dependencies = [
  "ecdsa",
  "fmmap",
  "globwalk",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "intaglio",
  "itertools 0.13.0",
  "lazy_static",
@@ -5611,7 +5611,7 @@ dependencies = [
  "ascii_tree",
  "bitmask",
  "bstr",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "itertools 0.13.0",
  "logos",
  "num-traits",
@@ -5724,7 +5724,7 @@ dependencies = [
  "crossbeam-utils",
  "displaydoc",
  "flate2",
- "indexmap 2.2.6",
+ "indexmap 2.3.0",
  "memchr",
  "thiserror",
  "zopfli",
