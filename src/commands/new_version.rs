@@ -175,10 +175,7 @@ impl NewVersion {
 
         let package_identifier = required_prompt(self.package_identifier)?;
 
-        let versions = github
-            .get_versions(&get_package_path(&package_identifier, None))
-            .await
-            .ok();
+        let versions = github.get_versions(&package_identifier).await.ok();
 
         let latest_version = versions.as_ref().and_then(|versions| versions.iter().max());
 

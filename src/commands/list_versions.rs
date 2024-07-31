@@ -43,15 +43,7 @@ impl ListVersions {
         let token = handle_token(self.token).await?;
         let github = GitHub::new(&token)?;
 
-        let versions = github
-            .get_versions(&get_package_path(&self.package_identifier, None))
-            .await
-            .wrap_err_with(|| {
-                format!(
-                    "{} does not exist in {WINGET_PKGS_FULL_NAME}",
-                    self.package_identifier
-                )
-            })?;
+        let versions = github.get_versions(&self.package_identifier).await?;
 
         let mut stdout_lock = io::stdout().lock();
         match (

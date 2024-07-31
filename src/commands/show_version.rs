@@ -45,15 +45,7 @@ impl ShowVersion {
         let github = GitHub::new(&token)?;
 
         // Get a list of all versions for the given package
-        let versions = github
-            .get_versions(&get_package_path(&self.package_identifier, None))
-            .await
-            .wrap_err_with(|| {
-                format!(
-                    "{} does not exist in {WINGET_PKGS_FULL_NAME}",
-                    self.package_identifier
-                )
-            })?;
+        let versions = github.get_versions(&self.package_identifier).await?;
 
         // Get the manifests for the latest or specified version
         let manifests = github

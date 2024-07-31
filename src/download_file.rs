@@ -172,8 +172,8 @@ async fn upgrade_to_https_if_reachable(url: &mut Url, client: &Client) -> Result
     Ok(())
 }
 
-/// Converts a vanity GitHub URL that always points to the latest release to its versioned URL like
-/// by following the redirect by one hop.
+/// Converts a vanity GitHub URL that always points to the latest release to its versioned URL by
+/// following the redirect by one hop.
 ///
 /// For example, github.com/owner/repo/releases/latest/download/file.exe to
 /// github.com/owner/repo/releases/download/v1.2.3/file.exe

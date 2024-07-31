@@ -57,15 +57,7 @@ impl RemoveVersion {
         );
         println!();
         let github = GitHub::new(&token)?;
-        let versions = github
-            .get_versions(&get_package_path(&self.package_identifier, None))
-            .await
-            .wrap_err_with(|| {
-                format!(
-                    "{} does not exist in {WINGET_PKGS_FULL_NAME}",
-                    self.package_identifier
-                )
-            })?;
+        let versions = github.get_versions(&self.package_identifier).await?;
 
         if !versions.contains(&self.package_version) {
             bail!(

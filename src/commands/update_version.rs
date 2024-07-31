@@ -107,15 +107,7 @@ impl UpdateVersion {
         let existing_pr =
             github.get_existing_pull_request(&self.package_identifier, &self.package_version);
 
-        let versions = github
-            .get_versions(&get_package_path(&self.package_identifier, None))
-            .await
-            .wrap_err_with(|| {
-                format!(
-                    "{} does not exist in {WINGET_PKGS_FULL_NAME}",
-                    self.package_identifier
-                )
-            })?;
+        let versions = github.get_versions(&self.package_identifier).await?;
 
         let latest_version = versions.iter().max().unwrap();
         println!(

@@ -4,7 +4,7 @@ use std::ops::Not;
 use std::str::FromStr;
 
 use camino::Utf8Path;
-use color_eyre::eyre::{bail, eyre, Result};
+use color_eyre::eyre::{bail, eyre, Result, WrapErr};
 use color_eyre::Report;
 use const_format::{formatcp, str_repeat};
 use cynic::http::ReqwestExt;
@@ -79,8 +79,23 @@ impl GitHub {
         ))
     }
 
-    pub async fn get_versions(&self, path: &str) -> Result<BTreeSet<PackageVersion>> {
-        Self::get_all_versions(&self.0, MICROSOFT, WINGET_PKGS, path).await
+    pub async fn get_versions(
+        &self,
+        package_identifier: &PackageIdentifier,
+    ) -> Result<BTreeSet<PackageVersion>> {
+        Self::get_all_versions(
+            &self.0,
+            MICROSOFT,
+            WINGET_PKGS,
+            &get_package_path(package_identifier, None),
+        )
+        .await
+        .wrap_err_with(|| {
+            format!(
+                "{} does not exist in {WINGET_PKGS_FULL_NAME}",
+                package_identifier
+            )
+        })
     }
 
     async fn get_all_versions(
