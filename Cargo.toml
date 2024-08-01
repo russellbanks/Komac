@@ -27,7 +27,7 @@ base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
 camino = { version = "1.1.7", features = ["serde1"] }
 chrono = { version = "0.4.38", features = ["serde"] }
-clap = { version = "4.5.11", features = ["derive", "cargo", "env"] }
+clap = { version = "4.5.13", features = ["derive", "cargo", "env"] }
 color-eyre = { version = "0.6.3", default-features = false }
 const_format = "0.2.32"
 crossterm = "0.27.0"
