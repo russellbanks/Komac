@@ -1,12 +1,11 @@
+use clap::Parser;
+use color_eyre::Result;
+
 use crate::credential::handle_token;
-use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::utils::get_package_path;
+use crate::github::github_client::GitHub;
 use crate::manifest::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
-use clap::Parser;
-use color_eyre::eyre::Context;
-use color_eyre::Result;
 
 #[derive(Parser)]
 pub struct ShowVersion {

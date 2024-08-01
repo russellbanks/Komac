@@ -7,7 +7,7 @@ use std::time::Duration;
 use base64ct::Encoding;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use color_eyre::eyre::{Result, WrapErr};
+use color_eyre::eyre::Result;
 use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};

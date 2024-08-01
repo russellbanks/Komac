@@ -1,13 +1,12 @@
-use crate::credential::handle_token;
-use crate::github::github_client::GitHub;
-use crate::github::github_client::WINGET_PKGS_FULL_NAME;
-use crate::github::utils::get_package_path;
-use crate::types::package_identifier::PackageIdentifier;
-use clap::{Args, Parser};
-use color_eyre::eyre::WrapErr;
-use color_eyre::Result;
 use std::io;
 use std::io::Write;
+
+use clap::{Args, Parser};
+use color_eyre::Result;
+
+use crate::credential::handle_token;
+use crate::github::github_client::GitHub;
+use crate::types::package_identifier::PackageIdentifier;
 
 #[derive(Parser)]
 pub struct ListVersions {

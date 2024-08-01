@@ -7,6 +7,8 @@ use clap::{crate_name, crate_version};
 use rand::{thread_rng, Rng};
 use uuid::Uuid;
 
+use crate::types::language_tag::LanguageTag;
+use crate::types::manifest_type::ManifestType;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::urls::url::DecodedUrl;
@@ -34,6 +36,59 @@ pub fn get_package_path(
         result.push_str(&version.to_string());
     }
     result
+}
+
+pub fn is_manifest_file(
+    file_name: &str,
+    package_identifier: &PackageIdentifier,
+    default_locale: Option<&LanguageTag>,
+    manifest_type: ManifestType,
+) -> bool {
+    const YAML_EXTENSION: &str = ".yaml";
+    const LOCALE_PART: &str = ".locale.";
+    const INSTALLER_PART: &str = ".installer";
+
+    let identifier_len = package_identifier.len();
+    let file_name_len = file_name.len();
+
+    // All manifest file names start with the package identifier
+    if !file_name.starts_with(package_identifier.as_str()) {
+        return false;
+    }
+
+    // All manifest files end with the YAML extension
+    if !file_name.ends_with(YAML_EXTENSION) {
+        return false;
+    }
+
+    match manifest_type {
+        ManifestType::Version => file_name_len == identifier_len + YAML_EXTENSION.len(),
+        ManifestType::Installer => {
+            file_name.get(identifier_len..file_name_len - YAML_EXTENSION.len())
+                == Some(INSTALLER_PART)
+        }
+        ManifestType::DefaultLocale | ManifestType::Locale => {
+            // Check if the file name after the identifier starts with `.locale.`
+            if file_name.get(identifier_len..identifier_len + LOCALE_PART.len())
+                != Some(LOCALE_PART)
+            {
+                return false;
+            }
+
+            let locale = file_name
+                .get(identifier_len + LOCALE_PART.len()..file_name_len - YAML_EXTENSION.len());
+
+            if let Some(locale) = locale {
+                default_locale.is_some_and(|tag| match manifest_type {
+                    ManifestType::DefaultLocale => tag.as_str() == locale,
+                    ManifestType::Locale => tag.as_str() != locale,
+                    _ => false,
+                })
+            } else {
+                false
+            }
+        }
+    }
 }
 
 pub fn get_pull_request_body(

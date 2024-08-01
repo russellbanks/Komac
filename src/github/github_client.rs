@@ -3,7 +3,6 @@ use std::env;
 use std::ops::Not;
 use std::str::FromStr;
 
-use camino::Utf8Path;
 use color_eyre::eyre::{bail, eyre, Result, WrapErr};
 use color_eyre::Report;
 use const_format::{formatcp, str_repeat};
@@ -46,12 +45,13 @@ use crate::github::graphql::get_repository_info::{
 use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariables};
 use crate::github::graphql::types::{GitObjectId, GitRefName};
 use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
-use crate::github::utils::get_package_path;
+use crate::github::utils::{get_package_path, is_manifest_file};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
 use crate::types::license::License;
+use crate::types::manifest_type::ManifestType;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::release_notes::ReleaseNotes;
@@ -77,6 +77,26 @@ impl GitHub {
                 .default_headers(get_default_headers(Some(token)))
                 .build()?,
         ))
+    }
+
+    pub async fn get_username(&self) -> Result<String> {
+        const KOMAC_FORK_OWNER: &str = "KOMAC_FORK_OWNER";
+
+        if let Ok(login) = env::var(KOMAC_FORK_OWNER) {
+            Ok(login)
+        } else {
+            let response = self
+                .0
+                .post(GITHUB_GRAPHQL_URL)
+                .run_graphql(GetCurrentUserLogin::build(()))
+                .await?;
+            response.data.map(|data| data.viewer.login).ok_or_else(|| {
+                response.errors.unwrap_or_default().into_iter().fold(
+                    eyre!("No data was returned when retrieving the current user's login"),
+                    Report::wrap_err,
+                )
+            })
+        }
     }
 
     pub async fn get_versions(
@@ -166,42 +186,43 @@ impl GitHub {
 
         let version_manifest = content
             .iter()
-            .find(|file| file.name == format!("{identifier}.yaml"))
+            .find(|file| is_manifest_file(&file.name, identifier, None, ManifestType::Version))
             .map(|file| serde_yaml::from_str::<VersionManifest>(&file.text))
-            .transpose()?
-            .ok_or_else(|| eyre!("No version manifest was found in {full_package_path}"))?;
+            .ok_or_else(|| eyre!("No version manifest was found in {full_package_path}"))??;
 
         let locale_manifests = content
             .iter()
             .filter(|file| {
-                file.name.starts_with(&format!("{identifier}.locale."))
-                    && !file.name.contains(version_manifest.default_locale.as_str())
-                    && Utf8Path::new(&file.name)
-                        .extension()
-                        .map_or(false, |ext| ext.eq_ignore_ascii_case("yaml"))
+                is_manifest_file(
+                    &file.name,
+                    identifier,
+                    Some(&version_manifest.default_locale),
+                    ManifestType::Locale,
+                )
             })
-            .map(|file| serde_yaml::from_str::<LocaleManifest>(&file.text).unwrap())
-            .collect::<Vec<_>>();
+            .map(|file| serde_yaml::from_str::<LocaleManifest>(&file.text))
+            .collect::<serde_yaml::Result<_>>()?;
 
         let default_locale_manifest = content
             .iter()
             .find(|file| {
-                file.name
-                    == format!(
-                        "{identifier}.locale.{}.yaml",
-                        version_manifest.default_locale
-                    )
+                is_manifest_file(
+                    &file.name,
+                    identifier,
+                    Some(&version_manifest.default_locale),
+                    ManifestType::DefaultLocale,
+                )
             })
             .map(|file| serde_yaml::from_str::<DefaultLocaleManifest>(&file.text))
-            .transpose()?
-            .ok_or_else(|| eyre!("No default locale manifest was found in {full_package_path}"))?;
+            .ok_or_else(|| {
+                eyre!("No default locale manifest was found in {full_package_path}")
+            })??;
 
         let installer_manifest = content
             .into_iter()
-            .find(|file| file.name == format!("{identifier}.installer.yaml"))
+            .find(|file| is_manifest_file(&file.name, identifier, None, ManifestType::Installer))
             .map(|file| serde_yaml::from_str::<InstallerManifest>(&file.text))
-            .transpose()?
-            .ok_or_else(|| eyre!("No installer manifest was found in {full_package_path}"))?;
+            .ok_or_else(|| eyre!("No installer manifest was found in {full_package_path}"))??;
 
         Ok(Manifests {
             installer_manifest,
@@ -258,25 +279,6 @@ impl GitHub {
                         Report::wrap_err,
                     )
             })
-    }
-
-    pub async fn get_username(&self) -> Result<String> {
-        const KOMAC_FORK_OWNER: &str = "KOMAC_FORK_OWNER";
-        if let Ok(login) = env::var(KOMAC_FORK_OWNER) {
-            Ok(login)
-        } else {
-            let response = self
-                .0
-                .post(GITHUB_GRAPHQL_URL)
-                .run_graphql(GetCurrentUserLogin::build(()))
-                .await?;
-            response.data.map(|data| data.viewer.login).ok_or_else(|| {
-                response.errors.unwrap_or_default().into_iter().fold(
-                    eyre!("No data was returned when retrieving the current user's login"),
-                    Report::wrap_err,
-                )
-            })
-        }
     }
 
     pub async fn get_winget_pkgs(&self, username: Option<&str>) -> Result<RepositoryData> {
