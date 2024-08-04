@@ -42,7 +42,7 @@ pub fn is_manifest_file(
     file_name: &str,
     package_identifier: &PackageIdentifier,
     default_locale: Option<&LanguageTag>,
-    manifest_type: ManifestType,
+    manifest_type: &ManifestType,
 ) -> bool {
     const YAML_EXTENSION: &str = ".yaml";
     const LOCALE_PART: &str = ".locale.";
@@ -78,21 +78,19 @@ pub fn is_manifest_file(
             let locale = file_name
                 .get(identifier_len + LOCALE_PART.len()..file_name_len - YAML_EXTENSION.len());
 
-            if let Some(locale) = locale {
-                default_locale.is_some_and(|tag| match manifest_type {
-                    ManifestType::DefaultLocale => tag.as_str() == locale,
-                    ManifestType::Locale => tag.as_str() != locale,
+            locale.map_or(false, |locale| {
+                default_locale.is_some_and(|default_locale| match manifest_type {
+                    ManifestType::DefaultLocale => default_locale.as_str() == locale,
+                    ManifestType::Locale => default_locale.as_str() != locale,
                     _ => false,
                 })
-            } else {
-                false
-            }
+            })
         }
     }
 }
 
 pub fn get_pull_request_body(
-    issue_resolves: Option<Vec<NonZeroU32>>,
+    issue_resolves: Vec<NonZeroU32>,
     alternative_text: Option<String>,
     created_with: Option<String>,
     created_with_url: Option<DecodedUrl>,
@@ -144,12 +142,10 @@ pub fn get_pull_request_body(
 
         let _ = writeln!(body, " :{emoji}:");
     }
-    if let Some(resolves) = issue_resolves {
-        if !resolves.is_empty() {
-            let _ = writeln!(body);
-            for resolve in BTreeSet::from_iter(resolves) {
-                let _ = writeln!(body, "- Resolves #{resolve}");
-            }
+    if !issue_resolves.is_empty() {
+        let _ = writeln!(body);
+        for resolve in BTreeSet::from_iter(issue_resolves) {
+            let _ = writeln!(body, "- Resolves #{resolve}");
         }
     }
     body

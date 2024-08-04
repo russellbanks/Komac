@@ -1,3 +1,4 @@
+use crate::github::github_client::GitHubValues;
 use crate::manifests::default_locale_manifest::{Agreement, Documentation, Icon};
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
@@ -51,4 +52,19 @@ pub struct LocaleManifest {
     pub manifest_type: ManifestType,
     #[serde(default)]
     pub manifest_version: ManifestVersion,
+}
+
+impl LocaleManifest {
+    pub fn update(
+        &mut self,
+        package_version: PackageVersion,
+        github_values: &Option<GitHubValues>,
+    ) {
+        self.package_version = package_version;
+        self.release_notes_url = github_values
+            .as_ref()
+            .map(|values| values.release_notes_url.clone());
+        self.manifest_type = ManifestType::Locale;
+        self.manifest_version = ManifestVersion::default();
+    }
 }

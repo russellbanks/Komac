@@ -1,9 +1,11 @@
 use std::collections::BTreeSet;
+use std::mem;
 
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use url::Url;
 
+use crate::github::github_client::GitHubValues;
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
 use crate::types::description::Description;
@@ -141,4 +143,49 @@ pub enum IconTheme {
     Light,
     Dark,
     HighContrast,
+}
+
+impl DefaultLocaleManifest {
+    pub fn update(
+        &mut self,
+        package_version: PackageVersion,
+        github_values: &mut Option<GitHubValues>,
+    ) {
+        self.package_version = package_version;
+        if self.publisher_url.is_none() {
+            self.publisher_url = github_values
+                .as_mut()
+                .map(|values| mem::take(&mut values.publisher_url));
+        }
+        if self.publisher_support_url.is_none() {
+            self.publisher_support_url = github_values
+                .as_mut()
+                .and_then(|values| mem::take(&mut values.publisher_support_url));
+        }
+        if let Some(github_license) = github_values
+            .as_mut()
+            .and_then(|values| mem::take(&mut values.license))
+        {
+            self.license = github_license;
+        }
+        if let Some(github_license_url) = github_values
+            .as_mut()
+            .and_then(|values| mem::take(&mut values.license_url))
+        {
+            self.license_url = Some(github_license_url);
+        }
+        if self.tags.is_none() {
+            self.tags = github_values
+                .as_mut()
+                .and_then(|values| mem::take(&mut values.topics));
+        }
+        self.release_notes = github_values
+            .as_mut()
+            .and_then(|values| mem::take(&mut values.release_notes));
+        self.release_notes_url = github_values
+            .as_ref()
+            .map(|values| values.release_notes_url.clone());
+        self.manifest_type = ManifestType::DefaultLocale;
+        self.manifest_version = ManifestVersion::default();
+    }
 }

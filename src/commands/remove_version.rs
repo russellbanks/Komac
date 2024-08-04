@@ -33,7 +33,7 @@ pub struct RemoveVersion {
 
     /// List of issues that removing this version would resolve
     #[arg(long)]
-    resolves: Option<Vec<NonZeroU32>>,
+    resolves: Vec<NonZeroU32>,
 
     #[arg(short, long)]
     submit: bool,

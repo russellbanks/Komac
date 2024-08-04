@@ -15,28 +15,23 @@ use reqwest::Client;
 use strsim::levenshtein;
 
 use crate::commands::utils::{
-    prompt_existing_pull_request, prompt_submit_option, reorder_keys, write_changes_to_dir,
-    SubmitOption,
+    prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
 use crate::github::graphql::create_commit::FileAddition;
 use crate::github::graphql::types::Base64String;
+use crate::github::pr_changes::PRChangesBuilder;
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
-use crate::manifest::{build_manifest_string, Manifest};
-use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, NestedInstallerFiles, Scope,
     UpgradeBehavior,
 };
-use crate::manifests::locale_manifest::LocaleManifest;
-use crate::manifests::version_manifest::VersionManifest;
 use crate::match_installers::match_installers;
 use crate::types::installer_type::InstallerType;
-use crate::types::manifest_version::ManifestVersion;
 use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -65,7 +60,7 @@ pub struct UpdateVersion {
 
     /// List of issues that updating this package would resolve
     #[arg(long)]
-    resolves: Option<Vec<NonZeroU32>>,
+    resolves: Vec<NonZeroU32>,
 
     /// Automatically submit a pull request
     #[arg(short, long)]
@@ -160,235 +155,166 @@ impl UpdateVersion {
                 ..Installer::default()
             })
             .collect::<Vec<_>>();
-        let manifests = manifests.await?;
-        let mut previous_installer_manifest = manifests.installer_manifest;
-        let previous_installers = mem::take(&mut previous_installer_manifest.installers)
+        let mut manifests = manifests.await?;
+        let previous_installers = mem::take(&mut manifests.installer_manifest.installers)
             .into_iter()
-            .map(|installer| Installer {
-                installer_type: previous_installer_manifest
-                    .installer_type
-                    .or(installer.installer_type),
-                nested_installer_type: previous_installer_manifest
-                    .nested_installer_type
-                    .or(installer.nested_installer_type),
-                scope: previous_installer_manifest.scope.or(installer.scope),
-                ..installer
+            .map(|mut installer| {
+                if manifests.installer_manifest.installer_type.is_some() {
+                    installer.installer_type = manifests.installer_manifest.installer_type;
+                }
+                if manifests.installer_manifest.nested_installer_type.is_some() {
+                    installer.nested_installer_type =
+                        manifests.installer_manifest.nested_installer_type;
+                }
+                if manifests.installer_manifest.scope.is_some() {
+                    installer.scope = manifests.installer_manifest.scope;
+                }
+                installer
             })
             .collect::<Vec<_>>();
         let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
-            .map(|(previous_installer, new_installer)| {
+            .map(|(mut previous_installer, new_installer)| {
                 let analyser = download_results.get(&new_installer.installer_url).unwrap();
-                Installer {
-                    installer_locale: analyser
-                        .product_language
-                        .clone()
-                        .or(previous_installer.installer_locale),
-                    platform: analyser.platform.clone().or(previous_installer.platform),
-                    minimum_os_version: analyser
-                        .minimum_os_version
-                        .clone()
-                        .or(previous_installer.minimum_os_version)
-                        .filter(|minimum_os_version| {
-                            *minimum_os_version != MinimumOSVersion::removable()
-                        }),
-                    installer_type: match previous_installer.installer_type {
-                        Some(InstallerType::Portable) => previous_installer.installer_type,
-                        _ => match new_installer.installer_type {
-                            Some(InstallerType::Portable) => previous_installer.installer_type,
-                            _ => new_installer.installer_type,
-                        },
-                    },
-                    nested_installer_type: analyser
-                        .zip
-                        .as_ref()
-                        .and_then(|zip| zip.nested_installer_type)
-                        .or(previous_installer.nested_installer_type),
-                    nested_installer_files: previous_installer
-                        .nested_installer_files
-                        .or_else(|| previous_installer_manifest.nested_installer_files.clone())
-                        .or_else(|| {
-                            analyser
-                                .zip
-                                .as_ref()
-                                .and_then(|zip| zip.nested_installer_files.clone())
-                        })
-                        .and_then(|nested_installer_files| {
-                            validate_relative_paths(nested_installer_files, &analyser.zip)
-                        }),
-                    scope: new_installer.scope.or(previous_installer.scope),
-                    installer_url: new_installer.installer_url.clone(),
-                    installer_sha_256: analyser.installer_sha_256.clone(),
-                    signature_sha_256: analyser.signature_sha_256.clone(),
-                    upgrade_behavior: UpgradeBehavior::get(analyser.installer_type)
-                        .or(previous_installer.upgrade_behavior),
-                    file_extensions: previous_installer
-                        .file_extensions
-                        .map(|mut extensions| {
-                            if let Some(mut identified_extensions) =
-                                analyser.file_extensions.clone()
-                            {
-                                extensions.append(&mut identified_extensions);
-                            }
-                            extensions
-                        })
-                        .or_else(|| analyser.file_extensions.clone()),
-                    package_family_name: analyser.package_family_name.clone(),
-                    product_code: analyser.product_code.clone(),
-                    capabilities: analyser
-                        .capabilities
-                        .clone()
-                        .or(previous_installer.capabilities),
-                    restricted_capabilities: analyser
-                        .restricted_capabilities
-                        .clone()
-                        .or(previous_installer.restricted_capabilities),
-                    release_date: analyser.last_modified,
-                    apps_and_features_entries: analyser.msi.as_ref().map(|msi| {
-                        BTreeSet::from([AppsAndFeaturesEntry {
-                            display_name: if msi.product_name
-                                == manifests.default_locale_manifest.package_name.as_str()
-                            {
-                                None
-                            } else {
-                                Some(msi.product_name.clone())
-                            },
-                            display_version: if msi.product_version
-                                == self.package_version.to_string()
-                            {
-                                None
-                            } else {
-                                Some(msi.product_version.clone())
-                            },
-                            upgrade_code: Some(msi.upgrade_code.clone()),
-                            ..AppsAndFeaturesEntry::default()
-                        }])
-                    }),
-                    installation_metadata: analyser.default_install_location.clone().map(
-                        |install_location| InstallationMetadata {
-                            default_install_location: Some(install_location),
-                            ..InstallationMetadata::default()
-                        },
-                    ),
-                    ..previous_installer
+                if analyser.product_language.is_some() {
+                    previous_installer
+                        .installer_locale
+                        .clone_from(&analyser.product_language);
                 }
+                if analyser.platform.is_some() {
+                    previous_installer.platform.clone_from(&analyser.platform);
+                }
+                if analyser.minimum_os_version.is_some() {
+                    previous_installer
+                        .minimum_os_version
+                        .clone_from(&analyser.minimum_os_version);
+                } else if previous_installer.minimum_os_version
+                    == Some(MinimumOSVersion::removable())
+                {
+                    previous_installer.minimum_os_version = None;
+                }
+                previous_installer.installer_type = match previous_installer.installer_type {
+                    Some(InstallerType::Portable) => previous_installer.installer_type,
+                    _ => match new_installer.installer_type {
+                        Some(InstallerType::Portable) => previous_installer.installer_type,
+                        _ => new_installer.installer_type,
+                    },
+                };
+                if let Some(nested_installer_type) = analyser
+                    .zip
+                    .as_ref()
+                    .and_then(|zip| zip.nested_installer_type)
+                {
+                    previous_installer.nested_installer_type = Some(nested_installer_type);
+                }
+                previous_installer.nested_installer_files = previous_installer
+                    .nested_installer_files
+                    .or_else(|| manifests.installer_manifest.nested_installer_files.clone())
+                    .or_else(|| {
+                        analyser
+                            .zip
+                            .as_ref()
+                            .and_then(|zip| zip.nested_installer_files.clone())
+                    })
+                    .and_then(|nested_installer_files| {
+                        validate_relative_paths(nested_installer_files, &analyser.zip)
+                    });
+                if previous_installer.scope.is_none() {
+                    previous_installer.scope = new_installer.scope;
+                }
+                previous_installer
+                    .installer_url
+                    .clone_from(&new_installer.installer_url);
+                previous_installer
+                    .installer_sha_256
+                    .clone_from(&analyser.installer_sha_256);
+                previous_installer
+                    .signature_sha_256
+                    .clone_from(&analyser.signature_sha_256);
+                if let Some(upgrade_behaviour) = UpgradeBehavior::get(analyser.installer_type) {
+                    previous_installer.upgrade_behavior = Some(upgrade_behaviour);
+                }
+                previous_installer.file_extensions = previous_installer
+                    .file_extensions
+                    .map(|mut extensions| {
+                        if let Some(mut identified_extensions) = analyser.file_extensions.clone() {
+                            extensions.append(&mut identified_extensions);
+                        }
+                        extensions
+                    })
+                    .or_else(|| analyser.file_extensions.clone());
+                previous_installer
+                    .package_family_name
+                    .clone_from(&analyser.package_family_name);
+                previous_installer
+                    .product_code
+                    .clone_from(&analyser.product_code);
+                previous_installer
+                    .capabilities
+                    .clone_from(&analyser.capabilities);
+                previous_installer
+                    .restricted_capabilities
+                    .clone_from(&analyser.restricted_capabilities);
+                previous_installer.release_date = analyser.last_modified;
+                previous_installer.apps_and_features_entries = analyser.msi.as_ref().map(|msi| {
+                    BTreeSet::from([AppsAndFeaturesEntry {
+                        display_name: (msi.product_name
+                            != manifests.default_locale_manifest.package_name.as_str())
+                        .then(|| msi.product_name.clone()),
+                        display_version: (msi.product_version != self.package_version.to_string())
+                            .then(|| msi.product_version.clone()),
+                        upgrade_code: Some(msi.upgrade_code.clone()),
+                        ..AppsAndFeaturesEntry::default()
+                    }])
+                });
+                if let Some(install_location) = &analyser.default_install_location {
+                    previous_installer.installation_metadata = Some(InstallationMetadata {
+                        default_install_location: Some(install_location.clone()),
+                        ..InstallationMetadata::default()
+                    });
+                }
+                previous_installer
             })
-            .collect::<BTreeSet<_>>();
+            .collect::<Vec<_>>();
 
-        let mut installer_manifest = reorder_keys(
-            self.package_identifier.clone(),
-            self.package_version.clone(),
-            installers,
-            previous_installer_manifest,
-        );
-        installer_manifest.minimum_os_version = installer_manifest
+        manifests.installer_manifest.minimum_os_version = manifests
+            .installer_manifest
             .minimum_os_version
             .filter(|minimum_os_version| *minimum_os_version != MinimumOSVersion::removable());
-        let previous_default_locale_manifest = manifests.default_locale_manifest;
+        manifests.installer_manifest.installers = installers;
+        manifests.installer_manifest.reorder_keys(
+            self.package_identifier.clone(),
+            self.package_version.clone(),
+        );
+        manifests.installer_manifest.installers.sort_unstable();
+
         let mut github_values = match github_values {
             Some(future) => Some(future.await?),
             None => None,
         };
-        let default_locale_manifest = DefaultLocaleManifest {
-            package_identifier: self.package_identifier.clone(),
-            package_version: self.package_version.clone(),
-            publisher_url: previous_default_locale_manifest.publisher_url.or_else(|| {
-                github_values
-                    .as_mut()
-                    .map(|values| mem::take(&mut values.publisher_url))
-            }),
-            publisher_support_url: previous_default_locale_manifest
-                .publisher_support_url
-                .or_else(|| {
-                    github_values
-                        .as_mut()
-                        .and_then(|values| mem::take(&mut values.publisher_support_url))
-                }),
-            license: github_values
-                .as_mut()
-                .and_then(|values| mem::take(&mut values.license))
-                .unwrap_or(previous_default_locale_manifest.license),
-            license_url: github_values
-                .as_mut()
-                .and_then(|values| mem::take(&mut values.license_url))
-                .or(previous_default_locale_manifest.license_url),
-            tags: previous_default_locale_manifest.tags.or_else(|| {
-                github_values
-                    .as_mut()
-                    .and_then(|values| mem::take(&mut values.topics))
-            }),
-            release_notes: github_values
-                .as_mut()
-                .and_then(|values| mem::take(&mut values.release_notes)),
-            release_notes_url: github_values
-                .as_ref()
-                .map(|values| values.release_notes_url.clone()),
-            manifest_version: ManifestVersion::default(),
-            ..previous_default_locale_manifest
-        };
-        let version_manifest = VersionManifest {
-            package_identifier: self.package_identifier.clone(),
-            package_version: self.package_version.clone(),
-            manifest_version: ManifestVersion::default(),
-            ..manifests.version_manifest
-        };
 
-        let full_package_path =
-            get_package_path(&self.package_identifier, Some(&self.package_version));
-        let mut changes = {
-            let mut path_content_map = Vec::new();
-            path_content_map.push((
-                format!(
-                    "{full_package_path}/{}.installer.yaml",
-                    self.package_identifier
-                ),
-                build_manifest_string(
-                    &Manifest::Installer(&installer_manifest),
-                    &self.created_with,
-                )?,
-            ));
-            path_content_map.push((
-                format!(
-                    "{full_package_path}/{}.locale.{}.yaml",
-                    self.package_identifier, version_manifest.default_locale
-                ),
-                build_manifest_string(
-                    &Manifest::DefaultLocale(&default_locale_manifest),
-                    &self.created_with,
-                )?,
-            ));
-            manifests
-                .locale_manifests
-                .into_iter()
-                .map(|locale_manifest| LocaleManifest {
-                    package_version: self.package_version.clone(),
-                    release_notes_url: github_values
-                        .as_ref()
-                        .map(|values| values.release_notes_url.clone()),
-                    manifest_version: ManifestVersion::default(),
-                    ..locale_manifest
-                })
-                .for_each(|locale_manifest| {
-                    if let Ok(yaml) = build_manifest_string(
-                        &Manifest::Locale(&locale_manifest),
-                        &self.created_with,
-                    ) {
-                        path_content_map.push((
-                            format!(
-                                "{full_package_path}/{}.locale.{}.yaml",
-                                self.package_identifier, locale_manifest.package_locale
-                            ),
-                            yaml,
-                        ));
-                    }
-                });
-            path_content_map.push((
-                format!("{full_package_path}/{}.yaml", self.package_identifier),
-                build_manifest_string(&Manifest::Version(&version_manifest), &self.created_with)?,
-            ));
-            path_content_map
-        };
+        manifests
+            .default_locale_manifest
+            .update(self.package_version.clone(), &mut github_values);
+
+        manifests
+            .locale_manifests
+            .iter_mut()
+            .for_each(|locale| locale.update(self.package_version.clone(), &github_values));
+
+        manifests
+            .version_manifest
+            .update(self.package_version.clone());
+
+        let package_path = get_package_path(&self.package_identifier, Some(&self.package_version));
+        let mut changes = PRChangesBuilder::default()
+            .package_identifier(&self.package_identifier)
+            .manifests(manifests)
+            .package_path(&package_path)
+            .created_with(&self.created_with)
+            .build()?
+            .create()?;
 
         let submit_option = prompt_submit_option(
             &mut changes,
@@ -398,7 +324,7 @@ impl UpdateVersion {
             self.dry_run,
         )?;
 
-        if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
+        if let Some(output) = self.output.map(|out| out.join(package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
                 "{} written all manifest files to {output}",

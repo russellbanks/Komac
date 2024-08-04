@@ -110,12 +110,7 @@ impl GitHub {
             &get_package_path(package_identifier, None),
         )
         .await
-        .wrap_err_with(|| {
-            format!(
-                "{} does not exist in {WINGET_PKGS_FULL_NAME}",
-                package_identifier
-            )
-        })
+        .wrap_err_with(|| format!("{package_identifier} does not exist in {WINGET_PKGS_FULL_NAME}"))
     }
 
     async fn get_all_versions(
@@ -186,7 +181,7 @@ impl GitHub {
 
         let version_manifest = content
             .iter()
-            .find(|file| is_manifest_file(&file.name, identifier, None, ManifestType::Version))
+            .find(|file| is_manifest_file(&file.name, identifier, None, &ManifestType::Version))
             .map(|file| serde_yaml::from_str::<VersionManifest>(&file.text))
             .ok_or_else(|| eyre!("No version manifest was found in {full_package_path}"))??;
 
@@ -197,7 +192,7 @@ impl GitHub {
                     &file.name,
                     identifier,
                     Some(&version_manifest.default_locale),
-                    ManifestType::Locale,
+                    &ManifestType::Locale,
                 )
             })
             .map(|file| serde_yaml::from_str::<LocaleManifest>(&file.text))
@@ -210,7 +205,7 @@ impl GitHub {
                     &file.name,
                     identifier,
                     Some(&version_manifest.default_locale),
-                    ManifestType::DefaultLocale,
+                    &ManifestType::DefaultLocale,
                 )
             })
             .map(|file| serde_yaml::from_str::<DefaultLocaleManifest>(&file.text))
@@ -220,7 +215,7 @@ impl GitHub {
 
         let installer_manifest = content
             .into_iter()
-            .find(|file| is_manifest_file(&file.name, identifier, None, ManifestType::Installer))
+            .find(|file| is_manifest_file(&file.name, identifier, None, &ManifestType::Installer))
             .map(|file| serde_yaml::from_str::<InstallerManifest>(&file.text))
             .ok_or_else(|| eyre!("No installer manifest was found in {full_package_path}"))??;
 

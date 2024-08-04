@@ -16,24 +16,22 @@ use reqwest::Client;
 use strum::IntoEnumIterator;
 
 use crate::commands::utils::{
-    prompt_existing_pull_request, prompt_submit_option, reorder_keys, write_changes_to_dir,
-    SubmitOption,
+    prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
+use crate::github::github_client::{GitHub, Manifests, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
 use crate::github::graphql::create_commit::FileAddition;
 use crate::github::graphql::types::Base64String;
+use crate::github::pr_changes::PRChangesBuilder;
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
-use crate::manifest::{build_manifest_string, Manifest};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallModes, InstallationMetadata, Installer, InstallerManifest,
     InstallerSwitches, Scope, UpgradeBehavior,
 };
-use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
 use crate::prompts::list_prompt::list_prompt;
 use crate::prompts::multi_prompt::{check_prompt, radio_prompt};
@@ -134,7 +132,7 @@ pub struct NewVersion {
 
     /// List of issues that adding this package or version would resolve
     #[arg(long)]
-    resolves: Option<Vec<NonZeroU32>>,
+    resolves: Vec<NonZeroU32>,
 
     /// Automatically submit a pull request
     #[arg(short, long)]
@@ -242,7 +240,7 @@ impl NewVersion {
                 )
             });
         let mut download_results = process_files(&mut files).await?;
-        let mut installers = BTreeSet::new();
+        let mut installers = Vec::new();
         for (url, analyser) in &mut download_results {
             if analyser.installer_type == InstallerType::Exe
                 && Confirm::new(&format!("Is {} a portable exe?", analyser.file_name)).prompt()?
@@ -262,7 +260,7 @@ impl NewVersion {
                 zip.prompt()?;
                 analyser.architecture = zip.architecture;
             }
-            installers.insert(Installer {
+            installers.push(Installer {
                 installer_locale: mem::take(&mut analyser.product_language),
                 platform: mem::take(&mut analyser.platform),
                 minimum_os_version: mem::take(&mut analyser.minimum_os_version),
@@ -314,7 +312,7 @@ impl NewVersion {
             Some(manifests) => Some(manifests.await?),
             None => None,
         };
-        let installer_manifest = InstallerManifest {
+        let mut installer_manifest = InstallerManifest {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
             install_modes: if installers
@@ -340,12 +338,9 @@ impl NewVersion {
             manifest_type: ManifestType::Installer,
             ..InstallerManifest::default()
         };
-        let installer_manifest = reorder_keys(
-            package_identifier.clone(),
-            package_version.clone(),
-            installers,
-            installer_manifest,
-        );
+        installer_manifest.installers = installers;
+        installer_manifest.reorder_keys(package_identifier.clone(), package_version.clone());
+        installer_manifest.installers.sort_unstable();
         let mut github_values = match github_values {
             Some(future) => Some(future.await?),
             None => None,
@@ -395,55 +390,23 @@ impl NewVersion {
             manifest_version: ManifestVersion::default(),
         };
 
-        let full_package_path = get_package_path(&package_identifier, Some(&package_version));
-        let mut changes = {
-            let mut path_content_map = Vec::new();
-            path_content_map.push((
-                format!("{full_package_path}/{package_identifier}.installer.yaml"),
-                build_manifest_string(
-                    &Manifest::Installer(&installer_manifest),
-                    &self.created_with,
-                )?,
-            ));
-            path_content_map.push((
-                format!(
-                    "{full_package_path}/{}.locale.{}.yaml",
-                    package_identifier, version_manifest.default_locale
-                ),
-                build_manifest_string(
-                    &Manifest::DefaultLocale(&default_locale_manifest),
-                    &self.created_with,
-                )?,
-            ));
-            if let Some(locale_manifests) = manifests.map(|manifests| manifests.locale_manifests) {
-                locale_manifests
-                    .into_iter()
-                    .map(|locale_manifest| LocaleManifest {
-                        package_version: package_version.clone(),
-                        manifest_version: ManifestVersion::default(),
-                        ..locale_manifest
-                    })
-                    .for_each(|locale_manifest| {
-                        if let Ok(yaml) = build_manifest_string(
-                            &Manifest::Locale(&locale_manifest),
-                            &self.created_with,
-                        ) {
-                            path_content_map.push((
-                                format!(
-                                    "{full_package_path}/{}.locale.{}.yaml",
-                                    package_identifier, locale_manifest.package_locale
-                                ),
-                                yaml,
-                            ));
-                        }
-                    });
-            }
-            path_content_map.push((
-                format!("{full_package_path}/{package_identifier}.yaml"),
-                build_manifest_string(&Manifest::Version(&version_manifest), &self.created_with)?,
-            ));
-            path_content_map
+        let manifests = Manifests {
+            installer_manifest,
+            default_locale_manifest,
+            version_manifest,
+            locale_manifests: manifests
+                .map(|manifests| manifests.locale_manifests)
+                .unwrap_or_default(),
         };
+
+        let package_path = get_package_path(&package_identifier, Some(&package_version));
+        let mut changes = PRChangesBuilder::default()
+            .package_identifier(&package_identifier)
+            .manifests(manifests)
+            .package_path(&package_path)
+            .created_with(&self.created_with)
+            .build()?
+            .create()?;
 
         let submit_option = prompt_submit_option(
             &mut changes,
@@ -453,7 +416,7 @@ impl NewVersion {
             self.dry_run,
         )?;
 
-        if let Some(output) = self.output.map(|out| out.join(full_package_path)) {
+        if let Some(output) = self.output.map(|out| out.join(package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
                 "{} written all manifest files to {output}",
