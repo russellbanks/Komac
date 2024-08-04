@@ -7,8 +7,8 @@ use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 
 use crate::file_analyser::{APPX, APPX_BUNDLE, EXE, MSI, MSIX, MSIX_BUNDLE, ZIP};
+use crate::installers::msi::Msi;
 use crate::manifests::installer_manifest::NestedInstallerType;
-use crate::msi::Msi;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "lowercase")]

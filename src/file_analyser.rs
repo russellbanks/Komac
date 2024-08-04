@@ -10,10 +10,11 @@ use package_family_name::PackageFamilyName;
 use yara_x::mods::pe::{Resource, ResourceType};
 use yara_x::mods::PE;
 
+use crate::installers::msi::Msi;
+use crate::installers::msix_family::msix::Msix;
+use crate::installers::msix_family::msixbundle::MsixBundle;
+use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::{Platform, Scope};
-use crate::msi::Msi;
-use crate::msix_family::msix::Msix;
-use crate::msix_family::msixbundle::MsixBundle;
 use crate::types::architecture::Architecture;
 use crate::types::copyright::Copyright;
 use crate::types::file_extension::FileExtension;
@@ -22,7 +23,6 @@ use crate::types::language_tag::LanguageTag;
 use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
-use crate::zip::Zip;
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -42,17 +42,19 @@ pub struct FileAnalyser<'data> {
     pub signature_sha_256: Option<String>,
     pub package_family_name: Option<PackageFamilyName>,
     pub product_code: Option<String>,
+    pub upgrade_code: Option<String>,
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
     pub file_extensions: Option<BTreeSet<FileExtension>>,
     pub product_language: Option<LanguageTag>,
     pub last_modified: Option<NaiveDate>,
+    pub display_name: Option<String>,
+    pub display_version: Option<String>,
     pub file_name: String,
     pub copyright: Option<Copyright>,
     pub package_name: Option<PackageName>,
     pub publisher: Option<Publisher>,
     pub default_install_location: Option<Utf8PathBuf>,
-    pub msi: Option<Msi>,
     pub zip: Option<Zip<Cursor<&'data [u8]>>>,
 }
 
@@ -62,10 +64,19 @@ impl<'data> FileAnalyser<'data> {
             .extension()
             .unwrap_or_default()
             .to_lowercase();
-        let mut msi = match extension.as_str() {
-            MSI => Some(Msi::new(Cursor::new(data.as_ref()))?),
-            _ => None,
-        };
+        let mut msi = None;
+        let mut msix = None;
+        let mut msix_bundle = None;
+        let mut zip = None;
+        match extension.as_str() {
+            MSI => msi = Some(Msi::new(Cursor::new(data.as_ref()))?),
+            MSIX | APPX => msix = Some(Msix::new(Cursor::new(data.as_ref()))?),
+            MSIX_BUNDLE | APPX_BUNDLE => {
+                msix_bundle = Some(MsixBundle::new(Cursor::new(data.as_ref()))?);
+            }
+            ZIP => zip = Some(Zip::new(Cursor::new(data.as_ref()))?),
+            _ => {}
+        }
         let mut installer_type = None;
         let mut pe_arch = None;
         let pe = yara_x::mods::invoke::<PE>(data.as_ref());
@@ -82,18 +93,6 @@ impl<'data> FileAnalyser<'data> {
                 msi = Some(extract_msi(data.as_ref(), msi_resource)?);
             }
         }
-        let mut msix = match extension.as_str() {
-            MSIX | APPX => Some(Msix::new(Cursor::new(data.as_ref()))?),
-            _ => None,
-        };
-        let mut msix_bundle = match extension.as_str() {
-            MSIX_BUNDLE | APPX_BUNDLE => Some(MsixBundle::new(Cursor::new(data.as_ref()))?),
-            _ => None,
-        };
-        let mut zip = match extension.as_str() {
-            ZIP => Some(Zip::new(Cursor::new(data.as_ref()))?),
-            _ => None,
-        };
         if installer_type.is_none() {
             installer_type = Some(InstallerType::get(
                 data.as_ref(),
@@ -140,6 +139,7 @@ impl<'data> FileAnalyser<'data> {
                 .map(|msix| mem::take(&mut msix.package_family_name))
                 .or_else(|| msix_bundle.map(|msix_bundle| msix_bundle.package_family_name)),
             product_code: msi.as_mut().map(|msi| mem::take(&mut msi.product_code)),
+            upgrade_code: msi.as_mut().map(|msi| mem::take(&mut msi.upgrade_code)),
             capabilities: msix
                 .as_mut()
                 .and_then(|msix| mem::take(&mut msix.capabilities)),
@@ -151,6 +151,8 @@ impl<'data> FileAnalyser<'data> {
                 .and_then(|msix| mem::take(&mut msix.file_extensions)),
             product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
             last_modified: None,
+            display_name: msi.as_mut().map(|msi| mem::take(&mut msi.product_name)),
+            display_version: msi.as_mut().map(|msi| mem::take(&mut msi.product_version)),
             file_name: String::new(),
             copyright: pe
                 .as_ref()
@@ -162,10 +164,8 @@ impl<'data> FileAnalyser<'data> {
                 .as_ref()
                 .and_then(|pe| Publisher::get_from_exe(&pe.version_info)),
             default_install_location: msi
-                .as_mut()
-                .and_then(|msi| mem::take(&mut msi.install_location))
+                .and_then(|msi| msi.install_location)
                 .or_else(|| msix.map(|msix| msix.install_location)),
-            msi,
             zip,
         })
     }

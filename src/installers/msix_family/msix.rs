@@ -1,3 +1,8 @@
+use crate::installers::msix_family::utils::{get_install_location, hash_signature, read_manifest};
+use crate::manifests::installer_manifest::Platform;
+use crate::types::architecture::Architecture;
+use crate::types::file_extension::FileExtension;
+use crate::types::minimum_os_version::MinimumOSVersion;
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
@@ -8,12 +13,6 @@ use std::collections::BTreeSet;
 use std::io::{Read, Seek};
 use std::str::FromStr;
 use zip::ZipArchive;
-
-use crate::manifests::installer_manifest::Platform;
-use crate::msix_family::utils::{get_install_location, hash_signature, read_manifest};
-use crate::types::architecture::Architecture;
-use crate::types::file_extension::FileExtension;
-use crate::types::minimum_os_version::MinimumOSVersion;
 
 pub struct Msix {
     pub display_name: String,

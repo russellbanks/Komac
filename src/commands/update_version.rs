@@ -26,6 +26,7 @@ use crate::github::pr_changes::PRChangesBuilder;
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
+use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, NestedInstallerFiles, Scope,
     UpgradeBehavior,
@@ -38,7 +39,6 @@ use crate::types::package_version::PackageVersion;
 use crate::types::path::NormalizePath;
 use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
-use crate::zip::Zip;
 
 #[derive(Parser)]
 pub struct UpdateVersion {
@@ -257,17 +257,28 @@ impl UpdateVersion {
                     .restricted_capabilities
                     .clone_from(&analyser.restricted_capabilities);
                 previous_installer.release_date = analyser.last_modified;
-                previous_installer.apps_and_features_entries = analyser.msi.as_ref().map(|msi| {
-                    BTreeSet::from([AppsAndFeaturesEntry {
-                        display_name: (msi.product_name
-                            != manifests.default_locale_manifest.package_name.as_str())
-                        .then(|| msi.product_name.clone()),
-                        display_version: (msi.product_version != self.package_version.to_string())
-                            .then(|| msi.product_version.clone()),
-                        upgrade_code: Some(msi.upgrade_code.clone()),
-                        ..AppsAndFeaturesEntry::default()
-                    }])
-                });
+                if analyser.display_name.is_some()
+                    || analyser.display_version.is_some()
+                    || analyser.upgrade_code.is_some()
+                {
+                    previous_installer.apps_and_features_entries =
+                        Some(BTreeSet::from([AppsAndFeaturesEntry {
+                            display_name: analyser
+                                .display_name
+                                .as_ref()
+                                .filter(|&name| {
+                                    name != manifests.default_locale_manifest.package_name.as_str()
+                                })
+                                .cloned(),
+                            display_version: analyser
+                                .display_version
+                                .as_ref()
+                                .filter(|&version| *version != self.package_version.to_string())
+                                .cloned(),
+                            upgrade_code: analyser.upgrade_code.clone(),
+                            ..AppsAndFeaturesEntry::default()
+                        }]));
+                }
                 if let Some(install_location) = &analyser.default_install_location {
                     previous_installer.installation_metadata = Some(InstallationMetadata {
                         default_install_location: Some(install_location.clone()),

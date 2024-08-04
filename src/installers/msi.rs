@@ -145,6 +145,12 @@ impl Msi {
                     })
             })
             .or_else(|| {
+                // Fallback: check for an `APPDIR` directory entry
+                const APP_DIR: &str = "APPDIR";
+
+                Self::build_directory(directory_table, APP_DIR, TARGET_DIR)
+            })
+            .or_else(|| {
                 // Fallback: find a directory entry with `installdir` in its name
                 directory_table
                     .keys()

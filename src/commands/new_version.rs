@@ -287,14 +287,13 @@ impl NewVersion {
                 capabilities: mem::take(&mut analyser.capabilities),
                 restricted_capabilities: mem::take(&mut analyser.restricted_capabilities),
                 release_date: analyser.last_modified,
-                apps_and_features_entries: analyser.msi.as_mut().map(|msi| {
+                apps_and_features_entries: (analyser.display_version.is_some()
+                    || analyser.upgrade_code.is_some())
+                .then(|| {
                     BTreeSet::from([AppsAndFeaturesEntry {
-                        display_version: if msi.product_version == package_version.to_string() {
-                            None
-                        } else {
-                            Some(mem::take(&mut msi.product_version))
-                        },
-                        upgrade_code: Some(mem::take(&mut msi.upgrade_code)),
+                        display_version: mem::take(&mut analyser.display_version)
+                            .filter(|version| *version != package_version.to_string()),
+                        upgrade_code: mem::take(&mut analyser.upgrade_code),
                         ..AppsAndFeaturesEntry::default()
                     }])
                 }),

@@ -1,13 +1,12 @@
 use std::io::{Read, Seek};
 
+use crate::installers::msi::RELATIVE_PROGRAM_FILES_64;
+use crate::installers::msix_family::msix::APPX_SIGNATURE_P7X;
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
 use sha2::{Digest, Sha256};
 use zip::ZipArchive;
-
-use crate::msi::RELATIVE_PROGRAM_FILES_64;
-use crate::msix_family::msix::APPX_SIGNATURE_P7X;
 
 pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Result<String> {
     let mut appx_manifest_file = zip.by_name(path)?;

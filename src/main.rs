@@ -7,15 +7,13 @@ mod editor;
 mod file_analyser;
 mod github;
 mod hyperlink;
+mod installers;
 mod manifest;
 mod manifests;
 mod match_installers;
-mod msi;
-mod msix_family;
 mod prompts;
 mod types;
 mod update_state;
-mod zip;
 
 use crate::commands::cleanup::Cleanup;
 use crate::commands::list_versions::ListVersions;
