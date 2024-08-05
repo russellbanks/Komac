@@ -1,12 +1,14 @@
 use std::io::{Read, Seek};
 
-use crate::installers::msi::RELATIVE_PROGRAM_FILES_64;
-use crate::installers::msix_family::msix::APPX_SIGNATURE_P7X;
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
 use sha2::{Digest, Sha256};
 use zip::ZipArchive;
+
+use crate::installers::msi::RELATIVE_PROGRAM_FILES_64;
+use crate::installers::msix_family::msix::APPX_SIGNATURE_P7X;
+use crate::types::sha_256::Sha256String;
 
 pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Result<String> {
     let mut appx_manifest_file = zip.by_name(path)?;
@@ -15,7 +17,7 @@ pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Res
     Ok(appx_manifest)
 }
 
-pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> Result<String> {
+pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> Result<Sha256String> {
     let mut signature_file = zip.by_name(APPX_SIGNATURE_P7X)?;
     let mut hasher = Sha256::new();
     let mut buffer = [0; 1 << 13];
@@ -26,7 +28,7 @@ pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> Result<String>
         }
         hasher.update(&buffer[..count]);
     }
-    Ok(base16ct::upper::encode_string(&hasher.finalize()))
+    Ok(Sha256String::from_hasher(&hasher.finalize())?)
 }
 
 pub fn get_install_location(

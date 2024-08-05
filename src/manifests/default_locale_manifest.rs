@@ -20,6 +20,7 @@ use crate::types::package_name::PackageName;
 use crate::types::package_version::PackageVersion;
 use crate::types::publisher::Publisher;
 use crate::types::release_notes::ReleaseNotes;
+use crate::types::sha_256::Sha256String;
 use crate::types::short_description::ShortDescription;
 use crate::types::tag::Tag;
 use crate::types::urls::copyright_url::CopyrightUrl;
@@ -93,7 +94,7 @@ pub struct Icon {
     #[serde(rename = "IconTheme")]
     pub theme: Option<IconTheme>,
     #[serde(rename = "IconSha256")]
-    pub sha_256: Option<String>,
+    pub sha_256: Option<Sha256String>,
 }
 
 #[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]

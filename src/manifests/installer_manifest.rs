@@ -24,6 +24,7 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::protocol::Protocol;
+use crate::types::sha_256::Sha256String;
 use crate::types::silent_switch::SilentSwitch;
 use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::DecodedUrl;
@@ -299,7 +300,7 @@ pub struct InstallationMetadata {
 #[serde(rename_all = "PascalCase")]
 pub struct MetadataFiles {
     pub relative_file_path: String,
-    pub file_sha_256: Option<String>,
+    pub file_sha_256: Option<Sha256String>,
     pub file_type: Option<MetadataFileType>,
     pub invocation_parameter: Option<String>,
     pub display_name: Option<String>,
@@ -327,8 +328,8 @@ pub struct Installer {
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub scope: Option<Scope>,
     pub installer_url: DecodedUrl,
-    pub installer_sha_256: String,
-    pub signature_sha_256: Option<String>,
+    pub installer_sha_256: Sha256String,
+    pub signature_sha_256: Option<Sha256String>,
     pub install_modes: Option<BTreeSet<InstallModes>>,
     pub installer_switches: Option<InstallerSwitches>,
     pub installer_success_codes: Option<BTreeSet<InstallerSuccessCode>>,

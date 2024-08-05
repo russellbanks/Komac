@@ -22,6 +22,7 @@ pub mod path;
 pub mod protocol;
 pub mod publisher;
 pub mod release_notes;
+pub mod sha_256;
 pub mod short_description;
 pub mod silent_switch;
 pub mod silent_with_progress_switch;

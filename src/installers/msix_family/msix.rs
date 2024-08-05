@@ -3,6 +3,7 @@ use crate::manifests::installer_manifest::Platform;
 use crate::types::architecture::Architecture;
 use crate::types::file_extension::FileExtension;
 use crate::types::minimum_os_version::MinimumOSVersion;
+use crate::types::sha_256::Sha256String;
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
@@ -18,7 +19,7 @@ pub struct Msix {
     pub display_name: String,
     pub publisher_display_name: String,
     pub version: String,
-    pub signature_sha_256: String,
+    pub signature_sha_256: Sha256String,
     pub package_family_name: PackageFamilyName,
     pub target_device_family: BTreeSet<Platform>,
     pub min_version: MinimumOSVersion,

@@ -1,9 +1,3 @@
-use std::cmp::min;
-use std::collections::HashMap;
-use std::fs::File;
-use std::future::Future;
-use std::mem;
-
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
 use color_eyre::eyre::{bail, eyre, Result};
@@ -16,6 +10,11 @@ use reqwest::header::{HeaderValue, CONTENT_DISPOSITION, LAST_MODIFIED};
 use reqwest::redirect::Policy;
 use reqwest::{Client, ClientBuilder, Response};
 use sha2::{Digest, Sha256};
+use std::cmp::min;
+use std::collections::HashMap;
+use std::fs::File;
+use std::future::Future;
+use std::mem;
 use tokio::io::AsyncWriteExt;
 use url::Url;
 use uuid::Uuid;
@@ -23,6 +22,7 @@ use uuid::Uuid;
 use crate::file_analyser::FileAnalyser;
 use crate::github::github_client::GITHUB_HOST;
 use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
+use crate::types::sha_256::Sha256String;
 use crate::types::urls::url::DecodedUrl;
 
 async fn download_file(
@@ -87,7 +87,7 @@ async fn download_file(
         url: url.into(),
         file: temp_file,
         mmap: unsafe { Mmap::map(&file) }?,
-        sha_256: base16ct::upper::encode_string(&hasher.finalize()),
+        sha_256: Sha256String::from_hasher(&hasher.finalize())?,
         file_name,
         last_modified,
     })
@@ -226,7 +226,7 @@ pub struct DownloadedFile {
     #[allow(dead_code)]
     pub file: File,
     pub mmap: Mmap,
-    pub sha_256: String,
+    pub sha_256: Sha256String,
     pub file_name: String,
     pub last_modified: Option<NaiveDate>,
 }

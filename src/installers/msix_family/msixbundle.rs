@@ -6,6 +6,7 @@ use crate::installers::msix_family::utils::{hash_signature, read_manifest};
 use crate::manifests::installer_manifest::Platform;
 use crate::types::architecture::Architecture;
 use crate::types::minimum_os_version::MinimumOSVersion;
+use crate::types::sha_256::Sha256String;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
 use quick_xml::de::from_str;
@@ -13,7 +14,7 @@ use serde::Deserialize;
 use zip::ZipArchive;
 
 pub struct MsixBundle {
-    pub signature_sha_256: String,
+    pub signature_sha_256: Sha256String,
     pub package_family_name: PackageFamilyName,
     pub packages: Vec<IndividualPackage>,
 }

@@ -36,7 +36,7 @@ derive_builder = "0.20.0"
 derive_more = "0.99.18"
 futures = "0.3.30"
 futures-util = "0.3.30"
-heapless = "0.8.0"
+heapless = { version = "0.8.0", features = ["serde"] }
 indexmap = "2.3.0"
 indicatif = "0.17.8"
 inquire = "0.7.5"

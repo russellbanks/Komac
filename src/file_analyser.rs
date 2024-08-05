@@ -23,6 +23,7 @@ use crate::types::language_tag::LanguageTag;
 use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
+use crate::types::sha_256::Sha256String;
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -38,8 +39,8 @@ pub struct FileAnalyser<'data> {
     pub architecture: Option<Architecture>,
     pub installer_type: InstallerType,
     pub scope: Option<Scope>,
-    pub installer_sha_256: String,
-    pub signature_sha_256: Option<String>,
+    pub installer_sha_256: Sha256String,
+    pub signature_sha_256: Option<Sha256String>,
     pub package_family_name: Option<PackageFamilyName>,
     pub product_code: Option<String>,
     pub upgrade_code: Option<String>,
@@ -125,7 +126,7 @@ impl<'data> FileAnalyser<'data> {
                 }),
             installer_type: installer_type.unwrap(),
             scope: msi.as_ref().and_then(|msi| msi.all_users),
-            installer_sha_256: String::new(),
+            installer_sha_256: Sha256String::default(),
             signature_sha_256: msix
                 .as_mut()
                 .map(|msix| mem::take(&mut msix.signature_sha_256))
