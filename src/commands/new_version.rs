@@ -283,10 +283,14 @@ impl NewVersion {
                     .then_some(installer_switches),
                 file_extensions: mem::take(&mut analyser.file_extensions),
                 package_family_name: mem::take(&mut analyser.package_family_name),
-                apps_and_features_entries: (analyser.display_version.is_some()
+                apps_and_features_entries: (analyser.display_name.is_some()
+                    || analyser.display_publisher.is_some()
+                    || analyser.display_version.is_some()
                     || analyser.upgrade_code.is_some())
                 .then(|| {
                     BTreeSet::from([AppsAndFeaturesEntry {
+                        display_name: mem::take(&mut analyser.display_name),
+                        publisher: mem::take(&mut analyser.display_publisher),
                         display_version: mem::take(&mut analyser.display_version)
                             .filter(|version| *version != package_version.to_string()),
                         product_code: analyser.product_code.clone(),

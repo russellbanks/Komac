@@ -258,18 +258,14 @@ impl UpdateVersion {
                     .clone_from(&analyser.restricted_capabilities);
                 previous_installer.release_date = analyser.last_modified;
                 if analyser.display_name.is_some()
+                    || analyser.display_publisher.is_some()
                     || analyser.display_version.is_some()
                     || analyser.upgrade_code.is_some()
                 {
                     previous_installer.apps_and_features_entries =
                         Some(BTreeSet::from([AppsAndFeaturesEntry {
-                            display_name: analyser
-                                .display_name
-                                .as_ref()
-                                .filter(|&name| {
-                                    name != manifests.default_locale_manifest.package_name.as_str()
-                                })
-                                .cloned(),
+                            display_name: analyser.display_name.clone(),
+                            publisher: analyser.display_publisher.clone(),
                             display_version: analyser
                                 .display_version
                                 .as_ref()

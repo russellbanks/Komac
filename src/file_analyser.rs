@@ -50,6 +50,7 @@ pub struct FileAnalyser<'data> {
     pub product_language: Option<LanguageTag>,
     pub last_modified: Option<NaiveDate>,
     pub display_name: Option<String>,
+    pub display_publisher: Option<String>,
     pub display_version: Option<String>,
     pub file_name: String,
     pub copyright: Option<Copyright>,
@@ -153,6 +154,7 @@ impl<'data> FileAnalyser<'data> {
             product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
             last_modified: None,
             display_name: msi.as_mut().map(|msi| mem::take(&mut msi.product_name)),
+            display_publisher: msi.as_mut().map(|msi| mem::take(&mut msi.manufacturer)),
             display_version: msi.as_mut().map(|msi| mem::take(&mut msi.product_version)),
             file_name: String::new(),
             copyright: pe
