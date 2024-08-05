@@ -275,6 +275,7 @@ impl UpdateVersion {
                                 .as_ref()
                                 .filter(|&version| *version != self.package_version.to_string())
                                 .cloned(),
+                            product_code: analyser.product_code.clone(),
                             upgrade_code: analyser.upgrade_code.clone(),
                             ..AppsAndFeaturesEntry::default()
                         }]));
