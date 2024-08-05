@@ -339,7 +339,7 @@ impl NewVersion {
             ..InstallerManifest::default()
         };
         installer_manifest.installers = installers;
-        installer_manifest.reorder_keys(package_identifier.clone(), package_version.clone());
+        installer_manifest.reorder_keys(&package_identifier, &package_version);
         installer_manifest.installers.sort_unstable();
         let mut github_values = match github_values {
             Some(future) => Some(future.await?),

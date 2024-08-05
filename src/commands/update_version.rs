@@ -295,10 +295,9 @@ impl UpdateVersion {
             .minimum_os_version
             .filter(|minimum_os_version| *minimum_os_version != MinimumOSVersion::removable());
         manifests.installer_manifest.installers = installers;
-        manifests.installer_manifest.reorder_keys(
-            self.package_identifier.clone(),
-            self.package_version.clone(),
-        );
+        manifests
+            .installer_manifest
+            .reorder_keys(&self.package_identifier, &self.package_version);
         manifests.installer_manifest.installers.sort_unstable();
 
         let mut github_values = match github_values {
@@ -308,16 +307,14 @@ impl UpdateVersion {
 
         manifests
             .default_locale_manifest
-            .update(self.package_version.clone(), &mut github_values);
+            .update(&self.package_version, &mut github_values);
 
         manifests
             .locale_manifests
             .iter_mut()
-            .for_each(|locale| locale.update(self.package_version.clone(), &github_values));
+            .for_each(|locale| locale.update(&self.package_version, &github_values));
 
-        manifests
-            .version_manifest
-            .update(self.package_version.clone());
+        manifests.version_manifest.update(&self.package_version);
 
         let package_path = get_package_path(&self.package_identifier, Some(&self.package_version));
         let mut changes = PRChangesBuilder::default()

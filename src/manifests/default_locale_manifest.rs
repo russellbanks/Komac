@@ -149,10 +149,10 @@ pub enum IconTheme {
 impl DefaultLocaleManifest {
     pub fn update(
         &mut self,
-        package_version: PackageVersion,
+        package_version: &PackageVersion,
         github_values: &mut Option<GitHubValues>,
     ) {
-        self.package_version = package_version;
+        self.package_version.clone_from(package_version);
         if self.publisher_url.is_none() {
             self.publisher_url = github_values
                 .as_mut()

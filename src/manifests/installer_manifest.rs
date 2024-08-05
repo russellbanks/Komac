@@ -361,8 +361,8 @@ pub struct Installer {
 impl InstallerManifest {
     pub fn reorder_keys(
         &mut self,
-        package_identifier: PackageIdentifier,
-        package_version: PackageVersion,
+        package_identifier: &PackageIdentifier,
+        package_version: &PackageVersion,
     ) {
         fn reorder_key<T>(
             installers: &mut [Installer],
@@ -429,8 +429,8 @@ impl InstallerManifest {
             };
         }
 
-        self.package_identifier = package_identifier;
-        self.package_version = package_version;
+        self.package_identifier.clone_from(package_identifier);
+        self.package_version.clone_from(package_version);
         root_keys!(
             installer_locale,
             platform,

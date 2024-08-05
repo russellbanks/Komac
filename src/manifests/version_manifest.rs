@@ -17,8 +17,8 @@ pub struct VersionManifest {
 }
 
 impl VersionManifest {
-    pub fn update(&mut self, package_version: PackageVersion) {
-        self.package_version = package_version;
+    pub fn update(&mut self, package_version: &PackageVersion) {
+        self.package_version.clone_from(package_version);
         self.manifest_type = ManifestType::Version;
         self.manifest_version = ManifestVersion::default();
     }

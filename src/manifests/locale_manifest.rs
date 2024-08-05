@@ -57,10 +57,10 @@ pub struct LocaleManifest {
 impl LocaleManifest {
     pub fn update(
         &mut self,
-        package_version: PackageVersion,
+        package_version: &PackageVersion,
         github_values: &Option<GitHubValues>,
     ) {
-        self.package_version = package_version;
+        self.package_version.clone_from(package_version);
         self.release_notes_url = github_values
             .as_ref()
             .map(|values| values.release_notes_url.clone());
