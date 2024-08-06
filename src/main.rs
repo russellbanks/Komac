@@ -4,6 +4,7 @@ mod commands;
 mod credential;
 mod download_file;
 mod editor;
+mod exe;
 mod file_analyser;
 mod github;
 mod hyperlink;

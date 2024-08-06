@@ -1,9 +1,10 @@
+use std::io::{Cursor, Read};
+
+use byteorder::{LittleEndian, ReadBytesExt};
 use color_eyre::Result;
 use crc32fast::Hasher;
-use object::ReadRef;
-use versions::SemVer;
 
-pub const SETUP_LOADER_RESOURCE: u16 = 11111;
+pub const SETUP_LOADER_RESOURCE: u32 = 11111;
 
 const SIGNATURE_LEN: usize = 12;
 
@@ -61,80 +62,79 @@ const KNOWN_SETUP_LOADER_VERSIONS: [SetupLoaderVersion; 7] = [
     },
 ];
 
-pub struct SetupLoader<'data> {
+pub struct SetupLoader {
     pub setup_loader_version: SetupLoaderVersion,
-    revision: &'data u32,
-    pub exe_offset: &'data u32,
-    pub exe_compressed_size: &'data u32,
-    pub exe_uncompressed_size: &'data u32,
-    pub message_offset: &'data u32,
-    pub header_offset: &'data u32,
-    pub data_offset: &'data u32,
+    revision: u32,
+    pub exe_offset: u32,
+    pub exe_compressed_size: u32,
+    pub exe_uncompressed_size: u32,
+    pub message_offset: u32,
+    pub header_offset: u32,
+    pub data_offset: u32,
 }
 
-impl<'data> SetupLoader<'data> {
-    pub fn new<R: ReadRef<'data>>(data: R, offset: &mut u64) -> Result<Self> {
-        let signature = data.read_slice(offset, SIGNATURE_LEN).unwrap();
+impl SetupLoader {
+    pub fn new(setup_loader_data: &[u8]) -> Result<Self> {
+        let mut setup_loader_data = Cursor::new(setup_loader_data);
+        let mut signature = [0; SIGNATURE_LEN];
+        setup_loader_data.read_exact(&mut signature)?;
 
         let loader_version = KNOWN_SETUP_LOADER_VERSIONS
             .into_iter()
             .find(|setup_loader_version| setup_loader_version.signature == signature)
             .unwrap_or_default();
 
-        println!("Loader version: {:?}", loader_version.version);
+        dbg!(&loader_version.version);
 
         let mut crc = Hasher::new();
-        crc.update(signature);
+        crc.update(&signature);
 
-        let mut revision = &0;
+        let mut revision = 0;
         if loader_version.version >= LoaderVersion(5, 1, 5) {
-            revision = data.read::<u32>(offset).unwrap();
+            revision = setup_loader_data.read_u32::<LittleEndian>()?;
             crc.update(&revision.to_le_bytes());
-            println!("Revision: {revision}");
+            dbg!(revision);
         }
 
-        let space = data.read::<u32>(offset).unwrap();
-        crc.update(&space.to_le_bytes());
+        crc.update(&setup_loader_data.read_u32::<LittleEndian>()?.to_le_bytes());
 
-        let exe_offset = data.read::<u32>(offset).unwrap();
+        let exe_offset = setup_loader_data.read_u32::<LittleEndian>()?;
+        crc.update(&exe_offset.to_le_bytes());
+        dbg!(exe_offset);
 
-        println!("exe offset: {}", exe_offset);
-
-        let mut exe_compressed_size = &0;
+        let mut exe_compressed_size = 0;
         if loader_version.version < LoaderVersion(4, 1, 6) {
-            exe_compressed_size = data.read::<u32>(offset).unwrap();
+            exe_compressed_size = setup_loader_data.read_u32::<LittleEndian>()?;
             crc.update(&exe_compressed_size.to_le_bytes())
         }
 
-        let exe_uncompressed_size = data.read::<u32>(offset).unwrap();
+        let exe_uncompressed_size = setup_loader_data.read_u32::<LittleEndian>()?;
         crc.update(&exe_uncompressed_size.to_le_bytes());
-        println!("exe uncompressed size: {}", exe_uncompressed_size);
+        dbg!(exe_uncompressed_size);
 
         if loader_version.version >= LoaderVersion(4, 0, 3) {
-            let crc32 = data.read::<u32>(offset).unwrap();
+            let crc32 = setup_loader_data.read_u32::<LittleEndian>()?;
             crc.update(&crc32.to_le_bytes());
-            println!("crc32: {}", crc32);
+            dbg!(crc32);
         }
 
         let message_offset = if loader_version.version >= LoaderVersion(4, 0, 0) {
-            &0
+            0
         } else {
-            data.read::<u32>(offset).unwrap()
+            setup_loader_data.read_u32::<LittleEndian>()?
         };
 
-        let header_offset = data.read::<u32>(offset).unwrap();
+        let header_offset = setup_loader_data.read_u32::<LittleEndian>()?;
         crc.update(&header_offset.to_le_bytes());
-        println!("Header offset: {}", header_offset);
+        dbg!(header_offset);
 
-        let data_offset = data.read::<u32>(offset).unwrap();
+        let data_offset = setup_loader_data.read_u32::<LittleEndian>()?;
         crc.update(&data_offset.to_le_bytes());
-        println!("Data offset: {}", data_offset);
+        dbg!(data_offset);
 
         if loader_version.version >= LoaderVersion(4, 0, 10) {
-            let expected = data.read::<u32>(offset).unwrap();
-            let checksum = crc.finalize();
-            println!("Expected: {}", expected);
-            println!("Checksum: {}", checksum);
+            let expected = setup_loader_data.read_u32::<LittleEndian>()?;
+            assert_eq!(expected, crc.finalize());
         }
 
         Ok(SetupLoader {

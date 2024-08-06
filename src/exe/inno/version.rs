@@ -1,5 +1,4 @@
 use bitflags::bitflags;
-use versions::SemVer;
 
 bitflags! {
     struct VersionFlags: u32 {
@@ -18,7 +17,7 @@ pub struct KnownVersion {
 #[derive(PartialEq, PartialOrd)]
 pub struct InnoVersion(pub u32, pub u32, pub u32, pub u32);
 
-pub const KNOWN_VERSIONS: [KnownVersion; 10] = [
+pub const KNOWN_VERSIONS: [KnownVersion; 12] = [
     KnownVersion {
         name: "Inno Setup Setup Data (5.5.7)", // Ambiguous
         version: InnoVersion(5, 5, 7, 0),
@@ -68,5 +67,15 @@ pub const KNOWN_VERSIONS: [KnownVersion; 10] = [
         name: "Inno Setup Setup Data (6.1.0) (u)",
         version: InnoVersion(6, 1, 0, 0),
         variant: VersionFlags::UNICODE,
+    },
+    KnownVersion {
+        name: "Inno Setup Setup Data (6.2.0) (u)",
+        version: InnoVersion(6, 2, 0, 0),
+        variant: VersionFlags::UNICODE,
+    },
+    KnownVersion {
+        name: "Inno Setup Setup Data (6.3.0)",
+        version: InnoVersion(6, 3, 0, 0),
+        variant: VersionFlags::empty(),
     },
 ];

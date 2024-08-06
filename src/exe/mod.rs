@@ -1,12 +1,1 @@
 pub mod inno;
-mod utils;
-pub mod var_dword;
-pub mod vs_file_flags;
-pub mod vs_fixed_file_info;
-pub mod vs_header;
-pub mod vs_string;
-mod vs_string_file_info;
-pub mod vs_string_table;
-pub mod vs_var;
-pub mod vs_var_file_info;
-pub mod vs_version_info;

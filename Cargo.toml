@@ -25,6 +25,8 @@ strip = true
 [dependencies]
 base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
+bitflags = "2.6.0"
+byteorder = "1.5.0"
 camino = { version = "1.1.7", features = ["serde1"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.13", features = ["derive", "cargo", "env"] }
@@ -43,6 +45,8 @@ indicatif = "0.17.8"
 inquire = "0.7.5"
 itertools = "0.13.0"
 keyring = { version = "3.0.5", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }
+liblzma = { version = "0.3.4", features = ["static"] }
+memchr = "2.7.4"
 memmap2 = "0.9.4"
 msi = "0.7.0"
 num_cpus = "1.16.0"
@@ -76,7 +80,6 @@ uuid = { version = "1.10.0", features = ["v4"] }
 versions = "6.3.1"
 yara-x = { version = "0.6.0", default-features = false, features = ["pe-module"] }
 zip = { version = "2.1.6", default-features = false, features = ["deflate"] }
-xz2 = "0.1.7"
 
 [build-dependencies]
 cynic-codegen = { version = "3.7.3", features = ["rkyv"] }
