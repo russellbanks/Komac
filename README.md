@@ -112,7 +112,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 | Full MSI value retrieval                 |   ✅    |   Partial    |                            Partial                             |
 | Linux & macOS MSI support                |   ✅    |      ❌       |                               ❌                                |
 | Full MSIX value retrieval                |   ✅    |   Partial    |   Partial - https://github.com/Trenly/winget-pkgs/issues/180   |
-| Get information from GitHub              |   ✅    |      ❌       |                               ❌                                |
+| Get information from GitHub              |   ✅    |      ✅       |                               ❌                                |
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                               ❌                                |
 | Release date identification              |   ✅    |      ❌       |                               ❌                                |
 | No telemetry                             |   ✅    |    ⭕ [^2]    |                               ✅                                |
