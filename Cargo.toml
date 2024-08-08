@@ -69,7 +69,7 @@ thiserror = "1.0.63"
 tokio = { version = "1.39.2", features = ["rt-multi-thread", "macros", "fs"] }
 tree-sitter-highlight = "0.22.6"
 tree-sitter-yaml = "0.6.1"
-tui-textarea = { version = "0.5.3", features = ["search"] }
+tui-textarea = { version = "0.6.1", features = ["search"] }
 url = { version = "2.5.2", features = ["serde"] }
 uuid = { version = "1.10.0", features = ["v4"] }
 versions = "6.3.1"
