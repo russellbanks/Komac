@@ -112,7 +112,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 | Full MSI value retrieval                 |   ✅    |   Partial    |                            Partial                             |
 | Linux & macOS MSI support                |   ✅    |      ❌       |                               ❌                                |
 | Full MSIX value retrieval                |   ✅    |   Partial    |   Partial - https://github.com/Trenly/winget-pkgs/issues/180   |
-| Get information from GitHub              |   ✅    |      ❌       |                               ❌                                |
+| Get information from GitHub              |   ✅    |      ✅       |                               ❌                                |
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                               ❌                                |
 | Release date identification              |   ✅    |      ❌       |                               ❌                                |
 | No telemetry                             |   ✅    |    ⭕ [^2]    |                               ✅                                |
@@ -131,7 +131,7 @@ notably slow and lacks the advanced detection capabilities that come with Komac.
 Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request
 this feature for YamlCreate.
 
-## Usage with GitHub Actions: [WinGet Releaser](https://github.com/vedantmgoyal2009/winget-releaser) 🌟
+## Usage with GitHub Actions: [WinGet Releaser](https://github.com/vedantmgoyal9/winget-releaser) 🌟
 
 WinGet Releaser is a GitHub Action that invokes Komac, passing in your release's URLs. This completely automates
 publishing to WinGet.
@@ -147,7 +147,7 @@ jobs:
   publish:
     runs-on: windows-latest
     steps:
-      - uses: vedantmgoyal2009/winget-releaser@v2
+      - uses: vedantmgoyal9/winget-releaser@main
         with:
           identifier: Package.Identifier
           token: ${{ secrets.WINGET_TOKEN }}
