@@ -33,7 +33,7 @@ const_format = "0.2.32"
 crossterm = "0.28.1"
 cynic = { version = "3.7.3", features = ["http-reqwest"] }
 derive_builder = "0.20.0"
-derive_more = "0.99.18"
+derive_more = { version = "1.0.0", features = ["as_ref", "deref", "display", "from_str"] }
 futures = "0.3.30"
 futures-util = "0.3.30"
 heapless = { version = "0.8.0", features = ["serde"] }
