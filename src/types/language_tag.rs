@@ -1,7 +1,6 @@
 use crate::prompts::prompt::RequiredPrompt;
 use derive_more::{AsRef, Deref, Display, FromStr};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 
 #[derive(
     AsRef,

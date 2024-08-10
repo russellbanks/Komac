@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use color_eyre::eyre::Error;
 use derive_more::{Display, FromStr};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
