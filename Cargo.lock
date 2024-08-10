@@ -630,19 +630,6 @@ checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
 
 [[package]]
 name = "compact_str"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f86b9c4c00838774a6d902ef931eff7470720c51d90c2e32cfe15dc304737b3f"
-dependencies = [
- "castaway",
- "cfg-if",
- "itoa",
- "ryu",
- "static_assertions",
-]
-
-[[package]]
-name = "compact_str"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6050c3a16ddab2e412160b31f2c871015704239bca62f72f6e5f0be631d3f644"
@@ -2373,7 +2360,7 @@ dependencies = [
  "pulldown-cmark",
  "quick-xml",
  "rand",
- "ratatui 0.27.0",
+ "ratatui",
  "reqwest",
  "rstest",
  "serde",
@@ -3468,34 +3455,13 @@ dependencies = [
 
 [[package]]
 name = "ratatui"
-version = "0.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d16546c5b5962abf8ce6e2881e722b4e0ae3b6f1a08a26ae3573c55853ca68d3"
-dependencies = [
- "bitflags 2.6.0",
- "cassowary",
- "compact_str 0.7.1",
- "crossterm 0.27.0",
- "itertools 0.13.0",
- "lru",
- "paste",
- "stability",
- "strum",
- "strum_macros",
- "unicode-segmentation",
- "unicode-truncate",
- "unicode-width",
-]
-
-[[package]]
-name = "ratatui"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ba6a365afbe5615999275bea2446b970b10a41102500e27ce7678d50d978303"
 dependencies = [
  "bitflags 2.6.0",
  "cassowary",
- "compact_str 0.8.0",
+ "compact_str",
  "crossterm 0.28.1",
  "instability",
  "itertools 0.13.0",
@@ -4215,16 +4181,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b9b39299b249ad65f3b7e96443bad61c02ca5cd3589f46cb6d610a0fd6c0d6a"
 
 [[package]]
-name = "stability"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d904e7009df136af5297832a3ace3370cd14ff1546a232f4f185036c2736fcac"
-dependencies = [
- "quote",
- "syn 2.0.72",
-]
-
-[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4675,7 +4631,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29c07084342a575cea919eea996b9658a358c800b03d435df581c1d7c60e065a"
 dependencies = [
  "crossterm 0.28.1",
- "ratatui 0.28.0",
+ "ratatui",
  "regex",
  "unicode-width",
 ]
