@@ -2323,17 +2323,21 @@ version = "2.4.0"
 dependencies = [
  "base16ct",
  "base64ct",
+ "bitflags 2.6.0",
+ "byteorder",
  "camino",
  "chrono",
  "clap",
  "clap_complete",
  "color-eyre",
  "const_format",
+ "crc32fast",
  "crossterm 0.28.1",
  "cynic",
  "cynic-codegen",
  "derive_builder",
  "derive_more",
+ "encoding_rs",
  "futures",
  "futures-util",
  "heapless",
@@ -2343,6 +2347,8 @@ dependencies = [
  "inquire",
  "itertools 0.13.0",
  "keyring",
+ "liblzma",
+ "memchr",
  "memmap2",
  "msi",
  "num_cpus",
@@ -2418,6 +2424,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06085512b750d640299b79be4bad3d2fa90a9c00b1fd9e1b46364f66f0485c72"
 dependencies = [
  "cc",
+ "pkg-config",
+]
+
+[[package]]
+name = "liblzma"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7c45fc6fcf5b527d3cf89c1dee8c327943984b0dc8bfcf6e100473b00969e63"
+dependencies = [
+ "liblzma-sys",
+]
+
+[[package]]
+name = "liblzma-sys"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "885d379719f1be90c51852451dc658009c1aab2eb867cae8d5eb7f83bfaaca96"
+dependencies = [
+ "cc",
+ "libc",
  "pkg-config",
 ]
 

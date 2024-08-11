@@ -25,16 +25,20 @@ strip = true
 [dependencies]
 base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
+bitflags = "2.6.0"
+byteorder = "1.5.0"
 camino = { version = "1.1.7", features = ["serde1"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.15", features = ["derive", "cargo", "env"] }
 clap_complete = "4.5.16"
 color-eyre = { version = "0.6.3", default-features = false }
 const_format = "0.2.32"
+crc32fast = "1.4.0"
 crossterm = "0.28.1"
 cynic = { version = "3.7.3", features = ["http-reqwest"] }
 derive_builder = "0.20.0"
 derive_more = { version = "1.0.0", features = ["as_ref", "deref", "display", "from_str"] }
+encoding_rs = "0.8.34"
 futures = "0.3.30"
 futures-util = "0.3.30"
 heapless = { version = "0.8.0", features = ["serde"] }
@@ -43,6 +47,8 @@ indicatif = "0.17.8"
 inquire = "0.7.5"
 itertools = "0.13.0"
 keyring = { version = "3.0.5", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }
+liblzma = { version = "0.3.4", features = ["static"] }
+memchr = "2.7.4"
 memmap2 = "0.9.4"
 msi = "0.8.0"
 num_cpus = "1.16.0"
