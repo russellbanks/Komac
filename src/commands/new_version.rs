@@ -78,7 +78,7 @@ pub struct NewVersion {
     package_version: Option<PackageVersion>,
 
     /// The list of package installers
-    #[arg(short, long, num_args = 1..)]
+    #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::Url)]
     urls: Vec<DecodedUrl>,
 
     #[arg(long)]
@@ -87,16 +87,16 @@ pub struct NewVersion {
     #[arg(long)]
     publisher: Option<Publisher>,
 
-    #[arg(long)]
+    #[arg(long, value_hint = clap::ValueHint::Url)]
     publisher_url: Option<PublisherUrl>,
 
-    #[arg(long)]
+    #[arg(long, value_hint = clap::ValueHint::Url)]
     publisher_support_url: Option<PublisherSupportUrl>,
 
     #[arg(long)]
     package_name: Option<PackageName>,
 
-    #[arg(long)]
+    #[arg(long, value_hint = clap::ValueHint::Url)]
     package_url: Option<PackageUrl>,
 
     #[arg(long)]
@@ -108,13 +108,13 @@ pub struct NewVersion {
     #[arg(long)]
     license: Option<License>,
 
-    #[arg(long)]
+    #[arg(long, value_hint = clap::ValueHint::Url)]
     license_url: Option<LicenseUrl>,
 
     #[arg(long)]
     copyright: Option<Copyright>,
 
-    #[arg(long)]
+    #[arg(long, value_hint = clap::ValueHint::Url)]
     copyright_url: Option<CopyrightUrl>,
 
     #[arg(long)]
@@ -123,7 +123,7 @@ pub struct NewVersion {
     #[arg(long)]
     description: Option<Description>,
 
-    #[arg(long)]
+    #[arg(long, value_hint = clap::ValueHint::Url)]
     release_notes_url: Option<ReleaseNotesUrl>,
 
     /// Number of installers to download at the same time
@@ -143,7 +143,7 @@ pub struct NewVersion {
     created_with: Option<String>,
 
     /// URL to external tool that invoked Komac
-    #[arg(long, env = "KOMAC_CREATED_WITH_URL")]
+    #[arg(long, env = "KOMAC_CREATED_WITH_URL", value_hint = clap::ValueHint::Url)]
     created_with_url: Option<DecodedUrl>,
 
     /// Directory to output the manifests to

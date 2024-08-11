@@ -1,4 +1,5 @@
 pub mod cleanup;
+pub mod complete;
 pub mod list_versions;
 pub mod merge_upstream;
 pub mod new_version;

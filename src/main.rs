@@ -1,5 +1,18 @@
 extern crate core;
 
+use clap::{Parser, Subcommand};
+use color_eyre::eyre::Result;
+
+use crate::commands::cleanup::Cleanup;
+use crate::commands::complete::Complete;
+use crate::commands::list_versions::ListVersions;
+use crate::commands::merge_upstream::SyncFork;
+use crate::commands::new_version::NewVersion;
+use crate::commands::remove_version::RemoveVersion;
+use crate::commands::show_version::ShowVersion;
+use crate::commands::token::commands::{TokenArgs, TokenCommands};
+use crate::commands::update_version::UpdateVersion;
+
 mod commands;
 mod credential;
 mod download_file;
@@ -14,17 +27,6 @@ mod match_installers;
 mod prompts;
 mod types;
 mod update_state;
-
-use crate::commands::cleanup::Cleanup;
-use crate::commands::list_versions::ListVersions;
-use crate::commands::merge_upstream::SyncFork;
-use crate::commands::new_version::NewVersion;
-use crate::commands::remove_version::RemoveVersion;
-use crate::commands::show_version::ShowVersion;
-use crate::commands::token::commands::{TokenArgs, TokenCommands};
-use crate::commands::update_version::UpdateVersion;
-use clap::{Parser, Subcommand};
-use color_eyre::eyre::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -43,6 +45,7 @@ async fn main() -> Result<()> {
         Commands::ListVersions(list_versions) => list_versions.run().await,
         Commands::Show(show_version) => show_version.run().await,
         Commands::SyncFork(sync_fork) => sync_fork.run().await,
+        Commands::Complete(complete) => complete.run(),
     }
 }
 
@@ -65,4 +68,5 @@ enum Commands {
     ListVersions(ListVersions),
     Show(ShowVersion),
     SyncFork(SyncFork),
+    Complete(Complete),
 }

@@ -51,7 +51,7 @@ pub struct UpdateVersion {
     package_version: PackageVersion,
 
     /// The list of package installers
-    #[arg(short, long, num_args = 1.., required = true)]
+    #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
     urls: Vec<DecodedUrl>,
 
     /// Number of installers to download at the same time
@@ -71,7 +71,7 @@ pub struct UpdateVersion {
     created_with: Option<String>,
 
     /// URL to external tool that invoked Komac
-    #[arg(long, env = "KOMAC_CREATED_WITH_URL")]
+    #[arg(long, env = "KOMAC_CREATED_WITH_URL", value_hint = clap::ValueHint::Url)]
     created_with_url: Option<DecodedUrl>,
 
     /// Directory to output the manifests to
