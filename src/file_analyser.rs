@@ -2,14 +2,7 @@ use std::collections::BTreeSet;
 use std::io::Cursor;
 use std::mem;
 
-use camino::{Utf8Path, Utf8PathBuf};
-use chrono::NaiveDate;
-use color_eyre::eyre::Result;
-use memmap2::Mmap;
-use package_family_name::PackageFamilyName;
-use yara_x::mods::pe::{Resource, ResourceType};
-use yara_x::mods::PE;
-
+use crate::installers::inno::inno::InnoFile;
 use crate::installers::msi::Msi;
 use crate::installers::msix_family::msix::Msix;
 use crate::installers::msix_family::msixbundle::MsixBundle;
@@ -24,6 +17,13 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
 use crate::types::sha_256::Sha256String;
+use camino::{Utf8Path, Utf8PathBuf};
+use chrono::NaiveDate;
+use color_eyre::eyre::Result;
+use memmap2::Mmap;
+use package_family_name::PackageFamilyName;
+use yara_x::mods::pe::{Resource, ResourceType};
+use yara_x::mods::PE;
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -79,6 +79,7 @@ impl<'data> FileAnalyser<'data> {
             ZIP => zip = Some(Zip::new(Cursor::new(data.as_ref()))?),
             _ => {}
         }
+        let mut inno = None;
         let mut installer_type = None;
         let mut pe_arch = None;
         let pe = yara_x::mods::invoke::<PE>(data.as_ref());
@@ -90,6 +91,9 @@ impl<'data> FileAnalyser<'data> {
                 &extension,
                 msi.as_ref(),
             )?);
+            if installer_type == Some(InstallerType::Inno) {
+                inno = InnoFile::new(data.as_ref(), pe).ok()
+            }
             if let Some(msi_resource) = get_msi_resource(pe) {
                 installer_type = Some(InstallerType::Burn);
                 msi = Some(extract_msi(data.as_ref(), msi_resource)?);
@@ -140,7 +144,13 @@ impl<'data> FileAnalyser<'data> {
                 .as_mut()
                 .map(|msix| mem::take(&mut msix.package_family_name))
                 .or_else(|| msix_bundle.map(|msix_bundle| msix_bundle.package_family_name)),
-            product_code: msi.as_mut().map(|msi| mem::take(&mut msi.product_code)),
+            product_code: msi
+                .as_mut()
+                .map(|msi| mem::take(&mut msi.product_code))
+                .or_else(|| {
+                    inno.as_mut()
+                        .and_then(|inno| mem::take(&mut inno.product_code))
+                }),
             upgrade_code: msi.as_mut().map(|msi| mem::take(&mut msi.upgrade_code)),
             capabilities: msix
                 .as_mut()
@@ -153,9 +163,27 @@ impl<'data> FileAnalyser<'data> {
                 .and_then(|msix| mem::take(&mut msix.file_extensions)),
             product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
             last_modified: None,
-            display_name: msi.as_mut().map(|msi| mem::take(&mut msi.product_name)),
-            display_publisher: msi.as_mut().map(|msi| mem::take(&mut msi.manufacturer)),
-            display_version: msi.as_mut().map(|msi| mem::take(&mut msi.product_version)),
+            display_name: msi
+                .as_mut()
+                .map(|msi| mem::take(&mut msi.product_name))
+                .or_else(|| {
+                    inno.as_mut()
+                        .and_then(|inno| mem::take(&mut inno.uninstall_name))
+                }),
+            display_publisher: msi
+                .as_mut()
+                .map(|msi| mem::take(&mut msi.manufacturer))
+                .or_else(|| {
+                    inno.as_mut()
+                        .and_then(|inno| mem::take(&mut inno.app_publisher))
+                }),
+            display_version: msi
+                .as_mut()
+                .map(|msi| mem::take(&mut msi.product_version))
+                .or_else(|| {
+                    inno.as_mut()
+                        .and_then(|inno| mem::take(&mut inno.app_version))
+                }),
             file_name: String::new(),
             copyright: pe
                 .as_ref()
