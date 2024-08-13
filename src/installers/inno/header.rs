@@ -11,7 +11,7 @@ use crate::installers::inno::version::{InnoVersion, KnownVersion};
 pub struct Header {
     pub app_name: Option<String>,
     pub app_versioned_name: Option<String>,
-    /// https://jrsoftware.org/ishelp/index.php?topic=setup_appid
+    /// <https://jrsoftware.org/ishelp/index.php?topic=setup_appid>
     pub app_id: Option<String>,
     pub app_copyright: Option<String>,
     pub app_publisher: Option<String>,
@@ -71,7 +71,7 @@ pub struct Header {
 
 impl Header {
     pub fn load<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<Self> {
-        let mut header = Header::default();
+        let mut header = Self::default();
 
         if *version < InnoVersion(1, 3, 0) {
             // Uncompressed size of the setup header

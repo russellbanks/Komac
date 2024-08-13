@@ -1,8 +1,9 @@
 use crate::credential::get_komac_credential;
+use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::Result;
-use crossterm::style::Stylize;
 use inquire::Confirm;
+use owo_colors::OwoColorize;
 
 #[derive(Parser)]
 pub struct RemoveToken {

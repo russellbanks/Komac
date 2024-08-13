@@ -101,7 +101,7 @@ impl SetupLoader {
         let mut exe_compressed_size = 0;
         if loader_version.version < LoaderVersion(4, 1, 6) {
             exe_compressed_size = setup_loader_data.read_u32::<LittleEndian>()?;
-            crc.update(&exe_compressed_size.to_le_bytes())
+            crc.update(&exe_compressed_size.to_le_bytes());
         }
 
         let exe_uncompressed_size = setup_loader_data.read_u32::<LittleEndian>()?;
@@ -129,7 +129,7 @@ impl SetupLoader {
             assert_eq!(expected, crc.finalize());
         }
 
-        Ok(SetupLoader {
+        Ok(Self {
             setup_loader_version: loader_version,
             revision,
             exe_offset,

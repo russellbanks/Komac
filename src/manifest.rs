@@ -1,12 +1,14 @@
+use std::env;
 use std::io::StdoutLock;
 use std::io::Write;
-use std::{env, io};
 
+use anstream::AutoStream;
 use clap::{crate_name, crate_version};
 use color_eyre::eyre::{Error, Result};
 use const_format::formatcp;
-use crossterm::style::{style, Color, Stylize};
 use once_cell::sync::Lazy;
+use owo_colors::colors::css::SlateGrey;
+use owo_colors::{OwoColorize, Style};
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
 
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
@@ -44,7 +46,7 @@ impl Manifest<'_> {
 }
 
 pub fn print_changes<'a>(contents: impl Iterator<Item = &'a str>) {
-    let mut lock = io::stdout().lock();
+    let mut lock = anstream::stdout().lock();
 
     for content in contents {
         print_manifest(&mut lock, content);
@@ -52,7 +54,7 @@ pub fn print_changes<'a>(contents: impl Iterator<Item = &'a str>) {
     }
 }
 
-fn print_manifest(lock: &mut StdoutLock, manifest: &str) {
+pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str) {
     const COMMENT: &str = "comment";
     const PROPERTY: &str = "property";
     const STRING: &str = "string";
@@ -77,35 +79,28 @@ fn print_manifest(lock: &mut StdoutLock, manifest: &str) {
         .highlight(&YAML_CONFIG, manifest.as_bytes(), None, |_| None)
         .unwrap();
 
-    let mut current_highlight = None;
+    let mut current_highlight: Option<Highlight> = None;
     for event in highlights {
         match event {
             Ok(HighlightEvent::Source { start, end }) => {
                 let source = &manifest[start..end];
-                let _ = write!(
-                    lock,
-                    "{}",
-                    style(source).with(
-                        current_highlight
-                            .and_then(|value: Highlight| {
-                                match HIGHLIGHT_NAMES[value.0] {
-                                    COMMENT => Some(Color::DarkGrey),
-                                    PROPERTY => Some(Color::Green),
-                                    STRING => {
-                                        if source.chars().all(|char| {
-                                            char.is_ascii_digit() || char.is_ascii_punctuation()
-                                        }) {
-                                            Some(Color::Blue)
-                                        } else {
-                                            None
-                                        }
-                                    }
-                                    _ => None,
-                                }
-                            })
-                            .unwrap_or(Color::Reset)
-                    )
-                );
+                let mut style = Style::new();
+                if let Some(highlight) = current_highlight {
+                    match HIGHLIGHT_NAMES[highlight.0] {
+                        COMMENT => style = style.fg::<SlateGrey>(),
+                        PROPERTY => style = style.green(),
+                        STRING => {
+                            if source
+                                .chars()
+                                .all(|char| char.is_ascii_digit() || char.is_ascii_punctuation())
+                            {
+                                style = style.blue();
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                let _ = write!(lock, "{}", source.style(style));
             }
             Ok(HighlightEvent::HighlightStart(highlight)) => current_highlight = Some(highlight),
             Ok(HighlightEvent::HighlightEnd) => current_highlight = None,
@@ -156,8 +151,9 @@ fn convert_to_crlf(buf: &mut Vec<u8>) {
 
 #[cfg(test)]
 mod tests {
-    use crate::manifest::convert_to_crlf;
     use std::io::Write;
+
+    use crate::manifest::convert_to_crlf;
 
     fn is_line_feed(value: &str) -> bool {
         value

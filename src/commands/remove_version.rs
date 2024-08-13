@@ -1,13 +1,6 @@
 use std::num::NonZeroU32;
 use std::time::Duration;
 
-use clap::Parser;
-use color_eyre::eyre::{bail, Result};
-use crossterm::style::Stylize;
-use indicatif::ProgressBar;
-use inquire::validator::{MaxLengthValidator, MinLengthValidator};
-use inquire::{Confirm, Text};
-
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
 use crate::github::graphql::create_commit::FileDeletion;
@@ -17,6 +10,13 @@ use crate::github::utils::{
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::update_state::UpdateState;
+use anstream::println;
+use clap::Parser;
+use color_eyre::eyre::{bail, Result};
+use indicatif::ProgressBar;
+use inquire::validator::{MaxLengthValidator, MinLengthValidator};
+use inquire::{Confirm, Text};
+use owo_colors::OwoColorize;
 
 #[derive(Parser)]
 pub struct RemoveVersion {

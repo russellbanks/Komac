@@ -12,8 +12,8 @@ pub struct InnoBlockFilter<R: Read> {
 }
 
 impl<R: Read> InnoBlockFilter<R> {
-    pub fn new(inner: R) -> Self {
-        InnoBlockFilter {
+    pub const fn new(inner: R) -> Self {
+        Self {
             inner,
             buffer: [0; 4096],
             pos: 0,

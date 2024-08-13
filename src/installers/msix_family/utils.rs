@@ -28,7 +28,7 @@ pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> Result<Sha256S
         }
         hasher.update(&buffer[..count]);
     }
-    Ok(Sha256String::from_hasher(&hasher.finalize())?)
+    Sha256String::from_hasher(&hasher.finalize())
 }
 
 pub fn get_install_location(

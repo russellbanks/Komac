@@ -3,15 +3,16 @@ use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 use std::time::Duration;
 
+use anstream::println;
 use base64ct::Encoding;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::Result;
-use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::{Confirm, CustomType};
 use ordinal::Ordinal;
+use owo_colors::OwoColorize;
 use reqwest::Client;
 use strum::IntoEnumIterator;
 

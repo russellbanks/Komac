@@ -1,13 +1,13 @@
 use std::time::Duration;
 
-use clap::Parser;
-use color_eyre::Result;
-use crossterm::style::Stylize;
-use indicatif::ProgressBar;
-
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
 use crate::hyperlink::Hyperlink;
+use anstream::println;
+use clap::Parser;
+use color_eyre::Result;
+use indicatif::ProgressBar;
+use owo_colors::OwoColorize;
 
 /// Merges changes from microsoft/winget-pkgs into the fork repository
 #[derive(Parser)]
@@ -37,17 +37,16 @@ impl SyncFork {
         let winget_pkgs = winget_pkgs.await?;
 
         // Create hyperlinks to the repository's URLs when their full name is printed
-        let winget_pkgs_hyperlink = winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue();
-        let winget_pkgs_fork_hyperlink = winget_pkgs_fork
-            .full_name
-            .hyperlink(winget_pkgs_fork.url)
-            .blue();
+        let winget_pkgs_hyperlink = winget_pkgs.full_name.hyperlink(winget_pkgs.url);
+        let winget_pkgs_fork_hyperlink = winget_pkgs_fork.full_name.hyperlink(winget_pkgs_fork.url);
 
         // Check whether the fork is already up-to-date with upstream by their latest commit OID's
         if winget_pkgs.default_branch_oid == winget_pkgs_fork.default_branch_oid {
             println!(
-                "{winget_pkgs_fork_hyperlink} is already {} with {winget_pkgs_hyperlink}",
-                "up-to-date".green()
+                "{} is already {} with {}",
+                winget_pkgs_fork_hyperlink.blue(),
+                "up-to-date".green(),
+                winget_pkgs_hyperlink.blue()
             );
             return Ok(());
         }
@@ -75,10 +74,13 @@ impl SyncFork {
             )
             .await?;
 
-        pb.finish_with_message(format!(
-            "{} merged {new_commits_count} upstream {commit_label} from {winget_pkgs_hyperlink} into {winget_pkgs_fork_hyperlink}",
+        pb.finish_and_clear();
+        println!(
+            "{} merged {new_commits_count} upstream {commit_label} from {} into {}",
             "Successfully".green(),
-        ));
+            winget_pkgs_hyperlink.blue(),
+            winget_pkgs_fork_hyperlink.blue()
+        );
 
         Ok(())
     }

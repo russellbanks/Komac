@@ -1,11 +1,12 @@
 use std::env;
 use std::str::FromStr;
 
+use anstream::println;
 use camino::Utf8Path;
 use color_eyre::Result;
-use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::{Confirm, Select};
+use owo_colors::OwoColorize;
 use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::fs;
 use tokio::fs::File;
@@ -33,7 +34,7 @@ pub fn prompt_existing_pull_request(
         pull_request.created_at.date_naive(),
         pull_request.created_at.time()
     );
-    println!("{}", pull_request.url.as_str().blue());
+    println!("{}", pull_request.url.blue());
     let proceed = if env::var("CI").is_ok_and(|ci| bool::from_str(&ci) == Ok(true)) {
         false
     } else {

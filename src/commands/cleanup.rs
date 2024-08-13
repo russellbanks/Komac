@@ -1,13 +1,14 @@
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
 use crate::github::graphql::get_pull_request_from_branch::PullRequestState;
+use anstream::println;
 use clap::Parser;
 use color_eyre::Result;
-use crossterm::style::Stylize;
 use futures_util::{stream, StreamExt};
 use indexmap::IndexMap;
 use indicatif::{ProgressBar, ProgressStyle};
 use inquire::MultiSelect;
+use owo_colors::OwoColorize;
 use std::num::NonZeroUsize;
 use std::time::Duration;
 

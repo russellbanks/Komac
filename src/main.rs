@@ -1,8 +1,6 @@
 extern crate core;
 
-use clap::{Parser, Subcommand};
-use color_eyre::eyre::Result;
-
+use crate::commands::analyse::Analyse;
 use crate::commands::cleanup::Cleanup;
 use crate::commands::complete::Complete;
 use crate::commands::list_versions::ListVersions;
@@ -12,6 +10,8 @@ use crate::commands::remove_version::RemoveVersion;
 use crate::commands::show_version::ShowVersion;
 use crate::commands::token::commands::{TokenArgs, TokenCommands};
 use crate::commands::update_version::UpdateVersion;
+use clap::{Parser, Subcommand};
+use color_eyre::eyre::Result;
 
 mod commands;
 mod credential;
@@ -45,7 +45,11 @@ async fn main() -> Result<()> {
         Commands::ListVersions(list_versions) => list_versions.run().await,
         Commands::Show(show_version) => show_version.run().await,
         Commands::SyncFork(sync_fork) => sync_fork.run().await,
-        Commands::Complete(complete) => complete.run(),
+        Commands::Complete(complete) => {
+            complete.run();
+            Ok(())
+        }
+        Commands::Analyse(analyse) => analyse.run(),
     }
 }
 
@@ -69,4 +73,5 @@ enum Commands {
     Show(ShowVersion),
     SyncFork(SyncFork),
     Complete(Complete),
+    Analyse(Analyse),
 }

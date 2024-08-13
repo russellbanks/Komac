@@ -2,7 +2,7 @@ use bitflags::bitflags;
 use std::cmp::Ordering;
 
 bitflags! {
-    #[derive(PartialEq)]
+    #[derive(PartialEq, Eq)]
     pub struct VersionFlags: u32 {
         const BITS_16 = 1 << 0;
         const UNICODE = 1 << 1;
@@ -38,7 +38,7 @@ impl KnownVersion {
     }
 }
 
-#[derive(PartialEq, PartialOrd)]
+#[derive(PartialEq, Eq, PartialOrd)]
 pub struct InnoVersion(pub u32, pub u32, pub u32);
 
 pub const KNOWN_VERSIONS: [KnownVersion; 12] = [

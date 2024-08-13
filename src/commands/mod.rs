@@ -1,3 +1,4 @@
+pub mod analyse;
 pub mod cleanup;
 pub mod complete;
 pub mod list_versions;

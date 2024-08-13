@@ -90,8 +90,7 @@ impl InnoFile {
         // The LZMA1 streams used by Inno Setup differ slightly from the LZMA Alone file format:
         // The stream header only stores the properties (lc, lp, pb) and the dictionary size and
         // is missing the uncompressed size field.
-        let mut header = Header::default();
-        if compression == CompressionType::LZMA1 {
+        let mut header = if compression == CompressionType::LZMA1 {
             let mut block_filter = InnoBlockFilter::new(cursor);
             let properties = block_filter.read_u8()?;
             if properties >= PROPERTIES_MAX {
@@ -99,9 +98,9 @@ impl InnoFile {
                     "LZMA properties value must be less than {PROPERTIES_MAX} but was {properties}",
                 )
             }
-            let pb = (properties / (9 * 5)) as u32;
-            let lp = ((properties % (9 * 5)) / 9) as u32;
-            let lc = (properties % 9) as u32;
+            let pb = u32::from(properties / (9 * 5));
+            let lp = u32::from((properties % (9 * 5)) / 9);
+            let lc = u32::from(properties % 9);
             if lc + lp > 4 {
                 bail!(
                     "LZMA lc + lp must not be greater than 4 but was {}",
@@ -118,14 +117,16 @@ impl InnoFile {
             filters.lzma1(&lzma_options);
             let stream = Stream::new_raw_decoder(&filters)?;
             let mut decompressor = XzDecoder::new_stream(block_filter, stream);
-            header = Header::load(&mut decompressor, &known_version)?;
-        }
+            Header::load(&mut decompressor, &known_version)?
+        } else {
+            Header::default()
+        };
 
-        Ok(InnoFile {
+        Ok(Self {
             uninstall_name: mem::take(&mut header.uninstall_name),
             app_version: mem::take(&mut header.app_version),
             app_publisher: mem::take(&mut header.app_publisher),
-            product_code: mem::take(&mut header.app_id).map(|app_id| to_product_code(app_id)),
+            product_code: mem::take(&mut header.app_id).map(to_product_code),
         })
     }
 }

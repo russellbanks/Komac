@@ -92,7 +92,7 @@ impl<'data> FileAnalyser<'data> {
                 msi.as_ref(),
             )?);
             if installer_type == Some(InstallerType::Inno) {
-                inno = InnoFile::new(data.as_ref(), pe).ok()
+                inno = InnoFile::new(data.as_ref(), pe).ok();
             }
             if let Some(msi_resource) = get_msi_resource(pe) {
                 installer_type = Some(InstallerType::Burn);
