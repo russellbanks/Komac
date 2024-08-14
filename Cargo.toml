@@ -42,7 +42,7 @@ encoding_rs = "0.8.34"
 futures = "0.3.30"
 futures-util = "0.3.30"
 heapless = { version = "0.8.0", features = ["serde"] }
-indexmap = "2.3.0"
+indexmap = "2.4.0"
 indicatif = "0.17.8"
 inquire = "0.7.5"
 itertools = "0.13.0"
