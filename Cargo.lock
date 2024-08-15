@@ -2284,16 +2284,16 @@ dependencies = [
 
 [[package]]
 name = "keyring"
-version = "3.0.5"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c163ef0b9da5ccf44ae4d7c9d24fb1a8750aa1969d484865fc1eedc44b26c09"
+checksum = "0e3ffeb4169230bc4f956b7276b688fc203824cc2ace8dc41ceecbd1746011a6"
 dependencies = [
  "byteorder",
  "dbus-secret-service",
  "openssl",
  "secret-service",
  "security-framework",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
