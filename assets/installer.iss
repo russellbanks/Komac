@@ -4,6 +4,12 @@
 #define URL "https://github.com/russellbanks/Komac"
 #define ExeName GetFileOriginalFilename(InputExecutable)
 
+#if Pos("x64", Architecture) > 0
+  #define ArchAllowed "x64compatible and not arm64"
+#else
+  #define ArchAllowed Architecture
+#endif
+
 #include "CodeDependencies.iss"
 
 [Setup]
@@ -26,10 +32,8 @@ SetupIconFile=logo.ico
 UninstallDisplayName={#AppName} ({#Architecture})
 WizardStyle=modern
 ChangesEnvironment=yes
-ArchitecturesAllowed={#Architecture}
-#if Architecture == "x64" || Architecture == "ia64" || Architecture == "arm64"
-ArchitecturesInstallIn64BitMode={#Architecture}
-#endif
+ArchitecturesAllowed={#ArchAllowed}
+ArchitecturesInstallIn64BitMode={#ArchAllowed}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
