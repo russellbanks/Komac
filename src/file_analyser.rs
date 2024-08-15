@@ -7,7 +7,9 @@ use crate::installers::msi::Msi;
 use crate::installers::msix_family::msix::Msix;
 use crate::installers::msix_family::msixbundle::MsixBundle;
 use crate::installers::zip::Zip;
-use crate::manifests::installer_manifest::{ElevationRequirement, Platform, Scope};
+use crate::manifests::installer_manifest::{
+    ElevationRequirement, Platform, Scope, UnsupportedOSArchitecture,
+};
 use crate::types::architecture::Architecture;
 use crate::types::copyright::Copyright;
 use crate::types::file_extension::FileExtension;
@@ -56,6 +58,7 @@ pub struct FileAnalyser<'data> {
     pub copyright: Option<Copyright>,
     pub package_name: Option<PackageName>,
     pub publisher: Option<Publisher>,
+    pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub default_install_location: Option<Utf8PathBuf>,
     pub zip: Option<Zip<Cursor<&'data [u8]>>>,
@@ -196,6 +199,9 @@ impl<'data> FileAnalyser<'data> {
             publisher: pe
                 .as_ref()
                 .and_then(|pe| Publisher::get_from_exe(&pe.version_info)),
+            unsupported_os_architectures: inno
+                .as_mut()
+                .and_then(|inno| mem::take(&mut inno.unsupported_architectures)),
             elevation_requirement: inno.and_then(|inno| inno.elevation_requirement),
             default_install_location: msi
                 .and_then(|msi| msi.install_location)

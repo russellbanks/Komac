@@ -50,6 +50,7 @@ impl Analyse {
             product_code: analyser.product_code.clone(),
             capabilities: analyser.capabilities,
             restricted_capabilities: analyser.restricted_capabilities,
+            unsupported_os_architectures: analyser.unsupported_os_architectures,
             elevation_requirement: analyser.elevation_requirement,
             ..Installer::default()
         };

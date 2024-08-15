@@ -64,7 +64,7 @@ pub struct InstallerManifest {
     pub require_explicit_upgrade: Option<bool>,
     pub display_install_warnings: Option<bool>,
     #[serde(rename = "UnsupportedOSArchitectures")]
-    pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitectures>>,
+    pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
     pub unsupported_arguments: Option<BTreeSet<UnsupportedArguments>>,
     pub apps_and_features_entries: Option<BTreeSet<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
@@ -253,7 +253,7 @@ pub struct Markets {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "lowercase")]
-pub enum UnsupportedOSArchitectures {
+pub enum UnsupportedOSArchitecture {
     X86,
     X64,
     Arm,
@@ -350,7 +350,7 @@ pub struct Installer {
     pub require_explicit_upgrade: Option<bool>,
     pub display_install_warnings: Option<bool>,
     #[serde(rename = "UnsupportedOSArchitectures")]
-    pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitectures>>,
+    pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
     pub unsupported_arguments: Option<BTreeSet<UnsupportedArguments>>,
     pub apps_and_features_entries: Option<BTreeSet<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,

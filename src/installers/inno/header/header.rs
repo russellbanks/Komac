@@ -51,6 +51,7 @@ pub struct Header {
     pub changes_environment: Option<String>,
     pub changes_associations: Option<String>,
     pub architectures_allowed: ArchitectureIdentifiers,
+    pub architectures_disallowed: ArchitectureIdentifiers,
     pub architectures_install_in_64_bit_mode: ArchitectureIdentifiers,
     pub license_text: Option<String>,
     pub info_before: Option<String>,
@@ -180,13 +181,20 @@ impl Header {
             header.changes_associations = encoded_string(reader, UTF_16LE)?;
         }
         if *version >= InnoVersion(6, 3, 0) {
-            header.architectures_allowed = encoded_string(reader, UTF_16LE)?
-                .map_or(ArchitectureIdentifiers::X86_COMPATIBLE, |architecture| {
-                    ArchitectureIdentifiers::from_spaced_list(&architecture)
-                });
+            let (allowed, disallowed) = encoded_string(reader, UTF_16LE)?.map_or_else(
+                || {
+                    (
+                        ArchitectureIdentifiers::default(),
+                        ArchitectureIdentifiers::empty(),
+                    )
+                },
+                |architecture| ArchitectureIdentifiers::from_expression(&architecture),
+            );
+            header.architectures_allowed = allowed;
+            header.architectures_disallowed = disallowed;
             header.architectures_install_in_64_bit_mode = encoded_string(reader, UTF_16LE)?
-                .map_or(ArchitectureIdentifiers::X86_COMPATIBLE, |architecture| {
-                    ArchitectureIdentifiers::from_spaced_list(&architecture)
+                .map_or_else(ArchitectureIdentifiers::default, |architecture| {
+                    ArchitectureIdentifiers::from_expression(&architecture).0
                 });
         }
         if *version >= InnoVersion(5, 2, 5) {

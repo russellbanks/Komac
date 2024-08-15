@@ -1,5 +1,7 @@
+use crate::manifests::installer_manifest::UnsupportedOSArchitecture;
 use crate::types::architecture::Architecture;
 use bitflags::bitflags;
+use std::collections::BTreeSet;
 
 bitflags! {
     /// Used before Inno Setup 6.3 where the architecture was stored in a single byte
@@ -30,7 +32,7 @@ impl StoredArchitecture {
 
 bitflags! {
     /// <https://jrsoftware.org/ishelp/index.php?topic=archidentifiers>
-    #[derive(Debug, Default)]
+    #[derive(Debug, PartialEq, Eq)]
     pub struct ArchitectureIdentifiers: u8 {
         /// Matches systems capable of running 32-bit Arm binaries. Only Arm64 Windows includes such
         /// support.
@@ -55,8 +57,14 @@ bitflags! {
     }
 }
 
+impl Default for ArchitectureIdentifiers {
+    fn default() -> Self {
+        Self::X86_COMPATIBLE
+    }
+}
+
 impl ArchitectureIdentifiers {
-    pub fn from_spaced_list(s: &str) -> Self {
+    pub fn from_expression(input: &str) -> (Self, Self) {
         const ARM32_COMPATIBLE: &str = "arm32compatible";
         const ARM64: &str = "arm64";
         const WIN64: &str = "win64";
@@ -71,23 +79,68 @@ impl ArchitectureIdentifiers {
         /// for x86os.
         const X86: &str = "x86";
 
-        let mut architecture_flags = Self::empty();
-        for architecture in s.split(' ') {
-            match architecture {
-                ARM32_COMPATIBLE => architecture_flags |= Self::ARM32_COMPATIBLE,
-                ARM64 => architecture_flags |= Self::ARM64,
-                WIN64 => architecture_flags |= Self::WIN64,
-                X64_COMPATIBLE => architecture_flags |= Self::X64_COMPATIBLE,
-                X64_OS | X64 => architecture_flags |= Self::X64_OS,
-                X86_COMPATIBLE => architecture_flags |= Self::X86_COMPATIBLE,
-                X86_OS | X86 => architecture_flags |= Self::X86_OS,
-                _ => {}
+        let tokens = input.replace('(', " ( ").replace(')', " ) ");
+        let tokens = tokens.split_whitespace().collect::<Vec<&str>>();
+
+        let mut expanded_tokens = Vec::new();
+        let mut prev_token = None;
+
+        for token in &tokens {
+            if let Some(prev) = prev_token {
+                if !["and", "or", "not", "(", ")"].contains(&prev)
+                    && !["and", "or", "not", "(", ")"].contains(token)
+                {
+                    expanded_tokens.push("and");
+                }
+            }
+            expanded_tokens.push(token);
+            prev_token = Some(token);
+        }
+
+        let postfix_tokens = infix_to_postfix(expanded_tokens);
+
+        let mut stack: Vec<Expr> = Vec::new();
+
+        for token in postfix_tokens {
+            match token {
+                "and" | "or" => {
+                    if let (Some(right), Some(left)) = (stack.pop(), stack.pop()) {
+                        if token == "and" {
+                            stack.push(Expr::And(Box::new(left), Box::new(right)));
+                        } else if token == "or" {
+                            stack.push(Expr::Or(Box::new(left), Box::new(right)));
+                        }
+                    }
+                }
+                "not" => {
+                    if let Some(expr) = stack.pop() {
+                        stack.push(Expr::Not(Box::new(expr)));
+                    }
+                }
+                _ => {
+                    let flag = match token {
+                        ARM32_COMPATIBLE => Self::ARM32_COMPATIBLE,
+                        ARM64 => Self::ARM64,
+                        WIN64 => Self::WIN64,
+                        X64_COMPATIBLE => Self::X64_COMPATIBLE,
+                        X64_OS | X64 => Self::X64_OS,
+                        X86_COMPATIBLE => Self::X86_COMPATIBLE,
+                        X86_OS | X86 => Self::X86_OS,
+                        _ => Self::empty(),
+                    };
+                    stack.push(Expr::Flag(flag));
+                }
             }
         }
-        if architecture_flags.is_empty() {
-            architecture_flags |= Self::X86_COMPATIBLE;
+
+        let (mut positive, negated) = stack
+            .pop()
+            .map_or_else(|| (Self::default(), Self::empty()), Expr::evaluate);
+
+        if positive.is_empty() {
+            positive = Self::default();
         }
-        architecture_flags
+        (positive, negated)
     }
 
     pub const fn to_winget_architecture(&self) -> Option<Architecture> {
@@ -103,5 +156,173 @@ impl ArchitectureIdentifiers {
         } else {
             None
         }
+    }
+
+    pub fn to_unsupported_architectures(&self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
+        let mut architectures = BTreeSet::new();
+        if self.contains(Self::X64_OS)
+            || self.contains(Self::WIN64)
+            || self.contains(Self::X64_COMPATIBLE)
+        {
+            architectures.insert(UnsupportedOSArchitecture::X64);
+        }
+        if self.contains(Self::ARM64) {
+            architectures.insert(UnsupportedOSArchitecture::Arm64);
+        }
+        if self.contains(Self::ARM32_COMPATIBLE) {
+            architectures.insert(UnsupportedOSArchitecture::Arm);
+        }
+        if self.contains(Self::X86_OS) || self.contains(Self::X86_COMPATIBLE) {
+            architectures.insert(UnsupportedOSArchitecture::X86);
+        }
+        Option::from(architectures).filter(|set| !set.is_empty())
+    }
+}
+
+enum Expr {
+    Flag(ArchitectureIdentifiers),
+    Not(Box<Expr>),
+    And(Box<Expr>, Box<Expr>),
+    Or(Box<Expr>, Box<Expr>),
+}
+
+impl Expr {
+    fn evaluate(self) -> (ArchitectureIdentifiers, ArchitectureIdentifiers) {
+        match self {
+            Self::Flag(flag) => (flag, ArchitectureIdentifiers::empty()),
+            Self::Not(expr) => {
+                let (pos, _neg) = expr.evaluate();
+                (ArchitectureIdentifiers::empty(), pos)
+            }
+            Self::And(left, right) => {
+                let (left_pos, left_neg) = left.evaluate();
+                let (right_pos, right_neg) = right.evaluate();
+                (left_pos | right_pos, left_neg | right_neg)
+            }
+            Self::Or(left, right) => {
+                let (left_pos, left_neg) = left.evaluate();
+                let (right_pos, right_neg) = right.evaluate();
+                (left_pos | right_pos, left_neg & right_neg)
+            }
+        }
+    }
+}
+
+fn precedence(op: &str) -> u8 {
+    match op {
+        "and" => 2,
+        "or" => 1,
+        _ => 0,
+    }
+}
+
+fn infix_to_postfix(tokens: Vec<&str>) -> Vec<&str> {
+    let mut output: Vec<&str> = Vec::new();
+    let mut operators: Vec<&str> = Vec::new();
+
+    for token in tokens {
+        match token {
+            "and" | "or" => {
+                while !operators.is_empty()
+                    && precedence(token) <= precedence(operators.last().unwrap())
+                {
+                    output.push(operators.pop().unwrap());
+                }
+                operators.push(token);
+            }
+            "not" | "(" => operators.push(token),
+            ")" => {
+                while let Some(top) = operators.pop() {
+                    if top == "(" {
+                        break;
+                    }
+                    output.push(top);
+                }
+            }
+            _ => output.push(token),
+        }
+    }
+
+    while let Some(op) = operators.pop() {
+        output.push(op);
+    }
+
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::installers::inno::header::architecture::ArchitectureIdentifiers;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(
+        "x64compatible",
+        ArchitectureIdentifiers::X64_COMPATIBLE,
+        ArchitectureIdentifiers::empty()
+    )]
+    #[case(
+        "x64compatible and arm64",
+        ArchitectureIdentifiers::X64_COMPATIBLE | ArchitectureIdentifiers::ARM64,
+        ArchitectureIdentifiers::empty()
+    )]
+    #[case(
+        "x64compatible and not arm64",
+        ArchitectureIdentifiers::X64_COMPATIBLE,
+        ArchitectureIdentifiers::ARM64
+    )]
+    #[case(
+        "not x64os",
+        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::X64_OS
+    )]
+    #[case(
+        "not (arm64 or x86compatible)",
+        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::ARM64 | ArchitectureIdentifiers::X86_COMPATIBLE
+    )]
+    #[case(
+        "x64compatible and not (arm64 or x86compatible)",
+        ArchitectureIdentifiers::X64_COMPATIBLE,
+        ArchitectureIdentifiers::ARM64 | ArchitectureIdentifiers::X86_COMPATIBLE
+    )]
+    #[case(
+        "x64compatible x86compatible",
+        ArchitectureIdentifiers::X64_COMPATIBLE | ArchitectureIdentifiers::X86_COMPATIBLE,
+        ArchitectureIdentifiers::empty()
+    )]
+    #[case(
+        "x64os or arm32compatible",
+        ArchitectureIdentifiers::X64_OS | ArchitectureIdentifiers::ARM32_COMPATIBLE,
+        ArchitectureIdentifiers::empty()
+    )]
+    #[case(
+        "x64 x86",
+        ArchitectureIdentifiers::X64_OS | ArchitectureIdentifiers::X86_OS,
+        ArchitectureIdentifiers::empty()
+    )]
+    #[case(
+        "",
+        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::empty()
+    )]
+    #[case(
+        "not not not",
+        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::empty()
+    )]
+    #[case(
+        "and or not x64os",
+        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::empty()
+    )]
+    fn test_architecture_expression(
+        #[case] expression: &str,
+        #[case] expected_allowed: ArchitectureIdentifiers,
+        #[case] expected_disallowed: ArchitectureIdentifiers,
+    ) {
+        let (allowed, disallowed) = ArchitectureIdentifiers::from_expression(expression);
+        assert_eq!(expected_allowed, allowed);
+        assert_eq!(expected_disallowed, disallowed);
     }
 }

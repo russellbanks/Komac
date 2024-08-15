@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::io::Cursor;
 use std::mem;
 
@@ -14,7 +15,7 @@ use crate::installers::inno::block_filter::InnoBlockFilter;
 use crate::installers::inno::header::header::Header;
 use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
-use crate::manifests::installer_manifest::ElevationRequirement;
+use crate::manifests::installer_manifest::{ElevationRequirement, UnsupportedOSArchitecture};
 use crate::types::architecture::Architecture;
 
 const VERSION_LEN: usize = 1 << 6;
@@ -23,6 +24,7 @@ const PROPERTIES_MAX: u8 = 9 * 5 * 5;
 
 pub struct InnoFile {
     pub architecture: Option<Architecture>,
+    pub unsupported_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
     pub uninstall_name: Option<String>,
     pub app_version: Option<String>,
     pub app_publisher: Option<String>,
@@ -129,6 +131,8 @@ impl InnoFile {
 
         Ok(Self {
             architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
+            unsupported_architectures: mem::take(&mut header.architectures_disallowed)
+                .to_unsupported_architectures(),
             uninstall_name: mem::take(&mut header.uninstall_name),
             app_version: mem::take(&mut header.app_version),
             app_publisher: mem::take(&mut header.app_publisher),

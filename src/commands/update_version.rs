@@ -278,6 +278,9 @@ impl UpdateVersion {
                         }]));
                 }
                 previous_installer
+                    .unsupported_os_architectures
+                    .clone_from(&analyser.unsupported_os_architectures);
+                previous_installer
                     .elevation_requirement
                     .clone_from(&analyser.elevation_requirement);
                 if let Some(install_location) = &analyser.default_install_location {
