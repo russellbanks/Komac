@@ -303,6 +303,7 @@ impl NewVersion {
                 capabilities: mem::take(&mut analyser.capabilities),
                 restricted_capabilities: mem::take(&mut analyser.restricted_capabilities),
                 release_date: analyser.last_modified,
+                elevation_requirement: mem::take(&mut analyser.elevation_requirement),
                 installation_metadata: mem::take(&mut analyser.default_install_location).map(
                     |install_location| InstallationMetadata {
                         default_install_location: Some(install_location),

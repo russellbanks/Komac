@@ -277,6 +277,9 @@ impl UpdateVersion {
                             ..AppsAndFeaturesEntry::default()
                         }]));
                 }
+                previous_installer
+                    .elevation_requirement
+                    .clone_from(&analyser.elevation_requirement);
                 if let Some(install_location) = &analyser.default_install_location {
                     previous_installer.installation_metadata = Some(InstallationMetadata {
                         default_install_location: Some(install_location.clone()),

@@ -50,8 +50,7 @@ impl Analyse {
             product_code: analyser.product_code.clone(),
             capabilities: analyser.capabilities,
             restricted_capabilities: analyser.restricted_capabilities,
-            apps_and_features_entries: None,
-            installation_metadata: None,
+            elevation_requirement: analyser.elevation_requirement,
             ..Installer::default()
         };
         if analyser.display_name.is_some()

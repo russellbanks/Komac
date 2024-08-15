@@ -10,20 +10,24 @@ use liblzma::stream::{Filters, LzmaOptions, Stream};
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 
-use crate::installers::inno::header::Header;
-use crate::installers::inno::inno_block_filter::InnoBlockFilter;
+use crate::installers::inno::block_filter::InnoBlockFilter;
+use crate::installers::inno::header::header::Header;
 use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
-use crate::installers::inno::version::{InnoVersion, KNOWN_VERSIONS};
+use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::manifests::installer_manifest::ElevationRequirement;
+use crate::types::architecture::Architecture;
 
 const VERSION_LEN: usize = 1 << 6;
 
 const PROPERTIES_MAX: u8 = 9 * 5 * 5;
 
 pub struct InnoFile {
+    pub architecture: Option<Architecture>,
     pub uninstall_name: Option<String>,
     pub app_version: Option<String>,
     pub app_publisher: Option<String>,
     pub product_code: Option<String>,
+    pub elevation_requirement: Option<ElevationRequirement>,
 }
 
 impl InnoFile {
@@ -45,13 +49,14 @@ impl InnoFile {
         let version_bytes = data
             .get(header_offset..header_offset + VERSION_LEN)
             .and_then(|bytes| memchr::memchr(u8::default(), bytes).map(|len| &bytes[..len]))
-            .ok_or_eyre("Invalid Inno header")?;
-        let version = String::from_utf8_lossy(version_bytes);
+            .ok_or_eyre("Invalid Inno header version")?;
 
-        let known_version = KNOWN_VERSIONS
-            .into_iter()
-            .rfind(|know_version| know_version.name == version)
-            .ok_or_else(|| eyre!("Unknown Inno Setup Version: {version}"))?;
+        let known_version = KnownVersion::from_version_bytes(version_bytes).ok_or_else(|| {
+            eyre!(
+                "Unknown Inno Setup version: {}",
+                &String::from_utf8_lossy(version_bytes)
+            )
+        })?;
 
         let mut cursor = Cursor::new(data);
         cursor.set_position((header_offset + VERSION_LEN) as u64);
@@ -123,10 +128,13 @@ impl InnoFile {
         };
 
         Ok(Self {
+            architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
             uninstall_name: mem::take(&mut header.uninstall_name),
             app_version: mem::take(&mut header.app_version),
             app_publisher: mem::take(&mut header.app_publisher),
             product_code: mem::take(&mut header.app_id).map(to_product_code),
+            elevation_requirement: mem::take(&mut header.privileges_required)
+                .to_elevation_requirement(&header.privileges_required_overrides_allowed),
         })
     }
 }

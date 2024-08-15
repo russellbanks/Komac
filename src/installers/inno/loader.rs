@@ -1,6 +1,7 @@
 use std::io::{Cursor, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use color_eyre::eyre::eyre;
 use color_eyre::Result;
 use crc32fast::Hasher;
 
@@ -8,7 +9,6 @@ pub const SETUP_LOADER_RESOURCE: u32 = 11111;
 
 const SIGNATURE_LEN: usize = 12;
 
-#[derive(Default)]
 pub struct SetupLoaderVersion {
     signature: [u8; SIGNATURE_LEN],
     version: LoaderVersion,
@@ -82,7 +82,7 @@ impl SetupLoader {
         let loader_version = KNOWN_SETUP_LOADER_VERSIONS
             .into_iter()
             .find(|setup_loader_version| setup_loader_version.signature == signature)
-            .unwrap_or_default();
+            .ok_or_else(|| eyre!("Unknown Inno Setup loader signature: {signature:?}"))?;
 
         let mut crc = Hasher::new();
         crc.update(&signature);
