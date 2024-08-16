@@ -62,7 +62,7 @@ owo-colors = "4.0.0"
 oxilangtag = { version = "0.1.5", features = ["serde"] }
 package-family-name = { version = "2.0.0", features = ["serde"] }
 percent-encoding = "2.3.1"
-pulldown-cmark = "0.11.0"
+pulldown-cmark = "0.11.2"
 quick-xml = { version = "0.36.1", features = ["serialize"] }
 rand = "0.8.5"
 ratatui = "0.28.0"
