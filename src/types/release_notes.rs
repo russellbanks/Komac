@@ -71,7 +71,7 @@ impl ReleaseNotes {
                 },
                 End(tag) => match tag {
                     TagEnd::Heading(_)
-                    | TagEnd::BlockQuote
+                    | TagEnd::BlockQuote(_)
                     | TagEnd::CodeBlock
                     | TagEnd::Table
                     | TagEnd::TableHead
