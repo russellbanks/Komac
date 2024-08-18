@@ -108,7 +108,9 @@ pub enum PackageIdentifierError {
 mod tests {
     use crate::types::package_identifier::{PackageIdentifier, PackageIdentifierError};
     use const_format::str_repeat;
-    use itertools::{repeat_n, Itertools};
+    use itertools::repeat_n;
+
+    // Replace itertools::intersperse with std::iter::Intersperse once it's stabilised
 
     #[test]
     fn test_valid_package_identifier() {
@@ -122,9 +124,9 @@ mod tests {
             (PackageIdentifier::MAX_LENGTH - NUM_DELIMITERS).div_ceil(PackageIdentifier::MAX_PARTS);
         const PART: &str = str_repeat!("a", PART_LEN as usize);
 
-        let identifier = repeat_n(PART, PackageIdentifier::MAX_PARTS as usize)
-            .intersperse(".")
-            .collect::<String>();
+        let identifier =
+            itertools::intersperse(repeat_n(PART, PackageIdentifier::MAX_PARTS as usize), ".")
+                .collect::<String>();
 
         assert_eq!(
             PackageIdentifier::parse(&identifier).err(),
@@ -134,9 +136,11 @@ mod tests {
 
     #[test]
     fn test_too_many_parts_package_identifier() {
-        let identifier = repeat_n('a', PackageIdentifier::MAX_PARTS as usize + 1)
-            .intersperse('.')
-            .collect::<String>();
+        let identifier = itertools::intersperse(
+            repeat_n('a', PackageIdentifier::MAX_PARTS as usize + 1),
+            '.',
+        )
+        .collect::<String>();
 
         assert_eq!(
             PackageIdentifier::parse(&identifier).err(),
@@ -148,9 +152,9 @@ mod tests {
     fn test_package_identifier_parts_too_long() {
         const PART: &str = str_repeat!("a", PackageIdentifier::MAX_PART_LENGTH as usize + 1);
 
-        let identifier = repeat_n(PART, PackageIdentifier::MIN_PARTS as usize)
-            .intersperse(".")
-            .collect::<String>();
+        let identifier =
+            itertools::intersperse(repeat_n(PART, PackageIdentifier::MIN_PARTS as usize), ".")
+                .collect::<String>();
 
         assert_eq!(
             PackageIdentifier::parse(&identifier).err(),
