@@ -202,7 +202,7 @@ mod tests {
         let value = "- Issue https://github.com/owner/repo/issues/123";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new("- Issue #123").ok()
+            ReleaseNotes::try_new("- Issue #123").ok()
         )
     }
 
@@ -211,7 +211,7 @@ mod tests {
         let value = "- Issue https://github.com/different/repo/issues/123";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new("- Issue different/repo#123").ok()
+            ReleaseNotes::try_new("- Issue different/repo#123").ok()
         )
     }
 
@@ -220,7 +220,7 @@ mod tests {
         let value = "- Issue https://github.com/owner/repo/issues/123 and https://github.com/owner/repo/issues/321";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new("- Issue #123 and #321").ok()
+            ReleaseNotes::try_new("- Issue #123 and #321").ok()
         )
     }
 
@@ -229,7 +229,7 @@ mod tests {
         let value = "- No issue link";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new(value).ok()
+            ReleaseNotes::try_new(value).ok()
         )
     }
 
@@ -238,7 +238,7 @@ mod tests {
         let value = "Full Changelog: https://github.com/owner/repo/compare/v1.0.0...v1.1.0";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new(value).ok()
+            ReleaseNotes::try_new(value).ok()
         )
     }
 
@@ -247,7 +247,7 @@ mod tests {
         let value = "Previous release: https://github.com/owner/repo/releases/tag/1.2.3";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new(value).ok()
+            ReleaseNotes::try_new(value).ok()
         )
     }
 
@@ -265,7 +265,7 @@ mod tests {
         "};
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new(expected).ok()
+            ReleaseNotes::try_new(expected).ok()
         )
     }
 
@@ -273,7 +273,7 @@ mod tests {
     fn test_strikethrough_removed() {
         assert_eq!(
             ReleaseNotes::format("~~Strikethrough text~~", "owner", "repo"),
-            ReleaseNotes::new("Strikethrough text").ok()
+            ReleaseNotes::try_new("Strikethrough text").ok()
         )
     }
 
@@ -281,7 +281,7 @@ mod tests {
     fn test_bold_removed() {
         assert_eq!(
             ReleaseNotes::format("**Bold text**", "owner", "repo"),
-            ReleaseNotes::new("Bold text").ok()
+            ReleaseNotes::try_new("Bold text").ok()
         )
     }
 
@@ -297,7 +297,7 @@ mod tests {
         "};
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new(expected).ok()
+            ReleaseNotes::try_new(expected).ok()
         )
     }
 
@@ -316,7 +316,7 @@ mod tests {
         "};
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new(value).ok()
+            ReleaseNotes::try_new(value).ok()
         )
     }
 
@@ -334,7 +334,7 @@ mod tests {
         "};
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
-            ReleaseNotes::new(value).ok()
+            ReleaseNotes::try_new(value).ok()
         )
     }
 
@@ -347,7 +347,7 @@ mod tests {
         let value = format!("- {random_hash} Bullet point 1 {random_hash}");
         assert_eq!(
             ReleaseNotes::format(&value, "owner", "repo"),
-            ReleaseNotes::new("- Bullet point 1").ok()
+            ReleaseNotes::try_new("- Bullet point 1").ok()
         )
     }
 
