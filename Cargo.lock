@@ -2355,6 +2355,7 @@ dependencies = [
  "derive_builder",
  "derive_more",
  "encoding_rs",
+ "flate2",
  "futures",
  "futures-util",
  "heapless",

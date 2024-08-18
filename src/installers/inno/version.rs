@@ -111,7 +111,7 @@ mod tests {
         VersionFlags::ISX
     )]
     #[case(
-        b"Inno Setup Setup Data (3.0.3) with ISX (3.0.3)",
+        b"Inno Setup Setup Data (3.0.3) with ISX (3.0.0)",
         InnoVersion(3, 0, 3),
         VersionFlags::ISX
     )]

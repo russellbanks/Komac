@@ -6,21 +6,20 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use color_eyre::eyre::{bail, eyre, OptionExt};
 use color_eyre::Result;
 use crc32fast::Hasher;
+use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
-use liblzma::stream::{Filters, LzmaOptions, Stream};
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 
-use crate::installers::inno::block_filter::InnoBlockFilter;
+use crate::installers::inno::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
 use crate::installers::inno::header::header::Header;
 use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
+use crate::installers::inno::lzma::read_inno_lzma_stream_header;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::manifests::installer_manifest::{ElevationRequirement, UnsupportedOSArchitecture};
 use crate::types::architecture::Architecture;
 
 const VERSION_LEN: usize = 1 << 6;
-
-const PROPERTIES_MAX: u8 = 9 * 5 * 5;
 
 pub struct InnoFile {
     pub architecture: Option<Architecture>,
@@ -85,6 +84,23 @@ impl InnoFile {
             } else {
                 CompressionType::Stored
             };
+        } else {
+            let compressed_size = cursor.read_u32::<LittleEndian>()?;
+            actual_checksum.update(&stored_size.to_le_bytes());
+
+            let uncompressed_size = cursor.read_u32::<LittleEndian>()?;
+            actual_checksum.update(&stored_size.to_le_bytes());
+
+            if compressed_size == u32::MAX {
+                stored_size = uncompressed_size;
+                compression = CompressionType::Stored;
+            } else {
+                stored_size = compressed_size;
+                compression = CompressionType::Zlib;
+            }
+
+            // Add the size of a CRC32 checksum for each 4KiB sub-block
+            stored_size += stored_size.div_ceil(u32::from(INNO_BLOCK_SIZE)) * 4;
         }
 
         let actual_checksum = actual_checksum.finalize();
@@ -94,39 +110,16 @@ impl InnoFile {
             );
         }
 
-        // The LZMA1 streams used by Inno Setup differ slightly from the LZMA Alone file format:
-        // The stream header only stores the properties (lc, lp, pb) and the dictionary size and
-        // is missing the uncompressed size field.
+        let mut block_filter = InnoBlockFilter::new(cursor);
         let mut header = if compression == CompressionType::LZMA1 {
-            let mut block_filter = InnoBlockFilter::new(cursor);
-            let properties = block_filter.read_u8()?;
-            if properties >= PROPERTIES_MAX {
-                bail!(
-                    "LZMA properties value must be less than {PROPERTIES_MAX} but was {properties}",
-                )
-            }
-            let pb = u32::from(properties / (9 * 5));
-            let lp = u32::from((properties % (9 * 5)) / 9);
-            let lc = u32::from(properties % 9);
-            if lc + lp > 4 {
-                bail!(
-                    "LZMA lc + lp must not be greater than 4 but was {}",
-                    lc + lp
-                )
-            }
-            let dictionary_size = block_filter.read_u32::<LittleEndian>()?;
-            let mut lzma_options = LzmaOptions::new();
-            lzma_options.position_bits(pb);
-            lzma_options.literal_position_bits(lp);
-            lzma_options.literal_context_bits(lc);
-            lzma_options.dict_size(dictionary_size);
-            let mut filters = Filters::new();
-            filters.lzma1(&lzma_options);
-            let stream = Stream::new_raw_decoder(&filters)?;
+            let stream = read_inno_lzma_stream_header(&mut block_filter)?;
             let mut decompressor = XzDecoder::new_stream(block_filter, stream);
             Header::load(&mut decompressor, &known_version)?
+        } else if compression == CompressionType::Zlib {
+            let mut zlib_decoder = ZlibDecoder::new(block_filter);
+            Header::load(&mut zlib_decoder, &known_version)?
         } else {
-            Header::default()
+            Header::load(&mut block_filter, &known_version)?
         };
 
         Ok(Self {

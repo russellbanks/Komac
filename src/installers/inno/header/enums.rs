@@ -92,5 +92,5 @@ pub enum Compression {
     LZMA1,
     LZMA2,
     #[default]
-    UnknownCompression = u8::MAX, // Set to u8::MAX to avoid conflicts with future variants
+    Unknown = u8::MAX, // Set to u8::MAX to avoid conflicts with future variants
 }
