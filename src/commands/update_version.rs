@@ -41,6 +41,7 @@ use crate::types::path::NormalizePath;
 use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 
+/// Add a version to a pre-existing package
 #[derive(Parser)]
 pub struct UpdateVersion {
     /// The package's unique identifier

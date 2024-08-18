@@ -7,6 +7,7 @@ use crate::manifest::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 
+/// Output the manifests for a given package and version
 #[derive(Parser)]
 pub struct ShowVersion {
     /// The package's unique identifier

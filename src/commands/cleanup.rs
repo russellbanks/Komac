@@ -12,9 +12,10 @@ use owo_colors::OwoColorize;
 use std::num::NonZeroUsize;
 use std::time::Duration;
 
-/// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to microsoft/winget-pkgs
-/// from them, prompting for which ones to delete
+/// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to
+/// microsoft/winget-pkgs from them, prompting for which ones to delete
 #[derive(Parser)]
+#[clap(visible_alias = "clean")]
 pub struct Cleanup {
     /// Only delete merged branches
     #[arg(long)]

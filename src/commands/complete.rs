@@ -5,7 +5,9 @@ use clap_complete::{generate, Shell};
 
 use crate::Cli;
 
+/// Outputs an autocompletion script for the given shell
 #[derive(Parser)]
+#[clap(visible_alias = "autocomplete")]
 pub struct Complete {
     #[arg(value_enum)]
     shell: Shell,

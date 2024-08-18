@@ -11,7 +11,7 @@ use owo_colors::OwoColorize;
 
 /// Merges changes from microsoft/winget-pkgs into the fork repository
 #[derive(Parser)]
-#[clap(alias = "merge-upstream")]
+#[clap(visible_aliases = ["sync", "merge-upstream"])]
 pub struct SyncFork {
     /// Merges changes even if the fork's default branch is not fast-forward. This is not
     /// recommended as you should instead have a clean default branch that has not diverged from the

@@ -68,6 +68,7 @@ use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 
+/// Create a new package from scratch
 #[derive(Parser)]
 pub struct NewVersion {
     /// The package's unique identifier

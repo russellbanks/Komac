@@ -13,6 +13,7 @@ use std::collections::BTreeSet;
 use std::fs::File;
 use std::mem;
 
+/// Analyses a file and outputs information about it
 #[derive(Parser)]
 pub struct Analyse {
     #[arg(value_parser = is_valid_file, value_hint = clap::ValueHint::FilePath)]

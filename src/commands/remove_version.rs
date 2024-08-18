@@ -18,6 +18,9 @@ use inquire::validator::{MaxLengthValidator, MinLengthValidator};
 use inquire::{Confirm, Text};
 use owo_colors::OwoColorize;
 
+/// Remove a version from winget-pkgs
+///
+/// To remove a package, all versions of that package must be removed
 #[derive(Parser)]
 pub struct RemoveVersion {
     /// The package's unique identifier

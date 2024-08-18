@@ -8,7 +8,9 @@ use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
 use crate::types::package_identifier::PackageIdentifier;
 
+/// Lists all versions for a given package
 #[derive(Parser)]
+#[clap(visible_alias = "list")]
 pub struct ListVersions {
     #[arg()]
     package_identifier: PackageIdentifier,
