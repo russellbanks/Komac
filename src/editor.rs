@@ -1,7 +1,3 @@
-use std::borrow::Cow;
-use std::fmt::Display;
-use std::io;
-
 use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
@@ -12,6 +8,10 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
 use ratatui::Terminal;
+use std::borrow::Cow;
+use std::fmt::Display;
+use std::io;
+use std::ops::Add;
 use tui_textarea::{CursorMove, Input, Key, TextArea};
 
 struct SearchBox<'a> {
@@ -103,7 +103,7 @@ impl<'a> Buffer<'a> {
         if !self.modified {
             return false;
         }
-        *self.content = self.textarea.lines().join("\r\n");
+        *self.content = self.textarea.lines().join("\r\n").add("\r\n");
         self.modified = false;
         true
     }
