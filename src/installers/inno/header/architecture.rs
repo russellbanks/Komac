@@ -32,7 +32,7 @@ impl StoredArchitecture {
 
 bitflags! {
     /// <https://jrsoftware.org/ishelp/index.php?topic=archidentifiers>
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, Default, PartialEq, Eq)]
     pub struct ArchitectureIdentifiers: u8 {
         /// Matches systems capable of running 32-bit Arm binaries. Only Arm64 Windows includes such
         /// support.
@@ -54,12 +54,6 @@ bitflags! {
         const X86_COMPATIBLE = 1 << 5;
         /// Matches systems running 32-bit x86 Windows only.
         const X86_OS = 1 << 6;
-    }
-}
-
-impl Default for ArchitectureIdentifiers {
-    fn default() -> Self {
-        Self::X86_COMPATIBLE
     }
 }
 
@@ -138,7 +132,7 @@ impl ArchitectureIdentifiers {
             .map_or_else(|| (Self::default(), Self::empty()), Expr::evaluate);
 
         if positive.is_empty() {
-            positive = Self::default();
+            positive |= Self::X86_COMPATIBLE;
         }
         (positive, negated)
     }
@@ -273,12 +267,12 @@ mod tests {
     )]
     #[case(
         "not x64os",
-        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::X86_COMPATIBLE,
         ArchitectureIdentifiers::X64_OS
     )]
     #[case(
         "not (arm64 or x86compatible)",
-        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::X86_COMPATIBLE,
         ArchitectureIdentifiers::ARM64 | ArchitectureIdentifiers::X86_COMPATIBLE
     )]
     #[case(
@@ -303,17 +297,17 @@ mod tests {
     )]
     #[case(
         "",
-        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::X86_COMPATIBLE,
         ArchitectureIdentifiers::empty()
     )]
     #[case(
         "not not not",
-        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::X86_COMPATIBLE,
         ArchitectureIdentifiers::empty()
     )]
     #[case(
         "and or not x64os",
-        ArchitectureIdentifiers::default(),
+        ArchitectureIdentifiers::X86_COMPATIBLE,
         ArchitectureIdentifiers::empty()
     )]
     fn test_architecture_expression(

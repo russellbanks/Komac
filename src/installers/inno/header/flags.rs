@@ -2,7 +2,7 @@ use bitflags::bitflags;
 
 bitflags! {
     #[derive(Debug, Default)]
-    pub struct HeaderFlags: u64 {
+    pub struct HeaderFlags: u128 {
         const DISABLE_STARTUP_PROMPT = 1 << 0;
         const CREATE_APP_DIR = 1 << 1;
         const ALLOW_NO_ICONS = 1 << 2;
@@ -32,7 +32,7 @@ bitflags! {
         const ALWAYS_SHOW_GROUP_ON_READY_PAGE = 1 << 26;
         const ALLOW_UNC_PATH = 1 << 27;
         const USER_INFO_PAGE = 1 << 28;
-        const USE_PREVIOUS_USE_INFO = 1 << 29;
+        const USE_PREVIOUS_USER_INFO = 1 << 29;
         const UNINSTALL_RESTART_COMPUTER = 1 << 30;
         const RESTART_IF_NEEDED_BY_RUN = 1 << 31;
         const SHOW_TASKS_TREE_LINES = 1 << 32;
@@ -42,18 +42,18 @@ bitflags! {
         const APPEND_DEFAULT_GROUP_NAME = 1 << 36;
         const ENCRYPTION_USED = 1 << 37;
         const CHANGES_ENVIRONMENT = 1 << 38;
-        const SHOW_UNDISPLAYABLE_LANGUAGES = 1 << 39;
-        const SETUP_LOGGING = 1 << 40;
-        const SIGNED_UNINSTALLER = 1 << 41;
-        const USE_PREVIOUS_LANGUAGE = 1 << 42;
-        const DISABLE_WELCOME_PAGE = 1 << 43;
-        const CLOSE_APPLICATIONS = 1 << 44;
-        const RESTART_APPLICATIONS = 1 << 45;
-        const ALLOW_NETWORK_DRIVE = 1 << 46;
-        const FORCE_CLOSE_APPLICATIONS = 1 << 47;
-        const APP_NAME_HAS_CONSTS = 1 << 48;
-        const USE_PREVIOUS_PRIVILEGES = 1 << 49;
-        const WIZARD_RESIZABLE = 1 << 50;
+        const SETUP_LOGGING = 1 << 39;
+        const SIGNED_UNINSTALLER = 1 << 40;
+        const USE_PREVIOUS_LANGUAGE = 1 << 41;
+        const DISABLE_WELCOME_PAGE = 1 << 42;
+        const CLOSE_APPLICATIONS = 1 << 43;
+        const RESTART_APPLICATIONS = 1 << 44;
+        const ALLOW_NETWORK_DRIVE = 1 << 45;
+        const FORCE_CLOSE_APPLICATIONS = 1 << 46;
+        const APP_NAME_HAS_CONSTS = 1 << 47;
+        const USE_PREVIOUS_PRIVILEGES = 1 << 48;
+        const WIZARD_RESIZABLE = 1 << 49;
+        const UNINSTALL_LOGGING = 1 << 50;
         // Obsolete flags
         const UNINSTALLABLE = 1 << 51;
         const DISABLE_DIR_PAGE = 1 << 52;
@@ -68,6 +68,7 @@ bitflags! {
         const DISABLE_DIR_EXISTS_WARNING = 1 << 61;
         const BACK_SOLID = 1 << 62;
         const OVERWRITE_UNINSTALL_REG_ENTRIES = 1 << 63;
+        const SHOW_UNDISPLAYABLE_LANGUAGES = 1 << 64;
     }
 }
 

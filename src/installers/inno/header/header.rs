@@ -1,23 +1,32 @@
 use std::io;
 use std::io::Read;
 
-use crate::installers::inno::header::architecture::{ArchitectureIdentifiers, StoredArchitecture};
-use crate::installers::inno::header::enums::{
-    AutoBool, Compression, ImageAlphaFormat, InnoStyle, InstallVerbosity, LanguageDetection,
-    LogMode, PrivilegeLevel,
-};
-use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
-use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
 use byteorder::{LittleEndian, ReadBytesExt};
 use color_eyre::eyre::{eyre, Result};
 use encoding_rs::{Encoding, UTF_16LE, WINDOWS_1252};
 
+use crate::installers::inno::header::architecture::{ArchitectureIdentifiers, StoredArchitecture};
+use crate::installers::inno::header::enums::{
+    AutoBool, Compression, ImageAlphaFormat, InnoStyle, InstallVerbosity, LanguageDetection,
+    LogMode, PrivilegeLevel,
+};
+use crate::installers::inno::header::flag_reader::FlagReader;
+use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
+use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::windows_version::WindowsVersionRange;
+
+macro_rules! enum_value {
+    ($enum_type:ty, $value:ident) => {
+        <$enum_type>::from_repr($value)
+            .ok_or_else(|| eyre!("Unexpected {} value: {}", stringify!($value), $value))
+    };
+}
+
 // https://github.com/jrsoftware/issrc/blob/main/Projects/Src/Shared.Struct.pas
 #[derive(Debug, Default)]
 pub struct Header {
-    header_flags: HeaderFlags,
+    flags: HeaderFlags,
     pub app_name: Option<String>,
     pub app_versioned_name: Option<String>,
     /// <https://jrsoftware.org/ishelp/index.php?topic=setup_appid>
@@ -96,6 +105,11 @@ pub struct Header {
     pub show_language_dialog: AutoBool,
     pub language_detection: LanguageDetection,
     pub compression: Compression,
+    pub signed_uninstaller_original_size: u32,
+    pub signed_uninstaller_header_checksum: u32,
+    pub disable_dir_page: AutoBool,
+    pub disable_program_group_page: AutoBool,
+    pub uninstall_display_size: u64,
 }
 
 impl Header {
@@ -184,7 +198,7 @@ impl Header {
             let (allowed, disallowed) = encoded_string(reader, UTF_16LE)?.map_or_else(
                 || {
                     (
-                        ArchitectureIdentifiers::default(),
+                        ArchitectureIdentifiers::X86_COMPATIBLE,
                         ArchitectureIdentifiers::empty(),
                     )
                 },
@@ -193,7 +207,7 @@ impl Header {
             header.architectures_allowed = allowed;
             header.architectures_disallowed = disallowed;
             header.architectures_install_in_64_bit_mode = encoded_string(reader, UTF_16LE)?
-                .map_or_else(ArchitectureIdentifiers::default, |architecture| {
+                .map_or(ArchitectureIdentifiers::X86_COMPATIBLE, |architecture| {
                     ArchitectureIdentifiers::from_expression(&architecture).0
                 });
         }
@@ -209,7 +223,7 @@ impl Header {
             header.compiled_code = encoded_string(reader, UTF_16LE)?;
         }
         if *version >= InnoVersion(2, 0, 6) && !version.is_unicode() {
-            let mut buf = [0; 256 / 8];
+            let mut buf = [0; 256 / u8::BITS as usize];
             reader.read_exact(&mut buf)?;
             header.lead_bytes = BitSet::from_bytes(&buf);
         }
@@ -262,25 +276,21 @@ impl Header {
         }
         if *version >= InnoVersion(6, 0, 0) {
             let wizard_style_value = reader.read_u8()?;
-            header.wizard_style = InnoStyle::from_repr(wizard_style_value)
-                .ok_or_else(|| eyre!("Unexpected wizard style value: {wizard_style_value}"))?;
+            header.wizard_style = enum_value!(InnoStyle, wizard_style_value)?;
             header.wizard_resize_percent_x = reader.read_u32::<LittleEndian>()?;
             header.wizard_resize_percent_y = reader.read_u32::<LittleEndian>()?;
         }
         if *version >= InnoVersion(5, 5, 7) {
             let image_alpha_format = reader.read_u8()?;
-            header.image_alpha_format = ImageAlphaFormat::from_repr(image_alpha_format)
-                .ok_or_else(|| {
-                    eyre!("Unexpected image alpha format value: {image_alpha_format}")
-                })?;
+            header.image_alpha_format = enum_value!(ImageAlphaFormat, image_alpha_format)?;
         }
         if *version < InnoVersion(4, 2, 0) {
             let _crc32 = reader.read_u32::<LittleEndian>()?;
         } else if *version < InnoVersion(5, 3, 9) {
-            let mut md5_buf = [0; 128 / 8]; // MD5 bit length in bytes
+            let mut md5_buf = [0; 128 / u8::BITS as usize]; // MD5 bit length in bytes
             reader.read_exact(&mut md5_buf)?;
         } else {
-            let mut sha1_buf = [0; 160 / 8]; // SHA1 bit length in bytes
+            let mut sha1_buf = [0; 160 / u8::BITS as usize]; // SHA1 bit length in bytes
             reader.read_exact(&mut sha1_buf)?;
         }
         if *version >= InnoVersion(4, 2, 2) {
@@ -297,15 +307,11 @@ impl Header {
             || (version.is_isx() && *version >= InnoVersion(1, 3, 4))
         {
             let install_verbosity = reader.read_u8()?;
-            header.install_verbosity = InstallVerbosity::from_repr(install_verbosity)
-                .ok_or_else(|| eyre!("Unexpected install verbosity value: {install_verbosity}"))?;
+            header.install_verbosity = enum_value!(InstallVerbosity, install_verbosity)?;
         }
         if *version >= InnoVersion(1, 3, 0) {
             let uninstall_log_mode = reader.read_u8()?;
-            header.uninstall_log_mode =
-                LogMode::from_repr(uninstall_log_mode).ok_or_else(|| {
-                    eyre!("Unexpected uninstall log mode value: {uninstall_log_mode}")
-                })?;
+            header.uninstall_log_mode = enum_value!(LogMode, uninstall_log_mode)?;
         }
         if *version >= InnoVersion(5, 0, 0) {
             header.uninstall_style = InnoStyle::Modern;
@@ -313,15 +319,11 @@ impl Header {
             || (version.is_isx() && *version >= InnoVersion(1, 3, 13))
         {
             let uninstall_style = reader.read_u8()?;
-            header.uninstall_style = InnoStyle::from_repr(uninstall_style)
-                .ok_or_else(|| eyre!("Unexpected uninstall style value: {uninstall_style}"))?;
+            header.uninstall_style = enum_value!(InnoStyle, uninstall_style)?;
         }
         if *version >= InnoVersion(1, 3, 6) {
             let dir_exists_warning = reader.read_u8()?;
-            header.dir_exists_warning =
-                AutoBool::from_repr(dir_exists_warning).ok_or_else(|| {
-                    eyre!("Unexpected dir exists warning value: {dir_exists_warning}")
-                })?;
+            header.dir_exists_warning = enum_value!(AutoBool, dir_exists_warning)?;
         }
         if version.is_isx() && *version >= InnoVersion(2, 0, 10) && *version < InnoVersion(3, 0, 0)
         {
@@ -329,9 +331,9 @@ impl Header {
         }
         if *version >= InnoVersion(3, 0, 0) && *version < InnoVersion(3, 0, 3) {
             match AutoBool::from_repr(reader.read_u8()?) {
-                Some(AutoBool::Yes) => header.header_flags |= HeaderFlags::ALWAYS_RESTART,
+                Some(AutoBool::Yes) => header.flags |= HeaderFlags::ALWAYS_RESTART,
                 Some(AutoBool::Auto) => {
-                    header.header_flags |= HeaderFlags::RESTART_IF_NEEDED_BY_RUN;
+                    header.flags |= HeaderFlags::RESTART_IF_NEEDED_BY_RUN;
                 }
                 _ => {}
             }
@@ -340,10 +342,7 @@ impl Header {
             || (version.is_isx() && *version >= InnoVersion(3, 0, 3))
         {
             let privileges_required = reader.read_u8()?;
-            header.privileges_required = PrivilegeLevel::from_repr(privileges_required)
-                .ok_or_else(|| {
-                    eyre!("Unexpected privileges required value: {privileges_required}")
-                })?;
+            header.privileges_required = enum_value!(PrivilegeLevel, privileges_required)?;
         }
         if *version >= InnoVersion(5, 7, 0) {
             header.privileges_required_overrides_allowed =
@@ -351,14 +350,13 @@ impl Header {
         }
         if *version >= InnoVersion(4, 0, 10) {
             let show_language_dialog = reader.read_u8()?;
-            header.show_language_dialog =
-                AutoBool::from_repr(show_language_dialog).ok_or_else(|| {
-                    eyre!("Unexpected show language dialog value: {show_language_dialog}")
-                })?;
-            header.language_detection = LanguageDetection::from_repr(reader.read_u8()?).unwrap();
+            header.show_language_dialog = enum_value!(AutoBool, show_language_dialog)?;
+            let language_detection = reader.read_u8()?;
+            header.language_detection = enum_value!(LanguageDetection, language_detection)?;
         }
         if *version >= InnoVersion(5, 3, 9) {
-            header.compression = Compression::from_repr(reader.read_u8()?).unwrap();
+            let compression = reader.read_u8()?;
+            header.compression = enum_value!(Compression, compression)?;
         }
         if *version >= InnoVersion(5, 1, 0) && *version < InnoVersion(6, 3, 0) {
             header.architectures_allowed =
@@ -370,7 +368,203 @@ impl Header {
             header.architectures_install_in_64_bit_mode =
                 StoredArchitecture::all().to_identifiers();
         }
+        if *version >= InnoVersion(5, 2, 1) && *version < InnoVersion(5, 3, 10) {
+            header.signed_uninstaller_original_size = reader.read_u32::<LittleEndian>()?;
+            header.signed_uninstaller_header_checksum = reader.read_u32::<LittleEndian>()?;
+        }
+        if *version >= InnoVersion(5, 3, 3) {
+            let disable_dir_page = reader.read_u8()?;
+            header.disable_dir_page = enum_value!(AutoBool, disable_dir_page)?;
+            let disable_program_group_page = reader.read_u8()?;
+            header.disable_program_group_page = enum_value!(AutoBool, disable_program_group_page)?;
+        }
+        if *version >= InnoVersion(5, 5, 0) {
+            header.uninstall_display_size = reader.read_u64::<LittleEndian>()?;
+        } else if *version >= InnoVersion(5, 3, 6) {
+            header.uninstall_display_size = u64::from(reader.read_u32::<LittleEndian>()?);
+        }
+        header.flags |= Self::read_flags(reader, version)?;
+        if *version < InnoVersion(3, 0, 4) {
+            header.privileges_required = PrivilegeLevel::from_header_flags(&header.flags);
+        }
+        if *version < InnoVersion(4, 0, 10) {
+            header.show_language_dialog =
+                AutoBool::from_header_flags(&header.flags, HeaderFlags::SHOW_LANGUAGE_DIALOG);
+            header.language_detection = LanguageDetection::from_header_flags(&header.flags);
+        }
+        if *version < InnoVersion(4, 1, 5) {
+            header.compression = Compression::from_header_flags(&header.flags);
+        }
+        if *version < InnoVersion(5, 3, 3) {
+            header.disable_dir_page =
+                AutoBool::from_header_flags(&header.flags, HeaderFlags::DISABLE_DIR_PAGE);
+            header.disable_program_group_page =
+                AutoBool::from_header_flags(&header.flags, HeaderFlags::DISABLE_PROGRAM_GROUP_PAGE);
+        }
         Ok(header)
+    }
+
+    fn read_flags<R: Read>(reader: &mut R, version: &KnownVersion) -> io::Result<HeaderFlags> {
+        let mut flags = HeaderFlags::empty();
+        let mut flag_reader = FlagReader::new(reader);
+        flag_reader.add(HeaderFlags::DISABLE_STARTUP_PROMPT)?;
+        if *version < InnoVersion(5, 3, 10) {
+            flag_reader.add(HeaderFlags::UNINSTALLABLE)?;
+        }
+        flag_reader.add(HeaderFlags::CREATE_APP_DIR)?;
+        if *version < InnoVersion(5, 3, 3) {
+            flag_reader.add(HeaderFlags::DISABLE_DIR_PAGE)?;
+        }
+        if *version < InnoVersion(1, 3, 6) {
+            flag_reader.add(HeaderFlags::DISABLE_DIR_EXISTS_WARNING)?;
+        }
+        if *version < InnoVersion(5, 3, 3) {
+            flag_reader.add(HeaderFlags::DISABLE_PROGRAM_GROUP_PAGE)?;
+        }
+        flag_reader.add(HeaderFlags::ALLOW_NO_ICONS)?;
+        if *version < InnoVersion(3, 0, 0) || *version >= InnoVersion(3, 0, 3) {
+            flag_reader.add(HeaderFlags::ALWAYS_RESTART)?;
+        }
+        if *version < InnoVersion(1, 3, 3) {
+            flag_reader.add(HeaderFlags::BACK_SOLID)?;
+        }
+        flag_reader.add(HeaderFlags::ALWAYS_USE_PERSONAL_GROUP)?;
+        flag_reader.add(HeaderFlags::WINDOW_VISIBLE)?;
+        flag_reader.add(HeaderFlags::WINDOW_SHOW_CAPTION)?;
+        flag_reader.add(HeaderFlags::WINDOW_RESIZABLE)?;
+        flag_reader.add(HeaderFlags::WINDOW_START_MAXIMISED)?;
+        flag_reader.add(HeaderFlags::ENABLED_DIR_DOESNT_EXIST_WARNING)?;
+        if *version < InnoVersion(4, 1, 2) {
+            flag_reader.add(HeaderFlags::DISABLE_APPEND_DIR)?;
+        }
+        flag_reader.add(HeaderFlags::PASSWORD)?;
+        if *version >= InnoVersion(1, 2, 6) {
+            flag_reader.add(HeaderFlags::ALLOW_ROOT_DIRECTORY)?;
+        }
+        if *version >= InnoVersion(1, 2, 14) {
+            flag_reader.add(HeaderFlags::DISABLE_FINISHED_PAGE)?;
+        }
+        if *version < InnoVersion(3, 0, 4) {
+            flag_reader.add(HeaderFlags::ADMIN_PRIVILEGES_REQUIRED)?;
+        }
+        if *version < InnoVersion(3, 0, 0) {
+            flag_reader.add(HeaderFlags::ALWAYS_CREATE_UNINSTALL_ICON)?;
+        }
+        if *version < InnoVersion(1, 3, 6) {
+            flag_reader.add(HeaderFlags::OVERWRITE_UNINSTALL_REG_ENTRIES)?;
+        }
+        if *version < InnoVersion(5, 6, 1) {
+            flag_reader.add(HeaderFlags::CHANGES_ASSOCIATIONS)?;
+        }
+        if *version >= InnoVersion(1, 3, 0) && *version < InnoVersion(5, 3, 8) {
+            flag_reader.add(HeaderFlags::CREATE_UNINSTALL_REG_KEY)?;
+        }
+        if *version >= InnoVersion(1, 3, 1) {
+            flag_reader.add(HeaderFlags::USE_PREVIOUS_APP_DIR)?;
+        }
+        if *version >= InnoVersion(1, 3, 3) {
+            flag_reader.add(HeaderFlags::BACK_COLOR_HORIZONTAL)?;
+        }
+        if *version >= InnoVersion(1, 3, 10) {
+            flag_reader.add(HeaderFlags::USE_PREVIOUS_GROUP)?;
+        }
+        if *version >= InnoVersion(1, 3, 20) {
+            flag_reader.add(HeaderFlags::UPDATE_UNINSTALL_LOG_APP_NAME)?;
+        }
+        if *version >= InnoVersion(2, 0, 0)
+            || (version.is_isx() && *version >= InnoVersion(1, 3, 10))
+        {
+            flag_reader.add(HeaderFlags::USE_PREVIOUS_SETUP_TYPE)?;
+        }
+        if *version >= InnoVersion(2, 0, 0) {
+            flag_reader.add(HeaderFlags::DISABLE_READY_MEMO)?;
+            flag_reader.add(HeaderFlags::ALWAYS_SHOW_COMPONENTS_LIST)?;
+            flag_reader.add(HeaderFlags::FLAT_COMPONENTS_LIST)?;
+            flag_reader.add(HeaderFlags::SHOW_COMPONENT_SIZES)?;
+            flag_reader.add(HeaderFlags::USE_PREVIOUS_TASKS)?;
+            flag_reader.add(HeaderFlags::DISABLE_READY_PAGE)?;
+        }
+        if *version >= InnoVersion(2, 0, 7) {
+            flag_reader.add(HeaderFlags::ALWAYS_SHOW_DIR_ON_READY_PAGE)?;
+            flag_reader.add(HeaderFlags::ALWAYS_SHOW_GROUP_ON_READY_PAGE)?;
+        }
+        if *version >= InnoVersion(2, 0, 17) && *version < InnoVersion(4, 1, 5) {
+            flag_reader.add(HeaderFlags::BZIP_USED)?;
+        }
+        if *version >= InnoVersion(2, 0, 18) {
+            flag_reader.add(HeaderFlags::ALLOW_UNC_PATH)?;
+        }
+        if *version >= InnoVersion(3, 0, 0) {
+            flag_reader.add(HeaderFlags::USER_INFO_PAGE)?;
+            flag_reader.add(HeaderFlags::USE_PREVIOUS_USER_INFO)?;
+        }
+        if *version >= InnoVersion(3, 0, 1) {
+            flag_reader.add(HeaderFlags::UNINSTALL_RESTART_COMPUTER)?;
+        }
+        if *version >= InnoVersion(3, 0, 3) {
+            flag_reader.add(HeaderFlags::RESTART_IF_NEEDED_BY_RUN)?;
+        }
+        if *version >= InnoVersion(4, 0, 0)
+            || (version.is_isx() && *version >= InnoVersion(3, 0, 3))
+        {
+            flag_reader.add(HeaderFlags::SHOW_TASKS_TREE_LINES)?;
+        }
+        if *version >= InnoVersion(4, 0, 1) && *version < InnoVersion(4, 0, 10) {
+            flag_reader.add(HeaderFlags::DETECT_LANGUAGE_USING_LOCALE)?;
+        }
+        if *version >= InnoVersion(4, 0, 9) {
+            flag_reader.add(HeaderFlags::ALLOW_CANCEL_DURING_INSTALL)?;
+        } else {
+            flags |= HeaderFlags::ALLOW_CANCEL_DURING_INSTALL;
+        }
+        if *version >= InnoVersion(4, 1, 3) {
+            flag_reader.add(HeaderFlags::WIZARD_IMAGE_STRETCH)?;
+        }
+        if *version >= InnoVersion(4, 1, 8) {
+            flag_reader.add(HeaderFlags::APPEND_DEFAULT_DIR_NAME)?;
+            flag_reader.add(HeaderFlags::APPEND_DEFAULT_GROUP_NAME)?;
+        }
+        if *version >= InnoVersion(4, 2, 2) {
+            flag_reader.add(HeaderFlags::ENCRYPTION_USED)?;
+        }
+        if *version >= InnoVersion(5, 0, 4) && *version < InnoVersion(5, 6, 1) {
+            flag_reader.add(HeaderFlags::CHANGES_ENVIRONMENT)?;
+        }
+        if *version >= InnoVersion(5, 1, 7) && !version.is_unicode() {
+            flag_reader.add(HeaderFlags::SHOW_UNDISPLAYABLE_LANGUAGES)?;
+        }
+        if *version >= InnoVersion(5, 1, 13) {
+            flag_reader.add(HeaderFlags::SETUP_LOGGING)?;
+        }
+        if *version >= InnoVersion(5, 2, 1) {
+            flag_reader.add(HeaderFlags::SIGNED_UNINSTALLER)?;
+        }
+        if *version >= InnoVersion(5, 3, 8) {
+            flag_reader.add(HeaderFlags::USE_PREVIOUS_LANGUAGE)?;
+        }
+        if *version >= InnoVersion(5, 3, 9) {
+            flag_reader.add(HeaderFlags::DISABLE_WELCOME_PAGE)?;
+        }
+        if *version >= InnoVersion(5, 5, 0) {
+            flag_reader.add(HeaderFlags::CLOSE_APPLICATIONS)?;
+            flag_reader.add(HeaderFlags::RESTART_APPLICATIONS)?;
+            flag_reader.add(HeaderFlags::ALLOW_NETWORK_DRIVE)?;
+        } else {
+            flags |= HeaderFlags::ALLOW_NETWORK_DRIVE;
+        }
+        if *version >= InnoVersion(5, 5, 7) {
+            flag_reader.add(HeaderFlags::FORCE_CLOSE_APPLICATIONS)?;
+        }
+        if *version >= InnoVersion(6, 0, 0) {
+            flag_reader.add(HeaderFlags::APP_NAME_HAS_CONSTS)?;
+            flag_reader.add(HeaderFlags::USE_PREVIOUS_PRIVILEGES)?;
+            flag_reader.add(HeaderFlags::WIZARD_RESIZABLE)?;
+        }
+        if *version >= InnoVersion(6, 3, 0) {
+            flag_reader.add(HeaderFlags::UNINSTALL_LOGGING)?;
+        }
+        flags |= flag_reader.finalize()?;
+        Ok(flags)
     }
 }
 

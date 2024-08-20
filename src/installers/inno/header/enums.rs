@@ -1,4 +1,4 @@
-use crate::installers::inno::header::flags::PrivilegesRequiredOverrides;
+use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
 use crate::manifests::installer_manifest::ElevationRequirement;
 use strum::FromRepr;
 // This file defines enums corresponding to Inno Setup's header values. Each enum is represented as
@@ -50,6 +50,16 @@ pub enum AutoBool {
     Yes,
 }
 
+impl AutoBool {
+    pub const fn from_header_flags(flags: &HeaderFlags, flag: HeaderFlags) -> Self {
+        if flags.contains(flag) {
+            Self::Yes
+        } else {
+            Self::No
+        }
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Eq, FromRepr)]
 #[repr(u8)]
 pub enum PrivilegeLevel {
@@ -61,6 +71,14 @@ pub enum PrivilegeLevel {
 }
 
 impl PrivilegeLevel {
+    pub const fn from_header_flags(flags: &HeaderFlags) -> Self {
+        if flags.contains(HeaderFlags::ADMIN_PRIVILEGES_REQUIRED) {
+            Self::Admin
+        } else {
+            Self::None
+        }
+    }
+
     pub const fn to_elevation_requirement(
         &self,
         overrides: &PrivilegesRequiredOverrides,
@@ -80,7 +98,17 @@ pub enum LanguageDetection {
     #[default]
     UILanguage,
     LocaleLanguage,
-    NoLanguageDetection,
+    None,
+}
+
+impl LanguageDetection {
+    pub const fn from_header_flags(flags: &HeaderFlags) -> Self {
+        if flags.contains(HeaderFlags::DETECT_LANGUAGE_USING_LOCALE) {
+            Self::LocaleLanguage
+        } else {
+            Self::UILanguage
+        }
+    }
 }
 
 #[derive(Debug, Default, FromRepr)]
@@ -93,4 +121,14 @@ pub enum Compression {
     LZMA2,
     #[default]
     Unknown = u8::MAX, // Set to u8::MAX to avoid conflicts with future variants
+}
+
+impl Compression {
+    pub const fn from_header_flags(flags: &HeaderFlags) -> Self {
+        if flags.contains(HeaderFlags::BZIP_USED) {
+            Self::BZip2
+        } else {
+            Self::Zlib
+        }
+    }
 }
