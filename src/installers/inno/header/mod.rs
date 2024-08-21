@@ -262,10 +262,13 @@ impl Header {
         header.uninstall_delete_entry_count = reader.read_u32::<LittleEndian>()?;
         header.run_entry_count = reader.read_u32::<LittleEndian>()?;
         header.uninstall_run_entry_count = reader.read_u32::<LittleEndian>()?;
+        let mut license_size = 0;
+        let mut info_before_size = 0;
+        let mut info_after_size = 0;
         if *version < InnoVersion(1, 3, 0) {
-            let _license_size = reader.read_u32::<LittleEndian>()?;
-            let _info_before_size = reader.read_u32::<LittleEndian>()?;
-            let _info_after_size = reader.read_u32::<LittleEndian>()?;
+            license_size = reader.read_u32::<LittleEndian>()?;
+            info_before_size = reader.read_u32::<LittleEndian>()?;
+            info_after_size = reader.read_u32::<LittleEndian>()?;
         }
         header.windows_version_range = WindowsVersionRange::load(reader, &version.version)?;
         header.back_color = reader.read_u32::<LittleEndian>()?;
@@ -405,6 +408,11 @@ impl Header {
                 AutoBool::from_header_flags(&header.flags, HeaderFlags::DISABLE_DIR_PAGE);
             header.disable_program_group_page =
                 AutoBool::from_header_flags(&header.flags, HeaderFlags::DISABLE_PROGRAM_GROUP_PAGE);
+        }
+        if *version < InnoVersion(1, 3, 0) {
+            header.license_text = sized_encoded_string(reader, license_size, WINDOWS_1252)?;
+            header.info_before = sized_encoded_string(reader, info_before_size, WINDOWS_1252)?;
+            header.info_after = sized_encoded_string(reader, info_after_size, WINDOWS_1252)?;
         }
         Ok(header)
     }
@@ -573,11 +581,26 @@ impl Header {
     }
 }
 
+/// Read an encoded String where the length is stored in the 4 bytes immediately prior
 fn encoded_string<R: Read>(
     reader: &mut R,
     encoding: &'static Encoding,
 ) -> io::Result<Option<String>> {
     let length = reader.read_u32::<LittleEndian>()?;
+    if length == 0 {
+        return Ok(None);
+    }
+    let mut buf = vec![0; length as usize];
+    reader.read_exact(&mut buf)?;
+    Ok(Some(encoding.decode(&buf).0.into_owned()))
+}
+
+/// Read an encoded String where the length is known
+fn sized_encoded_string<R: Read>(
+    reader: &mut R,
+    length: u32,
+    encoding: &'static Encoding
+) -> io::Result<Option<String>> {
     if length == 0 {
         return Ok(None);
     }
