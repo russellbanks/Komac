@@ -21,6 +21,8 @@ use crate::types::architecture::Architecture;
 
 const VERSION_LEN: usize = 1 << 6;
 
+const MAX_SUPPORTED_VERSION: InnoVersion = InnoVersion(6, 3, u8::MAX);
+
 pub struct InnoFile {
     pub architecture: Option<Architecture>,
     pub unsupported_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
@@ -58,6 +60,10 @@ impl InnoFile {
                 &String::from_utf8_lossy(version_bytes)
             )
         })?;
+
+        if known_version > MAX_SUPPORTED_VERSION {
+            bail!("Inno Setup version {known_version} is newer than the maximum supported version {MAX_SUPPORTED_VERSION}");
+        }
 
         let mut cursor = Cursor::new(data);
         cursor.set_position((header_offset + VERSION_LEN) as u64);

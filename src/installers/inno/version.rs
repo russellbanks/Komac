@@ -1,6 +1,7 @@
 use bitflags::bitflags;
 use memchr::memchr;
 use std::cmp::Ordering;
+use derive_more::Display;
 
 bitflags! {
     #[derive(Debug, Default, PartialEq, Eq)]
@@ -10,10 +11,12 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, Default, Display, PartialEq, Eq, PartialOrd)]
+#[display("{_0}.{_1}.{_2}")]
 pub struct InnoVersion(pub u8, pub u8, pub u8);
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, Display, PartialEq, Eq)]
+#[display("{version}")]
 pub struct KnownVersion {
     pub version: InnoVersion,
     pub variant: VersionFlags,
