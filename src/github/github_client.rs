@@ -25,7 +25,9 @@ use crate::github::graphql::get_all_values::{
 };
 use crate::github::graphql::get_branches::{GetBranches, Ref as GetBranchRef};
 use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
-use crate::github::graphql::get_deep_directory_content::{DeepGitObject, GetDeepDirectoryContent};
+use crate::github::graphql::get_deep_directory_content::{
+    DeepGitObject, DeepGitObjectNested, GetDeepDirectoryContent,
+};
 use crate::github::graphql::get_directory_content::{
     GetDirectoryContent, GetDirectoryContentVariables, TreeGitObject,
 };
@@ -131,10 +133,8 @@ impl GitHub {
             .await?;
         let files = response
             .data
-            .and_then(|data| data.repository)
-            .and_then(|repository| repository.object)
-            .and_then(|object| {
-                if let DeepGitObject::Tree(tree) = object {
+            .and_then(|data| {
+                if let DeepGitObject::Tree(tree) = data.repository?.object? {
                     return Some(tree.entries);
                 }
                 None
@@ -147,14 +147,13 @@ impl GitHub {
             })?
             .into_iter()
             .filter_map(|entry| {
-                if let Some(DeepGitObject::Tree(tree)) = &entry.object {
+                if let Some(DeepGitObjectNested::TreeNested(tree)) = &entry.object {
                     if tree.entries.iter().all(|entry| entry.type_ != "tree") {
-                        return Some(entry.name);
+                        return Some(PackageVersion::new(&entry.name).ok()?);
                     }
                 }
                 None
             })
-            .filter_map(|entry| PackageVersion::new(&entry).ok())
             .collect::<BTreeSet<_>>();
 
         if files.is_empty() {
@@ -245,10 +244,8 @@ impl GitHub {
             .await?;
         response
             .data
-            .and_then(|data| data.repository)
-            .and_then(|repository| repository.object)
-            .and_then(|object| {
-                if let GitObject::Tree(tree) = object {
+            .and_then(|data| {
+                if let GitObject::Tree(tree) = data.repository?.object? {
                     return Some(tree.entries);
                 }
                 None
@@ -335,8 +332,7 @@ impl GitHub {
             .await?;
         response
             .data
-            .and_then(|data| data.create_ref)
-            .and_then(|create_ref| create_ref.ref_)
+            .and_then(|data| data.create_ref?.ref_)
             .ok_or_else(|| {
                 response.errors.unwrap_or_default().into_iter().fold(
                     eyre!("No reference was returned after creating {branch_name}"),
@@ -378,8 +374,7 @@ impl GitHub {
             .await?;
         response
             .data
-            .and_then(|data| data.create_commit_on_branch)
-            .and_then(|commit_object| commit_object.commit)
+            .and_then(|data| data.create_commit_on_branch?.commit)
             .map(|commit| commit.url)
             .ok_or_else(|| {
                 response.errors.unwrap_or_default().into_iter().fold(
@@ -406,10 +401,8 @@ impl GitHub {
             .await?;
         let entries = response
             .data
-            .and_then(|data| data.repository)
-            .and_then(|repository| repository.object)
-            .and_then(|object| {
-                if let TreeGitObject::Tree(tree) = object {
+            .and_then(|data| {
+                if let TreeGitObject::Tree(tree) = data.repository?.object? {
                     return Some(tree.entries);
                 }
                 None
@@ -528,8 +521,7 @@ impl GitHub {
             .await?;
         response
             .data
-            .and_then(|data| data.create_pull_request)
-            .and_then(|create_pull_request| create_pull_request.pull_request)
+            .and_then(|data| data.create_pull_request?.pull_request)
             .map(|pull_request| pull_request.url)
             .ok_or_else(|| {
                 response
@@ -586,16 +578,14 @@ impl GitHub {
             }))
             .await?;
 
-        Ok(response
-            .data
-            .and_then(|data| data.search.edges.into_iter().next())
-            .and_then(|edge| edge.node)
-            .and_then(|node| {
-                if let SearchResultItem::PullRequest(pull_request) = node {
-                    return Some(pull_request);
-                }
-                None
-            }))
+        Ok(response.data.and_then(|mut data| {
+            if let SearchResultItem::PullRequest(pull_request) =
+                data.search.edges.swap_remove(0).node?
+            {
+                return Some(pull_request);
+            }
+            None
+        }))
     }
 
     pub async fn get_all_values(

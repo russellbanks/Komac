@@ -1,6 +1,27 @@
 use crate::github::graphql::get_directory_content::GetDirectoryContentVariablesFields;
 use crate::github::graphql::github_schema::github_schema as schema;
 
+/*
+query GetDeepDirectoryContent($owner: String!, $name: String!, $expression: String!) {
+  repository(owner: $owner, name: $name) {
+    object(expression: $expression) {
+      ... on Tree {
+        entries {
+          name
+          object {
+            ... on Tree {
+              entries {
+                type
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+*/
+
 #[derive(cynic::QueryFragment)]
 pub struct Tree {
     #[cynic(flatten)]
@@ -10,16 +31,13 @@ pub struct Tree {
 #[derive(cynic::QueryFragment)]
 pub struct TreeEntry {
     pub name: String,
-    #[cynic(rename = "type")]
-    pub type_: String,
-    #[cynic(recurse = "1")]
-    pub object: Option<DeepGitObject>,
+    pub object: Option<DeepGitObjectNested>,
 }
 
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Query", variables = "GetDirectoryContentVariables")]
 pub struct GetDeepDirectoryContent {
-    #[arguments(name: $name, owner: $owner)]
+    #[arguments(owner: $owner, name: $name)]
     pub repository: Option<Repository>,
 }
 
@@ -34,6 +52,28 @@ pub struct Repository {
 #[cynic(graphql_type = "GitObject")]
 pub enum DeepGitObject {
     Tree(Tree),
+    #[cynic(fallback)]
+    Unknown,
+}
+
+#[derive(cynic::QueryFragment)]
+#[cynic(graphql_type = "Tree")]
+pub struct TreeNested {
+    #[cynic(flatten)]
+    pub entries: Vec<TreeEntryNested>,
+}
+
+#[derive(cynic::QueryFragment)]
+#[cynic(graphql_type = "TreeEntry")]
+pub struct TreeEntryNested {
+    #[cynic(rename = "type")]
+    pub type_: String,
+}
+
+#[derive(cynic::InlineFragments)]
+#[cynic(graphql_type = "GitObject")]
+pub enum DeepGitObjectNested {
+    TreeNested(TreeNested),
     #[cynic(fallback)]
     Unknown,
 }
