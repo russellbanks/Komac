@@ -2,10 +2,9 @@ use std::collections::BTreeSet;
 use std::io::Cursor;
 use std::mem;
 
-use crate::installers::inno::inno::InnoFile;
 use crate::installers::msi::Msi;
-use crate::installers::msix_family::msix::Msix;
-use crate::installers::msix_family::msixbundle::MsixBundle;
+use crate::installers::msix_family::Msix;
+use crate::installers::msix_family::bundle::MsixBundle;
 use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::{
     ElevationRequirement, Platform, Scope, UnsupportedOSArchitecture,
@@ -26,6 +25,7 @@ use memmap2::Mmap;
 use package_family_name::PackageFamilyName;
 use yara_x::mods::pe::{Resource, ResourceType};
 use yara_x::mods::PE;
+use crate::installers::inno::InnoFile;
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";

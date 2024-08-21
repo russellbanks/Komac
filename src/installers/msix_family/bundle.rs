@@ -1,7 +1,6 @@
 use std::collections::BTreeSet;
 use std::io::{Read, Seek};
 
-use crate::installers::msix_family::msix;
 use crate::installers::msix_family::utils::{hash_signature, read_manifest};
 use crate::manifests::installer_manifest::Platform;
 use crate::types::architecture::Architecture;
@@ -12,6 +11,7 @@ use package_family_name::PackageFamilyName;
 use quick_xml::de::from_str;
 use serde::Deserialize;
 use zip::ZipArchive;
+use crate::installers::msix_family;
 
 pub struct MsixBundle {
     pub signature_sha_256: Sha256String,
@@ -105,7 +105,7 @@ struct Package {
     #[serde(rename = "@Version")]
     version: String,
     #[serde(rename = "Dependencies")]
-    dependencies: msix::Dependencies,
+    dependencies: msix_family::Dependencies,
 }
 
 /// <https://learn.microsoft.com/en-gb/uwp/schemas/bundlemanifestschema/element-package#attributes>
