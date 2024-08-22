@@ -185,7 +185,7 @@ impl DefaultLocaleManifest {
             .and_then(|values| mem::take(&mut values.release_notes));
         self.release_notes_url = github_values
             .as_ref()
-            .map(|values| values.release_notes_url.clone());
+            .and_then(|values| values.release_notes_url.clone());
         self.manifest_type = ManifestType::DefaultLocale;
         self.manifest_version = ManifestVersion::default();
     }

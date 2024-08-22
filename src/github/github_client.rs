@@ -611,9 +611,7 @@ impl GitHub {
         }
         .transpose()?;
 
-        let release = repository
-            .release
-            .ok_or_else(|| eyre!("No release was found with the tag of {tag_name}"))?;
+        let release = repository.release;
 
         let topics = repository
             .repository_topics
@@ -646,10 +644,11 @@ impl GitHub {
                 .and_then(|license| License::try_new(license).ok()),
             license_url,
             package_url: PackageUrl::from_str(repository.url.as_str())?,
-            release_notes: release
-                .description
-                .and_then(|body| ReleaseNotes::format(&body, &owner, &repo)),
-            release_notes_url: ReleaseNotesUrl::from_str(release.url.as_str())?,
+            release_notes: release.as_ref().and_then(|release| {
+                ReleaseNotes::format(release.description.as_ref()?, &owner, &repo)
+            }),
+            release_notes_url: release
+                .and_then(|release| ReleaseNotesUrl::from_str(release.url.as_str()).ok()),
             topics: Option::from(topics).filter(|topics| !topics.is_empty()),
         })
     }
@@ -695,7 +694,7 @@ pub struct GitHubValues {
     pub license_url: Option<LicenseUrl>,
     pub package_url: PackageUrl,
     pub release_notes: Option<ReleaseNotes>,
-    pub release_notes_url: ReleaseNotesUrl,
+    pub release_notes_url: Option<ReleaseNotesUrl>,
     pub topics: Option<BTreeSet<Tag>>,
 }
 
