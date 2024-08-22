@@ -69,3 +69,12 @@ pub enum TargetGitObject {
     #[cynic(fallback)]
     Unknown,
 }
+
+impl TargetGitObject {
+    pub fn into_commit(self) -> Option<Commit> {
+        match self {
+            Self::Commit(commit) => Some(commit),
+            Self::Unknown => None,
+        }
+    }
+}

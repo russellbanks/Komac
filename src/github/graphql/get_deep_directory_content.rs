@@ -56,6 +56,15 @@ pub enum DeepGitObject {
     Unknown,
 }
 
+impl DeepGitObject {
+    pub fn into_entries(self) -> Option<Vec<TreeEntry>> {
+        match self {
+            Self::Tree(tree) => Some(tree.entries),
+            Self::Unknown => None,
+        }
+    }
+}
+
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Tree")]
 pub struct TreeNested {
@@ -76,4 +85,13 @@ pub enum DeepGitObjectNested {
     TreeNested(TreeNested),
     #[cynic(fallback)]
     Unknown,
+}
+
+impl DeepGitObjectNested {
+    pub fn into_entries(self) -> Option<Vec<TreeEntryNested>> {
+        match self {
+            Self::TreeNested(tree) => Some(tree.entries),
+            Self::Unknown => None,
+        }
+    }
 }

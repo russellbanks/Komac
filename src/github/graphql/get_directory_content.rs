@@ -53,3 +53,12 @@ pub enum TreeGitObject {
     #[cynic(fallback)]
     Unknown,
 }
+
+impl TreeGitObject {
+    pub fn into_entries(self) -> Option<Vec<TreeEntry>> {
+        match self {
+            Self::Tree(tree) => Some(tree.entries),
+            Self::Unknown => None,
+        }
+    }
+}

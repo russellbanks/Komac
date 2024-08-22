@@ -262,14 +262,21 @@ impl Header {
         header.uninstall_delete_entry_count = reader.read_u32::<LittleEndian>()?;
         header.run_entry_count = reader.read_u32::<LittleEndian>()?;
         header.uninstall_run_entry_count = reader.read_u32::<LittleEndian>()?;
-        let mut license_size = 0;
-        let mut info_before_size = 0;
-        let mut info_after_size = 0;
-        if *version < InnoVersion(1, 3, 0) {
-            license_size = reader.read_u32::<LittleEndian>()?;
-            info_before_size = reader.read_u32::<LittleEndian>()?;
-            info_after_size = reader.read_u32::<LittleEndian>()?;
-        }
+        let license_size = if *version < InnoVersion(1, 3, 0) {
+            reader.read_u32::<LittleEndian>()?
+        } else {
+            0
+        };
+        let info_before_size = if *version < InnoVersion(1, 3, 0) {
+            reader.read_u32::<LittleEndian>()?
+        } else {
+            0
+        };
+        let info_after_size = if *version < InnoVersion(1, 3, 0) {
+            reader.read_u32::<LittleEndian>()?
+        } else {
+            0
+        };
         header.windows_version_range = WindowsVersionRange::load(reader, &version.version)?;
         header.back_color = reader.read_u32::<LittleEndian>()?;
         if *version >= InnoVersion(1, 3, 3) {
@@ -599,7 +606,7 @@ fn encoded_string<R: Read>(
 fn sized_encoded_string<R: Read>(
     reader: &mut R,
     length: u32,
-    encoding: &'static Encoding
+    encoding: &'static Encoding,
 ) -> io::Result<Option<String>> {
     if length == 0 {
         return Ok(None);
@@ -618,4 +625,3 @@ fn password_salt<R: Read>(reader: &mut R) -> io::Result<String> {
     password_salt.push_str(&String::from_utf8_lossy(&password_salt_buf));
     Ok(password_salt)
 }
-

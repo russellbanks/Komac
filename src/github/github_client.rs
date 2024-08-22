@@ -25,18 +25,14 @@ use crate::github::graphql::get_all_values::{
 };
 use crate::github::graphql::get_branches::{GetBranches, Ref as GetBranchRef};
 use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
-use crate::github::graphql::get_deep_directory_content::{
-    DeepGitObject, DeepGitObjectNested, GetDeepDirectoryContent,
-};
+use crate::github::graphql::get_deep_directory_content::GetDeepDirectoryContent;
 use crate::github::graphql::get_directory_content::{
-    GetDirectoryContent, GetDirectoryContentVariables, TreeGitObject,
+    GetDirectoryContent, GetDirectoryContentVariables,
 };
-use crate::github::graphql::get_directory_content_with_text::{
-    GetDirectoryContentWithText, GitObject,
-};
+use crate::github::graphql::get_directory_content_with_text::GetDirectoryContentWithText;
 use crate::github::graphql::get_existing_pull_request;
 use crate::github::graphql::get_existing_pull_request::{
-    GetExistingPullRequest, GetExistingPullRequestVariables, SearchResultItem,
+    GetExistingPullRequest, GetExistingPullRequestVariables,
 };
 use crate::github::graphql::get_pull_request_from_branch::{
     GetPullRequestFromBranch, GetPullRequestFromBranchVariables, PullRequest,
@@ -133,12 +129,7 @@ impl GitHub {
             .await?;
         let files = response
             .data
-            .and_then(|data| {
-                if let DeepGitObject::Tree(tree) = data.repository?.object? {
-                    return Some(tree.entries);
-                }
-                None
-            })
+            .and_then(|data| data.repository?.object?.into_entries())
             .ok_or_else(|| {
                 response.errors.unwrap_or_default().into_iter().fold(
                     eyre!("Failed to retrieve directory content of {path}"),
@@ -147,12 +138,12 @@ impl GitHub {
             })?
             .into_iter()
             .filter_map(|entry| {
-                if let Some(DeepGitObjectNested::TreeNested(tree)) = &entry.object {
-                    if tree.entries.iter().all(|entry| entry.type_ != "tree") {
-                        return Some(PackageVersion::new(&entry.name).ok()?);
-                    }
-                }
-                None
+                entry
+                    .object?
+                    .into_entries()?
+                    .iter()
+                    .all(|entry| entry.type_ != "tree")
+                    .then(|| PackageVersion::new(&entry.name).ok())?
             })
             .collect::<BTreeSet<_>>();
 
@@ -244,21 +235,15 @@ impl GitHub {
             .await?;
         response
             .data
-            .and_then(|data| {
-                if let GitObject::Tree(tree) = data.repository?.object? {
-                    return Some(tree.entries);
-                }
-                None
-            })
+            .and_then(|data| data.repository?.object?.into_tree_entries())
             .map(|entries| {
                 entries.into_iter().filter_map(|entry| {
-                    if let Some(GitObject::Blob(blob)) = entry.object {
-                        return Some(GitHubFile {
+                    entry.object?.into_blob_text().map(|text| {
+                        GitHubFile {
                             name: entry.name,
-                            text: blob.text.unwrap_or_default(),
-                        });
-                    }
-                    None
+                            text
+                        }
+                    })
                 })
             })
             .ok_or_else(|| {
@@ -298,10 +283,7 @@ impl GitHub {
 
         let commits = default_branch
             .target
-            .and_then(|target| match target {
-                TargetGitObject::Commit(commit) => Some(commit),
-                TargetGitObject::Unknown => None,
-            })
+            .and_then(TargetGitObject::into_commit)
             .ok_or_else(|| eyre!("No default branch object was returned when requesting repository information for {owner}/{name}"))?;
 
         Ok(RepositoryData {
@@ -401,12 +383,7 @@ impl GitHub {
             .await?;
         let entries = response
             .data
-            .and_then(|data| {
-                if let TreeGitObject::Tree(tree) = data.repository?.object? {
-                    return Some(tree.entries);
-                }
-                None
-            })
+            .and_then(|data| data.repository?.object?.into_entries())
             .ok_or_else(|| {
                 response.errors.unwrap_or_default().into_iter().fold(
                     eyre!("No directory content was returned for {path}"),
@@ -578,14 +555,9 @@ impl GitHub {
             }))
             .await?;
 
-        Ok(response.data.and_then(|mut data| {
-            if let SearchResultItem::PullRequest(pull_request) =
-                data.search.edges.swap_remove(0).node?
-            {
-                return Some(pull_request);
-            }
-            None
-        }))
+        Ok(response
+            .data
+            .and_then(|mut data| data.search.edges.swap_remove(0).node?.into_pull_request()))
     }
 
     pub async fn get_all_values(
@@ -620,11 +592,10 @@ impl GitHub {
                 .into_iter()
                 .filter_map(|entry| (entry.type_ == "blob").then_some(entry.name))
                 .find(|name| {
-                    name.rfind('.')
-                        .map_or(name.to_ascii_lowercase(), |dot_index| {
-                            name[..dot_index].to_ascii_lowercase()
-                        })
-                        == "license"
+                    name.rfind('.').map_or_else(
+                        || name.to_ascii_lowercase(),
+                        |dot_index| name[..dot_index].to_ascii_lowercase(),
+                    ) == "license"
                 })
                 .map(|name| {
                     LicenseUrl::from_str(&format!(

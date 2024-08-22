@@ -39,3 +39,12 @@ pub enum SearchResultItem {
     #[cynic(fallback)]
     Unknown,
 }
+
+impl SearchResultItem {
+    pub fn into_pull_request(self) -> Option<PullRequest> {
+        match self {
+            Self::PullRequest(pull_request) => Some(pull_request),
+            Self::Unknown => None,
+        }
+    }
+}

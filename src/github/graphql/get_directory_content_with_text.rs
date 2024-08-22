@@ -59,3 +59,19 @@ pub enum GitObject {
     #[cynic(fallback)]
     Unknown,
 }
+
+impl GitObject {
+    pub fn into_tree_entries(self) -> Option<Vec<TreeEntry>> {
+        match self {
+            Self::Tree(tree) => Some(tree.entries),
+            _ => None,
+        }
+    }
+
+    pub fn into_blob_text(self) -> Option<String> {
+        match self {
+            Self::Blob(blob) => blob.text,
+            _ => None,
+        }
+    }
+}
