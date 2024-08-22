@@ -555,9 +555,14 @@ impl GitHub {
             }))
             .await?;
 
-        Ok(response
-            .data
-            .and_then(|mut data| data.search.edges.swap_remove(0).node?.into_pull_request()))
+        Ok(response.data.and_then(|data| {
+            data.search
+                .edges
+                .into_iter()
+                .next()?
+                .node?
+                .into_pull_request()
+        }))
     }
 
     pub async fn get_all_values(
