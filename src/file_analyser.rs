@@ -2,9 +2,10 @@ use std::collections::BTreeSet;
 use std::io::Cursor;
 use std::mem;
 
+use crate::installers::inno::InnoFile;
 use crate::installers::msi::Msi;
-use crate::installers::msix_family::Msix;
 use crate::installers::msix_family::bundle::MsixBundle;
+use crate::installers::msix_family::Msix;
 use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::{
     ElevationRequirement, Platform, Scope, UnsupportedOSArchitecture,
@@ -25,7 +26,6 @@ use memmap2::Mmap;
 use package_family_name::PackageFamilyName;
 use yara_x::mods::pe::{Resource, ResourceType};
 use yara_x::mods::PE;
-use crate::installers::inno::InnoFile;
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -166,7 +166,13 @@ impl<'data> FileAnalyser<'data> {
             file_extensions: msix
                 .as_mut()
                 .and_then(|msix| mem::take(&mut msix.file_extensions)),
-            product_language: msi.as_mut().map(|msi| mem::take(&mut msi.product_language)),
+            product_language: msi
+                .as_mut()
+                .map(|msi| mem::take(&mut msi.product_language))
+                .or_else(|| {
+                    inno.as_mut()
+                        .and_then(|inno| mem::take(&mut inno.installer_locale))
+                }),
             last_modified: None,
             display_name: msi
                 .as_mut()

@@ -6,11 +6,7 @@ mod flags;
 use std::io;
 use std::io::Read;
 
-use bit_set::BitSet;
-use byteorder::{LittleEndian, ReadBytesExt};
-use color_eyre::eyre::{eyre, Result};
-use encoding_rs::{Encoding, UTF_16LE, WINDOWS_1252};
-
+use crate::installers::inno::encoding::{encoded_string, sized_encoded_string};
 use crate::installers::inno::header::architecture::{ArchitectureIdentifiers, StoredArchitecture};
 use crate::installers::inno::header::enums::{
     AutoBool, Compression, ImageAlphaFormat, InnoStyle, InstallVerbosity, LanguageDetection,
@@ -20,6 +16,10 @@ use crate::installers::inno::header::flag_reader::FlagReader;
 use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::windows_version::WindowsVersionRange;
+use bit_set::BitSet;
+use byteorder::{LittleEndian, ReadBytesExt};
+use color_eyre::eyre::{eyre, Result};
+use encoding_rs::{UTF_16LE, WINDOWS_1252};
 
 macro_rules! enum_value {
     ($enum_type:ty, $value:ident) => {
@@ -586,34 +586,6 @@ impl Header {
         flags |= flag_reader.finalize()?;
         Ok(flags)
     }
-}
-
-/// Read an encoded String where the length is stored in the 4 bytes immediately prior
-fn encoded_string<R: Read>(
-    reader: &mut R,
-    encoding: &'static Encoding,
-) -> io::Result<Option<String>> {
-    let length = reader.read_u32::<LittleEndian>()?;
-    if length == 0 {
-        return Ok(None);
-    }
-    let mut buf = vec![0; length as usize];
-    reader.read_exact(&mut buf)?;
-    Ok(Some(encoding.decode(&buf).0.into_owned()))
-}
-
-/// Read an encoded String where the length is known
-fn sized_encoded_string<R: Read>(
-    reader: &mut R,
-    length: u32,
-    encoding: &'static Encoding,
-) -> io::Result<Option<String>> {
-    if length == 0 {
-        return Ok(None);
-    }
-    let mut buf = vec![0; length as usize];
-    reader.read_exact(&mut buf)?;
-    Ok(Some(encoding.decode(&buf).0.into_owned()))
 }
 
 fn password_salt<R: Read>(reader: &mut R) -> io::Result<String> {

@@ -1,13 +1,11 @@
 mod block_filter;
+mod encoding;
 mod header;
+mod language;
 mod loader;
 mod lzma;
 mod version;
 mod windows_version;
-
-use std::collections::BTreeSet;
-use std::io::Cursor;
-use std::mem;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use color_eyre::eyre::{bail, eyre, OptionExt};
@@ -15,16 +13,23 @@ use color_eyre::Result;
 use crc32fast::Hasher;
 use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
+use msi::Language;
+use std::collections::BTreeSet;
+use std::io::{Cursor, Read};
+use std::mem;
+use std::str::FromStr;
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 
 use crate::installers::inno::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
 use crate::installers::inno::header::Header;
+use crate::installers::inno::language::LanguageEntry;
 use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
 use crate::installers::inno::lzma::read_inno_lzma_stream_header;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::manifests::installer_manifest::{ElevationRequirement, UnsupportedOSArchitecture};
 use crate::types::architecture::Architecture;
+use crate::types::language_tag::LanguageTag;
 
 const VERSION_LEN: usize = 1 << 6;
 
@@ -38,6 +43,7 @@ pub struct InnoFile {
     pub app_publisher: Option<String>,
     pub product_code: Option<String>,
     pub elevation_requirement: Option<ElevationRequirement>,
+    pub installer_locale: Option<LanguageTag>,
 }
 
 impl InnoFile {
@@ -124,16 +130,21 @@ impl InnoFile {
         }
 
         let mut block_filter = InnoBlockFilter::new(cursor);
-        let mut header = if compression == CompressionType::LZMA1 {
+        let mut reader: Box<dyn Read> = if compression == CompressionType::LZMA1 {
             let stream = read_inno_lzma_stream_header(&mut block_filter)?;
-            let mut decompressor = XzDecoder::new_stream(block_filter, stream);
-            Header::load(&mut decompressor, &known_version)?
+            Box::new(XzDecoder::new_stream(block_filter, stream))
         } else if compression == CompressionType::Zlib {
-            let mut zlib_decoder = ZlibDecoder::new(block_filter);
-            Header::load(&mut zlib_decoder, &known_version)?
+            Box::new(ZlibDecoder::new(block_filter))
         } else {
-            Header::load(&mut block_filter, &known_version)?
+            Box::new(block_filter)
         };
+
+        let mut header = Header::load(&mut reader, &known_version)?;
+
+        let mut language_entries = Vec::new();
+        for _ in 0..header.language_count {
+            language_entries.push(LanguageEntry::load(&mut reader, &known_version)?);
+        }
 
         Ok(Self {
             architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
@@ -143,8 +154,15 @@ impl InnoFile {
             app_version: mem::take(&mut header.app_version),
             app_publisher: mem::take(&mut header.app_publisher),
             product_code: mem::take(&mut header.app_id).map(to_product_code),
-            elevation_requirement: mem::take(&mut header.privileges_required)
+            elevation_requirement: header
+                .privileges_required
                 .to_elevation_requirement(&header.privileges_required_overrides_allowed),
+            installer_locale: language_entries.first().and_then(|language_entry| {
+                LanguageTag::from_str(
+                    Language::from_code(u16::try_from(language_entry.language_id).ok()?).tag(),
+                )
+                .ok()
+            }),
         })
     }
 }
