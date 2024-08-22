@@ -14,7 +14,7 @@ Komac is both blazingly fast 🔥 and incredibly low on memory, using just ~3.5M
 
 ## Installation
 
-Komac is cross-platform and binaries are built for Windows, Linux, and FreeBSD.
+Komac is cross-platform and binaries are built for Windows, Linux, and macOS.
 
 ### All platforms
 
