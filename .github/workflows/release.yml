@@ -62,7 +62,7 @@ jobs:
         if: contains(matrix.platform.bins, 'cargo-deb')
         shell: pwsh
         run: |
-          $nightly = if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') { "--deb-version=nightly" } else { "" }
+          $nightly = if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') { "--deb-version=2.nightly" } else { "" }
           cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip $nightly
 
       - name: Create RPM package
