@@ -1,16 +1,14 @@
-mod block_filter;
 mod encoding;
 mod header;
 mod language;
 mod loader;
-mod lzma;
+mod read;
 mod version;
 mod windows_version;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use color_eyre::eyre::{bail, eyre, OptionExt};
 use color_eyre::Result;
-use crc32fast::Hasher;
 use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
 use msi::Language;
@@ -21,11 +19,12 @@ use std::str::FromStr;
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 
-use crate::installers::inno::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
 use crate::installers::inno::header::Header;
 use crate::installers::inno::language::LanguageEntry;
 use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
-use crate::installers::inno::lzma::read_inno_lzma_stream_header;
+use crate::installers::inno::read::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
+use crate::installers::inno::read::crc32::Crc32Reader;
+use crate::installers::inno::read::lzma::read_inno_lzma_stream_header;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::manifests::installer_manifest::{ElevationRequirement, UnsupportedOSArchitecture};
 use crate::types::architecture::Architecture;
@@ -83,16 +82,13 @@ impl InnoFile {
 
         let expected_checksum = cursor.read_u32::<LittleEndian>()?;
 
-        let mut actual_checksum = Hasher::new();
+        let mut actual_checksum = Crc32Reader::new(&mut cursor);
 
         let mut compression = CompressionType::Stored;
         let mut stored_size = 0;
         if known_version > InnoVersion(4, 0, 9) {
-            stored_size = cursor.read_u32::<LittleEndian>()?;
-            actual_checksum.update(&stored_size.to_le_bytes());
-
-            let compressed = cursor.read_u8()?;
-            actual_checksum.update(&compressed.to_le_bytes());
+            stored_size = actual_checksum.read_u32::<LittleEndian>()?;
+            let compressed = actual_checksum.read_u8()?;
 
             compression = if compressed != 0 {
                 if known_version > InnoVersion(4, 1, 6) {
@@ -104,11 +100,9 @@ impl InnoFile {
                 CompressionType::Stored
             };
         } else {
-            let compressed_size = cursor.read_u32::<LittleEndian>()?;
-            actual_checksum.update(&compressed_size.to_le_bytes());
+            let compressed_size = actual_checksum.read_u32::<LittleEndian>()?;
 
-            let uncompressed_size = cursor.read_u32::<LittleEndian>()?;
-            actual_checksum.update(&uncompressed_size.to_le_bytes());
+            let uncompressed_size = actual_checksum.read_u32::<LittleEndian>()?;
 
             if compressed_size == u32::MAX {
                 stored_size = uncompressed_size;

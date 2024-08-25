@@ -24,7 +24,7 @@ pub struct KnownVersion {
 
 impl PartialEq<InnoVersion> for KnownVersion {
     fn eq(&self, other: &InnoVersion) -> bool {
-        self.version == *other
+        self.version.eq(other)
     }
 }
 
