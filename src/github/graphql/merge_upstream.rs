@@ -43,7 +43,7 @@ mod tests {
         let id = Id::new("");
         let operation = MergeUpstream::build(MergeUpstreamVariables {
             branch_ref_id: &id,
-            upstream_target_oid: GitObjectId(String::new()),
+            upstream_target_oid: GitObjectId::new(""),
             force: false,
         });
 

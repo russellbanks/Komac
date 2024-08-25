@@ -64,7 +64,7 @@ mod tests {
         let id = Id::new("");
         let operation = CreateRef::build(CreateRefVariables {
             name: "",
-            oid: GitObjectId(String::new()),
+            oid: GitObjectId::new(""),
             repository_id: &id,
         });
 

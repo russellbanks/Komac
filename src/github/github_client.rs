@@ -296,14 +296,14 @@ impl GitHub {
         &self,
         fork_id: &Id,
         branch_name: &str,
-        oid: &str,
+        oid: GitObjectId,
     ) -> Result<CreateBranchRef> {
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(CreateRef::build(CreateRefVariables {
                 name: &format!("refs/heads/{branch_name}"),
-                oid: GitObjectId(oid.to_owned()),
+                oid,
                 repository_id: fork_id,
             }))
             .await?;
@@ -321,7 +321,7 @@ impl GitHub {
     pub async fn create_commit(
         &self,
         branch_id: &Id,
-        head_sha: &str,
+        head_sha: GitObjectId,
         message: &str,
         additions: Option<Vec<FileAddition<'_>>>,
         deletions: Option<Vec<FileDeletion<'_>>>,
@@ -332,7 +332,7 @@ impl GitHub {
             .run_graphql(CreateCommit::build(CreateCommitVariables {
                 input: CreateCommitOnBranchInput {
                     branch: CommittableBranch { id: branch_id },
-                    expected_head_oid: GitObjectId(head_sha.to_owned()),
+                    expected_head_oid: head_sha,
                     file_changes: Some(FileChanges {
                         additions,
                         deletions,
@@ -495,10 +495,10 @@ impl GitHub {
                 ref_updates: branch_names
                     .iter()
                     .map(|branch_name| RefUpdate {
-                        after_oid: GitObjectId(DELETE_ID.to_string()),
+                        after_oid: GitObjectId::new(DELETE_ID),
                         before_oid: None,
                         force: None,
-                        name: GitRefName(format!("refs/heads/{branch_name}")),
+                        name: GitRefName::new(format!("refs/heads/{branch_name}")),
                     })
                     .collect(),
                 repository_id,

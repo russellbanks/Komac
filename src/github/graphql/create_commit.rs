@@ -99,7 +99,7 @@ mod tests {
         let operation = CreateCommit::build(CreateCommitVariables {
             input: CreateCommitOnBranchInput {
                 branch: CommittableBranch { id: &id },
-                expected_head_oid: GitObjectId(String::new()),
+                expected_head_oid: GitObjectId::new(""),
                 file_changes: None,
                 message: CommitMessage {
                     body: None,

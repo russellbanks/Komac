@@ -447,7 +447,7 @@ impl NewVersion {
         let fork = github.get_winget_pkgs(Some(&current_user)).await?;
         let branch_name = get_branch_name(&package_identifier, &package_version);
         let pull_request_branch = github
-            .create_branch(&fork.id, &branch_name, &winget_pkgs.default_branch_oid.0)
+            .create_branch(&fork.id, &branch_name, winget_pkgs.default_branch_oid)
             .await?;
         let commit_title = get_commit_title(
             &package_identifier,
@@ -457,17 +457,14 @@ impl NewVersion {
         let changes = changes
             .iter()
             .map(|(path, content)| FileAddition {
-                contents: Base64String(base64ct::Base64::encode_string(content.as_bytes())),
+                contents: Base64String::new(base64ct::Base64::encode_string(content.as_bytes())),
                 path,
             })
             .collect::<Vec<_>>();
         let _commit_url = github
             .create_commit(
                 &pull_request_branch.id,
-                &pull_request_branch
-                    .target
-                    .map(|target| target.oid.0)
-                    .unwrap(),
+                pull_request_branch.target.map(|target| target.oid).unwrap(),
                 &commit_title,
                 Some(changes),
                 None,

@@ -112,7 +112,7 @@ impl RemoveVersion {
         let fork = github.get_winget_pkgs(Some(&current_user)).await?;
         let branch_name = get_branch_name(&self.package_identifier, &self.package_version);
         let pull_request_branch = github
-            .create_branch(&fork.id, &branch_name, &winget_pkgs.default_branch_oid.0)
+            .create_branch(&fork.id, &branch_name, winget_pkgs.default_branch_oid)
             .await?;
         let commit_title = get_commit_title(
             &self.package_identifier,
@@ -134,10 +134,7 @@ impl RemoveVersion {
         let _commit_url = github
             .create_commit(
                 &pull_request_branch.id,
-                &pull_request_branch
-                    .target
-                    .map(|object| object.oid.0)
-                    .unwrap(),
+                pull_request_branch.target.map(|object| object.oid).unwrap(),
                 &commit_title,
                 None,
                 Some(deletions),
