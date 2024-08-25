@@ -14,7 +14,6 @@ use tokio::io::AsyncWriteExt;
 
 use crate::editor::Editor;
 use crate::github::graphql::get_existing_pull_request::PullRequest;
-use crate::github::graphql::get_pull_request_from_branch::PullRequestState;
 use crate::manifest::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -26,11 +25,7 @@ pub fn prompt_existing_pull_request(
 ) -> Result<bool> {
     println!(
         "There is already {} pull request for {identifier} {version} that was created on {} at {}",
-        match pull_request.state {
-            PullRequestState::Merged => "a merged",
-            PullRequestState::Open => "an open",
-            _ => "a closed",
-        },
+        pull_request.state,
         pull_request.created_at.date_naive(),
         pull_request.created_at.time()
     );

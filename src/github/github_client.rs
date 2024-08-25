@@ -3,14 +3,7 @@ use std::env;
 use std::ops::Not;
 use std::str::FromStr;
 
-use color_eyre::eyre::{bail, eyre, Result, WrapErr};
-use color_eyre::Report;
-use const_format::{formatcp, str_repeat};
-use cynic::http::ReqwestExt;
-use cynic::{Id, MutationBuilder, QueryBuilder};
-use reqwest::Client;
-use url::Url;
-
+use crate::commands::cleanup::MergeState;
 use crate::credential::get_default_headers;
 use crate::github::graphql::create_commit::{
     CommitMessage, CommittableBranch, CreateCommit, CreateCommitOnBranchInput,
@@ -23,7 +16,7 @@ use crate::github::graphql::create_ref::{CreateRef, CreateRefVariables, Ref as C
 use crate::github::graphql::get_all_values::{
     GetAllValues, GetAllValuesGitObject, GetAllValuesVariables,
 };
-use crate::github::graphql::get_branches::{GetBranches, Ref as GetBranchRef};
+use crate::github::graphql::get_branches::{GetBranches, PullRequest, PullRequestState};
 use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
 use crate::github::graphql::get_deep_directory_content::GetDeepDirectoryContent;
 use crate::github::graphql::get_directory_content::{
@@ -33,9 +26,6 @@ use crate::github::graphql::get_directory_content_with_text::GetDirectoryContent
 use crate::github::graphql::get_existing_pull_request;
 use crate::github::graphql::get_existing_pull_request::{
     GetExistingPullRequest, GetExistingPullRequestVariables,
-};
-use crate::github::graphql::get_pull_request_from_branch::{
-    GetPullRequestFromBranch, GetPullRequestFromBranchVariables, PullRequest,
 };
 use crate::github::graphql::get_repository_info::{
     GetRepositoryInfo, RepositoryVariables, TargetGitObject,
@@ -59,6 +49,14 @@ use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use color_eyre::eyre::{bail, eyre, Result, WrapErr};
+use color_eyre::Report;
+use const_format::{formatcp, str_repeat};
+use cynic::http::ReqwestExt;
+use cynic::{Id, MutationBuilder, QueryBuilder};
+use indexmap::IndexMap;
+use reqwest::Client;
+use url::Url;
 
 pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
@@ -269,10 +267,7 @@ impl GitHub {
     ) -> Result<RepositoryData> {
         let repository = client
             .post(GITHUB_GRAPHQL_URL)
-            .run_graphql(GetRepositoryInfo::build(RepositoryVariables {
-                name,
-                owner,
-            }))
+            .run_graphql(GetRepositoryInfo::build(RepositoryVariables { owner, name }))
             .await?
             .data
             .and_then(|data| data.repository)
@@ -394,52 +389,17 @@ impl GitHub {
         Ok(entries.into_iter().filter_map(|entry| entry.path))
     }
 
-    pub async fn get_pull_request_from_branch(
+    pub async fn get_branches(
         &self,
-        default_branch_name: &str,
-        branch_name: &str,
-    ) -> Result<Option<PullRequest>> {
-        let response = self
-            .0
-            .post(GITHUB_GRAPHQL_URL)
-            .run_graphql(GetPullRequestFromBranch::build(
-                GetPullRequestFromBranchVariables {
-                    base_ref_name: default_branch_name,
-                    head_ref_name: branch_name,
-                    name: WINGET_PKGS,
-                    owner: MICROSOFT,
-                },
-            ))
-            .await?;
-        let mut nodes = response
-            .data
-            .and_then(|data| data.repository)
-            .map(|repository| repository.pull_requests.nodes)
-            .ok_or_else(|| {
-                response
-                    .errors
-                    .unwrap_or_default()
-                    .into_iter()
-                    .fold(
-                        eyre!("No data was returned when getting an associated pull request for {branch_name} to {MICROSOFT}/{WINGET_PKGS}"),
-                        Report::wrap_err,
-                    )
-            })?;
-
-        if nodes.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(nodes.swap_remove(0)))
-        }
-    }
-
-    pub async fn get_branches(&self, user: &str) -> Result<(Vec<GetBranchRef>, Id, String)> {
+        user: &str,
+        merge_state: &MergeState,
+    ) -> Result<(IndexMap<PullRequest, String>, Id)> {
         let repository = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetBranches::build(RepositoryVariables {
-                name: WINGET_PKGS,
                 owner: user,
+                name: WINGET_PKGS,
             }))
             .await?
             .data
@@ -448,25 +408,44 @@ impl GitHub {
                 eyre!("No repository was returned when getting branches for {user}/{WINGET_PKGS}")
             })?;
 
-        let default_branch_name = repository
+        let default_branch = repository
             .default_branch_ref
-            .map(|default_branch_ref| default_branch_ref.name)
+            .ok_or_else(|| eyre!("No default branch reference was returned when getting branches for {user}/{WINGET_PKGS}"))?;
+
+        let pr_branch_map = repository
+            .refs
+            .map(|refs| refs.nodes)
             .ok_or_else(|| {
-                eyre!(
-                "No default branch reference was returned when getting branches for {user}/{WINGET_PKGS}"
-            )
-            })?;
-
-        let refs = repository.refs.map(|refs| refs.nodes).ok_or_else(|| {
-            eyre!("No references were returned when getting branches for {user}/{WINGET_PKGS}")
-        })?;
-
-        let branches = refs
+                eyre!("No references were returned when getting branches for {user}/{WINGET_PKGS}")
+            })?
             .into_iter()
-            .filter(|branch| branch.name != default_branch_name)
-            .collect();
+            .filter(|branch| branch.name != default_branch.name)
+            .filter_map(|branch| {
+                let associated_pull_requests = branch.associated_pull_requests.nodes;
 
-        Ok((branches, repository.id, default_branch_name))
+                // If any associated pull request is still open, skip this branch
+                if associated_pull_requests
+                    .iter()
+                    .any(|pull_request| pull_request.state == PullRequestState::Open)
+                {
+                    return None;
+                }
+
+                associated_pull_requests
+                    .into_iter()
+                    .filter(|pull_request| match *merge_state {
+                        MergeState::MERGED => pull_request.state == PullRequestState::Merged,
+                        MergeState::CLOSED => pull_request.state == PullRequestState::Closed,
+                        _ => pull_request.state != PullRequestState::Open,
+                    })
+                    .find(|pull_request| {
+                        pull_request.repository.name_with_owner == WINGET_PKGS_FULL_NAME
+                    })
+                    .map(|pull_request| (pull_request, branch.name))
+            })
+            .collect::<IndexMap<_, _>>();
+
+        Ok((pr_branch_map, repository.id))
     }
 
     pub async fn create_pull_request(
@@ -512,7 +491,7 @@ impl GitHub {
             })
     }
 
-    pub async fn delete_branches(&self, repository_id: &Id, branch_names: Vec<&str>) -> Result<()> {
+    pub async fn delete_branches(&self, repository_id: &Id, branch_names: &[&str]) -> Result<()> {
         const DELETE_ID: &str = str_repeat!("0", 40);
 
         let response = self
@@ -520,7 +499,7 @@ impl GitHub {
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(UpdateRefs::build(UpdateRefsVariables {
                 ref_updates: branch_names
-                    .into_iter()
+                    .iter()
                     .map(|branch_name| RefUpdate {
                         after_oid: GitObjectId(DELETE_ID.to_string()),
                         before_oid: None,

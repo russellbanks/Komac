@@ -1,4 +1,4 @@
-use crate::github::graphql::get_pull_request_from_branch::PullRequestState;
+use crate::github::graphql::get_branches::PullRequestState;
 use crate::github::graphql::github_schema::github_schema as schema;
 use chrono::{DateTime, Utc};
 use url::Url;

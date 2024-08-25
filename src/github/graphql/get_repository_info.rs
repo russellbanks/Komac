@@ -25,8 +25,8 @@ query GetRepositoryInfo($owner: String!, $name: String!) {
 
 #[derive(cynic::QueryVariables)]
 pub struct RepositoryVariables<'a> {
-    pub name: &'a str,
     pub owner: &'a str,
+    pub name: &'a str,
 }
 
 #[derive(cynic::QueryFragment)]
