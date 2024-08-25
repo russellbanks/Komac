@@ -1,7 +1,3 @@
-use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
@@ -112,7 +108,7 @@ impl<'a> Buffer<'a> {
 pub struct Editor<'a> {
     current: usize,
     buffers: Vec<Buffer<'a>>,
-    term: Terminal<CrosstermBackend<io::Stdout>>,
+    terminal: Terminal<CrosstermBackend<io::Stdout>>,
     message: Option<Cow<'static, str>>,
     search: SearchBox<'a>,
 }
@@ -123,15 +119,11 @@ impl<'a> Editor<'a> {
             .iter_mut()
             .map(|(path, content)| Buffer::new(path, content))
             .collect::<Vec<_>>();
-        let mut stdout = io::stdout();
-        enable_raw_mode()?;
-        crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-        let backend = CrosstermBackend::new(stdout);
-        let term = Terminal::new(backend)?;
+        let terminal = ratatui::init();
         Ok(Self {
             current: 0,
             buffers,
-            term,
+            terminal,
             message: None,
             search: SearchBox::default(),
         })
@@ -152,7 +144,7 @@ impl<'a> Editor<'a> {
                     .as_ref(),
                 );
 
-            self.term.draw(|f| {
+            self.terminal.draw(|f| {
                 let chunks = layout.split(f.area());
 
                 if search_height > 0 {
@@ -335,13 +327,6 @@ impl<'a> Editor<'a> {
 
 impl<'a> Drop for Editor<'a> {
     fn drop(&mut self) {
-        self.term.show_cursor().unwrap();
-        disable_raw_mode().unwrap();
-        crossterm::execute!(
-            self.term.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )
-        .unwrap();
+        ratatui::restore();
     }
 }
