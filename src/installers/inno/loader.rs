@@ -126,7 +126,7 @@ impl SetupLoader {
 
         if loader_version.version >= LoaderVersion(4, 0, 10) {
             let expected = setup_loader_data.read_u32::<LittleEndian>()?;
-            assert_eq!(expected, crc.finalize());
+            assert_eq!(crc.finalize(), expected);
         }
 
         Ok(Self {

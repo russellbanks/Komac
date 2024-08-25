@@ -138,8 +138,8 @@ mod tests {
             (previous_machine_x64, &installer_x64),
         ]);
         assert_eq!(
-            expected,
-            match_installers(previous_installers, &new_installers)
+            match_installers(previous_installers, &new_installers),
+            expected
         );
     }
 }

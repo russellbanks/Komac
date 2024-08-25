@@ -316,7 +316,7 @@ mod tests {
         #[case] expected_disallowed: ArchitectureIdentifiers,
     ) {
         let (allowed, disallowed) = ArchitectureIdentifiers::from_expression(expression);
-        assert_eq!(expected_allowed, allowed);
-        assert_eq!(expected_disallowed, disallowed);
+        assert_eq!(allowed, expected_allowed);
+        assert_eq!(disallowed, expected_disallowed);
     }
 }

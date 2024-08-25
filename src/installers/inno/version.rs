@@ -1,7 +1,7 @@
 use bitflags::bitflags;
+use derive_more::Display;
 use memchr::memchr;
 use std::cmp::Ordering;
-use derive_more::Display;
 
 bitflags! {
     #[derive(Debug, Default, PartialEq, Eq)]
@@ -174,7 +174,7 @@ mod tests {
         #[case] expected_variant: VersionFlags,
     ) {
         let actual = KnownVersion::from_version_bytes(input).unwrap_or_default();
-        assert_eq!(expected_inno_version, actual.version);
-        assert_eq!(expected_variant, actual.variant)
+        assert_eq!(actual.version, expected_inno_version);
+        assert_eq!(actual.variant, expected_variant)
     }
 }

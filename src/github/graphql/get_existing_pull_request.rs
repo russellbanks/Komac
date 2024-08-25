@@ -11,7 +11,7 @@ pub struct GetExistingPullRequestVariables<'a> {
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Query", variables = "GetExistingPullRequestVariables")]
 pub struct GetExistingPullRequest {
-    #[arguments(first: 1, type: "ISSUE", query: $query)]
+    #[arguments(first: 1, type: ISSUE, query: $query)]
     pub search: SearchResultItemConnection,
 }
 
@@ -46,5 +46,40 @@ impl SearchResultItem {
             Self::PullRequest(pull_request) => Some(pull_request),
             Self::Unknown => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::github::graphql::get_existing_pull_request::{
+        GetExistingPullRequest, GetExistingPullRequestVariables,
+    };
+    use cynic::QueryBuilder;
+    use indoc::indoc;
+
+    #[test]
+    fn get_existing_pull_request_output() {
+        const GET_EXISTING_PULL_REQUEST_QUERY: &str = indoc! {r#"
+            query GetExistingPullRequest($query: String!) {
+              search(first: 1, type: ISSUE, query: $query) {
+                edges {
+                  node {
+                    __typename
+                    ... on PullRequest {
+                      url
+                      state
+                      createdAt
+                    }
+                  }
+                }
+              }
+            }
+
+        "#};
+
+        let operation =
+            GetExistingPullRequest::build(GetExistingPullRequestVariables { query: "" });
+
+        assert_eq!(operation.query, GET_EXISTING_PULL_REQUEST_QUERY);
     }
 }

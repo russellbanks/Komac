@@ -185,8 +185,8 @@ mod tests {
     fn test_partial_package_path() {
         let identifier = PackageIdentifier::parse("Package.Identifier").unwrap_or_default();
         assert_eq!(
-            "manifests/p/Package/Identifier",
-            get_package_path(&identifier, None)
+            get_package_path(&identifier, None),
+            "manifests/p/Package/Identifier"
         );
     }
 
@@ -195,8 +195,8 @@ mod tests {
         let identifier = PackageIdentifier::parse("Package.Identifier").unwrap_or_default();
         let version = PackageVersion::new("1.2.3").unwrap_or_default();
         assert_eq!(
-            "manifests/p/Package/Identifier/1.2.3",
-            get_package_path(&identifier, Some(&version))
+            get_package_path(&identifier, Some(&version)),
+            "manifests/p/Package/Identifier/1.2.3"
         );
     }
 }

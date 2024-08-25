@@ -10,6 +10,7 @@ pub struct GetBranches {
     pub repository: Option<Repository>,
 }
 
+/// <https://docs.github.com/graphql/reference/objects#repository>
 #[derive(cynic::QueryFragment)]
 pub struct Repository {
     pub id: cynic::Id,
@@ -18,12 +19,14 @@ pub struct Repository {
     pub refs: Option<RefConnection>,
 }
 
+/// <https://docs.github.com/graphql/reference/objects#refconnection>
 #[derive(cynic::QueryFragment)]
 pub struct RefConnection {
     #[cynic(flatten)]
     pub nodes: Vec<PullRequestBranchRef>,
 }
 
+/// <https://docs.github.com/graphql/reference/objects#ref>
 #[derive(cynic::QueryFragment, Hash, PartialEq, Eq)]
 #[cynic(graphql_type = "Ref")]
 pub struct PullRequestBranchRef {
@@ -32,18 +35,21 @@ pub struct PullRequestBranchRef {
     pub associated_pull_requests: PullRequestConnection,
 }
 
+/// <https://docs.github.com/graphql/reference/objects#ref>
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Ref")]
 pub struct DefaultBranchRef {
     pub name: String,
 }
 
+/// <https://docs.github.com/graphql/reference/objects#pullrequestconnection>
 #[derive(cynic::QueryFragment, Hash, PartialEq, Eq)]
 pub struct PullRequestConnection {
     #[cynic(flatten)]
     pub nodes: Vec<PullRequest>,
 }
 
+/// <https://docs.github.com/graphql/reference/objects#pullrequest>
 #[derive(cynic::QueryFragment, Hash, PartialEq, Eq)]
 pub struct PullRequest {
     pub title: String,
@@ -58,12 +64,14 @@ impl Display for PullRequest {
     }
 }
 
+/// <https://docs.github.com/graphql/reference/objects#repository>
 #[derive(cynic::QueryFragment, Hash, PartialEq, Eq)]
 #[cynic(graphql_type = "Repository")]
 pub struct PullRequestRepository {
     pub name_with_owner: String,
 }
 
+/// <https://docs.github.com/graphql/reference/enums#pullrequeststate>
 #[derive(cynic::Enum, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum PullRequestState {
     Closed,
@@ -127,6 +135,6 @@ mod tests {
             name: WINGET_PKGS,
         });
 
-        assert_eq!(GET_BRANCHES_QUERY, operation.query);
+        assert_eq!(operation.query, GET_BRANCHES_QUERY);
     }
 }

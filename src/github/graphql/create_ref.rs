@@ -1,23 +1,7 @@
 use crate::github::graphql::github_schema::github_schema as schema;
 use crate::github::graphql::types::GitObjectId;
-/*
-mutation CreateRef($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
-  createRef(input: {
-    repositoryId: $repositoryId,
-    name: $name,
-    oid: $oid
-  }) {
-    ref {
-      id
-      name
-      target {
-        oid
-      }
-    }
-  }
-}
-*/
 
+/// <https://docs.github.com/graphql/reference/input-objects#createrefinput>
 #[derive(cynic::QueryVariables)]
 pub struct CreateRefVariables<'a> {
     pub name: &'a str,
@@ -32,12 +16,14 @@ pub struct CreateRef {
     pub create_ref: Option<CreateRefPayload>,
 }
 
+/// <https://docs.github.com/graphql/reference/mutations#createref>
 #[derive(cynic::QueryFragment)]
 pub struct CreateRefPayload {
     #[cynic(rename = "ref")]
     pub ref_: Option<Ref>,
 }
 
+/// <https://docs.github.com/graphql/reference/objects#ref>
 #[derive(cynic::QueryFragment)]
 pub struct Ref {
     pub id: cynic::Id,
@@ -45,7 +31,43 @@ pub struct Ref {
     pub target: Option<GitObject>,
 }
 
+/// <https://docs.github.com/graphql/reference/interfaces#gitobject>
 #[derive(cynic::QueryFragment)]
 pub struct GitObject {
     pub oid: GitObjectId,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::github::graphql::create_ref::{CreateRef, CreateRefVariables};
+    use crate::github::graphql::types::GitObjectId;
+    use cynic::{Id, MutationBuilder};
+    use indoc::indoc;
+
+    #[test]
+    fn create_ref_output() {
+        const CREATE_REF_MUTATION: &str = indoc! {"
+            mutation CreateRef($name: String!, $oid: GitObjectID!, $repositoryId: ID!) {
+              createRef(input: {name: $name, oid: $oid, repositoryId: $repositoryId, }) {
+                ref {
+                  id
+                  name
+                  target {
+                    oid
+                  }
+                }
+              }
+            }
+
+        "};
+
+        let id = Id::new("");
+        let operation = CreateRef::build(CreateRefVariables {
+            name: "",
+            oid: GitObjectId(String::new()),
+            repository_id: &id,
+        });
+
+        assert_eq!(operation.query, CREATE_REF_MUTATION);
+    }
 }

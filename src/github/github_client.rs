@@ -331,12 +331,7 @@ impl GitHub {
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(CreateCommit::build(CreateCommitVariables {
                 input: CreateCommitOnBranchInput {
-                    branch: CommittableBranch {
-                        branch_name: None,
-                        id: Some(branch_id),
-                        repository_name_with_owner: None,
-                    },
-                    client_mutation_id: None,
+                    branch: CommittableBranch { id: branch_id },
                     expected_head_oid: GitObjectId(head_sha.to_owned()),
                     file_changes: Some(FileChanges {
                         additions,
@@ -461,7 +456,6 @@ impl GitHub {
             input: CreatePullRequestInput {
                 base_ref_name: branch_name,
                 body: Some(body),
-                client_mutation_id: None,
                 draft: None,
                 head_ref_name: fork_ref_name,
                 head_repository_id: Some(fork_id),

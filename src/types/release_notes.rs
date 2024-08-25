@@ -366,6 +366,6 @@ mod tests {
         let formatted = truncate_with_lines(&buffer, CHAR_LIMIT);
         let formatted_char_count = formatted.chars().count();
         assert!(formatted_char_count < buffer.chars().count());
-        assert_eq!(formatted_char_count, formatted.trim().chars().count());
+        assert_eq!(formatted.trim().chars().count(), formatted_char_count);
     }
 }

@@ -1,24 +1,10 @@
 use crate::github::graphql::github_schema::github_schema as schema;
 
-/*
-query GetDirectoryContent($owner: String!, $name: String!, $expression: String!) {
-  repository(owner: $owner, name: $name) {
-    object(expression: $expression) {
-      ... on Tree {
-        entries {
-          path
-        }
-      }
-    }
-  }
-}
-*/
-
 #[derive(cynic::QueryVariables)]
 pub struct GetDirectoryContentVariables<'a> {
-    pub expression: &'a str,
-    pub name: &'a str,
     pub owner: &'a str,
+    pub name: &'a str,
+    pub expression: &'a str,
 }
 
 #[derive(cynic::QueryFragment)]
@@ -60,5 +46,42 @@ impl TreeGitObject {
             Self::Tree(tree) => Some(tree.entries),
             Self::Unknown => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::github::github_client::{MICROSOFT, WINGET_PKGS};
+    use crate::github::graphql::get_directory_content::{
+        GetDirectoryContent, GetDirectoryContentVariables,
+    };
+    use cynic::QueryBuilder;
+    use indoc::indoc;
+
+    #[test]
+    fn get_directory_content_output() {
+        const GET_DIRECTORY_CONTENT_QUERY: &str = indoc! {r#"
+            query GetDirectoryContent($owner: String!, $name: String!, $expression: String!) {
+              repository(owner: $owner, name: $name) {
+                object(expression: $expression) {
+                  __typename
+                  ... on Tree {
+                    entries {
+                      path
+                    }
+                  }
+                }
+              }
+            }
+
+        "#};
+
+        let operation = GetDirectoryContent::build(GetDirectoryContentVariables {
+            owner: MICROSOFT,
+            name: WINGET_PKGS,
+            expression: "",
+        });
+
+        assert_eq!(operation.query, GET_DIRECTORY_CONTENT_QUERY);
     }
 }
