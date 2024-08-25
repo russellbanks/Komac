@@ -105,10 +105,10 @@ impl InnoFile {
             };
         } else {
             let compressed_size = cursor.read_u32::<LittleEndian>()?;
-            actual_checksum.update(&stored_size.to_le_bytes());
+            actual_checksum.update(&compressed_size.to_le_bytes());
 
             let uncompressed_size = cursor.read_u32::<LittleEndian>()?;
-            actual_checksum.update(&stored_size.to_le_bytes());
+            actual_checksum.update(&uncompressed_size.to_le_bytes());
 
             if compressed_size == u32::MAX {
                 stored_size = uncompressed_size;
@@ -123,9 +123,9 @@ impl InnoFile {
         }
 
         let actual_checksum = actual_checksum.finalize();
-        if expected_checksum != actual_checksum {
+        if actual_checksum != expected_checksum {
             bail!(
-                "CRC32 checksum mismatch. Expected: {expected_checksum}. Actual: {actual_checksum}"
+                "CRC32 checksum mismatch. Actual: {actual_checksum}. Expected: {expected_checksum}."
             );
         }
 
