@@ -15,6 +15,7 @@ use msi::Language;
 use std::collections::BTreeSet;
 use std::io::{Cursor, Read};
 use std::mem;
+use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
@@ -84,37 +85,34 @@ impl InnoFile {
 
         let mut actual_checksum = Crc32Reader::new(&mut cursor);
 
-        let mut compression = CompressionType::Stored;
-        let mut stored_size = 0;
-        if known_version > InnoVersion(4, 0, 9) {
-            stored_size = actual_checksum.read_u32::<LittleEndian>()?;
+        let stored_size = if known_version > InnoVersion(4, 0, 9) {
+            let size = actual_checksum.read_u32::<LittleEndian>()?;
             let compressed = actual_checksum.read_u8()?;
 
-            compression = if compressed != 0 {
+            if compressed != 0 {
                 if known_version > InnoVersion(4, 1, 6) {
-                    CompressionType::LZMA1
+                    Compression::LZMA1(size)
                 } else {
-                    CompressionType::Zlib
+                    Compression::Zlib(size)
                 }
             } else {
-                CompressionType::Stored
-            };
+                Compression::Stored(size)
+            }
         } else {
             let compressed_size = actual_checksum.read_u32::<LittleEndian>()?;
-
             let uncompressed_size = actual_checksum.read_u32::<LittleEndian>()?;
 
-            if compressed_size == u32::MAX {
-                stored_size = uncompressed_size;
-                compression = CompressionType::Stored;
+            let mut stored_size = if compressed_size == u32::MAX {
+                Compression::Stored(uncompressed_size)
             } else {
-                stored_size = compressed_size;
-                compression = CompressionType::Zlib;
-            }
+                Compression::Zlib(compressed_size)
+            };
 
             // Add the size of a CRC32 checksum for each 4KiB sub-block
-            stored_size += stored_size.div_ceil(u32::from(INNO_BLOCK_SIZE)) * 4;
-        }
+            *stored_size += stored_size.div_ceil(u32::from(INNO_BLOCK_SIZE)) * 4;
+
+            stored_size
+        };
 
         let actual_checksum = actual_checksum.finalize();
         if actual_checksum != expected_checksum {
@@ -123,14 +121,14 @@ impl InnoFile {
             );
         }
 
-        let mut block_filter = InnoBlockFilter::new(cursor);
-        let mut reader: Box<dyn Read> = if compression == CompressionType::LZMA1 {
-            let stream = read_inno_lzma_stream_header(&mut block_filter)?;
-            Box::new(XzDecoder::new_stream(block_filter, stream))
-        } else if compression == CompressionType::Zlib {
-            Box::new(ZlibDecoder::new(block_filter))
-        } else {
-            Box::new(block_filter)
+        let mut block_filter = InnoBlockFilter::new(cursor.take(u64::from(*stored_size)));
+        let mut reader: Box<dyn Read> = match stored_size {
+            Compression::LZMA1(_) => {
+                let stream = read_inno_lzma_stream_header(&mut block_filter)?;
+                Box::new(XzDecoder::new_stream(block_filter, stream))
+            }
+            Compression::Zlib(_) => Box::new(ZlibDecoder::new(block_filter)),
+            Compression::Stored(_) => Box::new(block_filter),
         };
 
         let mut header = Header::load(&mut reader, &known_version)?;
@@ -172,9 +170,26 @@ pub fn to_product_code(mut app_id: String) -> String {
     app_id
 }
 
-#[derive(Debug, PartialEq)]
-enum CompressionType {
-    Stored,
-    Zlib,
-    LZMA1,
+enum Compression {
+    Stored(u32),
+    Zlib(u32),
+    LZMA1(u32),
+}
+
+impl Deref for Compression {
+    type Target = u32;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Stored(size) | Self::Zlib(size) | Self::LZMA1(size) => size,
+        }
+    }
+}
+
+impl DerefMut for Compression {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Self::Stored(size) | Self::Zlib(size) | Self::LZMA1(size) => size,
+        }
+    }
 }
