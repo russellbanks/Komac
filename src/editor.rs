@@ -1,9 +1,8 @@
-use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
-use ratatui::Terminal;
+use ratatui::DefaultTerminal;
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::io;
@@ -108,7 +107,7 @@ impl<'a> Buffer<'a> {
 pub struct Editor<'a> {
     current: usize,
     buffers: Vec<Buffer<'a>>,
-    terminal: Terminal<CrosstermBackend<io::Stdout>>,
+    terminal: DefaultTerminal,
     message: Option<Cow<'static, str>>,
     search: SearchBox<'a>,
 }
