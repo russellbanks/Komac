@@ -113,19 +113,19 @@ pub struct Editor<'a> {
 }
 
 impl<'a> Editor<'a> {
-    pub fn new(content: &'a mut [(String, String)]) -> io::Result<Self> {
+    pub fn new(content: &'a mut [(String, String)]) -> Self {
         let buffers = content
             .iter_mut()
             .map(|(path, content)| Buffer::new(path, content))
             .collect::<Vec<_>>();
         let terminal = ratatui::init();
-        Ok(Self {
+        Self {
             current: 0,
             buffers,
             terminal,
             message: None,
             search: SearchBox::default(),
-        })
+        }
     }
 
     pub fn run(&mut self) -> io::Result<()> {

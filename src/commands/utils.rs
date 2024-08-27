@@ -62,7 +62,7 @@ pub fn prompt_submit_option(
         };
 
         if submit_option == SubmitOption::Edit {
-            Editor::new(changes)?.run()?;
+            Editor::new(changes).run()?;
         } else {
             break;
         }
