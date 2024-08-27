@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use anstream::println;
 use camino::Utf8Path;
+use chrono::Local;
 use color_eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::{Confirm, Select};
@@ -23,11 +24,12 @@ pub fn prompt_existing_pull_request(
     version: &PackageVersion,
     pull_request: &PullRequest,
 ) -> Result<bool> {
+    let created_at = pull_request.created_at.with_timezone(&Local);
     println!(
         "There is already {} pull request for {identifier} {version} that was created on {} at {}",
         pull_request.state,
-        pull_request.created_at.date_naive(),
-        pull_request.created_at.time()
+        created_at.date_naive(),
+        created_at.time()
     );
     println!("{}", pull_request.url.blue());
     let proceed = if env::var("CI").is_ok_and(|ci| bool::from_str(&ci) == Ok(true)) {
