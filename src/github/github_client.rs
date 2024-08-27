@@ -1,8 +1,3 @@
-use std::collections::BTreeSet;
-use std::env;
-use std::ops::Not;
-use std::str::FromStr;
-
 use crate::commands::cleanup::MergeState;
 use crate::credential::get_default_headers;
 use crate::github::graphql::create_commit::{
@@ -18,7 +13,6 @@ use crate::github::graphql::get_all_values::{
 };
 use crate::github::graphql::get_branches::{GetBranches, PullRequest, PullRequestState};
 use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
-use crate::github::graphql::get_deep_directory_content::GetDeepDirectoryContent;
 use crate::github::graphql::get_directory_content::{
     GetDirectoryContent, GetDirectoryContentVariables,
 };
@@ -33,6 +27,7 @@ use crate::github::graphql::get_repository_info::{
 use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariables};
 use crate::github::graphql::types::{GitObjectId, GitRefName};
 use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
+use crate::github::rest::get_tree::GitTree;
 use crate::github::utils::{get_package_path, is_manifest_file};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
@@ -55,7 +50,12 @@ use const_format::{formatcp, str_repeat};
 use cynic::http::ReqwestExt;
 use cynic::{Id, MutationBuilder, QueryBuilder};
 use indexmap::IndexMap;
+use itertools::Itertools;
 use reqwest::Client;
+use std::collections::BTreeSet;
+use std::env;
+use std::ops::Not;
+use std::str::FromStr;
 use url::Url;
 
 pub const MICROSOFT: &str = "microsoft";
@@ -115,38 +115,34 @@ impl GitHub {
         repo: &str,
         path: &str,
     ) -> Result<BTreeSet<PackageVersion>> {
-        let response = client
-            .post(GITHUB_GRAPHQL_URL)
-            .run_graphql(GetDeepDirectoryContent::build(
-                GetDirectoryContentVariables {
-                    expression: &format!("HEAD:{path}"),
-                    name: repo,
-                    owner,
-                },
-            ))
-            .await?;
+        const TREE: &str = "tree";
+        const SEPARATOR: char = '/';
+
+        let endpoint = format!(
+            "https://api.github.com/repos/{owner}/{repo}/git/trees/HEAD:{path}?recursive=true"
+        );
+        let response = client.get(endpoint).send().await?.json::<GitTree>().await?;
         let files = response
-            .data
-            .and_then(|data| data.repository?.object?.into_entries())
-            .ok_or_else(|| {
-                response.errors.unwrap_or_default().into_iter().fold(
-                    eyre!("Failed to retrieve directory content of {path}"),
-                    Report::wrap_err,
-                )
-            })?
-            .into_iter()
-            .filter_map(|entry| {
+            .tree
+            .iter()
+            .filter(|entry| (0..=1).contains(&entry.path.matches(SEPARATOR).count()))
+            .chunk_by(|entry| {
                 entry
-                    .object?
-                    .into_entries()?
-                    .iter()
-                    .all(|entry| entry.type_ != "tree")
-                    .then(|| PackageVersion::new(&entry.name).ok())?
+                    .path
+                    .split_once(SEPARATOR)
+                    .map_or(entry.path.as_str(), |(version, _rest)| version)
+            })
+            .into_iter()
+            .filter_map(|(version, group)| {
+                group
+                    .filter(|object| object.path != version)
+                    .all(|object| object.r#type != TREE)
+                    .then(|| PackageVersion::new(version).ok())?
             })
             .collect::<BTreeSet<_>>();
 
         if files.is_empty() {
-            bail!("No files were found for {path}")
+            bail!("No valid files were found for {path}")
         }
 
         Ok(files)

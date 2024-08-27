@@ -4,7 +4,6 @@ pub mod create_ref;
 pub mod get_all_values;
 pub mod get_branches;
 pub mod get_current_user_login;
-pub mod get_deep_directory_content;
 pub mod get_directory_content;
 pub mod get_directory_content_with_text;
 pub mod get_existing_pull_request;
