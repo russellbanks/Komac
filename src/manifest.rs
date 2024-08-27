@@ -1,14 +1,13 @@
-use std::env;
-use std::io::StdoutLock;
-use std::io::Write;
-
 use anstream::AutoStream;
 use clap::{crate_name, crate_version};
 use color_eyre::eyre::{Error, Result};
 use const_format::formatcp;
-use once_cell::sync::Lazy;
 use owo_colors::colors::css::SlateGrey;
 use owo_colors::{OwoColorize, Style};
+use std::env;
+use std::io::StdoutLock;
+use std::io::Write;
+use std::sync::LazyLock;
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
 
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
@@ -61,7 +60,7 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
     const HIGHLIGHT_NAMES: [&str; 3] = [COMMENT, STRING, PROPERTY];
     const YAML: &str = "yaml";
 
-    static YAML_CONFIG: Lazy<HighlightConfiguration> = Lazy::new(|| {
+    static YAML_CONFIG: LazyLock<HighlightConfiguration> = LazyLock::new(|| {
         let mut config = HighlightConfiguration::new(
             tree_sitter_yaml::language(),
             YAML,
