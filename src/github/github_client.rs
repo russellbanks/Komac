@@ -28,6 +28,7 @@ use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariabl
 use crate::github::graphql::types::{GitObjectId, GitRefName};
 use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
 use crate::github::rest::get_tree::GitTree;
+use crate::github::rest::GITHUB_JSON_MIME;
 use crate::github::utils::{get_package_path, is_manifest_file};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
@@ -51,6 +52,7 @@ use cynic::http::ReqwestExt;
 use cynic::{Id, MutationBuilder, QueryBuilder};
 use indexmap::IndexMap;
 use itertools::Itertools;
+use reqwest::header::ACCEPT;
 use reqwest::Client;
 use std::collections::BTreeSet;
 use std::env;
@@ -121,7 +123,13 @@ impl GitHub {
         let endpoint = format!(
             "https://api.github.com/repos/{owner}/{repo}/git/trees/HEAD:{path}?recursive=true"
         );
-        let response = client.get(endpoint).send().await?.json::<GitTree>().await?;
+        let response = client
+            .get(endpoint)
+            .header(ACCEPT, GITHUB_JSON_MIME)
+            .send()
+            .await?
+            .json::<GitTree>()
+            .await?;
         let files = response
             .tree
             .iter()
