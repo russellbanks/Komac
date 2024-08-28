@@ -3,7 +3,7 @@ use color_eyre::Result;
 
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
-use crate::manifest::print_changes;
+use crate::manifests::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 

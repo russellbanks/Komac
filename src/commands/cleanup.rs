@@ -1,3 +1,4 @@
+use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
 use anstream::println;
@@ -8,7 +9,6 @@ use indicatif::ProgressBar;
 use inquire::MultiSelect;
 use owo_colors::OwoColorize;
 use std::fmt::{Display, Formatter};
-use std::time::Duration;
 
 /// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to
 /// microsoft/winget-pkgs from them, prompting for which ones to delete
@@ -42,7 +42,7 @@ impl Cleanup {
         let pb = ProgressBar::new_spinner().with_message(format!(
             "Retrieving branches that have a {merge_state} pull request associated with them"
         ));
-        pb.enable_steady_tick(Duration::from_millis(50));
+        pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         // Get all fork branches with an associated pull request to microsoft/winget-pkgs
         let (pr_branch_map, repository_id) = github
@@ -94,7 +94,7 @@ impl Cleanup {
             "Deleting {} selected {branch_label}",
             branches_to_delete.len(),
         ));
-        pb.enable_steady_tick(Duration::from_millis(50));
+        pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         github
             .delete_branches(&repository_id, &branches_to_delete)

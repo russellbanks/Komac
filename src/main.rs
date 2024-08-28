@@ -5,6 +5,7 @@ use crate::commands::cleanup::Cleanup;
 use crate::commands::complete::Complete;
 use crate::commands::list_versions::ListVersions;
 use crate::commands::new_version::NewVersion;
+use crate::commands::remove_dead_versions::RemoveDeadVersions;
 use crate::commands::remove_version::RemoveVersion;
 use crate::commands::show_version::ShowVersion;
 use crate::commands::sync_fork::SyncFork;
@@ -21,7 +22,6 @@ mod file_analyser;
 mod github;
 mod hyperlink;
 mod installers;
-mod manifest;
 mod manifests;
 mod match_installers;
 mod prompts;
@@ -50,6 +50,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Commands::Analyse(analyse) => analyse.run(),
+        Commands::RemoveDeadVersions(remove_dead_versions) => remove_dead_versions.run().await,
     }
 }
 
@@ -74,4 +75,5 @@ enum Commands {
     SyncFork(SyncFork),
     Complete(Complete),
     Analyse(Analyse),
+    RemoveDeadVersions(RemoveDeadVersions),
 }

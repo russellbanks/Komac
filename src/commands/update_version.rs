@@ -2,7 +2,6 @@ use std::collections::BTreeSet;
 use std::io::{Read, Seek};
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
-use std::time::Duration;
 
 use anstream::println;
 use base64ct::Encoding;
@@ -17,6 +16,7 @@ use strsim::levenshtein;
 
 use crate::commands::utils::{
     prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
+    SPINNER_TICK_RATE,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
@@ -62,7 +62,7 @@ pub struct UpdateVersion {
 
     /// List of issues that updating this package would resolve
     #[arg(long)]
-    resolves: Vec<NonZeroU32>,
+    resolves: Option<Vec<NonZeroU32>>,
 
     /// Automatically submit a pull request
     #[arg(short, long)]
@@ -320,7 +320,8 @@ impl UpdateVersion {
 
         manifests.version_manifest.update(&self.package_version);
 
-        let package_path = get_package_path(&self.package_identifier, Some(&self.package_version));
+        let package_path =
+            get_package_path(&self.package_identifier, Some(&self.package_version), None);
         let mut changes = PRChangesBuilder::default()
             .package_identifier(&self.package_identifier)
             .manifests(manifests)
@@ -354,7 +355,7 @@ impl UpdateVersion {
             "Creating a pull request for {} version {}",
             self.package_identifier, self.package_version
         ));
-        pr_progress.enable_steady_tick(Duration::from_millis(50));
+        pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
         let current_user = github.get_username().await?;
         let winget_pkgs = github.get_winget_pkgs(None).await?;

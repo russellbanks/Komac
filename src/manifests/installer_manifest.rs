@@ -2,14 +2,7 @@ use std::collections::BTreeSet;
 use std::mem;
 use std::num::NonZeroI64;
 
-use camino::Utf8PathBuf;
-use chrono::NaiveDate;
-use itertools::Itertools;
-use package_family_name::PackageFamilyName;
-use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
-use strum::{Display, EnumIter, EnumString};
-
+use crate::manifests::Manifest;
 use crate::types::architecture::Architecture;
 use crate::types::command::Command;
 use crate::types::custom_switch::CustomSwitch;
@@ -19,7 +12,7 @@ use crate::types::installer_switch::InstallerSwitch;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::ManifestVersion;
+use crate::types::manifest_version::{ManifestVersion, MANIFEST_VERSION};
 use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -28,6 +21,14 @@ use crate::types::sha_256::Sha256String;
 use crate::types::silent_switch::SilentSwitch;
 use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::DecodedUrl;
+use camino::Utf8PathBuf;
+use chrono::NaiveDate;
+use const_format::formatcp;
+use itertools::Itertools;
+use package_family_name::PackageFamilyName;
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
+use strum::{Display, EnumIter, EnumString};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]
@@ -74,6 +75,12 @@ pub struct InstallerManifest {
     pub manifest_type: ManifestType,
     #[serde(default)]
     pub manifest_version: ManifestVersion,
+}
+
+impl Manifest for InstallerManifest {
+    const SCHEMA: &'static str =
+        formatcp!("https://aka.ms/winget-manifest.installer.{MANIFEST_VERSION}.schema.json");
+    const TYPE: ManifestType = ManifestType::Installer;
 }
 
 #[derive(

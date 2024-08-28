@@ -1,29 +1,43 @@
-use crate::manifest::MANIFEST_VERSION;
-use nutype::nutype;
+use color_eyre::eyre::OptionExt;
+use derive_more::Display;
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;
 
-#[nutype(
-    validate(predicate = is_manifest_version_valid),
-    derive(Clone, FromStr, Display, Deserialize, Serialize)
-)]
-pub struct ManifestVersion(String);
+pub const MANIFEST_VERSION: &str = "1.6.0";
+
+#[derive(SerializeDisplay, DeserializeFromStr, Display)]
+#[display("{_0}.{_1}.{_2}")]
+pub struct ManifestVersion(u16, u16, u16);
 
 impl Default for ManifestVersion {
     fn default() -> Self {
-        Self::try_new(MANIFEST_VERSION).unwrap()
+        Self::DEFAULT_VERSION
     }
 }
 
-fn is_manifest_version_valid(input: &str) -> bool {
-    let parts = input.split('.').collect::<Vec<_>>();
+impl FromStr for ManifestVersion {
+    type Err = color_eyre::Report;
 
-    if parts.len() != 3 {
-        return false;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.splitn(Self::PARTS_COUNT as usize, Self::SEPARATOR);
+        let major = parts
+            .next()
+            .ok_or_eyre("No major version")?
+            .parse::<u16>()?;
+        let minor = parts
+            .next()
+            .ok_or_eyre("No minor version")?
+            .parse::<u16>()?;
+        let patch = parts
+            .next()
+            .ok_or_eyre("No patch version")?
+            .parse::<u16>()?;
+        Ok(Self(major, minor, patch))
     }
+}
 
-    if parts.into_iter().any(|part| u16::from_str(part).is_err()) {
-        return false;
-    }
-
-    true
+impl ManifestVersion {
+    const DEFAULT_VERSION: Self = Self(1, 6, 0);
+    const PARTS_COUNT: u8 = 3;
+    const SEPARATOR: char = '.';
 }

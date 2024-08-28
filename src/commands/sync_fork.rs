@@ -1,5 +1,4 @@
-use std::time::Duration;
-
+use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
 use crate::hyperlink::Hyperlink;
@@ -64,7 +63,7 @@ impl SyncFork {
             winget_pkgs.full_name.as_str().blue(),
             winget_pkgs_fork.full_name.as_str().blue(),
         ));
-        pb.enable_steady_tick(Duration::from_millis(50));
+        pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         github
             .merge_upstream(

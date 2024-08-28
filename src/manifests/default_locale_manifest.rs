@@ -1,11 +1,12 @@
-use std::collections::BTreeSet;
-use std::mem;
-
+use const_format::formatcp;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use std::collections::BTreeSet;
+use std::mem;
 use url::Url;
 
 use crate::github::github_client::GitHubValues;
+use crate::manifests::Manifest;
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
 use crate::types::description::Description;
@@ -13,7 +14,7 @@ use crate::types::installation_notes::InstallationNotes;
 use crate::types::language_tag::LanguageTag;
 use crate::types::license::License;
 use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::ManifestVersion;
+use crate::types::manifest_version::{ManifestVersion, MANIFEST_VERSION};
 use crate::types::moniker::Moniker;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_name::PackageName;
@@ -62,6 +63,12 @@ pub struct DefaultLocaleManifest {
     pub manifest_type: ManifestType,
     #[serde(default)]
     pub manifest_version: ManifestVersion,
+}
+
+impl Manifest for DefaultLocaleManifest {
+    const SCHEMA: &'static str =
+        formatcp!("https://aka.ms/winget-manifest.defaultLocale.{MANIFEST_VERSION}.schema.json");
+    const TYPE: ManifestType = ManifestType::DefaultLocale;
 }
 
 #[skip_serializing_none]
@@ -186,7 +193,7 @@ impl DefaultLocaleManifest {
         self.release_notes_url = github_values
             .as_ref()
             .and_then(|values| values.release_notes_url.clone());
-        self.manifest_type = ManifestType::DefaultLocale;
+        self.manifest_type = Self::TYPE;
         self.manifest_version = ManifestVersion::default();
     }
 }

@@ -1,5 +1,6 @@
 use crate::github::github_client::GitHubValues;
 use crate::manifests::default_locale_manifest::{Agreement, Documentation, Icon};
+use crate::manifests::Manifest;
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
 use crate::types::description::Description;
@@ -7,7 +8,7 @@ use crate::types::installation_notes::InstallationNotes;
 use crate::types::language_tag::LanguageTag;
 use crate::types::license::License;
 use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::ManifestVersion;
+use crate::types::manifest_version::{ManifestVersion, MANIFEST_VERSION};
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_name::PackageName;
 use crate::types::package_version::PackageVersion;
@@ -16,13 +17,14 @@ use crate::types::release_notes::ReleaseNotes;
 use crate::types::short_description::ShortDescription;
 use crate::types::tag::Tag;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use const_format::formatcp;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::BTreeSet;
 use url::Url;
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct LocaleManifest {
     pub package_identifier: PackageIdentifier,
@@ -54,6 +56,12 @@ pub struct LocaleManifest {
     pub manifest_version: ManifestVersion,
 }
 
+impl Manifest for LocaleManifest {
+    const SCHEMA: &'static str =
+        formatcp!("https://aka.ms/winget-manifest.locale.{MANIFEST_VERSION}.schema.json");
+    const TYPE: ManifestType = ManifestType::Locale;
+}
+
 impl LocaleManifest {
     pub fn update(
         &mut self,
@@ -64,7 +72,7 @@ impl LocaleManifest {
         self.release_notes_url = github_values
             .as_ref()
             .and_then(|values| values.release_notes_url.clone());
-        self.manifest_type = ManifestType::Locale;
+        self.manifest_type = Self::TYPE;
         self.manifest_version = ManifestVersion::default();
     }
 }

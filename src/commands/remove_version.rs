@@ -1,15 +1,10 @@
 use std::num::NonZeroU32;
-use std::time::Duration;
 
+use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::graphql::create_commit::FileDeletion;
-use crate::github::utils::{
-    get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
-};
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
-use crate::update_state::UpdateState;
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::{bail, Result};
@@ -36,10 +31,14 @@ pub struct RemoveVersion {
 
     /// List of issues that removing this version would resolve
     #[arg(long)]
-    resolves: Vec<NonZeroU32>,
+    resolves: Option<Vec<NonZeroU32>>,
 
     #[arg(short, long)]
     submit: bool,
+
+    /// Don't show the package removal warning
+    #[arg(long)]
+    no_warning: bool,
 
     /// Open pull request link automatically
     #[arg(long, env = "OPEN_PR")]
@@ -56,11 +55,12 @@ impl RemoveVersion {
 
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token).await?;
-        println!(
-            "{}",
-            "Packages should only be removed when necessary".yellow()
-        );
-        println!();
+        if !self.no_warning {
+            println!(
+                "{}",
+                "Packages should only be removed when necessary".yellow()
+            );
+        }
         let github = GitHub::new(&token)?;
         let versions = github.get_versions(&self.package_identifier).await?;
 
@@ -87,15 +87,13 @@ impl RemoveVersion {
             .with_validator(MaxLengthValidator::new(Self::MAX_REASON_LENGTH))
             .prompt()?,
         };
-        let should_remove_manifest = if self.submit {
-            true
-        } else {
-            Confirm::new(&format!(
+        let should_remove_manifest = self.submit
+            || Confirm::new(&format!(
                 "Would you like to make a pull request to remove {} {}?",
                 self.package_identifier, self.package_version
             ))
-            .prompt()?
-        };
+            .prompt()?;
+
         if !should_remove_manifest {
             return Ok(());
         }
@@ -105,61 +103,23 @@ impl RemoveVersion {
             "Creating a pull request to remove {} version {}",
             self.package_identifier, self.package_version
         ));
-        pr_progress.enable_steady_tick(Duration::from_millis(50));
+        pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
         let current_user = github.get_username().await?;
         let winget_pkgs = github.get_winget_pkgs(None).await?;
         let fork = github.get_winget_pkgs(Some(&current_user)).await?;
-        let branch_name = get_branch_name(&self.package_identifier, &self.package_version);
-        let pull_request_branch = github
-            .create_branch(&fork.id, &branch_name, winget_pkgs.default_branch_oid)
-            .await?;
-        let commit_title = get_commit_title(
-            &self.package_identifier,
-            &self.package_version,
-            &UpdateState::RemoveVersion,
-        );
-        let directory_content = github
-            .get_directory_content(
-                &current_user,
-                &branch_name,
-                &get_package_path(&self.package_identifier, Some(&self.package_version)),
-            )
-            .await?
-            .collect::<Vec<_>>();
-        let deletions = directory_content
-            .iter()
-            .map(|path| FileDeletion { path })
-            .collect::<Vec<_>>();
-        let _commit_url = github
-            .create_commit(
-                &pull_request_branch.id,
-                pull_request_branch.target.map(|object| object.oid).unwrap(),
-                &commit_title,
-                None,
-                Some(deletions),
-            )
-            .await?;
+
         let pull_request_url = github
-            .create_pull_request(
-                &winget_pkgs.id,
-                &fork.id,
-                &format!("{current_user}:{}", pull_request_branch.name),
-                &winget_pkgs.default_branch_name,
-                &commit_title,
-                &get_pull_request_body(self.resolves, Some(deletion_reason), None, None),
+            .remove_version(
+                &self.package_identifier,
+                &self.package_version,
+                deletion_reason,
+                &current_user,
+                &winget_pkgs,
+                &fork,
+                self.resolves,
             )
             .await?;
-
-        pr_progress.finish_and_clear();
-
-        println!(
-            "{} created a pull request to remove {} version {}",
-            "Successfully".green(),
-            self.package_identifier,
-            self.package_version
-        );
-        println!("{}", pull_request_url.as_str());
 
         if self.open_pr {
             open::that(pull_request_url.as_str())?;

@@ -1,6 +1,6 @@
 use crate::file_analyser::FileAnalyser;
-use crate::manifest::print_manifest;
 use crate::manifests::installer_manifest::{AppsAndFeaturesEntry, InstallationMetadata, Installer};
+use crate::manifests::print_manifest;
 use crate::types::sha_256::Sha256String;
 use anstream::stdout;
 use camino::{Utf8Path, Utf8PathBuf};

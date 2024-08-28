@@ -1,4 +1,5 @@
 use crate::commands::cleanup::MergeState;
+use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::get_default_headers;
 use crate::github::graphql::create_commit::{
     CommitMessage, CommittableBranch, CreateCommit, CreateCommitOnBranchInput,
@@ -21,6 +22,7 @@ use crate::github::graphql::get_existing_pull_request;
 use crate::github::graphql::get_existing_pull_request::{
     GetExistingPullRequest, GetExistingPullRequestVariables,
 };
+use crate::github::graphql::get_file_content::GetFileContent;
 use crate::github::graphql::get_repository_info::{
     GetRepositoryInfo, RepositoryVariables, TargetGitObject,
 };
@@ -29,13 +31,16 @@ use crate::github::graphql::types::{GitObjectId, GitRefName};
 use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
 use crate::github::rest::get_tree::GitTree;
 use crate::github::rest::GITHUB_JSON_MIME;
-use crate::github::utils::{get_package_path, is_manifest_file};
+use crate::github::utils::{
+    get_branch_name, get_commit_title, get_package_path, get_pull_request_body, is_manifest_file,
+};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
+use crate::manifests::Manifest;
 use crate::types::license::License;
-use crate::types::manifest_type::ManifestType;
+use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::release_notes::ReleaseNotes;
@@ -45,17 +50,22 @@ use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use crate::update_state::UpdateState;
 use color_eyre::eyre::{bail, eyre, Result, WrapErr};
 use color_eyre::Report;
 use const_format::{formatcp, str_repeat};
 use cynic::http::ReqwestExt;
 use cynic::{Id, MutationBuilder, QueryBuilder};
 use indexmap::IndexMap;
+use indicatif::ProgressBar;
 use itertools::Itertools;
+use owo_colors::OwoColorize;
 use reqwest::header::ACCEPT;
 use reqwest::Client;
+use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::env;
+use std::num::NonZeroU32;
 use std::ops::Not;
 use std::str::FromStr;
 use url::Url;
@@ -101,18 +111,17 @@ impl GitHub {
         &self,
         package_identifier: &PackageIdentifier,
     ) -> Result<BTreeSet<PackageVersion>> {
-        Self::get_all_versions(
-            &self.0,
+        self.get_all_versions(
             MICROSOFT,
             WINGET_PKGS,
-            &get_package_path(package_identifier, None),
+            &get_package_path(package_identifier, None, None),
         )
         .await
         .wrap_err_with(|| format!("{package_identifier} does not exist in {WINGET_PKGS_FULL_NAME}"))
     }
 
     async fn get_all_versions(
-        client: &Client,
+        &self,
         owner: &str,
         repo: &str,
         path: &str,
@@ -123,7 +132,8 @@ impl GitHub {
         let endpoint = format!(
             "https://api.github.com/repos/{owner}/{repo}/git/trees/HEAD:{path}?recursive=true"
         );
-        let response = client
+        let response = self
+            .0
             .get(endpoint)
             .header(ACCEPT, GITHUB_JSON_MIME)
             .send()
@@ -161,15 +171,11 @@ impl GitHub {
         identifier: &PackageIdentifier,
         latest_version: &PackageVersion,
     ) -> Result<Manifests> {
-        let full_package_path = get_package_path(identifier, Some(latest_version));
-        let content = Self::get_directory_content_with_text(
-            &self.0,
-            MICROSOFT,
-            WINGET_PKGS,
-            &full_package_path,
-        )
-        .await?
-        .collect::<Vec<_>>();
+        let full_package_path = get_package_path(identifier, Some(latest_version), None);
+        let content = self
+            .get_directory_content_with_text(MICROSOFT, WINGET_PKGS, &full_package_path)
+            .await?
+            .collect::<Vec<_>>();
 
         let version_manifest = content
             .iter()
@@ -220,18 +226,19 @@ impl GitHub {
     }
 
     async fn get_directory_content_with_text(
-        client: &Client,
+        &self,
         owner: &str,
         repo: &str,
         path: &str,
     ) -> Result<impl Iterator<Item = GitHubFile>> {
-        let response = client
+        let response = self
+            .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetDirectoryContentWithText::build(
                 GetDirectoryContentVariables {
-                    expression: &format!("HEAD:{path}"),
-                    name: repo,
                     owner,
+                    name: repo,
+                    expression: &format!("HEAD:{path}"),
                 },
             ))
             .await?;
@@ -260,16 +267,46 @@ impl GitHub {
             })
     }
 
-    pub async fn get_winget_pkgs(&self, username: Option<&str>) -> Result<RepositoryData> {
-        Self::get_repository_info(&self.0, username.unwrap_or(MICROSOFT), WINGET_PKGS).await
+    pub async fn get_manifest<T: Manifest + for<'de> Deserialize<'de>>(
+        &self,
+        identifier: &PackageIdentifier,
+        version: &PackageVersion,
+        manifest_type: ManifestTypeWithLocale,
+    ) -> Result<T> {
+        let path = get_package_path(identifier, Some(version), Some(&manifest_type));
+        let content = self.get_file_content(MICROSOFT, WINGET_PKGS, &path).await?;
+        let manifest = serde_yaml::from_str::<T>(&content)?;
+        Ok(manifest)
     }
 
-    async fn get_repository_info(
-        client: &Client,
-        owner: &str,
-        name: &str,
-    ) -> Result<RepositoryData> {
-        let repository = client
+    async fn get_file_content(&self, owner: &str, repo: &str, path: &str) -> Result<String> {
+        let response = self
+            .0
+            .post(GITHUB_GRAPHQL_URL)
+            .run_graphql(GetFileContent::build(GetDirectoryContentVariables {
+                owner,
+                name: repo,
+                expression: &format!("HEAD:{path}"),
+            }))
+            .await?;
+        response
+            .data
+            .and_then(|data| data.repository?.object?.into_blob_text())
+            .ok_or_else(|| {
+                response.errors.unwrap_or_default().into_iter().fold(
+                    eyre!("No file content was returned when retrieving {path}"),
+                    Report::wrap_err,
+                )
+            })
+    }
+
+    pub async fn get_winget_pkgs(&self, username: Option<&str>) -> Result<RepositoryData> {
+        self.get_repository_info(username.unwrap_or(MICROSOFT), WINGET_PKGS)
+            .await
+    }
+
+    async fn get_repository_info(&self, owner: &str, name: &str) -> Result<RepositoryData> {
+        let repository = self.0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetRepositoryInfo::build(RepositoryVariables { owner, name }))
             .await?
@@ -653,6 +690,73 @@ impl GitHub {
                 Report::wrap_err,
             ))
         }
+    }
+
+    pub async fn remove_version(
+        &self,
+        identifier: &PackageIdentifier,
+        version: &PackageVersion,
+        deletion_reason: String,
+        current_user: &String,
+        winget_pkgs: &RepositoryData,
+        fork: &RepositoryData,
+        resolves: Option<Vec<NonZeroU32>>,
+    ) -> Result<Url> {
+        // Create an indeterminate progress bar to show as a pull request is being created
+        let pr_progress = ProgressBar::new_spinner().with_message(format!(
+            "Creating a pull request to remove {identifier} {version}",
+        ));
+        pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
+
+        let branch_name = get_branch_name(identifier, version);
+        let pull_request_branch = self
+            .create_branch(
+                &fork.id,
+                &branch_name,
+                winget_pkgs.default_branch_oid.clone(),
+            )
+            .await?;
+        let commit_title = get_commit_title(identifier, version, &UpdateState::RemoveVersion);
+        let directory_content = self
+            .get_directory_content(
+                current_user,
+                &branch_name,
+                &get_package_path(identifier, Some(version), None),
+            )
+            .await?
+            .collect::<Vec<_>>();
+        let deletions = directory_content
+            .iter()
+            .map(|path| FileDeletion { path })
+            .collect::<Vec<_>>();
+        let _commit_url = self
+            .create_commit(
+                &pull_request_branch.id,
+                pull_request_branch.target.map(|object| object.oid).unwrap(),
+                &commit_title,
+                None,
+                Some(deletions),
+            )
+            .await?;
+        let pull_request_url = self
+            .create_pull_request(
+                &winget_pkgs.id,
+                &fork.id,
+                &format!("{current_user}:{}", pull_request_branch.name),
+                &winget_pkgs.default_branch_name,
+                &commit_title,
+                &get_pull_request_body(resolves, Some(deletion_reason), None, None),
+            )
+            .await?;
+
+        pr_progress.finish_and_clear();
+
+        println!(
+            "{} created a pull request to remove {identifier} {version}",
+            "Successfully".green(),
+        );
+        println!("{}", pull_request_url.as_str());
+        Ok(pull_request_url)
     }
 }
 

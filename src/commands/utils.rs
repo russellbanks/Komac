@@ -1,6 +1,3 @@
-use std::env;
-use std::str::FromStr;
-
 use anstream::println;
 use camino::Utf8Path;
 use chrono::Local;
@@ -8,6 +5,9 @@ use color_eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::{Confirm, Select};
 use owo_colors::OwoColorize;
+use std::env;
+use std::str::FromStr;
+use std::time::Duration;
 use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::fs;
 use tokio::fs::File;
@@ -15,9 +15,13 @@ use tokio::io::AsyncWriteExt;
 
 use crate::editor::Editor;
 use crate::github::graphql::get_existing_pull_request::PullRequest;
-use crate::manifest::print_changes;
+use crate::manifests::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
+
+pub const SPINNER_TICK_RATE: Duration = Duration::from_millis(50);
+
+pub const SPINNER_SLOW_TICK_RATE: Duration = Duration::from_millis(100);
 
 pub fn prompt_existing_pull_request(
     identifier: &PackageIdentifier,

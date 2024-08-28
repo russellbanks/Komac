@@ -11,7 +11,7 @@ impl Base64String {
 }
 
 /// <https://docs.github.com/graphql/reference/scalars#gitobjectid>
-#[derive(cynic::Scalar, PartialEq, Eq)]
+#[derive(cynic::Scalar, PartialEq, Eq, Clone)]
 #[cynic(graphql_type = "GitObjectID")]
 pub struct GitObjectId(String);
 
