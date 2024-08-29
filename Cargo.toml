@@ -39,7 +39,7 @@ const_format = "0.2.32"
 crc32fast = "1.4.2"
 crossterm = "0.28.1"
 cynic = { version = "3.7.3", features = ["http-reqwest"] }
-derive_builder = "0.20.0"
+derive_builder = "0.20.1"
 derive_more = { version = "1.0.0", features = ["as_ref", "deref", "display", "from_str"] }
 encoding_rs = "0.8.34"
 flate2 = "1.0.33"
