@@ -95,7 +95,6 @@ mod tests {
                 }
               }
             }
-
         "#};
 
         let operation = GetDirectoryContentWithText::build(GetDirectoryContentVariables {

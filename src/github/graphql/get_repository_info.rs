@@ -88,7 +88,6 @@ mod tests {
                 }
               }
             }
-
         "#};
 
         let operation = GetRepositoryInfo::build(RepositoryVariables {

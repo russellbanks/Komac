@@ -48,7 +48,7 @@ mod tests {
     fn create_ref_output() {
         const CREATE_REF_MUTATION: &str = indoc! {"
             mutation CreateRef($name: String!, $oid: GitObjectID!, $repositoryId: ID!) {
-              createRef(input: {name: $name, oid: $oid, repositoryId: $repositoryId, }) {
+              createRef(input: {name: $name, oid: $oid, repositoryId: $repositoryId}) {
                 ref {
                   id
                   name
@@ -58,7 +58,6 @@ mod tests {
                 }
               }
             }
-
         "};
 
         let id = Id::new("");

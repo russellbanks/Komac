@@ -138,7 +138,6 @@ mod tests {
                 url
               }
             }
-
         "#};
 
         let operation = GetAllValues::build(GetAllValuesVariables {

@@ -60,7 +60,6 @@ mod tests {
                 }
               }
             }
-
         "};
 
         let id = Id::new("");
