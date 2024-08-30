@@ -76,17 +76,18 @@ async fn download_file(
         let chunk = item?;
         let write = file.write_all(&chunk);
         hasher.update(&chunk); // Hash file as it's downloading
-        let new = min(downloaded + (chunk.len() as u64), total_size);
-        downloaded = new;
-        pb.set_position(new);
+        downloaded = min(downloaded + (chunk.len() as u64), total_size);
+        pb.set_position(downloaded);
         write.await?;
     }
     pb.finish_and_clear();
+    file.flush().await?;
+    file.sync_all().await?;
 
     Ok(DownloadedFile {
         url: url.into(),
+        mmap: unsafe { Mmap::map(&temp_file) }?,
         file: temp_file,
-        mmap: unsafe { Mmap::map(&file) }?,
         sha_256: Sha256String::from_hasher(&hasher.finalize())?,
         file_name,
         last_modified,
@@ -220,12 +221,12 @@ pub fn download_urls<'a>(
 
 pub struct DownloadedFile {
     pub url: DecodedUrl,
+    pub mmap: Mmap,
     // As the downloaded file is a temporary file, it's stored here so that the reference stays
     // alive and the file does not get deleted. This is necessary because the memory map needs the
     // reference to the file.
     #[allow(dead_code)]
     pub file: File,
-    pub mmap: Mmap,
     pub sha_256: Sha256String,
     pub file_name: String,
     pub last_modified: Option<NaiveDate>,
