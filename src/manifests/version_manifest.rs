@@ -7,7 +7,7 @@ use crate::types::package_version::PackageVersion;
 use const_format::formatcp;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct VersionManifest {
     pub package_identifier: PackageIdentifier,

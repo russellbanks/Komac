@@ -24,7 +24,7 @@ use std::collections::BTreeSet;
 use url::Url;
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct LocaleManifest {
     pub package_identifier: PackageIdentifier,
