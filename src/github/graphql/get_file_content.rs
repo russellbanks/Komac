@@ -37,7 +37,6 @@ mod tests {
                 }
               }
             }
-
         "#};
 
         let operation = GetFileContent::build(GetDirectoryContentVariables {

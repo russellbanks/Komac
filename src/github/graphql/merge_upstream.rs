@@ -33,11 +33,10 @@ mod tests {
     fn merge_upstream_output() {
         const MERGE_UPSTREAM_MUTATION: &str = indoc! {"
             mutation MergeUpstream($branchRefId: ID!, $upstreamTargetOid: GitObjectID!) {
-              updateRef(input: {oid: $upstreamTargetOid, refId: $branchRefId, }) {
+              updateRef(input: {oid: $upstreamTargetOid, refId: $branchRefId}) {
                 clientMutationId
               }
             }
-
         "};
 
         let id = Id::new("");

@@ -88,7 +88,7 @@ yara-x = { version = "0.7.0", default-features = false, features = ["pe-module"]
 zip = { version = "2.2.0", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
-cynic-codegen = { version = "3.7.3", features = ["rkyv"] }
+cynic-codegen = { version = "3.8.0", features = ["rkyv"] }
 windows_exe_info = { version = "0.4.2", features = ["manifest"] }
 
 [dev-dependencies]

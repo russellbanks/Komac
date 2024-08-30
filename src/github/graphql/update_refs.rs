@@ -43,11 +43,10 @@ mod tests {
     fn create_ref_output() {
         const UPDATE_REFS_MUTATION: &str = indoc! {"
             mutation UpdateRefs($refUpdates: [RefUpdate!]!, $repositoryId: ID!) {
-              updateRefs(input: {refUpdates: $refUpdates, repositoryId: $repositoryId, }) {
+              updateRefs(input: {refUpdates: $refUpdates, repositoryId: $repositoryId}) {
                 clientMutationId
               }
             }
-
         "};
 
         let id = Id::new("");

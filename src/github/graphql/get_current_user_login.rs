@@ -27,7 +27,6 @@ mod tests {
                 login
               }
             }
-
         "#};
 
         let operation = GetCurrentUserLogin::build(());

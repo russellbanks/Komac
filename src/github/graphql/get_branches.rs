@@ -127,7 +127,6 @@ mod tests {
                 }
               }
             }
-
         "#};
 
         let operation = GetBranches::build(RepositoryVariables {

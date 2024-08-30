@@ -74,7 +74,6 @@ mod tests {
                 }
               }
             }
-
         "#};
 
         let operation =
