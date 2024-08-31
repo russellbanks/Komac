@@ -80,9 +80,9 @@ async fn download_file(
         pb.set_position(downloaded);
         write.await?;
     }
-    pb.finish_and_clear();
     file.flush().await?;
     file.sync_all().await?;
+    pb.finish_and_clear();
 
     Ok(DownloadedFile {
         url: url.into(),
