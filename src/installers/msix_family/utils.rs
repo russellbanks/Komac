@@ -3,7 +3,6 @@ use std::io::{Read, Seek};
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
-use sha2::{Digest, Sha256};
 use zip::ZipArchive;
 
 use crate::installers::msi::RELATIVE_PROGRAM_FILES_64;
@@ -18,17 +17,8 @@ pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Res
 }
 
 pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> Result<Sha256String> {
-    let mut signature_file = zip.by_name(APPX_SIGNATURE_P7X)?;
-    let mut hasher = Sha256::new();
-    let mut buffer = [0; 1 << 13];
-    loop {
-        let count = signature_file.read(&mut buffer)?;
-        if count == 0 {
-            break;
-        }
-        hasher.update(&buffer[..count]);
-    }
-    Sha256String::from_hasher(&hasher.finalize())
+    let signature_file = zip.by_name(APPX_SIGNATURE_P7X)?;
+    Sha256String::from_reader(signature_file)
 }
 
 pub fn get_install_location(

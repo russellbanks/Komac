@@ -142,10 +142,10 @@ impl InnoFile {
             architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
             unsupported_architectures: mem::take(&mut header.architectures_disallowed)
                 .to_unsupported_architectures(),
-            uninstall_name: mem::take(&mut header.uninstall_name),
-            app_version: mem::take(&mut header.app_version),
-            app_publisher: mem::take(&mut header.app_publisher),
-            product_code: mem::take(&mut header.app_id).map(to_product_code),
+            uninstall_name: header.uninstall_name.take(),
+            app_version: header.app_version.take(),
+            app_publisher: header.app_publisher.take(),
+            product_code: header.app_id.take().map(to_product_code),
             elevation_requirement: header
                 .privileges_required
                 .to_elevation_requirement(&header.privileges_required_overrides_allowed),

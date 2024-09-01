@@ -15,6 +15,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::editor::Editor;
 use crate::github::graphql::get_existing_pull_request::PullRequest;
+use crate::manifests::installer_manifest::AppsAndFeaturesEntry;
 use crate::manifests::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -96,4 +97,15 @@ pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Utf8Pat
         .buffer_unordered(2)
         .try_collect()
         .await
+}
+
+pub fn deduplicate_display_version(
+    arp_entries: Option<&mut Vec<AppsAndFeaturesEntry>>,
+    package_version: &PackageVersion,
+) {
+    if let Some(arp) = arp_entries {
+        arp.iter_mut()
+            .filter(|entry| entry.display_version.as_ref() == Some(&**package_version))
+            .for_each(|entry| entry.display_version = None);
+    }
 }

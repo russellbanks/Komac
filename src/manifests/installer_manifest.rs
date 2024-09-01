@@ -1,5 +1,4 @@
 use std::collections::BTreeSet;
-use std::mem;
 use std::num::NonZeroI64;
 
 use crate::manifests::Manifest;
@@ -27,8 +26,9 @@ use const_format::formatcp;
 use itertools::Itertools;
 use package_family_name::PackageFamilyName;
 use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
+use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 use strum::{Display, EnumIter, EnumString};
+use versions::Versioning;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]
@@ -67,7 +67,7 @@ pub struct InstallerManifest {
     #[serde(rename = "UnsupportedOSArchitectures")]
     pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
     pub unsupported_arguments: Option<BTreeSet<UnsupportedArguments>>,
-    pub apps_and_features_entries: Option<BTreeSet<AppsAndFeaturesEntry>>,
+    pub apps_and_features_entries: Option<Vec<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
     pub download_command_prohibited: Option<bool>,
@@ -81,6 +81,126 @@ impl Manifest for InstallerManifest {
     const SCHEMA: &'static str =
         formatcp!("https://aka.ms/winget-manifest.installer.{MANIFEST_VERSION}.schema.json");
     const TYPE: ManifestType = ManifestType::Installer;
+}
+
+impl InstallerManifest {
+    pub fn reorder_keys(
+        &mut self,
+        package_identifier: &PackageIdentifier,
+        package_version: &PackageVersion,
+    ) {
+        fn reorder_key<T>(
+            installers: &mut [Installer],
+            get_key: impl Fn(&mut Installer) -> &mut Option<T>,
+            set_root: &mut Option<T>,
+        ) where
+            T: PartialEq,
+        {
+            if let Ok(value) = installers.iter_mut().map(&get_key).all_equal_value() {
+                if value.is_some() {
+                    *set_root = value.take();
+                    installers
+                        .iter_mut()
+                        .for_each(|installer| *get_key(installer) = None);
+                }
+            }
+        }
+
+        fn reorder_struct_key<T, R>(
+            installers: &mut [Installer],
+            field: impl Fn(&mut Installer) -> &mut Option<T>,
+            nested_field: impl Fn(&mut T) -> &mut Option<R>,
+            set_self: &mut Option<T>,
+        ) where
+            T: Default,
+            R: PartialEq,
+        {
+            if let Ok(Some(nested_value)) = installers
+                .iter_mut()
+                .map(&field)
+                .map(|opt| opt.as_mut().map(&nested_field))
+                .all_equal_value()
+            {
+                if nested_value.is_some() {
+                    if let Some(s) = set_self.as_mut() {
+                        *nested_field(s) = nested_value.take();
+                    } else {
+                        *set_self = Some(T::default());
+                        if let Some(s) = set_self.as_mut() {
+                            *nested_field(s) = nested_value.take();
+                        }
+                    }
+                    installers
+                        .iter_mut()
+                        .filter_map(|installer| field(installer).as_mut())
+                        .for_each(|s| *nested_field(s) = None);
+                }
+            }
+        }
+
+        macro_rules! root_keys {
+            ($($field:ident),*) => {
+                $(
+                    reorder_key(&mut self.installers, |installer| &mut installer.$field, &mut self.$field);
+                )*
+            };
+        }
+
+        macro_rules! root_struct_key {
+            ($struct:ident, $( $field:ident ),*) => {
+                $(
+                    reorder_struct_key(&mut self.installers, |installer| &mut installer.$struct, |s| &mut s.$field, &mut self.$struct);
+                )*
+            };
+        }
+
+        self.package_identifier.clone_from(package_identifier);
+        self.package_version.clone_from(package_version);
+        root_keys!(
+            installer_locale,
+            platform,
+            minimum_os_version,
+            installer_type,
+            nested_installer_type,
+            nested_installer_files,
+            scope,
+            install_modes,
+            installer_success_codes,
+            expected_return_codes,
+            upgrade_behavior,
+            commands,
+            protocols,
+            file_extensions,
+            dependencies,
+            package_family_name,
+            product_code,
+            capabilities,
+            restricted_capabilities,
+            markets,
+            installer_aborts_terminal,
+            release_date,
+            installer_location_required,
+            require_explicit_upgrade,
+            display_install_warnings,
+            unsupported_os_architectures,
+            unsupported_arguments,
+            apps_and_features_entries,
+            elevation_requirement,
+            installation_metadata
+        );
+        root_struct_key!(
+            installer_switches,
+            silent,
+            silent_with_progress,
+            interactive,
+            install_location,
+            log,
+            silent_with_progress,
+            upgrade,
+            custom
+        );
+        self.manifest_version = ManifestVersion::default();
+    }
 }
 
 #[derive(
@@ -274,13 +394,15 @@ pub enum UnsupportedArguments {
     Location,
 }
 
+#[serde_as]
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct AppsAndFeaturesEntry {
     pub display_name: Option<String>,
     pub publisher: Option<String>,
-    pub display_version: Option<String>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub display_version: Option<Versioning>,
     pub product_code: Option<String>,
     pub upgrade_code: Option<String>,
     pub installer_type: Option<InstallerType>,
@@ -359,86 +481,27 @@ pub struct Installer {
     #[serde(rename = "UnsupportedOSArchitectures")]
     pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
     pub unsupported_arguments: Option<BTreeSet<UnsupportedArguments>>,
-    pub apps_and_features_entries: Option<BTreeSet<AppsAndFeaturesEntry>>,
+    pub apps_and_features_entries: Option<Vec<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
     pub download_command_prohibited: Option<bool>,
 }
 
-impl InstallerManifest {
-    pub fn reorder_keys(
-        &mut self,
-        package_identifier: &PackageIdentifier,
-        package_version: &PackageVersion,
-    ) {
-        fn reorder_key<T>(
-            installers: &mut [Installer],
-            get_key: impl Fn(&mut Installer) -> &mut Option<T>,
-            set_self: &mut Option<T>,
-        ) where
-            T: PartialEq,
-        {
-            if let Ok(value) = installers.iter_mut().map(&get_key).all_equal_value() {
-                if value.is_some() {
-                    *set_self = mem::take(value);
-                    installers
-                        .iter_mut()
-                        .for_each(|installer| *get_key(installer) = None);
-                }
-            }
-        }
-
-        fn reorder_struct_key<T, R>(
-            installers: &mut [Installer],
-            field: impl Fn(&mut Installer) -> &mut Option<T>,
-            nested_field: impl Fn(&mut T) -> &mut Option<R>,
-            set_self: &mut Option<T>,
-        ) where
-            T: Default,
-            R: PartialEq,
-        {
-            if let Ok(Some(nested_value)) = installers
-                .iter_mut()
-                .map(&field)
-                .map(|opt| opt.as_mut().map(&nested_field))
-                .all_equal_value()
-            {
-                if nested_value.is_some() {
-                    if let Some(s) = set_self.as_mut() {
-                        *nested_field(s) = mem::take(nested_value);
-                    } else {
-                        *set_self = Some(T::default());
-                        if let Some(s) = set_self.as_mut() {
-                            *nested_field(s) = mem::take(nested_value);
-                        }
+impl Installer {
+    pub fn merge_with(mut self, other: Self) -> Self {
+        macro_rules! merge_fields {
+            ($self:ident, $other:ident, $( $field:ident ),* ) => {
+                $(
+                    if $self.$field.is_none() {
+                        $self.$field = $other.$field;
                     }
-                    installers
-                        .iter_mut()
-                        .filter_map(|installer| field(installer).as_mut())
-                        .for_each(|s| *nested_field(s) = None);
-                }
+                )*
             }
         }
 
-        macro_rules! root_keys {
-            ($($field:ident),*) => {
-                $(
-                    reorder_key(&mut self.installers, |installer| &mut installer.$field, &mut self.$field);
-                )*
-            };
-        }
-
-        macro_rules! root_struct_key {
-            ($struct:ident, $( $field:ident ),*) => {
-                $(
-                    reorder_struct_key(&mut self.installers, |installer| &mut installer.$struct, |s| &mut s.$field, &mut self.$struct);
-                )*
-            };
-        }
-
-        self.package_identifier.clone_from(package_identifier);
-        self.package_version.clone_from(package_version);
-        root_keys!(
+        merge_fields!(
+            self,
+            other,
             installer_locale,
             platform,
             minimum_os_version,
@@ -447,6 +510,7 @@ impl InstallerManifest {
             nested_installer_files,
             scope,
             install_modes,
+            installer_switches,
             installer_success_codes,
             expected_return_codes,
             upgrade_behavior,
@@ -460,27 +524,15 @@ impl InstallerManifest {
             restricted_capabilities,
             markets,
             installer_aborts_terminal,
-            release_date,
-            installer_location_required,
             require_explicit_upgrade,
             display_install_warnings,
             unsupported_os_architectures,
             unsupported_arguments,
-            apps_and_features_entries,
             elevation_requirement,
-            installation_metadata
+            installation_metadata,
+            download_command_prohibited
         );
-        root_struct_key!(
-            installer_switches,
-            silent,
-            silent_with_progress,
-            interactive,
-            install_location,
-            log,
-            silent_with_progress,
-            upgrade,
-            custom
-        );
-        self.manifest_version = ManifestVersion::default();
+
+        self
     }
 }

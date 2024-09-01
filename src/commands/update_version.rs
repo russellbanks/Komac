@@ -15,8 +15,8 @@ use reqwest::Client;
 use strsim::levenshtein;
 
 use crate::commands::utils::{
-    prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
-    SPINNER_TICK_RATE,
+    deduplicate_display_version, prompt_existing_pull_request, prompt_submit_option,
+    write_changes_to_dir, SubmitOption, SPINNER_TICK_RATE,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
@@ -28,10 +28,7 @@ use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
 use crate::installers::zip::Zip;
-use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallationMetadata, Installer, NestedInstallerFiles, Scope,
-    UpgradeBehavior,
-};
+use crate::manifests::installer_manifest::NestedInstallerFiles;
 use crate::match_installers::match_installers;
 use crate::types::installer_type::InstallerType;
 use crate::types::minimum_os_version::MinimumOSVersion;
@@ -145,16 +142,10 @@ impl UpdateVersion {
         let download_results = process_files(&mut files).await?;
         let installer_results = download_results
             .iter()
-            .map(|(url, download)| Installer {
-                architecture: download.architecture.unwrap_or_default(),
-                installer_type: Some(download.installer_type),
-                nested_installer_type: download
-                    .zip
-                    .as_ref()
-                    .and_then(|zip| zip.nested_installer_type),
-                scope: download.scope.or_else(|| Scope::get_from_url(url.as_str())),
-                installer_url: url.clone(),
-                ..Installer::default()
+            .map(|(url, download)| {
+                let mut installer = download.installer.clone();
+                installer.installer_url.clone_from(url);
+                installer
             })
             .collect::<Vec<_>>();
         let mut manifests = manifests.await?;
@@ -177,120 +168,31 @@ impl UpdateVersion {
         let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
-            .map(|(mut previous_installer, new_installer)| {
-                let analyser = download_results.get(&new_installer.installer_url).unwrap();
-                if analyser.product_language.is_some() {
-                    previous_installer
-                        .installer_locale
-                        .clone_from(&analyser.product_language);
-                }
-                if analyser.platform.is_some() {
-                    previous_installer.platform.clone_from(&analyser.platform);
-                }
-                if analyser.minimum_os_version.is_some() {
-                    previous_installer
-                        .minimum_os_version
-                        .clone_from(&analyser.minimum_os_version);
-                } else if previous_installer.minimum_os_version
-                    == Some(MinimumOSVersion::removable())
-                {
-                    previous_installer.minimum_os_version = None;
-                }
-                previous_installer.installer_type = match previous_installer.installer_type {
+            .map(|(previous_installer, new_installer)| {
+                let analyser = &download_results[&new_installer.installer_url];
+                let installer_type = match previous_installer.installer_type {
                     Some(InstallerType::Portable) => previous_installer.installer_type,
                     _ => match new_installer.installer_type {
                         Some(InstallerType::Portable) => previous_installer.installer_type,
                         _ => new_installer.installer_type,
                     },
                 };
-                if let Some(nested_installer_type) = analyser
-                    .zip
-                    .as_ref()
-                    .and_then(|zip| zip.nested_installer_type)
-                {
-                    previous_installer.nested_installer_type = Some(nested_installer_type);
-                }
-                previous_installer.nested_installer_files = previous_installer
+                let mut installer = new_installer.clone().merge_with(previous_installer);
+                installer.installer_type = installer_type;
+                installer
+                    .installer_url
+                    .clone_from(&new_installer.installer_url);
+                installer.nested_installer_files = installer
                     .nested_installer_files
                     .or_else(|| manifests.installer_manifest.nested_installer_files.clone())
-                    .or_else(|| {
-                        analyser
-                            .zip
-                            .as_ref()
-                            .and_then(|zip| zip.nested_installer_files.clone())
-                    })
                     .and_then(|nested_installer_files| {
                         validate_relative_paths(nested_installer_files, &analyser.zip)
                     });
-                if previous_installer.scope.is_none() {
-                    previous_installer.scope = new_installer.scope;
-                }
-                previous_installer
-                    .installer_url
-                    .clone_from(&new_installer.installer_url);
-                previous_installer
-                    .installer_sha_256
-                    .clone_from(&analyser.installer_sha_256);
-                previous_installer
-                    .signature_sha_256
-                    .clone_from(&analyser.signature_sha_256);
-                if let Some(upgrade_behaviour) = UpgradeBehavior::get(analyser.installer_type) {
-                    previous_installer.upgrade_behavior = Some(upgrade_behaviour);
-                }
-                previous_installer.file_extensions = previous_installer
-                    .file_extensions
-                    .map(|mut extensions| {
-                        if let Some(mut identified_extensions) = analyser.file_extensions.clone() {
-                            extensions.append(&mut identified_extensions);
-                        }
-                        extensions
-                    })
-                    .or_else(|| analyser.file_extensions.clone());
-                previous_installer
-                    .package_family_name
-                    .clone_from(&analyser.package_family_name);
-                previous_installer
-                    .product_code
-                    .clone_from(&analyser.product_code);
-                previous_installer
-                    .capabilities
-                    .clone_from(&analyser.capabilities);
-                previous_installer
-                    .restricted_capabilities
-                    .clone_from(&analyser.restricted_capabilities);
-                previous_installer.release_date = analyser.last_modified;
-                if analyser.display_name.is_some()
-                    || analyser.display_publisher.is_some()
-                    || analyser.display_version.is_some()
-                    || analyser.upgrade_code.is_some()
-                {
-                    previous_installer.apps_and_features_entries =
-                        Some(BTreeSet::from([AppsAndFeaturesEntry {
-                            display_name: analyser.display_name.clone(),
-                            publisher: analyser.display_publisher.clone(),
-                            display_version: analyser
-                                .display_version
-                                .as_ref()
-                                .filter(|&version| *version != self.package_version.to_string())
-                                .cloned(),
-                            product_code: analyser.product_code.clone(),
-                            upgrade_code: analyser.upgrade_code.clone(),
-                            ..AppsAndFeaturesEntry::default()
-                        }]));
-                }
-                previous_installer
-                    .unsupported_os_architectures
-                    .clone_from(&analyser.unsupported_os_architectures);
-                previous_installer
-                    .elevation_requirement
-                    .clone_from(&analyser.elevation_requirement);
-                if let Some(install_location) = &analyser.default_install_location {
-                    previous_installer.installation_metadata = Some(InstallationMetadata {
-                        default_install_location: Some(install_location.clone()),
-                        ..InstallationMetadata::default()
-                    });
-                }
-                previous_installer
+                deduplicate_display_version(
+                    installer.apps_and_features_entries.as_mut(),
+                    &self.package_version,
+                );
+                installer
             })
             .collect::<Vec<_>>();
 

@@ -27,7 +27,7 @@ use crate::types::urls::url::DecodedUrl;
 
 async fn download_file(
     client: &Client,
-    mut url: Url,
+    mut url: DecodedUrl,
     multi_progress: &MultiProgress,
 ) -> Result<DownloadedFile> {
     convert_github_latest_to_versioned(&mut url).await?;
@@ -113,8 +113,10 @@ fn get_file_name(url: &Url, final_url: &Url, content_disposition: Option<&Header
         let _disposition = sections.next(); // Skip the disposition type
         let filenames = sections
             .filter_map(|section| {
-                let mut parts = section.splitn(2, '=').map(str::trim);
-                if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+                if let Some((key, value)) = section
+                    .split_once('=')
+                    .map(|(key, value)| (key.trim(), value.trim()))
+                {
                     if key.starts_with(FILENAME) {
                         let value = value.trim_matches('"').trim();
                         if !value.is_empty() {
@@ -216,7 +218,7 @@ pub fn download_urls<'a>(
 ) -> impl Iterator<Item = impl Future<Output = Result<DownloadedFile>> + 'a> {
     urls.into_iter()
         .unique()
-        .map(|url| download_file(client, url.into_inner(), multi_progress))
+        .map(|url| download_file(client, url, multi_progress))
 }
 
 pub struct DownloadedFile {
@@ -245,10 +247,11 @@ pub async fn process_files(
              last_modified,
          }| async move {
             let mut file_analyser = FileAnalyser::new(mmap, file_name)?;
-            file_analyser.architecture =
-                Architecture::get_from_url(url.as_str()).or(file_analyser.architecture);
-            file_analyser.installer_sha_256 = mem::take(sha_256);
-            file_analyser.last_modified = mem::take(last_modified);
+            if let Some(architecture) = Architecture::get_from_url(url.as_str()) {
+                file_analyser.installer.architecture = architecture;
+            }
+            file_analyser.installer.installer_sha_256 = mem::take(sha_256);
+            file_analyser.installer.release_date = last_modified.take();
             file_analyser.file_name = mem::take(file_name);
             Ok((mem::take(url), file_analyser))
         },

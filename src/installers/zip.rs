@@ -75,8 +75,11 @@ impl<R: Read + Seek> Zip<R> {
                 io::copy(&mut chosen_file, &mut temp_file)?;
                 let map = unsafe { Mmap::map(&temp_file) }?;
                 let file_analyser = FileAnalyser::new(&map, chosen_file_name.as_str())?;
-                nested_installer_type = file_analyser.installer_type.to_nested();
-                architecture = file_analyser.architecture;
+                nested_installer_type = file_analyser
+                    .installer
+                    .installer_type
+                    .and_then(InstallerType::to_nested);
+                architecture = Some(file_analyser.installer.architecture);
             }
             return Ok(Self {
                 archive: zip,
@@ -119,8 +122,8 @@ impl<R: Read + Seek> Zip<R> {
                 chosen
                     .into_iter()
                     .map(|path| NestedInstallerFiles {
-                        portable_command_alias: if file_analyser.installer_type
-                            == InstallerType::Portable
+                        portable_command_alias: if file_analyser.installer.installer_type
+                            == Some(InstallerType::Portable)
                         {
                             Text::new(&format!("Portable command alias for {}:", path.as_str()))
                                 .prompt()
@@ -133,8 +136,11 @@ impl<R: Read + Seek> Zip<R> {
                     })
                     .collect(),
             );
-            self.architecture = file_analyser.architecture;
-            self.nested_installer_type = file_analyser.installer_type.to_nested();
+            self.architecture = Some(file_analyser.installer.architecture);
+            self.nested_installer_type = file_analyser
+                .installer
+                .installer_type
+                .and_then(InstallerType::to_nested);
         }
         Ok(())
     }

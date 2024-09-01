@@ -168,31 +168,31 @@ impl DefaultLocaleManifest {
         if self.publisher_support_url.is_none() {
             self.publisher_support_url = github_values
                 .as_mut()
-                .and_then(|values| mem::take(&mut values.publisher_support_url));
+                .and_then(|values| values.publisher_support_url.take());
         }
         if let Some(github_license) = github_values
             .as_mut()
-            .and_then(|values| mem::take(&mut values.license))
+            .and_then(|values| values.license.take())
         {
             self.license = github_license;
         }
         if let Some(github_license_url) = github_values
             .as_mut()
-            .and_then(|values| mem::take(&mut values.license_url))
+            .and_then(|values| values.license_url.take())
         {
             self.license_url = Some(github_license_url);
         }
         if self.tags.is_none() {
             self.tags = github_values
                 .as_mut()
-                .and_then(|values| mem::take(&mut values.topics));
+                .and_then(|values| values.topics.take());
         }
         self.release_notes = github_values
             .as_mut()
-            .and_then(|values| mem::take(&mut values.release_notes));
+            .and_then(|values| values.release_notes.take());
         self.release_notes_url = github_values
-            .as_ref()
-            .and_then(|values| values.release_notes_url.clone());
+            .as_mut()
+            .and_then(|values| values.release_notes_url.take());
         self.manifest_type = Self::TYPE;
         self.manifest_version = ManifestVersion::default();
     }
