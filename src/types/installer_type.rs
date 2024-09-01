@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use color_eyre::eyre::{bail, Result};
-use quick_xml::de::from_reader;
 use serde::{Deserialize, Serialize};
-use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 
 use crate::file_analyser::{APPX, APPX_BUNDLE, EXE, MSI, MSIX, MSIX_BUNDLE, ZIP};
@@ -27,7 +25,7 @@ pub enum InstallerType {
 }
 
 impl InstallerType {
-    pub fn get(data: &[u8], pe: Option<&PE>, extension: &str, msi: Option<&Msi>) -> Result<Self> {
+    pub fn get(pe: Option<&PE>, extension: &str, msi: Option<&Msi>) -> Result<Self> {
         match extension {
             MSI => {
                 if let Some(msi) = msi {
@@ -38,54 +36,20 @@ impl InstallerType {
             APPX | APPX_BUNDLE => return Ok(Self::Appx),
             ZIP => return Ok(Self::Zip),
             EXE => {
-                let vs_version_info = pe.map(|pe| &pe.version_info);
                 return match () {
-                    () if pe.is_some_and(|pe| Self::is_nullsoft(data, pe)) => Ok(Self::Nullsoft),
-                    () if vs_version_info.is_some_and(Self::is_inno) => Ok(Self::Inno),
                     () if pe.is_some_and(Self::is_burn) => Ok(Self::Burn),
-                    () if vs_version_info.is_some_and(Self::is_basic_installer) => Ok(Self::Exe),
+                    () if pe
+                        .map(|pe| &pe.version_info)
+                        .is_some_and(Self::is_basic_installer) =>
+                    {
+                        Ok(Self::Exe)
+                    }
                     () => Ok(Self::Portable),
                 };
             }
             _ => {}
         }
         bail!("Unsupported file extension {extension}")
-    }
-
-    /// Checks if the file is Nullsoft from the executable's manifest
-    fn is_nullsoft(data: &[u8], pe: &PE) -> bool {
-        #[derive(Default, Deserialize)]
-        #[serde(default, rename_all = "camelCase")]
-        struct Assembly {
-            assembly_identity: AssemblyIdentity,
-        }
-
-        #[derive(Default, Deserialize)]
-        #[serde(default)]
-        struct AssemblyIdentity {
-            #[serde(rename = "@name")]
-            name: String,
-        }
-
-        const NULLSOFT_MANIFEST_NAME: &str = "Nullsoft.NSIS.exehead";
-
-        pe.resources
-            .iter()
-            .find(|resource| resource.type_() == ResourceType::RESOURCE_TYPE_MANIFEST)
-            .and_then(|manifest| {
-                let offset = manifest.offset() as usize;
-                data.get(offset..offset + manifest.length() as usize)
-            })
-            .and_then(|manifest_data| from_reader::<_, Assembly>(manifest_data).ok())
-            .is_some_and(|assembly| assembly.assembly_identity.name == NULLSOFT_MANIFEST_NAME)
-    }
-
-    /// Checks the String File Info of the exe for whether its comment states that it was built with Inno Setup
-    fn is_inno(vs_version_info: &HashMap<String, String>) -> bool {
-        const COMMENTS: &str = "Comments";
-        const INNO_COMMENT: &str = "This installation was built with Inno Setup.";
-
-        vs_version_info.get(COMMENTS).map(String::as_ref) == Some(INNO_COMMENT)
     }
 
     fn is_burn(pe: &PE) -> bool {

@@ -64,7 +64,7 @@ impl KnownVersion {
 
         let remaining_data = &data[end_index..];
 
-        // Check for a unicode flag within parentheses
+        // Check for a Unicode flag within parentheses
         if let Some(u_start_index) = memchr(b'(', remaining_data) {
             if let Some(u_end_index) = memchr(b')', &remaining_data[u_start_index..]) {
                 let unicode_flag = &remaining_data[u_start_index + 1..u_start_index + u_end_index];

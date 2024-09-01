@@ -51,6 +51,7 @@ use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::update_state::UpdateState;
+use bon::bon;
 use color_eyre::eyre::{bail, eyre, Result, WrapErr};
 use color_eyre::Report;
 use const_format::{formatcp, str_repeat};
@@ -78,6 +79,7 @@ const GITHUB_GRAPHQL_URL: &str = "https://api.github.com/graphql";
 
 pub struct GitHub(Client);
 
+#[bon]
 impl GitHub {
     pub fn new(token: &str) -> Result<Self> {
         Ok(Self(
@@ -359,6 +361,7 @@ impl GitHub {
             })
     }
 
+    #[builder(finish_fn = send)]
     pub async fn create_commit(
         &self,
         branch_id: &Id,
@@ -579,6 +582,7 @@ impl GitHub {
         }))
     }
 
+    #[builder(finish_fn = send)]
     pub async fn get_all_values(
         &self,
         owner: String,
@@ -730,13 +734,12 @@ impl GitHub {
             .map(|path| FileDeletion { path })
             .collect::<Vec<_>>();
         let _commit_url = self
-            .create_commit(
-                &pull_request_branch.id,
-                pull_request_branch.target.map(|object| object.oid).unwrap(),
-                &commit_title,
-                None,
-                Some(deletions),
-            )
+            .create_commit()
+            .branch_id(&pull_request_branch.id)
+            .head_sha(pull_request_branch.target.map(|object| object.oid).unwrap())
+            .message(&commit_title)
+            .deletions(deletions)
+            .send()
             .await?;
         let pull_request_url = self
             .create_pull_request(

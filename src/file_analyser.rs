@@ -5,6 +5,7 @@ use crate::installers::inno::InnoFile;
 use crate::installers::msi::Msi;
 use crate::installers::msix_family::bundle::MsixBundle;
 use crate::installers::msix_family::Msix;
+use crate::installers::nsis::Nsis;
 use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, UpgradeBehavior,
@@ -50,6 +51,7 @@ impl<'data> FileAnalyser<'data> {
         let mut msix = None;
         let mut msix_bundle = None;
         let mut zip = None;
+        let mut pe = None;
         match extension.as_str() {
             MSI => msi = Some(Msi::new(Cursor::new(data.as_ref()))?),
             MSIX | APPX => msix = Some(Msix::new(Cursor::new(data.as_ref()))?),
@@ -57,35 +59,29 @@ impl<'data> FileAnalyser<'data> {
                 msix_bundle = Some(MsixBundle::new(Cursor::new(data.as_ref()))?);
             }
             ZIP => zip = Some(Zip::new(Cursor::new(data.as_ref()))?),
+            EXE => pe = yara_x::mods::invoke::<PE>(data.as_ref()),
             _ => {}
         }
         let mut inno = None;
+        let mut nsis = None;
         let mut installer_type = None;
         let mut pe_arch = None;
-        let pe = yara_x::mods::invoke::<PE>(data.as_ref());
         if let Some(ref pe) = pe {
             pe_arch = Some(Architecture::get_from_exe(pe)?);
-            installer_type = Some(InstallerType::get(
-                data.as_ref(),
-                Some(pe),
-                &extension,
-                msi.as_ref(),
-            )?);
-            if installer_type == Some(InstallerType::Inno) {
-                inno = InnoFile::new(data.as_ref(), pe).ok();
-            }
-            if let Some(msi_resource) = get_msi_resource(pe) {
+            installer_type = Some(InstallerType::get(Some(pe), &extension, msi.as_ref())?);
+            if let Ok(inno_file) = InnoFile::new(data.as_ref(), pe) {
+                inno = Some(inno_file);
+                installer_type = Some(InstallerType::Inno);
+            } else if let Ok(nsis_file) = Nsis::new(data.as_ref()) {
+                nsis = Some(nsis_file);
+                installer_type = Some(InstallerType::Nullsoft);
+            } else if let Some(msi_resource) = get_msi_resource(pe) {
                 installer_type = Some(InstallerType::Burn);
                 msi = Some(extract_msi(data.as_ref(), msi_resource)?);
             }
         }
         if installer_type.is_none() {
-            installer_type = Some(InstallerType::get(
-                data.as_ref(),
-                pe.as_deref(),
-                &extension,
-                msi.as_ref(),
-            )?);
+            installer_type = Some(InstallerType::get(pe.as_deref(), &extension, msi.as_ref())?);
         }
         let upgrade_code = msi.as_mut().map(|msi| mem::take(&mut msi.upgrade_code));
         let display_name = msi
@@ -133,6 +129,7 @@ impl<'data> FileAnalyser<'data> {
                     })
                 })
                 .or_else(|| inno.as_ref().and_then(|inno| inno.architecture))
+                .or_else(|| nsis.as_ref().map(|nsis| nsis.architecture))
                 .or(pe_arch)
                 .or_else(|| zip.as_mut().and_then(|zip| zip.architecture.take()))
                 .unwrap_or_default(),
@@ -188,6 +185,7 @@ impl<'data> FileAnalyser<'data> {
             installation_metadata: msi
                 .and_then(|msi| msi.install_location)
                 .or_else(|| msix.map(|msix| msix.install_location))
+                .or_else(|| nsis.map(|nsis| nsis.install_dir))
                 .map(|install_location| InstallationMetadata {
                     default_install_location: Some(install_location),
                     ..InstallationMetadata::default()

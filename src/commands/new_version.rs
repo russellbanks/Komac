@@ -1,19 +1,7 @@
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 
-use anstream::println;
-use base64ct::Encoding;
-use camino::Utf8PathBuf;
-use clap::Parser;
-use color_eyre::eyre::Result;
-use futures_util::{stream, StreamExt, TryStreamExt};
-use indicatif::{MultiProgress, ProgressBar};
-use inquire::{Confirm, CustomType};
-use ordinal::Ordinal;
-use owo_colors::OwoColorize;
-use reqwest::Client;
-use strum::IntoEnumIterator;
-
+use crate::commands::utils::ordinal::Ordinal;
 use crate::commands::utils::{
     deduplicate_display_version, prompt_existing_pull_request, prompt_submit_option,
     write_changes_to_dir, SubmitOption, SPINNER_TICK_RATE,
@@ -23,7 +11,7 @@ use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, Manifests, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
 use crate::github::graphql::create_commit::FileAddition;
 use crate::github::graphql::types::Base64String;
-use crate::github::pr_changes::PRChangesBuilder;
+use crate::github::utils::pull_request::pr_changes;
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
@@ -65,6 +53,17 @@ use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
+use anstream::println;
+use base64ct::Encoding;
+use camino::Utf8PathBuf;
+use clap::Parser;
+use color_eyre::eyre::Result;
+use futures_util::{stream, StreamExt, TryStreamExt};
+use indicatif::{MultiProgress, ProgressBar};
+use inquire::{Confirm, CustomType};
+use owo_colors::OwoColorize;
+use reqwest::Client;
+use strum::IntoEnumIterator;
 
 /// Create a new package from scratch
 #[derive(Parser)]
@@ -233,11 +232,12 @@ impl NewVersion {
             .find(|download| download.url.host_str() == Some(GITHUB_HOST))
             .map(|download| {
                 let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
-                github.get_all_values(
-                    parts[0].to_owned(),
-                    parts[1].to_owned(),
-                    parts[4..parts.len() - 1].join("/"),
-                )
+                github
+                    .get_all_values()
+                    .owner(parts[0].to_owned())
+                    .repo(parts[1].to_owned())
+                    .tag_name(parts[4..parts.len() - 1].join("/"))
+                    .send()
             });
         let mut download_results = process_files(&mut files).await?;
         let mut installers = Vec::new();
@@ -364,12 +364,11 @@ impl NewVersion {
         };
 
         let package_path = get_package_path(&package_identifier, Some(&package_version), None);
-        let mut changes = PRChangesBuilder::default()
+        let mut changes = pr_changes()
             .package_identifier(&package_identifier)
-            .manifests(manifests)
+            .manifests(&manifests)
             .package_path(&package_path)
             .created_with(&self.created_with)
-            .build()?
             .create()?;
 
         let submit_option = prompt_submit_option(
@@ -418,13 +417,12 @@ impl NewVersion {
             })
             .collect::<Vec<_>>();
         let _commit_url = github
-            .create_commit(
-                &pull_request_branch.id,
-                pull_request_branch.target.map(|target| target.oid).unwrap(),
-                &commit_title,
-                Some(changes),
-                None,
-            )
+            .create_commit()
+            .branch_id(&pull_request_branch.id)
+            .head_sha(pull_request_branch.target.map(|target| target.oid).unwrap())
+            .message(&commit_title)
+            .additions(changes)
+            .send()
             .await?;
         let pull_request_url = github
             .create_pull_request(

@@ -455,6 +455,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "bon"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97493a391b4b18ee918675fb8663e53646fd09321c58b46afa04e8ce2499c869"
+dependencies = [
+ "bon-macros",
+ "rustversion",
+]
+
+[[package]]
+name = "bon-macros"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a2af3eac944c12cdf4423eab70d310da0a8e5851a18ffb192c0a5e3f7ae1663"
+dependencies = [
+ "darling",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
+]
+
+[[package]]
 name = "bstr"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -504,6 +527,27 @@ name = "bytes"
 version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
+
+[[package]]
+name = "bzip2"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdb116a6ef3f6c3698828873ad02c3014b3c85cadb88496095628e3ef1e347f8"
+dependencies = [
+ "bzip2-sys",
+ "libc",
+]
+
+[[package]]
+name = "bzip2-sys"
+version = "0.1.11+1.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "736a955f3fa7875102d57c82b8cac37ec45224a07fd32d58f9f7a186b6cd4cdc"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+]
 
 [[package]]
 name = "camino"
@@ -1144,37 +1188,6 @@ checksum = "67e77553c4162a157adbf834ebae5b415acbecbeafc7a74b0e886657506a7611"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.77",
-]
-
-[[package]]
-name = "derive_builder"
-version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd33f37ee6a119146a1781d3356a7c26028f83d779b2e04ecd45fdc75c76877b"
-dependencies = [
- "derive_builder_macro",
-]
-
-[[package]]
-name = "derive_builder_core"
-version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7431fa049613920234f22c47fdc33e6cf3ee83067091ea4277a3f8c4587aae38"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn 2.0.77",
-]
-
-[[package]]
-name = "derive_builder_macro"
-version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4abae7035bf79b9877b779505d8cf3749285b80c43941eda66604841889451dc"
-dependencies = [
- "derive_builder_core",
  "syn 2.0.77",
 ]
 
@@ -2249,7 +2262,9 @@ dependencies = [
  "base64ct",
  "bit-set",
  "bitflags 2.6.0",
+ "bon",
  "byteorder",
+ "bzip2",
  "camino",
  "chrono",
  "clap",
@@ -2261,7 +2276,6 @@ dependencies = [
  "crossterm 0.28.1",
  "cynic",
  "cynic-codegen",
- "derive_builder",
  "derive_more",
  "encoding_rs",
  "flate2",
@@ -2273,6 +2287,7 @@ dependencies = [
  "indoc",
  "inquire",
  "itertools 0.13.0",
+ "itoa",
  "keyring",
  "liblzma",
  "memchr",
@@ -2281,7 +2296,6 @@ dependencies = [
  "num_cpus",
  "nutype",
  "open",
- "ordinal",
  "owo-colors 4.1.0",
  "oxilangtag",
  "package-family-name",
@@ -2311,6 +2325,7 @@ dependencies = [
  "versions",
  "windows_exe_info",
  "yara-x",
+ "zerocopy",
  "zip",
 ]
 
@@ -2921,15 +2936,6 @@ checksum = "9aa2b01e1d916879f73a53d01d1d6cee68adbb31d6d9177a8cfce093cced1d50"
 dependencies = [
  "futures-core",
  "pin-project-lite",
-]
-
-[[package]]
-name = "ordinal"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c80c1530f46e9d8985706d7deb80b83172b250538902f607dea6cd6028851083"
-dependencies = [
- "num-integer",
 ]
 
 [[package]]

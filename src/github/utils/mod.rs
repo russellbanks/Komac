@@ -14,6 +14,8 @@ use crate::types::package_version::PackageVersion;
 use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 
+pub mod pull_request;
+
 const YAML_EXTENSION: &str = ".yaml";
 const LOCALE_PART: &str = ".locale.";
 const INSTALLER_PART: &str = ".installer";

@@ -2,7 +2,7 @@ mod encoding;
 mod header;
 mod language;
 mod loader;
-mod read;
+pub mod read;
 mod version;
 mod windows_version;
 
@@ -25,8 +25,8 @@ use crate::installers::inno::language::LanguageEntry;
 use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
 use crate::installers::inno::read::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
 use crate::installers::inno::read::crc32::Crc32Reader;
-use crate::installers::inno::read::lzma::read_inno_lzma_stream_header;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::utils::read_lzma_stream_header;
 use crate::manifests::installer_manifest::{ElevationRequirement, UnsupportedOSArchitecture};
 use crate::types::architecture::Architecture;
 use crate::types::language_tag::LanguageTag;
@@ -124,7 +124,7 @@ impl InnoFile {
         let mut block_filter = InnoBlockFilter::new(cursor.take(u64::from(*stored_size)));
         let mut reader: Box<dyn Read> = match stored_size {
             Compression::LZMA1(_) => {
-                let stream = read_inno_lzma_stream_header(&mut block_filter)?;
+                let stream = read_lzma_stream_header(&mut block_filter)?;
                 Box::new(XzDecoder::new_stream(block_filter, stream))
             }
             Compression::Zlib(_) => Box::new(ZlibDecoder::new(block_filter)),

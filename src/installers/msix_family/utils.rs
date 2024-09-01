@@ -5,8 +5,8 @@ use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
 use zip::ZipArchive;
 
-use crate::installers::msi::RELATIVE_PROGRAM_FILES_64;
 use crate::installers::msix_family::APPX_SIGNATURE_P7X;
+use crate::installers::utils::RELATIVE_PROGRAM_FILES_64;
 use crate::types::sha_256::Sha256String;
 
 pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Result<String> {

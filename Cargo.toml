@@ -28,7 +28,9 @@ base16ct = { version = "0.2.0", features = ["std"] }
 base64ct = { version = "1.6.0", features = ["std"] }
 bit-set = "0.8.0"
 bitflags = "2.6.0"
+bon = "2.3.0"
 byteorder = "1.5.0"
+bzip2 = "0.4.4"
 camino = { version = "1.1.9", features = ["serde1"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.18", features = ["derive", "cargo", "env"] }
@@ -39,7 +41,6 @@ const_format = "0.2.33"
 crc32fast = "1.4.2"
 crossterm = "0.28.1"
 cynic = { version = "3.8.0", features = ["http-reqwest"] }
-derive_builder = "0.20.1"
 derive_more = { version = "1.0.0", features = ["as_ref", "deref", "deref_mut", "display", "from_str"] }
 encoding_rs = "0.8.34"
 flate2 = "1.0.33"
@@ -50,6 +51,7 @@ indexmap = "2.5.0"
 indicatif = "0.17.8"
 inquire = "0.7.5"
 itertools = "0.13.0"
+itoa = "1.0.11"
 keyring = { version = "3.3.0", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }
 liblzma = { version = "0.3.4", features = ["static"] }
 memchr = "2.7.4"
@@ -58,7 +60,6 @@ msi = "0.8.0"
 num_cpus = "1.16.0"
 nutype = { version = "0.5.0", features = ["serde"] }
 open = "5.3.0"
-ordinal = "0.3.2"
 owo-colors = "4.1.0"
 oxilangtag = { version = "0.1.5", features = ["serde"] }
 package-family-name = { version = "2.0.0", features = ["serde"] }
@@ -85,6 +86,7 @@ url = { version = "2.5.2", features = ["serde"] }
 uuid = { version = "1.10.0", features = ["v4"] }
 versions = "6.3.2"
 yara-x = { version = "0.8.0", default-features = false, features = ["pe-module"] }
+zerocopy = { version = "0.7.35", features = ["derive"] }
 zip = { version = "2.2.0", default-features = false, features = ["deflate"] }
 
 [build-dependencies]

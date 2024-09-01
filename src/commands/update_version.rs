@@ -23,7 +23,7 @@ use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
 use crate::github::graphql::create_commit::FileAddition;
 use crate::github::graphql::types::Base64String;
-use crate::github::pr_changes::PRChangesBuilder;
+use crate::github::utils::pull_request::pr_changes;
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
 };
@@ -133,11 +133,12 @@ impl UpdateVersion {
             .find(|download| download.url.host_str() == Some(GITHUB_HOST))
             .map(|download| {
                 let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
-                github.get_all_values(
-                    parts[0].to_owned(),
-                    parts[1].to_owned(),
-                    parts[4..parts.len() - 1].join("/"),
-                )
+                github
+                    .get_all_values()
+                    .owner(parts[0].to_owned())
+                    .repo(parts[1].to_owned())
+                    .tag_name(parts[4..parts.len() - 1].join("/"))
+                    .send()
             });
         let download_results = process_files(&mut files).await?;
         let installer_results = download_results
@@ -224,12 +225,11 @@ impl UpdateVersion {
 
         let package_path =
             get_package_path(&self.package_identifier, Some(&self.package_version), None);
-        let mut changes = PRChangesBuilder::default()
+        let mut changes = pr_changes()
             .package_identifier(&self.package_identifier)
-            .manifests(manifests)
+            .manifests(&manifests)
             .package_path(&package_path)
             .created_with(&self.created_with)
-            .build()?
             .create()?;
 
         let submit_option = prompt_submit_option(
@@ -279,13 +279,12 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
         let _commit_url = github
-            .create_commit(
-                &pull_request_branch.id,
-                pull_request_branch.target.map(|object| object.oid).unwrap(),
-                &commit_title,
-                Some(changes),
-                None,
-            )
+            .create_commit()
+            .branch_id(&pull_request_branch.id)
+            .head_sha(pull_request_branch.target.map(|target| target.oid).unwrap())
+            .message(&commit_title)
+            .additions(changes)
+            .send()
             .await?;
         let pull_request_url = github
             .create_pull_request(

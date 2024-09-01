@@ -2,13 +2,17 @@ use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::str::FromStr;
 
-use camino::Utf8PathBuf;
-use color_eyre::eyre::{bail, Result};
-use msi::{Language, Package, Select};
-
+use crate::installers::utils::{
+    RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
+    RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_TEMP_FOLDER,
+    RELATIVE_WINDOWS_DIR,
+};
 use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
 use crate::types::language_tag::LanguageTag;
+use camino::Utf8PathBuf;
+use color_eyre::eyre::{bail, Result};
+use msi::{Language, Package, Select};
 
 pub struct Msi {
     pub architecture: Architecture,
@@ -22,8 +26,6 @@ pub struct Msi {
     pub install_location: Option<Utf8PathBuf>,
     pub is_wix: bool,
 }
-
-pub const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";
 
 const PRODUCT_CODE: &str = "ProductCode";
 const PRODUCT_LANGUAGE: &str = "ProductLanguage";
@@ -220,27 +222,13 @@ impl Msi {
 
     fn get_property_relative_path(property: &str) -> Option<&str> {
         const PROGRAM_FILES_64_FOLDER: &str = "ProgramFiles64Folder";
-
         const PROGRAM_FILES_FOLDER: &str = "ProgramFilesFolder";
-        const RELATIVE_PROGRAM_FILES_32: &str = "%ProgramFiles(x86)%";
-
         const COMMON_FILES_64_FOLDER: &str = "CommonFiles64Folder";
-        const RELATIVE_COMMON_FILES_64: &str = "%CommonProgramFiles%";
-
         const COMMON_FILES_FOLDER: &str = "CommonFilesFolder";
-        const RELATIVE_COMMON_FILES_32: &str = "%CommonProgramFiles(x86)%";
-
         const APP_DATA_FOLDER: &str = "AppDataFolder";
-        const RELATIVE_APP_DATA: &str = "%AppData%";
-
         const LOCAL_APP_DATA_FOLDER: &str = "LocalAppDataFolder";
-        const RELATIVE_LOCAL_APP_DATA: &str = "%LocalAppData%";
-
         const TEMP_FOLDER: &str = "TempFolder";
-        const RELATIVE_TEMP_FOLDER: &str = "%Temp%";
-
         const WINDOWS_FOLDER: &str = "WindowsFolder";
-        const RELATIVE_SYSTEM_ROOT: &str = "%SystemRoot%";
 
         match property {
             PROGRAM_FILES_64_FOLDER => Some(RELATIVE_PROGRAM_FILES_64),
@@ -250,7 +238,7 @@ impl Msi {
             APP_DATA_FOLDER => Some(RELATIVE_APP_DATA),
             LOCAL_APP_DATA_FOLDER => Some(RELATIVE_LOCAL_APP_DATA),
             TEMP_FOLDER => Some(RELATIVE_TEMP_FOLDER),
-            WINDOWS_FOLDER => Some(RELATIVE_SYSTEM_ROOT),
+            WINDOWS_FOLDER => Some(RELATIVE_WINDOWS_DIR),
             _ => None,
         }
     }

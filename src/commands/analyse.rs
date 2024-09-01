@@ -4,7 +4,7 @@ use crate::types::sha_256::Sha256String;
 use anstream::stdout;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
-use color_eyre::eyre::bail;
+use color_eyre::eyre::ensure;
 use color_eyre::Result;
 use memmap2::Mmap;
 use sha2::{Digest, Sha256};
@@ -36,11 +36,7 @@ impl Analyse {
 
 fn is_valid_file(path: &str) -> Result<Utf8PathBuf> {
     let path = Utf8Path::new(path);
-    if !path.exists() {
-        bail!("{path} does not exist")
-    }
-    if !path.is_file() {
-        bail!("{path} is not a file")
-    }
+    ensure!(path.exists(), "{path} does not exist");
+    ensure!(path.is_file(), "{path} is not a file");
     Ok(path.to_path_buf())
 }
