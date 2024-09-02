@@ -56,7 +56,7 @@ memchr = "2.7.4"
 memmap2 = "0.9.4"
 msi = "0.8.0"
 num_cpus = "1.16.0"
-nutype = { version = "0.4.3", features = ["serde"] }
+nutype = { version = "0.5.0", features = ["serde"] }
 open = "5.3.0"
 ordinal = "0.3.2"
 owo-colors = "4.0.0"
