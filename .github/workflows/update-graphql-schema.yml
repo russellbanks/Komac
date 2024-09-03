@@ -19,7 +19,7 @@ jobs:
         run: curl -L https://docs.github.com/public/fpt/schema.docs.graphql -o assets/github.graphql
           
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "Update GitHub GraphQL Schema"
           branch: update-github-graphql-schema
