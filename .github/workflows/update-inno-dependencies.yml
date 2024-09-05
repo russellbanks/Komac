@@ -19,7 +19,7 @@ jobs:
         run: curl -L https://github.com/DomGries/InnoDependencyInstaller/raw/HEAD/CodeDependencies.iss -o assets/CodeDependencies.iss
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           commit-message: "Update Inno Setup Dependency Installer script"
           branch: update-inno-dependencies-script
