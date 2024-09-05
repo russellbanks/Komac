@@ -227,7 +227,7 @@ pub struct DownloadedFile {
     // As the downloaded file is a temporary file, it's stored here so that the reference stays
     // alive and the file does not get deleted. This is necessary because the memory map needs the
     // reference to the file.
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub file: File,
     pub sha_256: Sha256String,
     pub file_name: String,

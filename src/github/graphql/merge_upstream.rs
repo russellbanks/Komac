@@ -11,14 +11,14 @@ pub struct MergeUpstreamVariables<'id> {
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Mutation", variables = "MergeUpstreamVariables")]
 pub struct MergeUpstream {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     #[arguments(input: { oid: $upstream_target_oid, refId: $branch_ref_id })]
     pub update_ref: Option<UpdateRefPayload>,
 }
 
 #[derive(cynic::QueryFragment)]
 pub struct UpdateRefPayload {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub client_mutation_id: Option<String>,
 }
 

@@ -73,13 +73,13 @@ const KNOWN_SETUP_LOADER_VERSIONS: [SetupLoaderVersion; 7] = [
     },
 ];
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 enum Checksum {
     Adler32(u32),
     CRC32(u32),
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub struct SetupLoader {
     setup_loader_version: SetupLoaderVersion,
     revision: u32,

@@ -11,7 +11,7 @@ pub enum ManifestType {
     Version,
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 pub enum ManifestTypeWithLocale {
     Installer,
     Locale(LanguageTag),

@@ -11,14 +11,14 @@ pub struct UpdateRefsVariables<'id> {
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Mutation", variables = "UpdateRefsVariables")]
 pub struct UpdateRefs {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     #[arguments(input: { refUpdates: $ref_updates, repositoryId: $repository_id })]
     pub update_refs: Option<UpdateRefsPayload>,
 }
 
 #[derive(cynic::QueryFragment)]
 pub struct UpdateRefsPayload {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub client_mutation_id: Option<String>,
 }
 

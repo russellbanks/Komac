@@ -28,7 +28,7 @@ struct ServicePack {
     minor: u8,
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(Debug, Default)]
 struct WindowsVersion {
     pub win_version: Version,
@@ -53,7 +53,7 @@ impl WindowsVersion {
     }
 }
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(Debug, Default)]
 pub struct WindowsVersionRange {
     begin: WindowsVersion,
