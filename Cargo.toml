@@ -35,7 +35,7 @@ clap = { version = "4.5.17", features = ["derive", "cargo", "env"] }
 clap_complete = "4.5.26"
 codepage = "0.1.2"
 color-eyre = { version = "0.6.3", default-features = false }
-const_format = "0.2.32"
+const_format = "0.2.33"
 crc32fast = "1.4.2"
 crossterm = "0.28.1"
 cynic = { version = "3.8.0", features = ["http-reqwest"] }
