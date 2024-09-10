@@ -2283,7 +2283,7 @@ dependencies = [
  "nutype",
  "open",
  "ordinal",
- "owo-colors 4.0.0",
+ "owo-colors 5.0.0",
  "oxilangtag",
  "package-family-name",
  "percent-encoding",
@@ -2966,9 +2966,9 @@ checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 
 [[package]]
 name = "owo-colors"
-version = "4.0.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
+checksum = "8f1fd1e2f6b8c2caa4ede09a3c1b8fcab7b8b3c0c82987e685eb0df047b044f5"
 
 [[package]]
 name = "oxilangtag"
