@@ -72,7 +72,7 @@ impl<'data> FileAnalyser<'data> {
             if let Ok(inno_file) = InnoFile::new(data.as_ref(), pe) {
                 inno = Some(inno_file);
                 installer_type = Some(InstallerType::Inno);
-            } else if let Ok(nsis_file) = Nsis::new(data.as_ref()) {
+            } else if let Ok(nsis_file) = Nsis::new(data.as_ref(), pe) {
                 nsis = Some(nsis_file);
                 installer_type = Some(InstallerType::Nullsoft);
             } else if let Some(msi_resource) = get_msi_resource(pe) {

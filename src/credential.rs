@@ -74,7 +74,6 @@ pub async fn validate_token(client: &Client, token: &str) -> Result<()> {
     }
 }
 
-#[expect(clippy::declare_interior_mutable_const)]
 const MICROSOFT_DELIVERY_OPTIMIZATION: HeaderValue =
     HeaderValue::from_static("Microsoft-Delivery-Optimization/10.1");
 const SEC_GPC: &str = "Sec-GPC";

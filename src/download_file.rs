@@ -85,7 +85,7 @@ async fn download_file(
     pb.finish_and_clear();
 
     Ok(DownloadedFile {
-        url: url.into(),
+        url,
         mmap: unsafe { Mmap::map(&temp_file) }?,
         file: temp_file,
         sha_256: Sha256String::from_hasher(&hasher.finalize())?,
