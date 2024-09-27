@@ -17,7 +17,7 @@ use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOver
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 use color_eyre::eyre::{eyre, Result};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 
@@ -123,7 +123,7 @@ impl Header {
 
         if *version < InnoVersion(1, 3, 0) {
             // Uncompressed size of the setup header
-            reader.read_u32::<LittleEndian>()?;
+            reader.read_u32::<LE>()?;
         }
 
         header.app_name = encoded_string(reader, UTF_16LE)?;
@@ -233,74 +233,74 @@ impl Header {
             header.lead_bytes = BitSet::from_bytes(&buf);
         }
         if *version >= InnoVersion(4, 0, 0) {
-            header.language_count = reader.read_u32::<LittleEndian>()?;
+            header.language_count = reader.read_u32::<LE>()?;
         } else if *version >= InnoVersion(2, 0, 1) {
             header.language_count = 1;
         }
         if *version >= InnoVersion(4, 2, 1) {
-            header.message_count = reader.read_u32::<LittleEndian>()?;
+            header.message_count = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(4, 1, 0) {
-            header.permission_count = reader.read_u32::<LittleEndian>()?;
+            header.permission_count = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(2, 0, 0) || version.is_isx() {
-            header.type_count = reader.read_u32::<LittleEndian>()?;
-            header.component_count = reader.read_u32::<LittleEndian>()?;
+            header.type_count = reader.read_u32::<LE>()?;
+            header.component_count = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(2, 0, 0)
             || (version.is_isx() && *version >= InnoVersion(1, 3, 17))
         {
-            header.task_count = reader.read_u32::<LittleEndian>()?;
+            header.task_count = reader.read_u32::<LE>()?;
         }
-        header.directory_count = reader.read_u32::<LittleEndian>()?;
-        header.file_count = reader.read_u32::<LittleEndian>()?;
-        header.data_entry_count = reader.read_u32::<LittleEndian>()?;
-        header.icon_count = reader.read_u32::<LittleEndian>()?;
-        header.ini_entry_count = reader.read_u32::<LittleEndian>()?;
-        header.registry_entry_count = reader.read_u32::<LittleEndian>()?;
-        header.delete_entry_count = reader.read_u32::<LittleEndian>()?;
-        header.uninstall_delete_entry_count = reader.read_u32::<LittleEndian>()?;
-        header.run_entry_count = reader.read_u32::<LittleEndian>()?;
-        header.uninstall_run_entry_count = reader.read_u32::<LittleEndian>()?;
+        header.directory_count = reader.read_u32::<LE>()?;
+        header.file_count = reader.read_u32::<LE>()?;
+        header.data_entry_count = reader.read_u32::<LE>()?;
+        header.icon_count = reader.read_u32::<LE>()?;
+        header.ini_entry_count = reader.read_u32::<LE>()?;
+        header.registry_entry_count = reader.read_u32::<LE>()?;
+        header.delete_entry_count = reader.read_u32::<LE>()?;
+        header.uninstall_delete_entry_count = reader.read_u32::<LE>()?;
+        header.run_entry_count = reader.read_u32::<LE>()?;
+        header.uninstall_run_entry_count = reader.read_u32::<LE>()?;
         let license_size = if *version < InnoVersion(1, 3, 0) {
-            reader.read_u32::<LittleEndian>()?
+            reader.read_u32::<LE>()?
         } else {
             0
         };
         let info_before_size = if *version < InnoVersion(1, 3, 0) {
-            reader.read_u32::<LittleEndian>()?
+            reader.read_u32::<LE>()?
         } else {
             0
         };
         let info_after_size = if *version < InnoVersion(1, 3, 0) {
-            reader.read_u32::<LittleEndian>()?
+            reader.read_u32::<LE>()?
         } else {
             0
         };
         header.windows_version_range = WindowsVersionRange::load(reader, &version.version)?;
-        header.back_color = reader.read_u32::<LittleEndian>()?;
+        header.back_color = reader.read_u32::<LE>()?;
         if *version >= InnoVersion(1, 3, 3) {
-            header.back_color2 = reader.read_u32::<LittleEndian>()?;
+            header.back_color2 = reader.read_u32::<LE>()?;
         }
         if *version < InnoVersion(5, 5, 7) {
-            header.image_back_color = reader.read_u32::<LittleEndian>()?;
+            header.image_back_color = reader.read_u32::<LE>()?;
         }
         if (*version >= InnoVersion(2, 0, 0) && *version < InnoVersion(5, 0, 4)) || version.is_isx()
         {
-            header.small_image_back_color = reader.read_u32::<LittleEndian>()?;
+            header.small_image_back_color = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(6, 0, 0) {
             let wizard_style_value = reader.read_u8()?;
             header.wizard_style = enum_value!(InnoStyle, wizard_style_value)?;
-            header.wizard_resize_percent_x = reader.read_u32::<LittleEndian>()?;
-            header.wizard_resize_percent_y = reader.read_u32::<LittleEndian>()?;
+            header.wizard_resize_percent_x = reader.read_u32::<LE>()?;
+            header.wizard_resize_percent_y = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(5, 5, 7) {
             let image_alpha_format = reader.read_u8()?;
             header.image_alpha_format = enum_value!(ImageAlphaFormat, image_alpha_format)?;
         }
         if *version < InnoVersion(4, 2, 0) {
-            let _crc32 = reader.read_u32::<LittleEndian>()?;
+            let _crc32 = reader.read_u32::<LE>()?;
         } else if *version < InnoVersion(5, 3, 9) {
             let mut md5_buf = [0; 128 / u8::BITS as usize]; // MD5 bit length in bytes
             reader.read_exact(&mut md5_buf)?;
@@ -312,10 +312,10 @@ impl Header {
             header.password_salt = Some(password_salt(reader)?);
         }
         if *version >= InnoVersion(4, 0, 0) {
-            header.extra_disk_space_required = reader.read_u64::<LittleEndian>()?;
-            header.slices_per_disk = reader.read_u32::<LittleEndian>()?;
+            header.extra_disk_space_required = reader.read_u64::<LE>()?;
+            header.slices_per_disk = reader.read_u32::<LE>()?;
         } else {
-            header.extra_disk_space_required = u64::from(reader.read_u32::<LittleEndian>()?);
+            header.extra_disk_space_required = u64::from(reader.read_u32::<LE>()?);
             header.slices_per_disk = 1;
         }
         if (*version >= InnoVersion(2, 0, 0) && *version < InnoVersion(5, 0, 0))
@@ -342,7 +342,7 @@ impl Header {
         }
         if version.is_isx() && *version >= InnoVersion(2, 0, 10) && *version < InnoVersion(3, 0, 0)
         {
-            let _code_line_offset = reader.read_u32::<LittleEndian>()?;
+            let _code_line_offset = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(3, 0, 0) && *version < InnoVersion(3, 0, 3) {
             match AutoBool::from_repr(reader.read_u8()?) {
@@ -384,8 +384,8 @@ impl Header {
                 StoredArchitecture::all().to_identifiers();
         }
         if *version >= InnoVersion(5, 2, 1) && *version < InnoVersion(5, 3, 10) {
-            header.signed_uninstaller_original_size = reader.read_u32::<LittleEndian>()?;
-            header.signed_uninstaller_header_checksum = reader.read_u32::<LittleEndian>()?;
+            header.signed_uninstaller_original_size = reader.read_u32::<LE>()?;
+            header.signed_uninstaller_header_checksum = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(5, 3, 3) {
             let disable_dir_page = reader.read_u8()?;
@@ -394,9 +394,9 @@ impl Header {
             header.disable_program_group_page = enum_value!(AutoBool, disable_program_group_page)?;
         }
         if *version >= InnoVersion(5, 5, 0) {
-            header.uninstall_display_size = reader.read_u64::<LittleEndian>()?;
+            header.uninstall_display_size = reader.read_u64::<LE>()?;
         } else if *version >= InnoVersion(5, 3, 6) {
-            header.uninstall_display_size = u64::from(reader.read_u32::<LittleEndian>()?);
+            header.uninstall_display_size = u64::from(reader.read_u32::<LE>()?);
         }
         header.flags |= Self::read_flags(reader, version)?;
         if *version < InnoVersion(3, 0, 4) {

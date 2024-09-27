@@ -5,12 +5,12 @@ use bitflags::bitflags;
 use byteorder::{ByteOrder, ReadBytesExt, LE};
 use bzip2::read::BzDecoder;
 use color_eyre::eyre::{bail, Result};
-use flate2::read::ZlibDecoder;
+use flate2::read::DeflateDecoder;
 use liblzma::read::XzDecoder;
 use std::io::{Cursor, Read};
 use strum::EnumCount;
 use zerocopy::little_endian::{I32, U32};
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::{FromBytes, Immutable, KnownLayout};
 
 #[derive(Debug)]
 enum Compression {
@@ -20,7 +20,7 @@ enum Compression {
     None,
 }
 
-#[derive(Debug, FromBytes, FromZeroes)]
+#[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
 struct CommonHeaderFlags(u32);
 
@@ -41,7 +41,7 @@ bitflags! {
 
 const NSIS_MAX_INST_TYPES: u8 = 32;
 
-#[derive(Debug, FromBytes, FromZeroes)]
+#[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct Header {
     flags: CommonHeaderFlags,
@@ -59,7 +59,7 @@ pub struct Header {
     code_on_init: I32,
     code_on_inst_success: I32,
     code_on_inst_failed: I32,
-    code_on_user_abort: U32,
+    code_on_user_abort: I32,
     code_on_gui_init: I32,
     code_on_gui_end: I32,
     code_on_mouse_over_section: I32,
@@ -131,7 +131,7 @@ impl Header {
                 Box::new(XzDecoder::new_stream(reader, stream))
             }
             Compression::BZip2 => Box::new(BzDecoder::new(reader)),
-            Compression::Zlib => Box::new(ZlibDecoder::new(reader)),
+            Compression::Zlib => Box::new(DeflateDecoder::new(reader)),
             Compression::None => Box::new(reader),
         };
 

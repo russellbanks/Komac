@@ -1,6 +1,6 @@
 use crate::installers::inno::encoding::encoded_string;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 use color_eyre::Result;
 use encoding_rs::{Encoding, UTF_16LE, WINDOWS_1252};
 use std::io::Read;
@@ -51,12 +51,12 @@ impl LanguageEntry {
             entry.info_after = encoded_string(reader, UTF_16LE)?;
         }
 
-        entry.language_id = reader.read_u32::<LittleEndian>()?;
+        entry.language_id = reader.read_u32::<LE>()?;
 
         if *version < InnoVersion(4, 2, 2) {
             entry.codepage = codepage::to_encoding(u16::try_from(entry.language_id)?);
         } else if !version.is_unicode() {
-            let codepage = reader.read_u32::<LittleEndian>()?;
+            let codepage = reader.read_u32::<LE>()?;
             entry.codepage = if codepage != 0 {
                 codepage::to_encoding(u16::try_from(codepage)?)
             } else {
@@ -64,20 +64,20 @@ impl LanguageEntry {
             };
         } else {
             if *version < InnoVersion(5, 3, 0) {
-                reader.read_u32::<LittleEndian>()?;
+                reader.read_u32::<LE>()?;
             }
             entry.codepage = Some(UTF_16LE);
         }
 
-        entry.dialog_font_size = reader.read_u32::<LittleEndian>()?;
+        entry.dialog_font_size = reader.read_u32::<LE>()?;
 
         if *version < InnoVersion(4, 1, 0) {
-            entry.dialog_font_standard_height = reader.read_u32::<LittleEndian>()?;
+            entry.dialog_font_standard_height = reader.read_u32::<LE>()?;
         }
 
-        entry.title_font_size = reader.read_u32::<LittleEndian>()?;
-        entry.welcome_font_size = reader.read_u32::<LittleEndian>()?;
-        entry.copyright_font_size = reader.read_u32::<LittleEndian>()?;
+        entry.title_font_size = reader.read_u32::<LE>()?;
+        entry.welcome_font_size = reader.read_u32::<LE>()?;
+        entry.copyright_font_size = reader.read_u32::<LE>()?;
 
         if *version >= InnoVersion(5, 2, 3) {
             entry.right_to_left = reader.read_u8()? != 0;

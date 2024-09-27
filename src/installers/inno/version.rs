@@ -52,7 +52,7 @@ impl KnownVersion {
 
         let inno_version = InnoVersion(parts.next()?, parts.next()?, parts.next()?);
 
-        // Inno Setup 6 and above is always only unicode
+        // Inno Setup 6 and above is always only Unicode
         if inno_version >= InnoVersion(6, 0, 0) {
             return Some(Self {
                 version: inno_version,

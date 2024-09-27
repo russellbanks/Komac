@@ -6,7 +6,7 @@ pub mod read;
 mod version;
 mod windows_version;
 
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 use color_eyre::eyre::{bail, eyre, OptionExt};
 use color_eyre::Result;
 use flate2::read::ZlibDecoder;
@@ -81,12 +81,12 @@ impl InnoFile {
         let mut cursor = Cursor::new(data);
         cursor.set_position((header_offset + VERSION_LEN) as u64);
 
-        let expected_checksum = cursor.read_u32::<LittleEndian>()?;
+        let expected_checksum = cursor.read_u32::<LE>()?;
 
         let mut actual_checksum = Crc32Reader::new(&mut cursor);
 
         let stored_size = if known_version > InnoVersion(4, 0, 9) {
-            let size = actual_checksum.read_u32::<LittleEndian>()?;
+            let size = actual_checksum.read_u32::<LE>()?;
             let compressed = actual_checksum.read_u8()?;
 
             if compressed != 0 {
@@ -99,8 +99,8 @@ impl InnoFile {
                 Compression::Stored(size)
             }
         } else {
-            let compressed_size = actual_checksum.read_u32::<LittleEndian>()?;
-            let uncompressed_size = actual_checksum.read_u32::<LittleEndian>()?;
+            let compressed_size = actual_checksum.read_u32::<LE>()?;
+            let uncompressed_size = actual_checksum.read_u32::<LE>()?;
 
             let mut stored_size = if compressed_size == u32::MAX {
                 Compression::Stored(uncompressed_size)

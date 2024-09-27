@@ -1,26 +1,33 @@
 mod block;
 mod first_header;
 mod header;
+mod language;
 mod strings;
 mod version;
 
 use crate::installers::nsis::block::BlockType;
 use crate::installers::nsis::first_header::FirstHeader;
 use crate::installers::nsis::header::Header;
+use crate::installers::nsis::language::table::LanguageTable;
 use crate::installers::nsis::version::NsisVersion;
 use crate::installers::utils::RELATIVE_PROGRAM_FILES_64;
 use crate::types::architecture::Architecture;
+use crate::types::language_tag::LanguageTag;
 use byteorder::{ByteOrder, LE};
 use camino::Utf8PathBuf;
-use color_eyre::eyre::OptionExt;
+use color_eyre::eyre::{Error, OptionExt};
 use color_eyre::Result;
+use msi::Language;
+use std::str::FromStr;
 use strings::encoding::nsis_string;
 use yara_x::mods::PE;
-use zerocopy::FromBytes;
+use zerocopy::little_endian::U32;
+use zerocopy::{FromBytes, TryFromBytes};
 
 pub struct Nsis {
     pub architecture: Architecture,
-    pub install_dir: Utf8PathBuf,
+    pub install_dir: Option<Utf8PathBuf>,
+    pub install_locale: LanguageTag,
 }
 
 impl Nsis {
@@ -35,32 +42,36 @@ impl Nsis {
             .ok_or_eyre("Unable to get NSIS first header offset")?;
 
         let data_offset = first_header_offset + size_of::<FirstHeader>();
-        let first_header = FirstHeader::read(&data[first_header_offset..data_offset])?;
+        let first_header = FirstHeader::try_ref_from_bytes(&data[first_header_offset..data_offset])
+            .map_err(|error| Error::msg(error.to_string()))?;
 
         let decompressed_data = Header::decompress(&data[data_offset..], first_header)?;
-        let header = Header::ref_from(&decompressed_data[..size_of::<Header>()]).unwrap();
+        let (header, _) = Header::ref_from_prefix(&decompressed_data)
+            .map_err(|error| Error::msg(error.to_string()))?;
 
         let strings_block = BlockType::Strings.get(&decompressed_data, &header.blocks);
-        let unicode = LE::read_u16(&strings_block) == 0;
+        let unicode = LE::read_u16(strings_block) == 0;
 
-        let names = get_name_offsets(&decompressed_data, header);
+        let nsis_version = NsisVersion::detect(strings_block, unicode);
 
-        let branding_text = nsis_string()
-            .strings_block(strings_block)
-            .relative_offset(names[0])
-            .unicode(unicode)
-            .get()?;
+        let language_table = LanguageTable::get_main(&decompressed_data, header)?;
 
-        let nsis_version = NsisVersion::from_branding_text(&branding_text).unwrap_or_default();
+        let install_dir = if header.install_directory_ptr != U32::ZERO {
+            nsis_string()
+                .strings_block(strings_block)
+                .relative_offset(header.install_directory_ptr.get())
+                .nsis_version(nsis_version)
+                .unicode(unicode)
+                .get()
+                .ok()
+        } else {
+            None
+        };
 
-        let install_dir = nsis_string()
-            .strings_block(strings_block)
-            .relative_offset(header.install_directory_ptr.get())
-            .nsis_version(nsis_version)
-            .unicode(unicode)
-            .get()?;
-
-        let architecture = if install_dir.contains(RELATIVE_PROGRAM_FILES_64) {
+        let architecture = if install_dir
+            .as_deref()
+            .is_some_and(|dir| dir.contains(RELATIVE_PROGRAM_FILES_64))
+        {
             Architecture::X64
         } else {
             Architecture::X86
@@ -68,31 +79,10 @@ impl Nsis {
 
         Ok(Self {
             architecture,
-            install_dir: Utf8PathBuf::from(install_dir),
+            install_dir: install_dir.map(Utf8PathBuf::from),
+            install_locale: LanguageTag::from_str(
+                Language::from_code(language_table.language_id.get()).tag(),
+            )?,
         })
     }
-}
-
-fn get_name_offsets(data: &[u8], header: &Header) -> [u32; 3] {
-    let mut names: [u32; 3] = [0; 3];
-
-    let strings_count = (header.langtable_size.get() - 10) as usize / size_of::<u32>();
-    let lang_table_block_header = &header.blocks[BlockType::LangTables as usize];
-
-    for index in 0..lang_table_block_header.num.get() {
-        let offset = lang_table_block_header.offset.get() as usize
-            + (header.langtable_size.get() * index) as usize;
-        let lang_table = &data[offset..offset + header.langtable_size.get() as usize];
-        let lang_id = LE::read_u16(lang_table);
-
-        for name_index in 0..names.len().min(strings_count) {
-            let offset = 10 + name_index * size_of::<u32>();
-            let name_offset = LE::read_u32(&lang_table[offset..]);
-            if name_offset != 0 && (lang_id == 1033 || names[name_index] == 0) {
-                names[name_index] = name_offset;
-            }
-        }
-    }
-
-    names
 }

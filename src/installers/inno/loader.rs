@@ -3,7 +3,7 @@ use std::io::{Cursor, Read};
 
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::InnoVersion;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 use color_eyre::eyre::{bail, eyre};
 use color_eyre::Result;
 
@@ -104,39 +104,39 @@ impl SetupLoader {
             .ok_or_else(|| eyre!("Unknown Inno Setup loader signature: {signature:?}"))?;
 
         let revision = if loader_version >= InnoVersion(5, 1, 5) {
-            checksum.read_u32::<LittleEndian>()?
+            checksum.read_u32::<LE>()?
         } else {
             0
         };
 
-        checksum.read_u32::<LittleEndian>()?;
-        let exe_offset = checksum.read_u32::<LittleEndian>()?;
+        checksum.read_u32::<LE>()?;
+        let exe_offset = checksum.read_u32::<LE>()?;
 
         let exe_compressed_size = if loader_version >= InnoVersion(4, 1, 6) {
             0
         } else {
-            checksum.read_u32::<LittleEndian>()?
+            checksum.read_u32::<LE>()?
         };
 
-        let exe_uncompressed_size = checksum.read_u32::<LittleEndian>()?;
+        let exe_uncompressed_size = checksum.read_u32::<LE>()?;
 
         let exe_checksum = if loader_version >= InnoVersion(4, 0, 3) {
-            Checksum::CRC32(checksum.read_u32::<LittleEndian>()?)
+            Checksum::CRC32(checksum.read_u32::<LE>()?)
         } else {
-            Checksum::Adler32(checksum.read_u32::<LittleEndian>()?)
+            Checksum::Adler32(checksum.read_u32::<LE>()?)
         };
 
         let message_offset = if loader_version >= InnoVersion(4, 0, 0) {
             0
         } else {
-            checksum.get_mut().read_u32::<LittleEndian>()?
+            checksum.get_mut().read_u32::<LE>()?
         };
 
-        let header_offset = checksum.read_u32::<LittleEndian>()?;
-        let data_offset = checksum.read_u32::<LittleEndian>()?;
+        let header_offset = checksum.read_u32::<LE>()?;
+        let data_offset = checksum.read_u32::<LE>()?;
 
         if loader_version >= InnoVersion(4, 0, 10) {
-            let expected_checksum = checksum.get_mut().read_u32::<LittleEndian>()?;
+            let expected_checksum = checksum.get_mut().read_u32::<LE>()?;
             let actual_checksum = checksum.finalize();
             if actual_checksum != expected_checksum {
                 bail!("CRC32 checksum mismatch. Actual: {actual_checksum}. Expected: {expected_checksum}.")

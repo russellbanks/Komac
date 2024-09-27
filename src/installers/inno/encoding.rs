@@ -1,4 +1,4 @@
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 use encoding_rs::Encoding;
 use std::io;
 use std::io::Read;
@@ -8,7 +8,7 @@ pub fn encoded_string<R: Read>(
     reader: &mut R,
     encoding: &'static Encoding,
 ) -> io::Result<Option<String>> {
-    let length = reader.read_u32::<LittleEndian>()?;
+    let length = reader.read_u32::<LE>()?;
     if length == 0 {
         return Ok(None);
     }

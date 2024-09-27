@@ -1,4 +1,4 @@
-mod code;
+pub mod code;
 pub mod encoding;
 mod lang;
 mod shell;

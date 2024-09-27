@@ -1,9 +1,8 @@
 use bitflags::bitflags;
-use color_eyre::eyre::{ensure, eyre, Result};
 use zerocopy::little_endian::U32;
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::{FromBytes, Immutable, KnownLayout, TryFromBytes};
 
-#[derive(Debug, FromBytes, FromZeroes)]
+#[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
 struct HeaderFlags(u32);
 
@@ -21,12 +20,48 @@ bitflags! {
     }
 }
 
-#[derive(Debug, FromBytes, FromZeroes)]
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(u32)]
+enum Magic1 {
+    DeadBeef = 0xDEAD_BEEF,
+    DeadBeed = 0xDEAD_BEED,
+}
+
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(u32)]
+enum Magic2 {
+    Null = u32::from_le_bytes(*b"Null"),
+    Nsis = u32::from_le_bytes(*b"nsis"),
+}
+
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(u32)]
+enum Magic3 {
+    SoftL = u32::from_le_bytes(*b"soft"),
+    SoftU = u32::from_le_bytes(*b"Soft"),
+    Inst = u32::from_le_bytes(*b"inst"),
+}
+
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(u32)]
+enum Magic4 {
+    Inst = u32::from_le_bytes(*b"Inst"),
+    All0 = u32::from_le_bytes(*b"all\0"),
+}
+
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(C)]
+struct NsisSignature(Magic1, Magic2, Magic3, Magic4);
+
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct FirstHeader {
     flags: HeaderFlags,
-    signature: U32,
-    magic: [u8; FirstHeader::MAGIC_SIZE as usize],
+    signature: NsisSignature,
     pub header_size: U32,
     length_of_following_data: U32,
 }
@@ -34,21 +69,4 @@ pub struct FirstHeader {
 impl FirstHeader {
     /// The NSIS first header is aligned to 512 bytes
     pub const ALIGNMENT: u16 = 512;
-
-    /// Signature that appears directly before the NSIS magic bytes, `NullsoftInst`
-    const SIGNATURE: u32 = 0xDEAD_BEEF;
-
-    const MAGIC_SIZE: u8 = 12;
-
-    const MAGIC: &'static [u8; Self::MAGIC_SIZE as usize] = b"NullsoftInst";
-
-    pub fn read(data: &[u8]) -> Result<&Self> {
-        let first_header = Self::ref_from(&data[..size_of::<Self>()]).unwrap();
-        if first_header.signature.get() == Self::SIGNATURE && &first_header.magic == Self::MAGIC {
-            ensure!(first_header.length_of_following_data.get() as usize > size_of::<Self>());
-            return Ok(first_header);
-        }
-
-        Err(eyre!("No NSIS first header found"))
-    }
 }

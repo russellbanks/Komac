@@ -21,7 +21,7 @@ const fn decode_number_from_char(mut char: u16) -> u16 {
 pub fn nsis_string(
     strings_block: &[u8],
     relative_offset: u32,
-    #[builder(default)] nsis_version: NsisVersion,
+    nsis_version: NsisVersion,
     unicode: bool,
 ) -> Result<String> {
     let mut nsis_string = String::new();
@@ -34,8 +34,6 @@ pub fn nsis_string(
     )?;
     Ok(nsis_string)
 }
-
-const NSIS_MAX_STRING_LEN: u16 = 1 << 10;
 
 /// Resolves a NSIS string given the strings block, a relative offset, and whether the string is
 /// Unicode.
@@ -55,7 +53,7 @@ fn resolve_nsis_string(
     let offset = relative_offset as usize * (usize::from(unicode) + 1);
 
     let mut reader = Cursor::new(&strings_block[offset..]);
-    for _ in 0..NSIS_MAX_STRING_LEN {
+    loop {
         let mut current = read_char(&mut reader, unicode)?;
         if current == 0 {
             break;

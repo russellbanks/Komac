@@ -1,5 +1,5 @@
 use crate::installers::inno::version::InnoVersion;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 use color_eyre::Result;
 use std::io::Read;
 
@@ -14,7 +14,7 @@ impl Version {
     fn load<R: Read>(reader: &mut R, inno_version: &InnoVersion) -> Result<Self> {
         let mut version = Self::default();
         if *inno_version >= InnoVersion(1, 3, 19) {
-            version.build = reader.read_u16::<LittleEndian>()?;
+            version.build = reader.read_u16::<LE>()?;
         }
         version.minor = reader.read_u8()?;
         version.major = reader.read_u8()?;

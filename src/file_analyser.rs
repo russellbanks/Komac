@@ -111,7 +111,11 @@ impl<'data> FileAnalyser<'data> {
             installer_locale: msi
                 .as_mut()
                 .map(|msi| mem::take(&mut msi.product_language))
-                .or_else(|| inno.as_mut().and_then(|inno| inno.installer_locale.take())),
+                .or_else(|| inno.as_mut().and_then(|inno| inno.installer_locale.take()))
+                .or_else(|| {
+                    nsis.as_mut()
+                        .map(|nsis| mem::take(&mut nsis.install_locale))
+                }),
             platform: msix
                 .as_mut()
                 .map(|msix| mem::take(&mut msix.target_device_family)),
@@ -185,7 +189,7 @@ impl<'data> FileAnalyser<'data> {
             installation_metadata: msi
                 .and_then(|msi| msi.install_location)
                 .or_else(|| msix.map(|msix| msix.install_location))
-                .or_else(|| nsis.map(|nsis| nsis.install_dir))
+                .or_else(|| nsis.and_then(|nsis| nsis.install_dir))
                 .map(|install_location| InstallationMetadata {
                     default_install_location: Some(install_location),
                     ..InstallationMetadata::default()

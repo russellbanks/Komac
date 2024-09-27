@@ -1,8 +1,8 @@
 use strum::EnumCount;
 use zerocopy::little_endian::U32;
-use zerocopy::{FromBytes, FromZeroes};
+use zerocopy::{FromBytes, Immutable, KnownLayout};
 
-#[derive(Debug, FromZeroes, FromBytes)]
+#[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct BlockHeader {
     pub offset: U32,
