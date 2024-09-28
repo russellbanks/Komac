@@ -15,11 +15,6 @@ pub struct FirstHeader {
     length_of_following_data: U32,
 }
 
-impl FirstHeader {
-    /// The NSIS first header is aligned to 512 bytes
-    pub const ALIGNMENT: u16 = 512;
-}
-
 #[cfg(test)]
 mod tests {
     use crate::installers::nsis::first_header::FirstHeader;

@@ -31,13 +31,10 @@ pub struct Nsis {
 
 impl Nsis {
     pub fn new(data: &[u8], pe: &PE) -> Result<Self> {
-        // The first header is positioned after the PE data
         let first_header_offset = pe
-            .sections
-            .iter()
-            .max_by_key(|section| section.raw_data_offset())
-            .map(|section| section.raw_data_offset() as usize + section.raw_data_size() as usize)
-            .map(|offset| offset.next_multiple_of(FirstHeader::ALIGNMENT as usize))
+            .overlay
+            .offset
+            .and_then(|offset| usize::try_from(offset).ok())
             .ok_or_eyre("Unable to get NSIS first header offset")?;
 
         let data_offset = first_header_offset + size_of::<FirstHeader>();
