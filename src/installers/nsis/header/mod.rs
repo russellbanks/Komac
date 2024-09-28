@@ -1,7 +1,12 @@
-use crate::installers::nsis::block::{BlockHeader, BlockType};
+pub mod block;
+mod compression;
+mod flags;
+
 use crate::installers::nsis::first_header::FirstHeader;
+use crate::installers::nsis::header::block::{BlockHeader, BlockType};
+use crate::installers::nsis::header::compression::Compression;
+use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::utils::read_lzma_stream_header;
-use bitflags::bitflags;
 use byteorder::{ByteOrder, ReadBytesExt, LE};
 use bzip2::read::BzDecoder;
 use color_eyre::eyre::{bail, Result};
@@ -11,33 +16,6 @@ use std::io::{Cursor, Read};
 use strum::EnumCount;
 use zerocopy::little_endian::{I32, U32};
 use zerocopy::{FromBytes, Immutable, KnownLayout};
-
-#[derive(Debug)]
-enum Compression {
-    Lzma,
-    BZip2,
-    Zlib,
-    None,
-}
-
-#[derive(Debug, FromBytes, KnownLayout, Immutable)]
-#[repr(transparent)]
-struct CommonHeaderFlags(u32);
-
-bitflags! {
-    impl CommonHeaderFlags: u32 {
-        const DETAILS_SHOWDETAILS = 1 << 0;
-        const DETAILS_NEVERSHOW = 1 << 1;
-        const PROGRESS_COLORED = 1 << 2;
-        const SILENT = 1 << 3;
-        const SILENT_LOG = 1 << 4;
-        const AUTO_CLOSE = 1 << 5;
-        const DIR_NO_SHOW = 1 << 6;
-        const NO_ROOT_DIR = 1 << 7;
-        const COMP_ONLY_ON_CUSTOM = 1 << 8;
-        const NO_CUSTOM = 1 << 9;
-    }
-}
 
 const NSIS_MAX_INST_TYPES: u8 = 32;
 
@@ -99,7 +77,7 @@ impl Header {
         let compressed_header_size = LE::read_u32(signature);
         let mut is_solid = true;
 
-        let compression = if compressed_header_size == first_header.header_size.get() {
+        let compression = if compressed_header_size == first_header.length_of_header.get() {
             is_solid = false;
             Compression::None
         } else if Self::is_lzma(signature) {
@@ -135,11 +113,11 @@ impl Header {
             Compression::None => Box::new(reader),
         };
 
-        if is_solid && decoder.read_u32::<LE>()? != first_header.header_size.get() {
+        if is_solid && decoder.read_u32::<LE>()? != first_header.length_of_header.get() {
             bail!("Decompressed header size did not equal size defined in first header");
         }
 
-        let mut uncompressed_data = vec![0; first_header.header_size.get() as usize];
+        let mut uncompressed_data = vec![0; first_header.length_of_header.get() as usize];
         decoder.read_exact(&mut uncompressed_data)?;
 
         Ok(uncompressed_data)

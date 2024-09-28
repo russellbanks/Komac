@@ -64,13 +64,13 @@ impl InnoFile {
         let header_offset = setup_loader.header_offset as usize;
         let version_bytes = data
             .get(header_offset..header_offset + VERSION_LEN)
-            .and_then(|bytes| memchr::memchr(u8::default(), bytes).map(|len| &bytes[..len]))
+            .and_then(|bytes| memchr::memchr(0, bytes).map(|len| &bytes[..len]))
             .ok_or_eyre("Invalid Inno header version")?;
 
         let known_version = KnownVersion::from_version_bytes(version_bytes).ok_or_else(|| {
             eyre!(
                 "Unknown Inno Setup version: {}",
-                &String::from_utf8_lossy(version_bytes)
+                String::from_utf8_lossy(version_bytes)
             )
         })?;
 

@@ -6,7 +6,7 @@ use crate::installers::utils::{
     RELATIVE_WINDOWS_DIR,
 };
 
-/// NSIS can use one name for two CSIDL_*** and CSIDL_COMMON_*** items (`CurrentUser` / `AllUsers`)
+/// NSIS can use one name for two CSIDL_*** and `CSIDL_COMMON`_*** items (`CurrentUser` / `AllUsers`)
 /// Some NSIS shell names are not identical to WIN32 CSIDL_* names.
 /// NSIS doesn't use some CSIDL_* values.
 ///

@@ -30,45 +30,31 @@ impl PartialOrd<InnoVersion> for SetupLoaderVersion {
 
 const KNOWN_SETUP_LOADER_VERSIONS: [SetupLoaderVersion; 7] = [
     SetupLoaderVersion {
-        signature: [
-            b'r', b'D', b'l', b'P', b't', b'S', b'0', b'2', 0x87, b'e', b'V', b'x',
-        ],
+        signature: *b"rDlPtS02\x87eVx",
         version: InnoVersion(1, 2, 10),
     },
     SetupLoaderVersion {
-        signature: [
-            b'r', b'D', b'l', b'P', b't', b'S', b'0', b'4', 0x87, b'e', b'V', b'x',
-        ],
+        signature: *b"rDlPtS04\x87eVx",
         version: InnoVersion(4, 0, 0),
     },
     SetupLoaderVersion {
-        signature: [
-            b'r', b'D', b'l', b'P', b't', b'S', b'0', b'5', 0x87, b'e', b'V', b'x',
-        ],
+        signature: *b"rDlPtS05\x87eVx",
         version: InnoVersion(4, 0, 3),
     },
     SetupLoaderVersion {
-        signature: [
-            b'r', b'D', b'l', b'P', b't', b'S', b'0', b'6', 0x87, b'e', b'V', b'x',
-        ],
+        signature: *b"rDlPtS06\x87eVx",
         version: InnoVersion(4, 0, 10),
     },
     SetupLoaderVersion {
-        signature: [
-            b'r', b'D', b'l', b'P', b't', b'S', b'0', b'7', 0x87, b'e', b'V', b'x',
-        ],
+        signature: *b"rDlPtS07\x87eVx",
         version: InnoVersion(4, 1, 6),
     },
     SetupLoaderVersion {
-        signature: [
-            b'r', b'D', b'l', b'P', b't', b'S', 0xCD, 0xE6, 0xD7, b'{', 0x0B, b'*',
-        ],
+        signature: *b"rDlPtS\xCD\xE6\xD7{\x0B*",
         version: InnoVersion(5, 1, 5),
     },
     SetupLoaderVersion {
-        signature: [
-            b'n', b'S', b'5', b'W', b'7', b'd', b'T', 0x83, 0xAA, 0x1B, 0x0F, b'j',
-        ],
+        signature: *b"nS5W7dT\x83\xAA\x1B\x0Fj",
         version: InnoVersion(5, 1, 5),
     },
 ];

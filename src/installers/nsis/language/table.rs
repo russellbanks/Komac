@@ -1,4 +1,4 @@
-use crate::installers::nsis::block::BlockType;
+use crate::installers::nsis::header::block::BlockType;
 use crate::installers::nsis::header::Header;
 use color_eyre::eyre::{Error, OptionExt};
 use color_eyre::Result;

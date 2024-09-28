@@ -28,7 +28,7 @@ impl BlockType {
         let end = blocks
             .iter()
             .skip(self as usize + 1)
-            .find(|b| b.offset.get() > 0)
+            .find(|b| b.offset > U32::ZERO)
             .map_or(blocks.len(), |block| block.offset.get() as usize);
         &data[start..end]
     }

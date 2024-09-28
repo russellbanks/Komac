@@ -63,13 +63,13 @@ fn resolve_nsis_string(
             if next == 0 {
                 break;
             }
-            if current != NsCode::Skip.get::<u16>(nsis_version) {
+            if current != u16::from(NsCode::Skip.get(nsis_version)) {
                 let special_char = if unicode {
                     next
                 } else {
                     u16::from_le_bytes([next as u8, read_char(&mut reader, unicode)? as u8])
                 };
-                if current == NsCode::Shell.get::<u16>(nsis_version) {
+                if current == u16::from(NsCode::Shell.get(nsis_version)) {
                     Shell::resolve(buf, strings_block, special_char, nsis_version, unicode)?;
                 } else {
                     let index = if unicode {
@@ -78,9 +78,9 @@ fn resolve_nsis_string(
                     } else {
                         decode_number_from_char(special_char)
                     };
-                    if current == NsCode::Var.get::<u16>(nsis_version) {
+                    if current == u16::from(NsCode::Var.get(nsis_version)) {
                         NsVar::resolve(buf, u32::from(index), nsis_version);
-                    } else if current == NsCode::Lang.get::<u16>(nsis_version) {
+                    } else if current == u16::from(NsCode::Lang.get(nsis_version)) {
                         LangCode::resolve(buf, index);
                     }
                 }
@@ -95,11 +95,11 @@ fn resolve_nsis_string(
     Ok(())
 }
 
-/// Reads two bytes as little-endian if Unicode; otherwise, reads one byte and casts it to u16
+/// Reads two bytes as little-endian if Unicode; otherwise, reads one byte and converts it to u16
 fn read_char<R: Read>(reader: &mut R, unicode: bool) -> Result<u16> {
     if unicode {
-        reader.read_u16::<LE>().map_err(Error::msg)
+        reader.read_u16::<LE>().map_err(Error::from)
     } else {
-        Ok(u16::from(reader.read_u8()?))
+        reader.read_u8().map(u16::from).map_err(Error::from)
     }
 }

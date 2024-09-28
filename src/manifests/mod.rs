@@ -99,7 +99,7 @@ pub fn build_manifest_string<T: Manifest + Serialize>(
     writeln!(result)?;
     serde_yaml::to_writer(&mut result, manifest)?;
     convert_to_crlf(&mut result);
-    String::from_utf8(result).map_err(Error::msg)
+    String::from_utf8(result).map_err(Error::from)
 }
 
 fn convert_to_crlf(buf: &mut Vec<u8>) {
@@ -138,10 +138,8 @@ mod tests {
         for index in 0..10 {
             let _ = writeln!(buffer, "Line {index}");
         }
-        let lf_string = String::from_utf8_lossy(&buffer);
-        assert!(is_line_feed(&lf_string));
+        assert!(is_line_feed(std::str::from_utf8(&buffer).unwrap()));
         convert_to_crlf(&mut buffer);
-        let crlf_string = String::from_utf8_lossy(&buffer);
-        assert!(!is_line_feed(&crlf_string));
+        assert!(!is_line_feed(std::str::from_utf8(&buffer).unwrap()));
     }
 }
