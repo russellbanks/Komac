@@ -1,4 +1,6 @@
+use crate::installers::nsis::language::table::LanguageTable;
 use crate::installers::nsis::strings::code::NsCode;
+use crate::installers::nsis::strings::encoding::nsis_string;
 use byteorder::{ByteOrder, LE};
 use derive_more::Display;
 use itertools::Either;
@@ -22,8 +24,6 @@ impl NsisVersion {
     }
 
     pub fn from_manifest(data: &[u8], pe: &PE) -> Option<Self> {
-        const NULLSOFT_INSTALL_SYSTEM: &str = "Nullsoft Install System";
-
         #[derive(Deserialize)]
         struct Assembly<'data> {
             #[serde(borrow)]
@@ -46,19 +46,38 @@ impl NsisVersion {
             .and_then(|manifest_bytes| std::str::from_utf8(manifest_bytes).ok())
             .and_then(|manifest| from_str::<Assembly>(manifest).ok())
             .map(|assembly| assembly.description.inner)
-            .and_then(|description| {
-                let (text, version) = description.rsplit_once(' ')?;
+            .and_then(Self::from_text)
+    }
 
-                if text.trim() != NULLSOFT_INSTALL_SYSTEM {
-                    return None;
-                }
+    pub fn from_branding_text(
+        strings_block: &[u8],
+        language_table: &LanguageTable,
+        unicode: bool,
+    ) -> Option<Self> {
+        nsis_string()
+            .strings_block(strings_block)
+            .relative_offset(language_table.language_string_offsets[0].get())
+            .unicode(unicode)
+            .get()
+            .ok()
+            .as_deref()
+            .and_then(Self::from_text)
+    }
 
-                let mut parts = version
-                    .chars()
-                    .filter_map(|char| u8::try_from(char.to_digit(10)?).ok());
+    fn from_text(text: &str) -> Option<Self> {
+        const NULLSOFT_INSTALL_SYSTEM: &str = "Nullsoft Install System";
 
-                Some(Self(parts.next()?, parts.next()?, parts.next()?))
-            })
+        let (text, version) = text.rsplit_once(' ')?;
+
+        if text.trim() != NULLSOFT_INSTALL_SYSTEM {
+            return None;
+        }
+
+        let mut parts = version
+            .chars()
+            .filter_map(|char| u8::try_from(char.to_digit(10)?).ok());
+
+        Some(Self(parts.next()?, parts.next()?, parts.next()?))
     }
 
     pub fn detect(strings_block: &[u8], unicode: bool) -> Self {
@@ -111,6 +130,12 @@ impl NsisVersion {
         } else {
             Self::_2
         }
+    }
+}
+
+impl Default for NsisVersion {
+    fn default() -> Self {
+        Self::_3
     }
 }
 

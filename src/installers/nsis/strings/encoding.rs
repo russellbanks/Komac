@@ -21,7 +21,7 @@ const fn decode_number_from_char(mut char: u16) -> u16 {
 pub fn nsis_string(
     strings_block: &[u8],
     relative_offset: u32,
-    nsis_version: NsisVersion,
+    #[builder(default)] nsis_version: NsisVersion,
     unicode: bool,
 ) -> Result<String> {
     let mut nsis_string = String::new();

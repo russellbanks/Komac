@@ -56,10 +56,11 @@ impl Nsis {
         let strings_block = BlockType::Strings.get(&decompressed_data, &header.blocks);
         let unicode = LE::read_u16(strings_block) == 0;
 
-        let nsis_version = NsisVersion::from_manifest(data, pe)
-            .unwrap_or_else(|| NsisVersion::detect(strings_block, unicode));
-
         let language_table = LanguageTable::get_main(&decompressed_data, header)?;
+
+        let nsis_version = NsisVersion::from_manifest(data, pe)
+            .or_else(|| NsisVersion::from_branding_text(strings_block, language_table, unicode))
+            .unwrap_or_else(|| NsisVersion::detect(strings_block, unicode));
 
         let install_dir = if header.install_directory_ptr != U32::ZERO {
             nsis_string()
