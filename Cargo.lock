@@ -2325,7 +2325,7 @@ dependencies = [
  "versions",
  "windows_exe_info",
  "yara-x",
- "zerocopy 0.8.0-alpha.25",
+ "zerocopy 0.8.0-alpha.26",
  "zip",
 ]
 
@@ -5591,11 +5591,11 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.0-alpha.25"
+version = "0.8.0-alpha.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ade16fe7106200b0c121a3251c106c40ffcdecdab68122de5909643d22db075e"
+checksum = "c3fc60668b5125670760cf6712c79ce7b1f81593f61a63f242f84dc86ea655f7"
 dependencies = [
- "zerocopy-derive 0.8.0-alpha.25",
+ "zerocopy-derive 0.8.0-alpha.26",
 ]
 
 [[package]]
@@ -5611,9 +5611,9 @@ dependencies = [
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.0-alpha.25"
+version = "0.8.0-alpha.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7873cce5410d6ff897beb4b4847366c1013fcda5ec96387a74fa4e0d2580025b"
+checksum = "a149678b343b6dc51769bc6e382042a6df5d8b0dfb4d7e2cc144c305da19d6e0"
 dependencies = [
  "proc-macro2",
  "quote",
