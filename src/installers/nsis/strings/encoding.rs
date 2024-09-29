@@ -4,7 +4,7 @@ use crate::installers::nsis::strings::shell::Shell;
 use crate::installers::nsis::strings::var::NsVar;
 use crate::installers::nsis::version::NsisVersion;
 use bon::builder;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{ByteOrder, ReadBytesExt, LE};
 use color_eyre::eyre::{Error, Result};
 use std::io::{Cursor, Read};
 
@@ -22,7 +22,6 @@ pub fn nsis_string(
     strings_block: &[u8],
     relative_offset: u32,
     #[builder(default)] nsis_version: NsisVersion,
-    unicode: bool,
 ) -> Result<String> {
     let mut nsis_string = String::new();
     resolve_nsis_string(
@@ -30,7 +29,6 @@ pub fn nsis_string(
         strings_block,
         relative_offset,
         nsis_version,
-        unicode,
     )?;
     Ok(nsis_string)
 }
@@ -47,8 +45,9 @@ fn resolve_nsis_string(
     strings_block: &[u8],
     relative_offset: u32,
     nsis_version: NsisVersion,
-    unicode: bool,
 ) -> Result<()> {
+    let unicode = LE::read_u16(strings_block) == 0;
+
     // Double the offset if the string is Unicode as each character will be 2 bytes
     let offset = relative_offset as usize * (usize::from(unicode) + 1);
 
@@ -70,7 +69,7 @@ fn resolve_nsis_string(
                     u16::from_le_bytes([next as u8, read_char(&mut reader, unicode)? as u8])
                 };
                 if current == u16::from(NsCode::Shell.get(nsis_version)) {
-                    Shell::resolve(buf, strings_block, special_char, nsis_version, unicode)?;
+                    Shell::resolve(buf, strings_block, special_char, nsis_version)?;
                 } else {
                     let index = if unicode {
                         next = decode_number_from_char(special_char);

@@ -1,72 +1,41 @@
-use std::fmt::{Debug, Formatter};
-use zerocopy::little_endian::U32;
-use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
+use std::fmt::Debug;
+use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
-enum Magic {
+pub enum Magic {
     /// Default NSIS magic bytes
-    DeadBeef = 0xDEAD_BEEF,
+    DeadBeef = 0xDEAD_BEEFu32.to_le(),
     /// Present in NSIS 1.1e..<1.30
-    DeadBeed = 0xDEAD_BEED,
+    DeadBeed = 0xDEAD_BEEDu32.to_le(),
 }
 
-/// NSIS 1.00 signature `nsisinstall\0` with `0xDEAD_BEEF` magic bytes
-const DEAD_BEEF_NSIS_INSTALL: [U32; 4] = [
-    U32::new(Magic::DeadBeef as u32),
-    U32::new(u32::from_le_bytes(*b"nsis")),
-    U32::new(u32::from_le_bytes(*b"inst")),
-    U32::new(u32::from_le_bytes(*b"all\0")),
-];
-
-/// NSIS 1.1e Signature `NullSoftInst` with `0xDEAD_BEED` magic bytes
-const DEAD_BEED_NULLSOFT_U: [U32; 4] = [
-    U32::new(Magic::DeadBeed as u32),
-    U32::new(u32::from_le_bytes(*b"Null")),
-    U32::new(u32::from_le_bytes(*b"Soft")),
-    U32::new(u32::from_le_bytes(*b"Inst")),
-];
-
-/// NSIS 1.30 Signature `NullSoftInst` with `0xDEAD_BEEF` magic bytes
-const DEAD_BEEF_NULLSOFT_U: [U32; 4] = [
-    U32::new(Magic::DeadBeef as u32),
-    U32::new(u32::from_le_bytes(*b"Null")),
-    U32::new(u32::from_le_bytes(*b"Soft")),
-    U32::new(u32::from_le_bytes(*b"Inst")),
-];
-
-/// NSIS 1.60b2+ Signature `NullsoftInst` with `0xDEAD_BEEF` magic bytes
-const DEAD_BEEF_NULLSOFT_L: [U32; 4] = [
-    U32::new(Magic::DeadBeef as u32),
-    U32::new(u32::from_le_bytes(*b"Null")),
-    U32::new(u32::from_le_bytes(*b"soft")),
-    U32::new(u32::from_le_bytes(*b"Inst")),
-];
-
-#[derive(FromBytes, KnownLayout, Immutable)]
-#[repr(transparent)]
-pub struct NsisSignature([U32; 4]);
-
-impl NsisSignature {
-    pub const fn is_valid(&self) -> bool {
-        matches!(
-            self.0,
-            DEAD_BEEF_NULLSOFT_L
-                | DEAD_BEEF_NULLSOFT_U
-                | DEAD_BEED_NULLSOFT_U
-                | DEAD_BEEF_NSIS_INSTALL
-        )
-    }
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(u32)]
+pub enum Sig1 {
+    Null = u32::from_le_bytes(*b"Null").to_le(),
+    Nsis = u32::from_le_bytes(*b"nsis").to_le(),
 }
 
-impl Debug for NsisSignature {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for section in &self.0 {
-            if let Ok(str) = std::str::from_utf8(section.as_bytes()) {
-                write!(f, "{str}")?;
-            } else {
-                write!(f, "{:08x}", section.get())?;
-            }
-        }
-        Ok(())
-    }
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(u32)]
+pub enum Sig2 {
+    SoftU = u32::from_le_bytes(*b"Soft").to_le(),
+    SoftL = u32::from_le_bytes(*b"soft").to_le(),
+    Inst = u32::from_le_bytes(*b"inst").to_le(),
 }
+
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(u32)]
+pub enum Sig3 {
+    Inst = u32::from_le_bytes(*b"Inst").to_le(),
+    All0 = u32::from_le_bytes(*b"all\0").to_le(),
+}
+
+#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[repr(C)]
+pub struct NsisSignature(Sig1, Sig2, Sig3);

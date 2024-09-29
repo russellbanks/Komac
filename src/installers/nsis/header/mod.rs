@@ -3,7 +3,7 @@ mod compression;
 mod flags;
 
 use crate::installers::nsis::first_header::FirstHeader;
-use crate::installers::nsis::header::block::{BlockHeader, BlockType};
+use crate::installers::nsis::header::block::BlockHeaders;
 use crate::installers::nsis::header::compression::Compression;
 use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::utils::read_lzma_stream_header;
@@ -13,7 +13,6 @@ use color_eyre::eyre::{bail, Result};
 use flate2::read::DeflateDecoder;
 use liblzma::read::XzDecoder;
 use std::io::{Cursor, Read};
-use strum::EnumCount;
 use zerocopy::little_endian::{I32, U32};
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
@@ -23,7 +22,7 @@ const NSIS_MAX_INST_TYPES: u8 = 32;
 #[repr(C)]
 pub struct Header {
     flags: CommonHeaderFlags,
-    pub blocks: [BlockHeader; BlockType::COUNT],
+    pub blocks: BlockHeaders,
     install_reg_rootkey: U32,
     install_rek_key_ptr: U32,
     install_reg_value_ptr: U32,

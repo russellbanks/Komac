@@ -1,19 +1,20 @@
-use zerocopy::little_endian::U32;
+use bitflags::bitflags;
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
 #[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
-pub struct HeaderFlags(U32);
+pub struct HeaderFlags(u32);
 
-#[expect(dead_code)]
-impl HeaderFlags {
-    pub const UNINSTALL: Self = Self(U32::new(1 << 0));
-    pub const SILENT: Self = Self(U32::new(1 << 1));
-    pub const NO_CRC: Self = Self(U32::new(1 << 2));
-    pub const FORCE_CRC: Self = Self(U32::new(1 << 3));
-    // NSISBI fork flags:
-    pub const BI_LONG_OFFSET: Self = Self(U32::new(1 << 4));
-    pub const BI_EXTERNAL_FILE_SUPPORT: Self = Self(U32::new(1 << 5));
-    pub const BI_EXTERNAL_FILE: Self = Self(U32::new(1 << 6));
-    pub const BI_IS_STUB_INSTALLER: Self = Self(U32::new(1 << 7));
+bitflags! {
+    impl HeaderFlags: u32 {
+        const UNINSTALL = (1u32 << 0).to_le();
+        const SILENT = (1u32 << 1).to_le();
+        const NO_CRC = (1u32 << 2).to_le();
+        const FORCE_CRC = (1u32 << 3).to_le();
+        // NSISBI fork flags:
+        const BI_LONG_OFFSET = (1u32 << 4).to_le();
+        const BI_EXTERNAL_FILE_SUPPORT = (1u32 << 5).to_le();
+        const BI_EXTERNAL_FILE = (1u32 << 6).to_le();
+        const BI_IS_STUB_INSTALLER = (1u32 << 7).to_le();
+    }
 }

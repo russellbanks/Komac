@@ -18,7 +18,7 @@ const EN_US_LANG_CODE: u16 = 1033;
 
 impl LanguageTable {
     pub fn get_main<'data>(data: &'data [u8], header: &Header) -> Result<&'data Self> {
-        let lang_table_block_header = &header.blocks[BlockType::LangTables as usize];
+        let lang_table_block_header = &header.blocks[BlockType::LangTables];
 
         let mut first_table = None;
 

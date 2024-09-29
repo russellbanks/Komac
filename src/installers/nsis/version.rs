@@ -52,12 +52,10 @@ impl NsisVersion {
     pub fn from_branding_text(
         strings_block: &[u8],
         language_table: &LanguageTable,
-        unicode: bool,
     ) -> Option<Self> {
         nsis_string()
             .strings_block(strings_block)
             .relative_offset(language_table.language_string_offsets[0].get())
-            .unicode(unicode)
             .get()
             .ok()
             .as_deref()
@@ -80,7 +78,9 @@ impl NsisVersion {
         Some(Self(parts.next()?, parts.next()?, parts.next()?))
     }
 
-    pub fn detect(strings_block: &[u8], unicode: bool) -> Self {
+    pub fn detect(strings_block: &[u8]) -> Self {
+        let unicode = LE::read_u16(strings_block) == 0;
+
         let mut nsis3_count = 0;
         let mut nsis2_count = 0;
 
@@ -179,13 +179,13 @@ mod tests {
     fn detect_nsis_3() {
         const STRINGS_BLOCK: &[u8; 25] = b"\0\x02Shell\0\x04Skip\0\x01Lang\0\x03Var\0";
 
-        assert_eq!(NsisVersion::detect(STRINGS_BLOCK, false), NsisVersion::_3);
+        assert_eq!(NsisVersion::detect(STRINGS_BLOCK), NsisVersion::_3);
     }
 
     #[test]
     fn detect_nsis_2() {
         const STRINGS_BLOCK: &[u8; 25] = b"\0\xFEShell\0\xFCSkip\0\xFFLang\0\xFDVar\0";
 
-        assert_eq!(NsisVersion::detect(STRINGS_BLOCK, false), NsisVersion::_2);
+        assert_eq!(NsisVersion::detect(STRINGS_BLOCK), NsisVersion::_2);
     }
 }

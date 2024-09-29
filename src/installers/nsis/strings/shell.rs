@@ -85,7 +85,6 @@ impl Shell {
         strings_block: &[u8],
         character: u16,
         nsis_version: NsisVersion,
-        unicode: bool,
     ) -> color_eyre::Result<()> {
         const PROGRAM_FILES_DIR: &str = "ProgramFilesDir";
         const COMMON_FILES_DIR: &str = "CommonFilesDir";
@@ -99,7 +98,6 @@ impl Shell {
                 .strings_block(strings_block)
                 .relative_offset(u32::from(offset))
                 .nsis_version(nsis_version)
-                .unicode(unicode)
                 .get()?;
             if shell_string == PROGRAM_FILES_DIR {
                 buf.push_str(if is_64_bit {

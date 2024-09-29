@@ -88,7 +88,8 @@ impl<'data> FileAnalyser<'data> {
             .as_mut()
             .map(|msi| mem::take(&mut msi.product_name))
             .or_else(|| msix.as_mut().map(|msix| mem::take(&mut msix.display_name)))
-            .or_else(|| inno.as_mut().and_then(|inno| inno.uninstall_name.take()));
+            .or_else(|| inno.as_mut().and_then(|inno| inno.uninstall_name.take()))
+            .or_else(|| nsis.as_mut().and_then(|nsis| nsis.display_name.take()));
         let display_publisher = msi
             .as_mut()
             .map(|msi| mem::take(&mut msi.manufacturer))
@@ -96,12 +97,14 @@ impl<'data> FileAnalyser<'data> {
                 msix.as_mut()
                     .map(|msix| mem::take(&mut msix.publisher_display_name))
             })
-            .or_else(|| inno.as_mut().and_then(|inno| inno.app_publisher.take()));
+            .or_else(|| inno.as_mut().and_then(|inno| inno.app_publisher.take()))
+            .or_else(|| nsis.as_mut().and_then(|nsis| nsis.display_publisher.take()));
         let display_version = msi
             .as_mut()
             .map(|msi| mem::take(&mut msi.product_version))
             .or_else(|| msix.as_mut().map(|msix| mem::take(&mut msix.version)))
             .or_else(|| inno.as_mut().and_then(|inno| inno.app_version.take()))
+            .or_else(|| nsis.as_mut().and_then(|nsis| nsis.display_version.take()))
             .and_then(Versioning::new);
         let product_code = msi
             .as_mut()
