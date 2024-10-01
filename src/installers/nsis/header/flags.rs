@@ -1,20 +1,22 @@
-use zerocopy::little_endian::U32;
+use bitflags::bitflags;
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
 #[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
-pub struct CommonHeaderFlags(U32);
+pub struct CommonHeaderFlags(u32);
 
-#[expect(dead_code)]
-impl CommonHeaderFlags {
-    pub const DETAILS_SHOWDETAILS: Self = Self(U32::new(1 << 0));
-    pub const DETAILS_NEVERSHOW: Self = Self(U32::new(1 << 1));
-    pub const PROGRESS_COLORED: Self = Self(U32::new(1 << 2));
-    pub const SILENT: Self = Self(U32::new(1 << 3));
-    pub const SILENT_LOG: Self = Self(U32::new(1 << 4));
-    pub const AUTO_CLOSE: Self = Self(U32::new(1 << 5));
-    pub const DIR_NO_SHOW: Self = Self(U32::new(1 << 6));
-    pub const NO_ROOT_DIR: Self = Self(U32::new(1 << 7));
-    pub const COMP_ONLY_ON_CUSTOM: Self = Self(U32::new(1 << 7));
-    pub const NO_CUSTOM: Self = Self(U32::new(1 << 7));
+bitflags! {
+    impl CommonHeaderFlags: u32 {
+        const DETAILS_SHOWDETAILS = (1u32 << 0).to_le();
+        const DETAILS_NEVERSHOW = (1u32 << 1).to_le();
+        const PROGRESS_COLORED = (1u32 << 2).to_le();
+        const FORCE_CRC = (1u32 << 3).to_le();
+        const SILENT = (1u32 << 4).to_le();
+        const SILENT_LOG = (1u32 << 5).to_le();
+        const AUTO_CLOSE = (1u32 << 6).to_le();
+        const DIR_NO_SHOW = (1u32 << 7).to_le();
+        const NO_ROOT_DIR = (1u32 << 8).to_le();
+        const COMP_ONLY_ON_CUSTOM = (1u32 << 9).to_le();
+        const NO_CUSTOM = (1u32 << 10).to_le();
+    }
 }

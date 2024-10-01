@@ -1,7 +1,8 @@
 use crate::installers::nsis::header::block::BlockType;
 use crate::installers::nsis::header::Header;
-use color_eyre::eyre::{Error, OptionExt};
+use color_eyre::eyre::OptionExt;
 use color_eyre::Result;
+use itertools::Itertools;
 use zerocopy::little_endian::{U16, U32};
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
@@ -14,28 +15,15 @@ pub struct LanguageTable {
     pub language_string_offsets: [U32],
 }
 
-const EN_US_LANG_CODE: u16 = 1033;
+const EN_US_LANG_CODE: U16 = U16::new(1033);
 
 impl LanguageTable {
     pub fn get_main<'data>(data: &'data [u8], header: &Header) -> Result<&'data Self> {
-        let lang_table_block_header = &header.blocks[BlockType::LangTables];
-
-        let mut first_table = None;
-
-        for index in 0..lang_table_block_header.num.get() {
-            let offset = lang_table_block_header.offset.get() as usize
-                + (header.langtable_size.get() * index) as usize;
-            let lang_table = &data[offset..offset + header.langtable_size.get() as usize];
-            let table =
-                Self::ref_from_bytes(lang_table).map_err(|error| Error::msg(error.to_string()))?;
-            if first_table.is_none() {
-                first_table = Some(table);
-            }
-            if table.language_id.get() == EN_US_LANG_CODE {
-                return Ok(table);
-            }
-        }
-
-        first_table.ok_or_eyre("No NSIS language table found")
+        BlockType::LangTables
+            .get(data, &header.blocks)
+            .chunks_exact(header.langtable_size.get() as usize)
+            .filter_map(|data| Self::ref_from_bytes(data).ok())
+            .find_or_first(|lang_table| lang_table.language_id == EN_US_LANG_CODE)
+            .ok_or_eyre("No NSIS language table found")
     }
 }

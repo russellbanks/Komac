@@ -5,6 +5,7 @@ use crate::installers::utils::{
     RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_ROOT,
     RELATIVE_WINDOWS_DIR,
 };
+use color_eyre::Result;
 
 /// NSIS can use one name for two CSIDL_*** and `CSIDL_COMMON`_*** items (`CurrentUser` / `AllUsers`)
 /// Some NSIS shell names are not identical to WIN32 CSIDL_* names.
@@ -85,7 +86,7 @@ impl Shell {
         strings_block: &[u8],
         character: u16,
         nsis_version: NsisVersion,
-    ) -> color_eyre::Result<()> {
+    ) -> Result<()> {
         const PROGRAM_FILES_DIR: &str = "ProgramFilesDir";
         const COMMON_FILES_DIR: &str = "CommonFilesDir";
 
