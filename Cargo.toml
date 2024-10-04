@@ -85,7 +85,7 @@ tui-textarea = { version = "0.6.1", features = ["search"] }
 url = { version = "2.5.2", features = ["serde"] }
 uuid = { version = "1.10.0", features = ["v4"] }
 versions = "6.3.2"
-yara-x = { version = "0.8.0", default-features = false, features = ["pe-module"] }
+yara-x = { version = "0.9.0", default-features = false, features = ["pe-module"] }
 zerocopy = { version = "0.8.0-alpha.27", features = ["derive"] }
 zip = { version = "2.2.0", default-features = false, features = ["deflate"] }
 
