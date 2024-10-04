@@ -1,5 +1,5 @@
 pub mod block;
-mod compression;
+pub mod compression;
 mod flags;
 
 use crate::installers::nsis::first_header::FirstHeader;
@@ -12,7 +12,7 @@ use bzip2::read::BzDecoder;
 use color_eyre::eyre::{bail, Result};
 use flate2::read::DeflateDecoder;
 use liblzma::read::XzDecoder;
-use std::io::{Cursor, Read};
+use std::io::Read;
 use zerocopy::little_endian::{I32, U32};
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
@@ -54,71 +54,100 @@ pub struct Header {
 const HEADER_SIGNATURE_SIZE: u8 = 12;
 const NON_SOLID_EXTRA_BYTES: u8 = 1 << 2;
 
+const IS_COMPRESSED_MASK: u32 = 1 << 31;
+
+pub struct Decompressed<'data> {
+    pub decompressed_data: Vec<u8>,
+    pub is_solid: bool,
+    pub non_solid_start_offset: u32,
+    pub compression: Compression,
+    pub decoder: Box<dyn Read + 'data>,
+}
+
+fn is_lzma(data: &[u8]) -> Option<Compression> {
+    let is_lzma_header = |d: &[u8]| {
+        d.get(0..3) == Some([0x5D, 0, 0].as_slice())
+            && d.get(5) == Some(&0)
+            && d.get(6).map_or(false, |byte| byte & 1 << 7 == 0)
+    };
+
+    if is_lzma_header(data) {
+        Some(Compression::Lzma(false))
+    } else if data.first() <= Some(&1) && is_lzma_header(&data[1..]) {
+        Some(Compression::Lzma(true))
+    } else {
+        None
+    }
+}
+
+fn is_bzip2(data: &[u8]) -> bool {
+    const BZIP2_MAGIC: u8 = 0x31;
+
+    data.first() == Some(&BZIP2_MAGIC) && data.get(1) < Some(&14)
+}
+
 impl Header {
-    fn is_lzma(data: &[u8]) -> bool {
-        let is_lzma_header = |d: &[u8]| {
-            d.get(0..3) == Some([0x5D, 0, 0].as_slice())
-                && d.get(5) == Some(&0)
-                && d.get(6).map_or(false, |byte| byte & 1 << 7 == 0)
-        };
-
-        is_lzma_header(data) || (data.first() <= Some(&1) && is_lzma_header(&data[1..]))
-    }
-
-    fn is_bzip2(data: &[u8]) -> bool {
-        const BZIP2_MAGIC: u8 = 0x31;
-
-        data.first() == Some(&BZIP2_MAGIC) && data.get(1) < Some(&14)
-    }
-
-    pub fn decompress(data: &[u8], first_header: &FirstHeader) -> Result<Vec<u8>> {
+    pub fn decompress<'data>(
+        data: &'data [u8],
+        first_header: &'data FirstHeader,
+    ) -> Result<Decompressed<'data>> {
         let signature = &data[..HEADER_SIGNATURE_SIZE as usize];
-        let compressed_header_size = LE::read_u32(signature);
+        let mut compressed_header_size = LE::read_u32(signature);
         let mut is_solid = true;
 
         let compression = if compressed_header_size == first_header.length_of_header.get() {
             is_solid = false;
             Compression::None
-        } else if Self::is_lzma(signature) {
-            Compression::Lzma
+        } else if let Some(lzma_compression) = is_lzma(signature) {
+            lzma_compression
         } else if signature.get(3) == Some(&0x80) {
             is_solid = false;
-            if Self::is_lzma(&signature[NON_SOLID_EXTRA_BYTES as usize..]) {
-                Compression::Lzma
-            } else if Self::is_bzip2(&signature[NON_SOLID_EXTRA_BYTES as usize..]) {
-                Compression::BZip2
-            } else {
-                Compression::Zlib
-            }
-        } else if Self::is_bzip2(signature) {
+            is_lzma(&signature[NON_SOLID_EXTRA_BYTES as usize..]).map_or_else(
+                || {
+                    if is_bzip2(&signature[NON_SOLID_EXTRA_BYTES as usize..]) {
+                        Compression::BZip2
+                    } else {
+                        Compression::Zlib
+                    }
+                },
+                |lzma_compression| lzma_compression,
+            )
+        } else if is_bzip2(signature) {
             Compression::BZip2
         } else {
             Compression::Zlib
         };
 
-        let mut reader = if is_solid {
-            Cursor::new(data)
+        let mut data = if is_solid {
+            data
         } else {
-            Cursor::new(&data[NON_SOLID_EXTRA_BYTES as usize..])
+            compressed_header_size &= !IS_COMPRESSED_MASK;
+            &data[NON_SOLID_EXTRA_BYTES as usize..]
         };
 
         let mut decoder: Box<dyn Read> = match compression {
-            Compression::Lzma => {
-                let stream = read_lzma_stream_header(&mut reader)?;
-                Box::new(XzDecoder::new_stream(reader, stream))
+            Compression::Lzma(_) => {
+                let stream = read_lzma_stream_header(&mut data)?;
+                Box::new(XzDecoder::new_stream(data, stream))
             }
-            Compression::BZip2 => Box::new(BzDecoder::new(reader)),
-            Compression::Zlib => Box::new(DeflateDecoder::new(reader)),
-            Compression::None => Box::new(reader),
+            Compression::BZip2 => Box::new(BzDecoder::new(data)),
+            Compression::Zlib => Box::new(DeflateDecoder::new(data)),
+            Compression::None => Box::new(data),
         };
 
         if is_solid && decoder.read_u32::<LE>()? != first_header.length_of_header.get() {
             bail!("Decompressed header size did not equal size defined in first header");
         }
 
-        let mut uncompressed_data = vec![0; first_header.length_of_header.get() as usize];
-        decoder.read_exact(&mut uncompressed_data)?;
+        let mut decompressed_data = vec![0; first_header.length_of_header.get() as usize];
+        decoder.read_exact(&mut decompressed_data)?;
 
-        Ok(uncompressed_data)
+        Ok(Decompressed {
+            decompressed_data,
+            is_solid,
+            non_solid_start_offset: compressed_header_size,
+            compression,
+            decoder,
+        })
     }
 }

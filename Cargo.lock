@@ -2314,6 +2314,7 @@ dependencies = [
  "oxilangtag",
  "package-family-name",
  "percent-encoding",
+ "protobuf",
  "pulldown-cmark",
  "quick-xml",
  "rand",

@@ -3,8 +3,7 @@ use crate::installers::nsis::strings::code::NsCode;
 use crate::installers::nsis::strings::encoding::nsis_string;
 use byteorder::{ByteOrder, LE};
 use derive_more::Display;
-use itertools::Either;
-use memchr::memmem;
+use itertools::{Either, Itertools};
 use quick_xml::de::from_str;
 use serde::Deserialize;
 use yara_x::mods::pe::ResourceType::RESOURCE_TYPE_MANIFEST;
@@ -53,13 +52,12 @@ impl NsisVersion {
         strings_block: &[u8],
         language_table: &LanguageTable,
     ) -> Option<Self> {
-        nsis_string()
-            .strings_block(strings_block)
-            .relative_offset(language_table.language_string_offsets[0].get())
-            .get()
-            .ok()
-            .as_deref()
-            .and_then(Self::from_text)
+        let branding_text = nsis_string(
+            strings_block,
+            language_table.language_string_offsets[0].get(),
+            Self::default(),
+        );
+        Self::from_text(&branding_text)
     }
 
     fn from_text(text: &str) -> Option<Self> {
@@ -91,7 +89,12 @@ impl NsisVersion {
         };
 
         let null_indexes = if unicode {
-            Either::Left(memmem::find_iter(strings_block, b"\0\0"))
+            Either::Left(
+                strings_block
+                    .chunks_exact(size_of::<u16>())
+                    .positions(|chunk| chunk == b"\0\0")
+                    .map(|index| index * size_of::<u16>()),
+            )
         } else {
             Either::Right(memchr::memchr_iter(0, strings_block))
         };

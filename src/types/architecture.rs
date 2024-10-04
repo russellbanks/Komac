@@ -2,7 +2,6 @@ use color_eyre::eyre::{bail, Result};
 use serde::{Deserialize, Serialize};
 use strum::EnumString;
 use yara_x::mods::pe::Machine;
-use yara_x::mods::PE;
 
 #[derive(
     Clone,
@@ -76,12 +75,22 @@ const ARCHITECTURES: [(&str, Architecture); 31] = [
 ];
 
 impl Architecture {
-    pub fn get_from_exe(pe: &PE) -> Result<Self> {
-        Ok(match pe.machine() {
-            Machine::MACHINE_AMD64 | Machine::MACHINE_IA64 => Self::X64,
-            Machine::MACHINE_I386 => Self::X86,
+    pub fn from_machine(machine: Machine) -> Result<Self> {
+        Ok(match machine {
+            Machine::MACHINE_AMD64
+            | Machine::MACHINE_IA64
+            | Machine::MACHINE_POWERPC
+            | Machine::MACHINE_POWERPCFP
+            | Machine::MACHINE_R4000
+            | Machine::MACHINE_SH5 => Self::X64,
+            Machine::MACHINE_AM33
+            | Machine::MACHINE_I386
+            | Machine::MACHINE_M32R
+            | Machine::MACHINE_SH3
+            | Machine::MACHINE_SH3DSP
+            | Machine::MACHINE_SH4 => Self::X86,
             Machine::MACHINE_ARM64 => Self::Arm64,
-            Machine::MACHINE_ARM | Machine::MACHINE_THUMB | Machine::MACHINE_ARMNT => Self::Arm,
+            Machine::MACHINE_ARM | Machine::MACHINE_ARMNT | Machine::MACHINE_THUMB => Self::Arm,
             Machine::MACHINE_UNKNOWN => Self::Neutral,
             machine => bail!("Unexpected architecture: {:?}", machine),
         })

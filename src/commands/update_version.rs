@@ -103,7 +103,7 @@ impl UpdateVersion {
 
         let versions = github.get_versions(&self.package_identifier).await?;
 
-        let latest_version = versions.iter().max().unwrap();
+        let latest_version = versions.iter().max().unwrap_or_else(|| unreachable!());
         println!(
             "Latest version of {}: {latest_version}",
             self.package_identifier

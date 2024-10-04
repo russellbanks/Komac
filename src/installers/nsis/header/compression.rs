@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub enum Compression {
-    Lzma,
+    Lzma(bool),
     BZip2,
     Zlib,
     None,

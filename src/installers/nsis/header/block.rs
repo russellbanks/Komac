@@ -31,7 +31,7 @@ impl BlockType {
             .iter()
             .skip(self as usize + 1)
             .find(|b| b.offset > U32::ZERO)
-            .map_or(blocks.len(), |block| block.offset.get() as usize);
+            .map_or(start, |block| block.offset.get() as usize);
         &data[start..end]
     }
 }
@@ -43,10 +43,6 @@ pub struct BlockHeaders([BlockHeader; BlockType::COUNT]);
 impl BlockHeaders {
     pub fn iter(&self) -> Iter<BlockHeader> {
         self.0.iter()
-    }
-
-    pub const fn len(&self) -> usize {
-        self.0.len()
     }
 }
 

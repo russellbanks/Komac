@@ -2,6 +2,7 @@ use crate::installers::nsis::entry::which::WhichEntry;
 use zerocopy::little_endian::U32;
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
+pub mod file;
 pub mod registry;
 pub mod which;
 

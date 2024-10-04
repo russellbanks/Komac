@@ -67,7 +67,7 @@ impl<'data> FileAnalyser<'data> {
         let mut installer_type = None;
         let mut pe_arch = None;
         if let Some(ref pe) = pe {
-            pe_arch = Some(Architecture::get_from_exe(pe)?);
+            pe_arch = Some(Architecture::from_machine(pe.machine())?);
             installer_type = Some(InstallerType::get(Some(pe), &extension, msi.as_ref())?);
             if let Ok(inno_file) = InnoFile::new(data.as_ref(), pe) {
                 inno = Some(inno_file);

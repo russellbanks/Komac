@@ -3,10 +3,10 @@ use crate::installers::nsis::strings::lang::LangCode;
 use crate::installers::nsis::strings::shell::Shell;
 use crate::installers::nsis::strings::var::NsVar;
 use crate::installers::nsis::version::NsisVersion;
-use bon::builder;
-use byteorder::{ByteOrder, ReadBytesExt, LE};
-use color_eyre::eyre::{Error, Result};
-use std::io::{Cursor, Read};
+use byteorder::{ByteOrder, LE};
+use encoding_rs::{UTF_16LE, WINDOWS_1252};
+use itertools::Either;
+use std::borrow::Cow;
 
 const fn decode_number_from_char(mut char: u16) -> u16 {
     const ASCII_MASK: u16 = u16::from_le_bytes([u8::MAX >> 1; size_of::<u16>()]);
@@ -17,59 +17,78 @@ const fn decode_number_from_char(mut char: u16) -> u16 {
     le_bytes[0] as u16 | ((le_bytes[1] as u16) << 7)
 }
 
-#[builder(finish_fn = get)]
+#[expect(clippy::cast_possible_truncation)] // Truncating u16 `as u8` is intentional
 pub fn nsis_string(
     strings_block: &[u8],
     relative_offset: u32,
-    #[builder(default)] nsis_version: NsisVersion,
-) -> Result<String> {
-    let mut nsis_string = String::new();
-    resolve_nsis_string(
-        &mut nsis_string,
-        strings_block,
-        relative_offset,
-        nsis_version,
-    )?;
-    Ok(nsis_string)
-}
-
-/// Resolves a NSIS string given the strings block, a relative offset, and whether the string is
-/// Unicode.
-///
-/// Instead of simply decoding a UTF-16LE or ANSI string by searching for a null byte, NSIS strings
-/// contain special characters that must be handled. As a result, the string needs to be decoded
-/// one character at a time.
-#[expect(clippy::cast_possible_truncation)] // Truncating u16 `as u8` is intentional
-fn resolve_nsis_string(
-    buf: &mut String,
-    strings_block: &[u8],
-    relative_offset: u32,
     nsis_version: NsisVersion,
-) -> Result<()> {
-    let unicode = LE::read_u16(strings_block) == 0;
+) -> Cow<str> {
+    // The strings block starts with a UTF-16 null byte if it is Unicode
+    let unicode = &strings_block[..size_of::<u16>()] == b"\0\0";
 
     // Double the offset if the string is Unicode as each character will be 2 bytes
     let offset = relative_offset as usize * (usize::from(unicode) + 1);
 
-    let mut reader = Cursor::new(&strings_block[offset..]);
-    loop {
-        let mut current = read_char(&mut reader, unicode)?;
-        if current == 0 {
-            break;
-        }
+    // Get the index of the null byte at the end of the string
+    let string_end_index = if unicode {
+        strings_block[offset..]
+            .chunks_exact(size_of::<u16>())
+            .position(|chunk| chunk == b"\0\0")
+            .map(|index| index * size_of::<u16>())
+    } else {
+        memchr::memchr(0, &strings_block[offset..])
+    }
+    .unwrap_or(strings_block.len());
+
+    let string_bytes = &strings_block[offset..offset + string_end_index];
+
+    // Check whether the string contains any special characters that need to be decoded
+    let contains_code = if unicode {
+        string_bytes
+            .chunks_exact(size_of::<u16>())
+            .map(LE::read_u16)
+            .any(|char| NsCode::is_code(char as u8, nsis_version))
+    } else {
+        string_bytes
+            .iter()
+            .any(|&char| NsCode::is_code(char, nsis_version))
+    };
+
+    // If the string doesn't have any special characters, we can just decode it normally
+    if !contains_code {
+        let encoding = if unicode { UTF_16LE } else { WINDOWS_1252 };
+        return encoding.decode_without_bom_handling(string_bytes).0;
+    }
+
+    // Create an iterator of characters represented as an unsigned 16-bit integer
+    let mut characters = if unicode {
+        Either::Left(
+            string_bytes
+                .chunks_exact(size_of::<u16>())
+                .map(LE::read_u16),
+        )
+    } else {
+        Either::Right(string_bytes.iter().map(|&char| u16::from(char)))
+    };
+
+    let mut buf = String::new();
+
+    while let Some(mut current) = characters.next() {
         if NsCode::is_code(current as u8, nsis_version) {
-            let mut next = read_char(&mut reader, unicode)?;
-            if next == 0 {
+            let Some(mut next) = characters.next() else {
                 break;
-            }
+            };
             if current != u16::from(NsCode::Skip.get(nsis_version)) {
                 let special_char = if unicode {
                     next
                 } else {
-                    u16::from_le_bytes([next as u8, read_char(&mut reader, unicode)? as u8])
+                    let Some(next_next) = characters.next() else {
+                        break;
+                    };
+                    u16::from_le_bytes([next as u8, next_next as u8])
                 };
                 if current == u16::from(NsCode::Shell.get(nsis_version)) {
-                    Shell::resolve(buf, strings_block, special_char, nsis_version)?;
+                    Shell::resolve(&mut buf, strings_block, special_char, nsis_version);
                 } else {
                     let index = if unicode {
                         next = decode_number_from_char(special_char);
@@ -78,9 +97,9 @@ fn resolve_nsis_string(
                         decode_number_from_char(special_char)
                     };
                     if current == u16::from(NsCode::Var.get(nsis_version)) {
-                        NsVar::resolve(buf, u32::from(index), nsis_version);
+                        NsVar::resolve(&mut buf, u32::from(index), nsis_version);
                     } else if current == u16::from(NsCode::Lang.get(nsis_version)) {
-                        LangCode::resolve(buf, index);
+                        LangCode::resolve(&mut buf, index);
                     }
                 }
                 continue;
@@ -91,14 +110,6 @@ fn resolve_nsis_string(
             buf.push(character);
         }
     }
-    Ok(())
-}
 
-/// Reads two bytes as little-endian if Unicode; otherwise, reads one byte and converts it to u16
-fn read_char<R: Read>(reader: &mut R, unicode: bool) -> Result<u16> {
-    if unicode {
-        reader.read_u16::<LE>().map_err(Error::from)
-    } else {
-        reader.read_u8().map(u16::from).map_err(Error::from)
-    }
+    Cow::Owned(buf)
 }
