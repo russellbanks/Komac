@@ -44,8 +44,8 @@ cynic = { version = "3.8.0", features = ["http-reqwest"] }
 derive_more = { version = "1.0.0", features = ["as_ref", "deref", "deref_mut", "display", "from_str"] }
 encoding_rs = "0.8.34"
 flate2 = "1.0.34"
-futures = "0.3.30"
-futures-util = "0.3.30"
+futures = "0.3.31"
+futures-util = "0.3.31"
 heapless = { version = "0.8.0", features = ["serde"] }
 indexmap = "2.6.0"
 indicatif = "0.17.8"
