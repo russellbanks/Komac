@@ -43,6 +43,13 @@ where
         Ok(())
     }
 
+    pub fn add_all<I: IntoIterator<Item = E>>(&mut self, flags: I) -> io::Result<()> {
+        for flag in flags {
+            self.add(flag)?;
+        }
+        Ok(())
+    }
+
     pub fn finalize(self) -> io::Result<E> {
         if self.bytes == 3 {
             self.reader.read_u8()?;

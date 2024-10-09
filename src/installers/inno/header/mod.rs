@@ -448,12 +448,14 @@ impl Header {
         if *version < InnoVersion(1, 3, 3) {
             flag_reader.add(HeaderFlags::BACK_SOLID)?;
         }
-        flag_reader.add(HeaderFlags::ALWAYS_USE_PERSONAL_GROUP)?;
-        flag_reader.add(HeaderFlags::WINDOW_VISIBLE)?;
-        flag_reader.add(HeaderFlags::WINDOW_SHOW_CAPTION)?;
-        flag_reader.add(HeaderFlags::WINDOW_RESIZABLE)?;
-        flag_reader.add(HeaderFlags::WINDOW_START_MAXIMISED)?;
-        flag_reader.add(HeaderFlags::ENABLED_DIR_DOESNT_EXIST_WARNING)?;
+        flag_reader.add_all([
+            HeaderFlags::ALWAYS_USE_PERSONAL_GROUP,
+            HeaderFlags::WINDOW_VISIBLE,
+            HeaderFlags::WINDOW_SHOW_CAPTION,
+            HeaderFlags::WINDOW_RESIZABLE,
+            HeaderFlags::WINDOW_START_MAXIMISED,
+            HeaderFlags::ENABLED_DIR_DOESNT_EXIST_WARNING,
+        ])?;
         if *version < InnoVersion(4, 1, 2) {
             flag_reader.add(HeaderFlags::DISABLE_APPEND_DIR)?;
         }
@@ -497,16 +499,20 @@ impl Header {
             flag_reader.add(HeaderFlags::USE_PREVIOUS_SETUP_TYPE)?;
         }
         if *version >= InnoVersion(2, 0, 0) {
-            flag_reader.add(HeaderFlags::DISABLE_READY_MEMO)?;
-            flag_reader.add(HeaderFlags::ALWAYS_SHOW_COMPONENTS_LIST)?;
-            flag_reader.add(HeaderFlags::FLAT_COMPONENTS_LIST)?;
-            flag_reader.add(HeaderFlags::SHOW_COMPONENT_SIZES)?;
-            flag_reader.add(HeaderFlags::USE_PREVIOUS_TASKS)?;
-            flag_reader.add(HeaderFlags::DISABLE_READY_PAGE)?;
+            flag_reader.add_all([
+                HeaderFlags::DISABLE_READY_MEMO,
+                HeaderFlags::ALWAYS_SHOW_COMPONENTS_LIST,
+                HeaderFlags::FLAT_COMPONENTS_LIST,
+                HeaderFlags::SHOW_COMPONENT_SIZES,
+                HeaderFlags::USE_PREVIOUS_TASKS,
+                HeaderFlags::DISABLE_READY_PAGE,
+            ])?;
         }
         if *version >= InnoVersion(2, 0, 7) {
-            flag_reader.add(HeaderFlags::ALWAYS_SHOW_DIR_ON_READY_PAGE)?;
-            flag_reader.add(HeaderFlags::ALWAYS_SHOW_GROUP_ON_READY_PAGE)?;
+            flag_reader.add_all([
+                HeaderFlags::ALWAYS_SHOW_DIR_ON_READY_PAGE,
+                HeaderFlags::ALWAYS_SHOW_GROUP_ON_READY_PAGE,
+            ])?;
         }
         if *version >= InnoVersion(2, 0, 17) && *version < InnoVersion(4, 1, 5) {
             flag_reader.add(HeaderFlags::BZIP_USED)?;
@@ -515,8 +521,10 @@ impl Header {
             flag_reader.add(HeaderFlags::ALLOW_UNC_PATH)?;
         }
         if *version >= InnoVersion(3, 0, 0) {
-            flag_reader.add(HeaderFlags::USER_INFO_PAGE)?;
-            flag_reader.add(HeaderFlags::USE_PREVIOUS_USER_INFO)?;
+            flag_reader.add_all([
+                HeaderFlags::USER_INFO_PAGE,
+                HeaderFlags::USE_PREVIOUS_USER_INFO,
+            ])?;
         }
         if *version >= InnoVersion(3, 0, 1) {
             flag_reader.add(HeaderFlags::UNINSTALL_RESTART_COMPUTER)?;
@@ -541,8 +549,10 @@ impl Header {
             flag_reader.add(HeaderFlags::WIZARD_IMAGE_STRETCH)?;
         }
         if *version >= InnoVersion(4, 1, 8) {
-            flag_reader.add(HeaderFlags::APPEND_DEFAULT_DIR_NAME)?;
-            flag_reader.add(HeaderFlags::APPEND_DEFAULT_GROUP_NAME)?;
+            flag_reader.add_all([
+                HeaderFlags::APPEND_DEFAULT_DIR_NAME,
+                HeaderFlags::APPEND_DEFAULT_GROUP_NAME,
+            ])?;
         }
         if *version >= InnoVersion(4, 2, 2) {
             flag_reader.add(HeaderFlags::ENCRYPTION_USED)?;
@@ -566,9 +576,11 @@ impl Header {
             flag_reader.add(HeaderFlags::DISABLE_WELCOME_PAGE)?;
         }
         if *version >= InnoVersion(5, 5, 0) {
-            flag_reader.add(HeaderFlags::CLOSE_APPLICATIONS)?;
-            flag_reader.add(HeaderFlags::RESTART_APPLICATIONS)?;
-            flag_reader.add(HeaderFlags::ALLOW_NETWORK_DRIVE)?;
+            flag_reader.add_all([
+                HeaderFlags::CLOSE_APPLICATIONS,
+                HeaderFlags::RESTART_APPLICATIONS,
+                HeaderFlags::ALLOW_NETWORK_DRIVE,
+            ])?;
         } else {
             flags |= HeaderFlags::ALLOW_NETWORK_DRIVE;
         }
@@ -576,15 +588,16 @@ impl Header {
             flag_reader.add(HeaderFlags::FORCE_CLOSE_APPLICATIONS)?;
         }
         if *version >= InnoVersion(6, 0, 0) {
-            flag_reader.add(HeaderFlags::APP_NAME_HAS_CONSTS)?;
-            flag_reader.add(HeaderFlags::USE_PREVIOUS_PRIVILEGES)?;
-            flag_reader.add(HeaderFlags::WIZARD_RESIZABLE)?;
+            flag_reader.add_all([
+                HeaderFlags::APP_NAME_HAS_CONSTS,
+                HeaderFlags::USE_PREVIOUS_PRIVILEGES,
+                HeaderFlags::WIZARD_RESIZABLE,
+            ])?;
         }
         if *version >= InnoVersion(6, 3, 0) {
             flag_reader.add(HeaderFlags::UNINSTALL_LOGGING)?;
         }
-        flags |= flag_reader.finalize()?;
-        Ok(flags)
+        flag_reader.finalize().map(|read_flags| flags | read_flags)
     }
 }
 
