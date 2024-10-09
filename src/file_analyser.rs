@@ -147,7 +147,10 @@ impl<'data> FileAnalyser<'data> {
             nested_installer_files: zip
                 .as_mut()
                 .and_then(|zip| zip.nested_installer_files.take()),
-            scope: msi.as_ref().and_then(|msi| msi.all_users),
+            scope: msi
+                .as_ref()
+                .and_then(|msi| msi.all_users)
+                .or_else(|| nsis.as_ref().and_then(|nsis| nsis.scope)),
             installer_url: DecodedUrl::default(),
             installer_sha_256: Sha256String::default(),
             signature_sha_256: msix

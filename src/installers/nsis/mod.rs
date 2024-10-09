@@ -15,6 +15,7 @@ use crate::installers::nsis::header::{Decompressed, Header};
 use crate::installers::nsis::language::table::LanguageTable;
 use crate::installers::nsis::version::NsisVersion;
 use crate::installers::utils::{read_lzma_stream_header, RELATIVE_PROGRAM_FILES_64};
+use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
 use crate::types::language_tag::LanguageTag;
 use byteorder::{ReadBytesExt, LE};
@@ -39,6 +40,7 @@ use zerocopy::{FromBytes, TryFromBytes};
 
 pub struct Nsis {
     pub architecture: Architecture,
+    pub scope: Option<Scope>,
     pub install_dir: Option<Utf8PathBuf>,
     pub install_locale: LanguageTag,
     pub display_name: Option<String>,
@@ -169,7 +171,8 @@ impl Nsis {
 
         Ok(Self {
             architecture,
-            install_dir: install_dir.map(|dir| Utf8PathBuf::from(&dir)),
+            scope: install_dir.as_deref().and_then(Scope::from_install_dir),
+            install_dir: install_dir.as_deref().map(Utf8PathBuf::from),
             install_locale: LanguageTag::from_str(
                 Language::from_code(language_table.language_id.get()).tag(),
             )?,

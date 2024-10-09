@@ -19,7 +19,7 @@ pub fn match_installers(
         .iter()
         .filter_map(|installer| {
             let url = &installer.installer_url;
-            Scope::get_from_url(url.as_str()).map(|scope| (url, scope))
+            Scope::from_url(url.as_str()).map(|scope| (url, scope))
         })
         .collect::<HashMap<_, _>>();
 

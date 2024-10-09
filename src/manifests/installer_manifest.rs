@@ -1,6 +1,11 @@
 use std::collections::BTreeSet;
 use std::num::NonZeroI64;
 
+use crate::installers::utils::{
+    RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
+    RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_ROOT,
+    RELATIVE_WINDOWS_DIR,
+};
 use crate::manifests::Manifest;
 use crate::types::architecture::Architecture;
 use crate::types::command::Command;
@@ -245,12 +250,35 @@ pub enum Scope {
 }
 
 impl Scope {
-    pub fn get_from_url(url: &str) -> Option<Self> {
+    pub fn from_url(url: &str) -> Option<Self> {
         match url.to_ascii_lowercase() {
             url if url.contains("all-users") || url.contains("machine") => Some(Self::Machine),
             url if url.contains("user") => Some(Self::User),
             _ => None,
         }
+    }
+
+    pub fn from_install_dir(install_dir: &str) -> Option<Self> {
+        const USER_INSTALL_DIRS: [&str; 2] = [RELATIVE_APP_DATA, RELATIVE_LOCAL_APP_DATA];
+        const MACHINE_INSTALL_DIRS: [&str; 6] = [
+            RELATIVE_PROGRAM_FILES_64,
+            RELATIVE_PROGRAM_FILES_32,
+            RELATIVE_COMMON_FILES_64,
+            RELATIVE_COMMON_FILES_32,
+            RELATIVE_WINDOWS_DIR,
+            RELATIVE_SYSTEM_ROOT,
+        ];
+
+        USER_INSTALL_DIRS
+            .iter()
+            .any(|directory| install_dir.starts_with(directory))
+            .then_some(Self::User)
+            .or_else(|| {
+                MACHINE_INSTALL_DIRS
+                    .iter()
+                    .any(|directory| install_dir.starts_with(directory))
+                    .then_some(Self::Machine)
+            })
     }
 }
 
