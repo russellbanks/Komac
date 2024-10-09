@@ -27,12 +27,12 @@ use crate::github::graphql::get_repository_info::{
     GetRepositoryInfo, RepositoryVariables, TargetGitObject,
 };
 use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariables};
-use crate::github::graphql::types::{GitObjectId, GitRefName};
+use crate::github::graphql::types::{Base64String, GitObjectId, GitRefName};
 use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
 use crate::github::rest::get_tree::GitTree;
 use crate::github::rest::GITHUB_JSON_MIME;
 use crate::github::utils::{
-    get_branch_name, get_commit_title, get_package_path, get_pull_request_body, is_manifest_file,
+    get_branch_name, get_commit_title, get_package_path, is_manifest_file, pull_request_body,
 };
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
@@ -50,7 +50,9 @@ use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
+use base64ct::Encoding;
 use bon::bon;
 use color_eyre::eyre::{bail, eyre, Result, WrapErr};
 use color_eyre::Report;
@@ -302,8 +304,9 @@ impl GitHub {
             })
     }
 
-    pub async fn get_winget_pkgs(&self, username: Option<&str>) -> Result<RepositoryData> {
-        self.get_repository_info(username.unwrap_or(MICROSOFT), WINGET_PKGS)
+    #[builder(finish_fn = send)]
+    pub async fn get_winget_pkgs(&self, owner: Option<&str>) -> Result<RepositoryData> {
+        self.get_repository_info(owner.unwrap_or(MICROSOFT), WINGET_PKGS)
             .await
     }
 
@@ -696,15 +699,16 @@ impl GitHub {
         }
     }
 
+    #[builder(finish_fn = send)]
     pub async fn remove_version(
         &self,
         identifier: &PackageIdentifier,
         version: &PackageVersion,
-        deletion_reason: String,
-        current_user: &String,
-        winget_pkgs: &RepositoryData,
+        reason: String,
+        fork_owner: &String,
         fork: &RepositoryData,
-        resolves: Option<Vec<NonZeroU32>>,
+        winget_pkgs: &RepositoryData,
+        issue_resolves: Option<Vec<NonZeroU32>>,
     ) -> Result<Url> {
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
@@ -723,7 +727,7 @@ impl GitHub {
         let commit_title = get_commit_title(identifier, version, &UpdateState::RemoveVersion);
         let directory_content = self
             .get_directory_content(
-                current_user,
+                fork_owner,
                 &branch_name,
                 &get_package_path(identifier, Some(version), None),
             )
@@ -745,10 +749,13 @@ impl GitHub {
             .create_pull_request(
                 &winget_pkgs.id,
                 &fork.id,
-                &format!("{current_user}:{}", pull_request_branch.name),
+                &format!("{fork_owner}:{}", pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,
-                &get_pull_request_body(resolves, Some(deletion_reason), None, None),
+                &pull_request_body()
+                    .maybe_issue_resolves(issue_resolves)
+                    .alternative_text(reason)
+                    .get(),
             )
             .await?;
 
@@ -760,6 +767,57 @@ impl GitHub {
         );
         println!("{}", pull_request_url.as_str());
         Ok(pull_request_url)
+    }
+
+    #[builder(finish_fn = send)]
+    pub async fn add_version(
+        &self,
+        identifier: &PackageIdentifier,
+        version: &PackageVersion,
+        versions: Option<&BTreeSet<PackageVersion>>,
+        changes: Vec<(String, String)>,
+        issue_resolves: Option<Vec<NonZeroU32>>,
+        created_with: Option<String>,
+        created_with_url: Option<DecodedUrl>,
+    ) -> Result<Url> {
+        let current_user = self.get_username();
+        let winget_pkgs = self.get_winget_pkgs().send().await?;
+        let current_user = current_user.await?;
+        let fork = self.get_winget_pkgs().owner(&current_user).send().await?;
+        let branch_name = get_branch_name(identifier, version);
+        let pull_request_branch = self
+            .create_branch(&fork.id, &branch_name, winget_pkgs.default_branch_oid)
+            .await?;
+        let commit_title =
+            get_commit_title(identifier, version, &UpdateState::get(version, versions));
+        let changes = changes
+            .iter()
+            .map(|(path, content)| FileAddition {
+                contents: Base64String::new(base64ct::Base64::encode_string(content.as_bytes())),
+                path,
+            })
+            .collect::<Vec<_>>();
+        let _commit_url = self
+            .create_commit()
+            .branch_id(&pull_request_branch.id)
+            .head_sha(pull_request_branch.target.map(|target| target.oid).unwrap())
+            .message(&commit_title)
+            .additions(changes)
+            .send()
+            .await?;
+        self.create_pull_request(
+            &winget_pkgs.id,
+            &fork.id,
+            &format!("{current_user}:{}", pull_request_branch.name),
+            &winget_pkgs.default_branch_name,
+            &commit_title,
+            &pull_request_body()
+                .maybe_issue_resolves(issue_resolves)
+                .maybe_created_with(created_with)
+                .maybe_created_with_url(created_with_url)
+                .get(),
+        )
+        .await
     }
 }
 

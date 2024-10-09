@@ -89,12 +89,12 @@ impl RemoveDeadVersions {
             .build()?;
 
         let current_user = github.get_username();
-        let winget_pkgs = github.get_winget_pkgs(None);
+        let winget_pkgs = github.get_winget_pkgs().send();
 
         let versions = github.get_versions(&self.package_identifier).await?;
 
         let current_user = current_user.await?;
-        let fork = github.get_winget_pkgs(Some(&current_user)).await?;
+        let fork = github.get_winget_pkgs().owner(&current_user).send().await?;
         let winget_pkgs = winget_pkgs.await?;
 
         let rate_limit_delay = if self.fast {
@@ -180,15 +180,14 @@ impl RemoveDeadVersions {
             }
 
             github
-                .remove_version(
-                    &self.package_identifier,
-                    version,
-                    deletion_reason,
-                    &current_user,
-                    &winget_pkgs,
-                    &fork,
-                    None,
-                )
+                .remove_version()
+                .identifier(&self.package_identifier)
+                .version(version)
+                .reason(deletion_reason)
+                .fork_owner(&current_user)
+                .fork(&fork)
+                .winget_pkgs(&winget_pkgs)
+                .send()
                 .await?;
 
             last_pr_time = Instant::now();

@@ -72,7 +72,7 @@ impl RemoveVersion {
             );
         }
 
-        let latest_version = versions.iter().max().unwrap();
+        let latest_version = versions.last().unwrap_or_else(|| unreachable!());
         println!(
             "Latest version of {}: {latest_version}",
             &self.package_identifier
@@ -106,19 +106,19 @@ impl RemoveVersion {
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
         let current_user = github.get_username().await?;
-        let winget_pkgs = github.get_winget_pkgs(None).await?;
-        let fork = github.get_winget_pkgs(Some(&current_user)).await?;
+        let winget_pkgs = github.get_winget_pkgs().send().await?;
+        let fork = github.get_winget_pkgs().owner(&current_user).send().await?;
 
         let pull_request_url = github
-            .remove_version(
-                &self.package_identifier,
-                &self.package_version,
-                deletion_reason,
-                &current_user,
-                &winget_pkgs,
-                &fork,
-                self.resolves,
-            )
+            .remove_version()
+            .identifier(&self.package_identifier)
+            .version(&self.package_version)
+            .reason(deletion_reason)
+            .fork_owner(&current_user)
+            .fork(&fork)
+            .winget_pkgs(&winget_pkgs)
+            .maybe_issue_resolves(self.resolves)
+            .send()
             .await?;
 
         if self.open_pr {

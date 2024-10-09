@@ -45,7 +45,7 @@ impl ShowVersion {
         let github = GitHub::new(&token)?;
 
         // Get a list of all versions for the given package
-        let versions = github.get_versions(&self.package_identifier).await?;
+        let mut versions = github.get_versions(&self.package_identifier).await?;
 
         // Get the manifests for the latest or specified version
         let manifests = github
@@ -53,7 +53,7 @@ impl ShowVersion {
                 &self.package_identifier,
                 &self
                     .package_version
-                    .unwrap_or_else(|| versions.into_iter().max().unwrap()),
+                    .unwrap_or_else(|| versions.pop_last().unwrap_or_else(|| unreachable!())),
             )
             .await?;
 

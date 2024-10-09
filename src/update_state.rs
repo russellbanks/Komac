@@ -17,16 +17,16 @@ pub enum UpdateState {
     RemoveVersion,
 }
 impl UpdateState {
-    pub fn get(
-        version: &PackageVersion,
-        versions: Option<&BTreeSet<PackageVersion>>,
-        latest_version: Option<&PackageVersion>,
-    ) -> Self {
+    pub fn get(version: &PackageVersion, versions: Option<&BTreeSet<PackageVersion>>) -> Self {
         match version {
             version if versions.map_or(false, |versions| versions.contains(version)) => {
                 Self::UpdateVersion
             }
-            version if latest_version.map_or(false, |latest| max(version, latest) == version) => {
+            version
+                if versions
+                    .and_then(BTreeSet::last)
+                    .map_or(false, |latest| max(version, latest) == version) =>
+            {
                 Self::NewVersion
             }
             _ if versions.is_none() => Self::NewPackage,

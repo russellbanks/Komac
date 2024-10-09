@@ -29,9 +29,11 @@ impl SyncFork {
         let github = GitHub::new(&token)?;
 
         // Fetch repository data from both upstream and fork repositories asynchronously
-        let winget_pkgs = github.get_winget_pkgs(None);
+        let winget_pkgs = github.get_winget_pkgs().send();
         let winget_pkgs_fork = github
-            .get_winget_pkgs(Some(&github.get_username().await?))
+            .get_winget_pkgs()
+            .owner(&github.get_username().await?)
+            .send()
             .await?;
         let winget_pkgs = winget_pkgs.await?;
 

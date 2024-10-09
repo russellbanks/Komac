@@ -1,10 +1,10 @@
+use bon::builder;
+use clap::{crate_name, crate_version};
+use rand::{thread_rng, Rng};
 use std::collections::BTreeSet;
 use std::env;
 use std::fmt::Write;
 use std::num::NonZeroU32;
-
-use clap::{crate_name, crate_version};
-use rand::{thread_rng, Rng};
 use uuid::Uuid;
 
 use crate::types::language_tag::LanguageTag;
@@ -105,7 +105,8 @@ pub fn is_manifest_file(
     }
 }
 
-pub fn get_pull_request_body(
+#[builder(finish_fn = get)]
+pub fn pull_request_body(
     issue_resolves: Option<Vec<NonZeroU32>>,
     alternative_text: Option<String>,
     created_with: Option<String>,

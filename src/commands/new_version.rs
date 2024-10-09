@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 
@@ -9,12 +10,8 @@ use crate::commands::utils::{
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, Manifests, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
-use crate::github::graphql::create_commit::FileAddition;
-use crate::github::graphql::types::Base64String;
+use crate::github::utils::get_package_path;
 use crate::github::utils::pull_request::pr_changes;
-use crate::github::utils::{
-    get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
-};
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
     InstallModes, InstallerManifest, InstallerSwitches, UpgradeBehavior,
@@ -52,9 +49,7 @@ use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::DecodedUrl;
-use crate::update_state::UpdateState;
 use anstream::println;
-use base64ct::Encoding;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::Result;
@@ -174,7 +169,7 @@ impl NewVersion {
 
         let versions = github.get_versions(&package_identifier).await.ok();
 
-        let latest_version = versions.as_ref().and_then(|versions| versions.iter().max());
+        let latest_version = versions.as_ref().and_then(BTreeSet::last);
 
         if let Some(latest_version) = latest_version {
             println!("Latest version of {package_identifier}: {latest_version}");
@@ -397,47 +392,16 @@ impl NewVersion {
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
-        let current_user = github.get_username().await?;
-        let winget_pkgs = github.get_winget_pkgs(None).await?;
-        let fork = github.get_winget_pkgs(Some(&current_user)).await?;
-        let branch_name = get_branch_name(&package_identifier, &package_version);
-        let pull_request_branch = github
-            .create_branch(&fork.id, &branch_name, winget_pkgs.default_branch_oid)
-            .await?;
-        let commit_title = get_commit_title(
-            &package_identifier,
-            &package_version,
-            &UpdateState::get(&package_version, versions.as_ref(), latest_version),
-        );
-        let changes = changes
-            .iter()
-            .map(|(path, content)| FileAddition {
-                contents: Base64String::new(base64ct::Base64::encode_string(content.as_bytes())),
-                path,
-            })
-            .collect::<Vec<_>>();
-        let _commit_url = github
-            .create_commit()
-            .branch_id(&pull_request_branch.id)
-            .head_sha(pull_request_branch.target.map(|target| target.oid).unwrap())
-            .message(&commit_title)
-            .additions(changes)
-            .send()
-            .await?;
         let pull_request_url = github
-            .create_pull_request(
-                &winget_pkgs.id,
-                &fork.id,
-                &format!("{current_user}:{}", pull_request_branch.name),
-                &winget_pkgs.default_branch_name,
-                &commit_title,
-                &get_pull_request_body(
-                    self.resolves,
-                    None,
-                    self.created_with,
-                    self.created_with_url,
-                ),
-            )
+            .add_version()
+            .identifier(&package_identifier)
+            .version(&package_version)
+            .maybe_versions(versions.as_ref())
+            .changes(changes)
+            .maybe_issue_resolves(self.resolves)
+            .maybe_created_with(self.created_with)
+            .maybe_created_with_url(self.created_with_url)
+            .send()
             .await?;
 
         pr_progress.finish_and_clear();
