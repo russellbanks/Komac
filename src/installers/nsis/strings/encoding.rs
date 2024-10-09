@@ -47,7 +47,7 @@ pub fn nsis_string(
         string_bytes
             .chunks_exact(size_of::<u16>())
             .map(LE::read_u16)
-            .any(|char| NsCode::is_code(char as u8, nsis_version))
+            .any(|char| u8::try_from(char).is_ok_and(|code| NsCode::is_code(code, nsis_version)))
     } else {
         string_bytes
             .iter()
@@ -74,7 +74,7 @@ pub fn nsis_string(
     let mut buf = String::new();
 
     while let Some(mut current) = characters.next() {
-        if NsCode::is_code(current as u8, nsis_version) {
+        if u8::try_from(current).is_ok_and(|code| NsCode::is_code(code, nsis_version)) {
             let Some(mut next) = characters.next() else {
                 break;
             };

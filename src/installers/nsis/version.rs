@@ -77,7 +77,8 @@ impl NsisVersion {
     }
 
     pub fn detect(strings_block: &[u8]) -> Self {
-        let unicode = LE::read_u16(strings_block) == 0;
+        // The strings block starts with a UTF-16 null byte if it is Unicode
+        let unicode = &strings_block[..size_of::<u16>()] == b"\0\0";
 
         let mut nsis3_count = 0;
         let mut nsis2_count = 0;

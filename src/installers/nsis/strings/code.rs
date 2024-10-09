@@ -3,7 +3,7 @@ use std::num::NonZeroU8;
 
 #[repr(u8)]
 pub enum NsCode {
-    Lang,  // 1 if >= NSIS 3 or Unicode, 255 otherwise
+    Lang,  // 1 if >= NSIS 3, 255 otherwise
     Shell, // 2 or 254
     Var,   // 3 or 253
     Skip,  // 4 or 252
