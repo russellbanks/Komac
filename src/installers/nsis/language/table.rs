@@ -22,7 +22,7 @@ impl LanguageTable {
         BlockType::LangTables
             .get(data, &header.blocks)
             .chunks_exact(header.langtable_size.get() as usize)
-            .filter_map(|data| Self::ref_from_bytes(data).ok())
+            .flat_map(Self::ref_from_bytes)
             .find_or_first(|lang_table| lang_table.language_id == EN_US_LANG_CODE)
             .ok_or_eyre("No NSIS language table found")
     }

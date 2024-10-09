@@ -79,7 +79,7 @@ impl ShowVersion {
                 manifests
                     .locale_manifests
                     .into_iter()
-                    .filter_map(|locale_manifest| serde_yaml::to_string(&locale_manifest).ok()),
+                    .flat_map(|locale_manifest| serde_yaml::to_string(&locale_manifest)),
             );
         }
         if all || self.version_manifest {

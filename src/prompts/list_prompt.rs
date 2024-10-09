@@ -42,7 +42,7 @@ where
         })
         .prompt()?
         .split(|char| DELIMITERS.contains(&char))
-        .filter_map(|str| T::from_str(str).ok())
+        .flat_map(T::from_str)
         .collect::<BTreeSet<_>>();
     if items.is_empty() {
         Ok(None)

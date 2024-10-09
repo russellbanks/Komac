@@ -635,7 +635,7 @@ impl GitHub {
             .repository_topics
             .nodes
             .into_iter()
-            .filter_map(|topic_node| Tag::try_new(topic_node.topic.name).ok())
+            .flat_map(|topic_node| Tag::try_new(topic_node.topic.name))
             .collect::<BTreeSet<_>>();
 
         let publisher_support_url = repository
