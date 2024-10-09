@@ -32,6 +32,7 @@ pub struct NsVar;
 
 impl NsVar {
     pub fn resolve(buf: &mut String, mut index: u32, nsis_version: NsisVersion) {
+        buf.push('$');
         if index < TOTAL_INT_VARS {
             if index >= NUM_R_INT_VARS {
                 buf.push('R');
