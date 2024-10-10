@@ -3,21 +3,22 @@ use crate::installers::nsis::entry::Entry;
 use crate::installers::nsis::strings::encoding::nsis_string;
 use crate::installers::nsis::version::NsisVersion;
 use std::borrow::Cow;
-use strum::FromRepr;
+use zerocopy::{try_transmute, TryFromBytes};
 
-#[derive(Debug, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, TryFromBytes)]
 #[repr(u32)]
 pub enum RegRoot {
-    ShellContext = 0,
-    HKeyClassesRoot = 0x8000_0000,
-    HKeyCurrentUser = 0x8000_0001,
-    HKeyLocalMachine = 0x8000_0002,
-    HKeyUsers = 0x8000_0003,
-    HKeyPerformanceData = 0x8000_0004,
-    HKeyCurrentConfig = 0x8000_0005,
-    HKeyDynamicData = 0x8000_0006,
-    HKeyPerformanceText = 0x8000_0050,
-    HKeyPerformanceNLSText = 0x8000_0060,
+    ShellContext = 0u32.to_le(),
+    HKeyClassesRoot = 0x8000_0000u32.to_le(),
+    HKeyCurrentUser = 0x8000_0001u32.to_le(),
+    HKeyLocalMachine = 0x8000_0002u32.to_le(),
+    HKeyUsers = 0x8000_0003u32.to_le(),
+    HKeyPerformanceData = 0x8000_0004u32.to_le(),
+    HKeyCurrentConfig = 0x8000_0005u32.to_le(),
+    HKeyDynamicData = 0x8000_0006u32.to_le(),
+    HKeyPerformanceText = 0x8000_0050u32.to_le(),
+    HKeyPerformanceNLSText = 0x8000_0060u32.to_le(),
 }
 
 #[derive(Debug)]
@@ -63,7 +64,7 @@ impl<'str_block> WriteReg<'str_block> {
         }
         Some(Self {
             r#type: RegActionType::from_entry(entry)?,
-            root: RegRoot::from_repr(entry.offsets[0].get())?,
+            root: try_transmute!(entry.offsets[0]).ok()?,
             key_name: nsis_string(strings_block, entry.offsets[1].get(), nsis_version),
             value_name: nsis_string(strings_block, entry.offsets[2].get(), nsis_version),
             value: nsis_string(strings_block, entry.offsets[3].get(), nsis_version),

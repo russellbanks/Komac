@@ -6,16 +6,17 @@ use chrono::{DateTime, Utc};
 use std::borrow::Cow;
 use std::ops::{BitOr, Shl};
 use std::time::Duration;
-use strum::FromRepr;
+use zerocopy::{try_transmute, Immutable, KnownLayout, TryFromBytes};
 
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 enum OverwriteFlag {
     #[default]
-    Force,
-    No,
-    Try,
-    IfDateIsNewer,
+    Force = 0u32.to_le(),
+    No = 1u32.to_le(),
+    Try = 2u32.to_le(),
+    IfDateIsNewer = 3u32.to_le(),
 }
 
 #[expect(dead_code)]
@@ -55,10 +56,8 @@ impl<'str_block> ExtractFile<'str_block> {
             return None;
         }
         Some(Self {
-            overwrite_flag: OverwriteFlag::from_repr(
-                entry.offsets[Offsets::OverwriteFlag as usize].get() & 0b111,
-            )
-            .unwrap_or_default(),
+            overwrite_flag: try_transmute!(entry.offsets[Offsets::OverwriteFlag as usize] & 0b111)
+                .unwrap_or_default(),
             name: nsis_string(
                 strings_block,
                 entry.offsets[Offsets::Filename as usize].get(),

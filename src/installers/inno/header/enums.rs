@@ -1,11 +1,12 @@
 use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
 use crate::manifests::installer_manifest::ElevationRequirement;
-use strum::FromRepr;
+use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+
 // This file defines enums corresponding to Inno Setup's header values. Each enum is represented as
 // a u8 as Inno Setup stores these values in a single byte. For example, 0 = Classic, 1 = Modern.
 
 /// <https://jrsoftware.org/ishelp/index.php?topic=setup_wizardstyle>
-#[derive(Debug, Default, FromRepr)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum InnoStyle {
     #[default]
@@ -14,7 +15,8 @@ pub enum InnoStyle {
 }
 
 /// <https://jrsoftware.org/ishelp/index.php?topic=setup_wizardimagealphaformat>
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum ImageAlphaFormat {
     #[default]
@@ -23,7 +25,8 @@ pub enum ImageAlphaFormat {
     Premultiplied,
 }
 
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum InstallVerbosity {
     #[default]
@@ -32,7 +35,8 @@ pub enum InstallVerbosity {
     VerySilent,
 }
 
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum LogMode {
     Append,
@@ -41,7 +45,7 @@ pub enum LogMode {
     Overwrite,
 }
 
-#[derive(Debug, Default, FromRepr)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum AutoBool {
     #[default]
@@ -60,7 +64,8 @@ impl AutoBool {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum PrivilegeLevel {
     #[default]
@@ -92,7 +97,8 @@ impl PrivilegeLevel {
 }
 
 /// <https://jrsoftware.org/ishelp/index.php?topic=setup_languagedetectionmethod>
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum LanguageDetection {
     #[default]
@@ -111,7 +117,8 @@ impl LanguageDetection {
     }
 }
 
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum Compression {
     Stored,

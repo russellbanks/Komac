@@ -18,14 +18,16 @@ use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
 use byteorder::{ReadBytesExt, LE};
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{Error, Result};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
+use zerocopy::TryFromBytes;
 
 macro_rules! enum_value {
-    ($enum_type:ty, $value:ident) => {
-        <$enum_type>::from_repr($value)
-            .ok_or_else(|| eyre!("Unexpected {} value: {}", stringify!($value), $value))
-    };
+    ($reader:expr, $ty:ty) => {{
+        let mut buf = [0; size_of::<$ty>()];
+        $reader.read_exact(&mut buf)?;
+        <$ty>::try_read_from_bytes(&buf).map_err(|error| Error::msg(error.to_string()))
+    }};
 }
 
 // https://github.com/jrsoftware/issrc/blob/main/Projects/Src/Shared.Struct.pas
@@ -290,14 +292,12 @@ impl Header {
             header.small_image_back_color = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(6, 0, 0) {
-            let wizard_style_value = reader.read_u8()?;
-            header.wizard_style = enum_value!(InnoStyle, wizard_style_value)?;
+            header.wizard_style = enum_value!(reader, InnoStyle)?;
             header.wizard_resize_percent_x = reader.read_u32::<LE>()?;
             header.wizard_resize_percent_y = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(5, 5, 7) {
-            let image_alpha_format = reader.read_u8()?;
-            header.image_alpha_format = enum_value!(ImageAlphaFormat, image_alpha_format)?;
+            header.image_alpha_format = enum_value!(reader, ImageAlphaFormat)?;
         }
         if *version < InnoVersion(4, 2, 0) {
             let _crc32 = reader.read_u32::<LE>()?;
@@ -321,33 +321,29 @@ impl Header {
         if (*version >= InnoVersion(2, 0, 0) && *version < InnoVersion(5, 0, 0))
             || (version.is_isx() && *version >= InnoVersion(1, 3, 4))
         {
-            let install_verbosity = reader.read_u8()?;
-            header.install_verbosity = enum_value!(InstallVerbosity, install_verbosity)?;
+            header.install_verbosity = enum_value!(reader, InstallVerbosity)?;
         }
         if *version >= InnoVersion(1, 3, 0) {
-            let uninstall_log_mode = reader.read_u8()?;
-            header.uninstall_log_mode = enum_value!(LogMode, uninstall_log_mode)?;
+            header.uninstall_log_mode = enum_value!(reader, LogMode)?;
         }
         if *version >= InnoVersion(5, 0, 0) {
             header.uninstall_style = InnoStyle::Modern;
         } else if *version >= InnoVersion(2, 0, 0)
             || (version.is_isx() && *version >= InnoVersion(1, 3, 13))
         {
-            let uninstall_style = reader.read_u8()?;
-            header.uninstall_style = enum_value!(InnoStyle, uninstall_style)?;
+            header.uninstall_style = enum_value!(reader, InnoStyle)?;
         }
         if *version >= InnoVersion(1, 3, 6) {
-            let dir_exists_warning = reader.read_u8()?;
-            header.dir_exists_warning = enum_value!(AutoBool, dir_exists_warning)?;
+            header.dir_exists_warning = enum_value!(reader, AutoBool)?;
         }
         if version.is_isx() && *version >= InnoVersion(2, 0, 10) && *version < InnoVersion(3, 0, 0)
         {
             let _code_line_offset = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(3, 0, 0) && *version < InnoVersion(3, 0, 3) {
-            match AutoBool::from_repr(reader.read_u8()?) {
-                Some(AutoBool::Yes) => header.flags |= HeaderFlags::ALWAYS_RESTART,
-                Some(AutoBool::Auto) => {
+            match enum_value!(reader, AutoBool) {
+                Ok(AutoBool::Yes) => header.flags |= HeaderFlags::ALWAYS_RESTART,
+                Ok(AutoBool::Auto) => {
                     header.flags |= HeaderFlags::RESTART_IF_NEEDED_BY_RUN;
                 }
                 _ => {}
@@ -356,22 +352,18 @@ impl Header {
         if *version >= InnoVersion(3, 0, 4)
             || (version.is_isx() && *version >= InnoVersion(3, 0, 3))
         {
-            let privileges_required = reader.read_u8()?;
-            header.privileges_required = enum_value!(PrivilegeLevel, privileges_required)?;
+            header.privileges_required = enum_value!(reader, PrivilegeLevel)?;
         }
         if *version >= InnoVersion(5, 7, 0) {
             header.privileges_required_overrides_allowed =
                 PrivilegesRequiredOverrides::from_bits_retain(reader.read_u8()?);
         }
         if *version >= InnoVersion(4, 0, 10) {
-            let show_language_dialog = reader.read_u8()?;
-            header.show_language_dialog = enum_value!(AutoBool, show_language_dialog)?;
-            let language_detection = reader.read_u8()?;
-            header.language_detection = enum_value!(LanguageDetection, language_detection)?;
+            header.show_language_dialog = enum_value!(reader, AutoBool)?;
+            header.language_detection = enum_value!(reader, LanguageDetection)?;
         }
         if *version >= InnoVersion(5, 3, 9) {
-            let compression = reader.read_u8()?;
-            header.compression = enum_value!(Compression, compression)?;
+            header.compression = enum_value!(reader, Compression)?;
         }
         if *version >= InnoVersion(5, 1, 0) && *version < InnoVersion(6, 3, 0) {
             header.architectures_allowed =
@@ -388,10 +380,8 @@ impl Header {
             header.signed_uninstaller_header_checksum = reader.read_u32::<LE>()?;
         }
         if *version >= InnoVersion(5, 3, 3) {
-            let disable_dir_page = reader.read_u8()?;
-            header.disable_dir_page = enum_value!(AutoBool, disable_dir_page)?;
-            let disable_program_group_page = reader.read_u8()?;
-            header.disable_program_group_page = enum_value!(AutoBool, disable_program_group_page)?;
+            header.disable_dir_page = enum_value!(reader, AutoBool)?;
+            header.disable_program_group_page = enum_value!(reader, AutoBool)?;
         }
         if *version >= InnoVersion(5, 5, 0) {
             header.uninstall_display_size = reader.read_u64::<LE>()?;
