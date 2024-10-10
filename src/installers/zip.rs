@@ -33,9 +33,9 @@ impl<R: Read + Seek> Zip<R> {
             .map(Utf8Path::new)
             .filter(|file_name| {
                 VALID_NESTED_FILE_EXTENSIONS.iter().any(|file_extension| {
-                    file_name.extension().map_or(false, |extension| {
-                        extension.eq_ignore_ascii_case(file_extension)
-                    })
+                    file_name
+                        .extension()
+                        .is_some_and(|extension| extension.eq_ignore_ascii_case(file_extension))
                 })
             })
             .map(Utf8Path::to_path_buf)
@@ -50,7 +50,7 @@ impl<R: Read + Seek> Zip<R> {
                         .filter(|file_name| {
                             Utf8Path::new(file_name)
                                 .extension()
-                                .map_or(false, |extension| {
+                                .is_some_and(|extension| {
                                     extension.eq_ignore_ascii_case(file_extension)
                                 })
                         })

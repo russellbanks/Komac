@@ -68,7 +68,7 @@ fn is_lzma(data: &[u8]) -> Option<Compression> {
     let is_lzma_header = |d: &[u8]| {
         d.get(0..3) == Some([0x5D, 0, 0].as_slice())
             && d.get(5) == Some(&0)
-            && d.get(6).map_or(false, |byte| byte & 1 << 7 == 0)
+            && d.get(6).is_some_and(|byte| byte & 1 << 7 == 0)
     };
 
     if is_lzma_header(data) {

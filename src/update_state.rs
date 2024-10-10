@@ -19,13 +19,13 @@ pub enum UpdateState {
 impl UpdateState {
     pub fn get(version: &PackageVersion, versions: Option<&BTreeSet<PackageVersion>>) -> Self {
         match version {
-            version if versions.map_or(false, |versions| versions.contains(version)) => {
+            version if versions.is_some_and(|versions| versions.contains(version)) => {
                 Self::UpdateVersion
             }
             version
                 if versions
                     .and_then(BTreeSet::last)
-                    .map_or(false, |latest| max(version, latest) == version) =>
+                    .is_some_and(|latest| max(version, latest) == version) =>
             {
                 Self::NewVersion
             }

@@ -147,9 +147,7 @@ fn get_file_name(url: &Url, final_url: &Url, content_disposition: Option<&Header
         .filter(|last_segment| {
             Utf8Path::new(last_segment)
                 .extension()
-                .map_or(false, |extension| {
-                    VALID_FILE_EXTENSIONS.contains(&extension)
-                })
+                .is_some_and(|extension| VALID_FILE_EXTENSIONS.contains(&extension))
         })
         .or_else(|| {
             final_url

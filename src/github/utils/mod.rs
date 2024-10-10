@@ -94,7 +94,7 @@ pub fn is_manifest_file(
             let locale = file_name
                 .get(identifier_len + LOCALE_PART.len()..file_name_len - YAML_EXTENSION.len());
 
-            locale.map_or(false, |locale| {
+            locale.is_some_and(|locale| {
                 default_locale.is_some_and(|default_locale| match manifest_type {
                     ManifestType::DefaultLocale => default_locale.as_str() == locale,
                     ManifestType::Locale => default_locale.as_str() != locale,
