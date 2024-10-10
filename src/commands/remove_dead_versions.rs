@@ -1,13 +1,17 @@
 use crate::commands::utils::{SPINNER_SLOW_TICK_RATE, SPINNER_TICK_RATE};
 use crate::credential::{get_default_headers, handle_token};
 use crate::github::github_client::GitHub;
+use crate::github::graphql::get_branches::PullRequestState;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::types::manifest_type::ManifestTypeWithLocale;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::urls::url::DecodedUrl;
+use anstream::println;
+use bon::builder;
 use chrono::TimeDelta;
 use clap::Parser;
+use color_eyre::eyre::Error;
 use color_eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::ProgressBar;
@@ -68,7 +72,7 @@ pub struct RemoveDeadVersions {
     fast: bool,
 
     /// Automatically create pull requests to remove dead versions without prompting
-    #[arg(long, hide = true)]
+    #[arg(long, hide = true, env = "CI")]
     auto: bool,
 
     /// Number of installer URLs to check concurrently
@@ -153,13 +157,13 @@ impl RemoveDeadVersions {
 
             progress_bar.finish_and_clear();
 
-            let confirm = self.auto
-                || Confirm::new(&format!(
-                    "{} {version} InstallerUrls all returned {}. Remove?",
-                    self.package_identifier,
-                    StatusCode::NOT_FOUND.red()
-                ))
-                .prompt()?;
+            let confirm = confirm_removal()
+                .github(&github)
+                .identifier(&self.package_identifier)
+                .version(version)
+                .auto(self.auto)
+                .prompt()
+                .await?;
 
             if !confirm {
                 continue;
@@ -215,4 +219,39 @@ impl RemoveDeadVersions {
         }
         Ok(deletion_reason)
     }
+}
+
+#[builder(finish_fn = prompt)]
+async fn confirm_removal(
+    github: &GitHub,
+    identifier: &PackageIdentifier,
+    version: &PackageVersion,
+    auto: bool,
+) -> Result<bool> {
+    if let Some(pull_request) = github
+        .get_existing_pull_request(identifier, version)
+        .await?
+    {
+        if pull_request.state == PullRequestState::Open {
+            println!(
+                "{identifier} {version} returned {} in all its InstallerUrls but there is already {} pull request for this version that was created on {} at {}.",
+                StatusCode::NOT_FOUND.red(),
+                pull_request.state,
+                pull_request.created_at.date_naive(),
+                pull_request.created_at.time()
+            );
+            return if auto {
+                Ok(false)
+            } else {
+                Confirm::new("Remove anyway?").prompt().map_err(Error::from)
+            };
+        }
+    }
+
+    Ok(auto
+        || Confirm::new(&format!(
+            "{identifier} {version} returned {} in all its InstallerUrls. Remove?",
+            StatusCode::NOT_FOUND.red()
+        ))
+        .prompt()?)
 }
