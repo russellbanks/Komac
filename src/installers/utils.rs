@@ -1,6 +1,5 @@
-use color_eyre::eyre::{Error, Result};
 use liblzma::stream::{Filters, Stream};
-use std::io::Read;
+use std::io::{Error, ErrorKind, Read, Result};
 
 pub const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";
 pub const RELATIVE_PROGRAM_FILES_32: &str = "%ProgramFiles(x86)%";
@@ -19,5 +18,5 @@ pub fn read_lzma_stream_header<R: Read>(reader: &mut R) -> Result<Stream> {
     let mut filters = Filters::new();
     filters.lzma1_properties(&properties)?;
 
-    Stream::new_raw_decoder(&filters).map_err(Error::msg)
+    Stream::new_raw_decoder(&filters).map_err(|error| Error::new(ErrorKind::InvalidData, error))
 }

@@ -3,9 +3,8 @@ use std::io::{Cursor, Read};
 
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::InnoVersion;
+use crate::installers::inno::InnoError;
 use byteorder::{ReadBytesExt, LE};
-use color_eyre::eyre::{bail, eyre};
-use color_eyre::Result;
 
 pub const SETUP_LOADER_RESOURCE: u32 = 11111;
 
@@ -79,7 +78,7 @@ pub struct SetupLoader {
 }
 
 impl SetupLoader {
-    pub fn new(setup_loader_data: &[u8]) -> Result<Self> {
+    pub fn new(setup_loader_data: &[u8]) -> Result<Self, InnoError> {
         let mut checksum = Crc32Reader::new(Cursor::new(setup_loader_data));
         let mut signature = [0; SIGNATURE_LEN];
         checksum.read_exact(&mut signature)?;
@@ -87,7 +86,7 @@ impl SetupLoader {
         let loader_version = KNOWN_SETUP_LOADER_VERSIONS
             .into_iter()
             .find(|setup_loader_version| setup_loader_version.signature == signature)
-            .ok_or_else(|| eyre!("Unknown Inno Setup loader signature: {signature:?}"))?;
+            .ok_or(InnoError::UnknownLoaderSignature(signature))?;
 
         let revision = if loader_version >= InnoVersion(5, 1, 5) {
             checksum.read_u32::<LE>()?
@@ -125,7 +124,10 @@ impl SetupLoader {
             let expected_checksum = checksum.get_mut().read_u32::<LE>()?;
             let actual_checksum = checksum.finalize();
             if actual_checksum != expected_checksum {
-                bail!("CRC32 checksum mismatch. Actual: {actual_checksum}. Expected: {expected_checksum}.")
+                return Err(InnoError::CrcChecksumMismatch {
+                    actual: actual_checksum,
+                    expected: expected_checksum,
+                });
             }
         }
 

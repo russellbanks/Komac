@@ -1,29 +1,22 @@
-use std::collections::BTreeSet;
-use std::io::{Read, Seek};
-
 use crate::installers::msix_family::utils::{hash_signature, read_manifest};
-use crate::manifests::installer_manifest::Platform;
+use crate::installers::msix_family::Msix;
+use crate::installers::traits::InstallSpec;
 use crate::types::architecture::Architecture;
-use crate::types::minimum_os_version::MinimumOSVersion;
+use crate::types::installer_type::InstallerType;
 use crate::types::sha_256::Sha256String;
 use color_eyre::eyre::Result;
+use memmap2::Mmap;
 use package_family_name::PackageFamilyName;
 use quick_xml::de::from_str;
 use serde::Deserialize;
+use std::io::{Cursor, Read, Seek};
+use std::{io, mem};
 use zip::ZipArchive;
-use crate::installers::msix_family;
 
 pub struct MsixBundle {
     pub signature_sha_256: Sha256String,
     pub package_family_name: PackageFamilyName,
-    pub packages: Vec<IndividualPackage>,
-}
-
-pub struct IndividualPackage {
-    pub version: String,
-    pub target_device_family: BTreeSet<Platform>,
-    pub min_version: MinimumOSVersion,
-    pub processor_architecture: Architecture,
+    pub packages: Vec<Msix>,
 }
 
 const APPX_BUNDLE_MANIFEST_PATH: &str = "AppxMetadata/AppxBundleManifest.xml";
@@ -49,24 +42,14 @@ impl MsixBundle {
                 .package
                 .into_iter()
                 .filter(|package| package.r#type == PackageType::Application)
-                .map(|package| IndividualPackage {
-                    version: package.version,
-                    target_device_family: package
-                        .dependencies
-                        .target_device_family
-                        .iter()
-                        .map(|target_device_family| target_device_family.name)
-                        .collect(),
-                    min_version: package
-                        .dependencies
-                        .target_device_family
-                        .into_iter()
-                        .map(|target_device_family| target_device_family.min_version)
-                        .min()
-                        .unwrap(),
-                    processor_architecture: package.architecture,
+                .map(|package| {
+                    let mut embedded_msix = zip.by_name(&package.file_name)?;
+                    let mut temp_file = tempfile::tempfile()?;
+                    io::copy(&mut embedded_msix, &mut temp_file)?;
+                    let map = unsafe { Mmap::map(&temp_file) }?;
+                    Msix::new(Cursor::new(map.as_ref()))
                 })
-                .collect(),
+                .collect::<Result<Vec<_>>>()?,
         })
     }
 }
@@ -98,14 +81,10 @@ struct Packages {
 /// <https://learn.microsoft.com/uwp/schemas/bundlemanifestschema/element-package>
 #[derive(Deserialize)]
 struct Package {
-    #[serde(default, rename = "@Architecture")]
-    architecture: Architecture,
     #[serde(default, rename = "@Type")]
     r#type: PackageType,
-    #[serde(rename = "@Version")]
-    version: String,
-    #[serde(rename = "Dependencies")]
-    dependencies: msix_family::Dependencies,
+    #[serde(rename = "@FileName")]
+    file_name: String,
 }
 
 /// <https://learn.microsoft.com/en-gb/uwp/schemas/bundlemanifestschema/element-package#attributes>
@@ -115,4 +94,28 @@ enum PackageType {
     Application,
     #[default]
     Resource,
+}
+
+impl InstallSpec for MsixBundle {
+    fn r#type(&self) -> InstallerType {
+        if self.packages.first().is_some_and(|msix| msix.is_appx) {
+            InstallerType::Appx
+        } else {
+            InstallerType::Msix
+        }
+    }
+
+    fn architecture(&mut self) -> Option<Architecture> {
+        self.packages
+            .first()
+            .map(|msix| msix.processor_architecture)
+    }
+
+    fn signature_sha_256(&mut self) -> Option<Sha256String> {
+        Some(mem::take(&mut self.signature_sha_256))
+    }
+
+    fn package_family_name(&mut self) -> Option<PackageFamilyName> {
+        Some(mem::take(&mut self.package_family_name))
+    }
 }

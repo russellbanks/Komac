@@ -14,15 +14,15 @@ use crate::installers::nsis::header::compression::Compression;
 use crate::installers::nsis::header::{Decompressed, Header};
 use crate::installers::nsis::language::table::LanguageTable;
 use crate::installers::nsis::version::NsisVersion;
+use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{read_lzma_stream_header, RELATIVE_PROGRAM_FILES_64};
 use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
+use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use byteorder::{ReadBytesExt, LE};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
-use color_eyre::eyre::{Error, OptionExt};
-use color_eyre::Result;
 use flate2::read::DeflateDecoder;
 use header::block::BlockType;
 use liblzma::read::XzDecoder;
@@ -33,32 +33,45 @@ use std::str::FromStr;
 use std::{io, mem};
 use strings::encoding::nsis_string;
 use strsim::levenshtein;
+use thiserror::Error;
 use yara_x::mods::pe::Machine;
 use yara_x::mods::PE;
 use zerocopy::little_endian::U32;
 use zerocopy::{FromBytes, TryFromBytes};
 
+#[derive(Error, Debug)]
+pub enum NsisError {
+    #[error("File is not a NSIS installer")]
+    NotNsisFile,
+    #[error("Failed to get NSIS first header offset")]
+    FirstHeaderOffset,
+    #[error("{0}")]
+    ZeroCopy(String),
+    #[error(transparent)]
+    Io(#[from] io::Error),
+}
+
 pub struct Nsis {
-    pub architecture: Architecture,
-    pub scope: Option<Scope>,
-    pub install_dir: Option<Utf8PathBuf>,
-    pub install_locale: LanguageTag,
-    pub display_name: Option<String>,
-    pub display_version: Option<String>,
-    pub display_publisher: Option<String>,
+    architecture: Architecture,
+    scope: Option<Scope>,
+    install_dir: Option<Utf8PathBuf>,
+    install_locale: Option<LanguageTag>,
+    display_name: Option<String>,
+    display_version: Option<String>,
+    display_publisher: Option<String>,
 }
 
 impl Nsis {
-    pub fn new(data: &[u8], pe: &PE) -> Result<Self> {
+    pub fn new(data: &[u8], pe: &PE) -> Result<Self, NsisError> {
         let first_header_offset = pe
             .overlay
             .offset
             .and_then(|offset| usize::try_from(offset).ok())
-            .ok_or_eyre("Unable to get NSIS first header offset")?;
+            .ok_or(NsisError::FirstHeaderOffset)?;
 
         let data_offset = first_header_offset + size_of::<FirstHeader>();
         let first_header = FirstHeader::try_ref_from_bytes(&data[first_header_offset..data_offset])
-            .map_err(|error| Error::msg(error.to_string()))?;
+            .map_err(|_| NsisError::NotNsisFile)?;
 
         let Decompressed {
             decompressed_data,
@@ -68,7 +81,7 @@ impl Nsis {
             decoder: solid_decoder,
         } = Header::decompress(&data[data_offset..], first_header)?;
         let (header, _) = Header::ref_from_prefix(&decompressed_data)
-            .map_err(|error| Error::msg(error.to_string()))?;
+            .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
         let strings_block = BlockType::Strings.get(&decompressed_data, &header.blocks);
 
@@ -89,7 +102,7 @@ impl Nsis {
         let entries = <[Entry]>::try_ref_from_bytes(
             BlockType::Entries.get(&decompressed_data, &header.blocks),
         )
-        .map_err(|error| Error::msg(error.to_string()))?;
+        .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
         let app_name = nsis_string(
             strings_block,
@@ -175,7 +188,8 @@ impl Nsis {
             install_dir: install_dir.as_deref().map(Utf8PathBuf::from),
             install_locale: LanguageTag::from_str(
                 Language::from_code(language_table.language_id.get()).tag(),
-            )?,
+            )
+            .ok(),
             display_name: write_reg
                 .iter_mut()
                 .find(|write_reg| write_reg.value_name == "DisplayName")
@@ -189,5 +203,39 @@ impl Nsis {
                 .find(|write_reg| write_reg.value_name == "Publisher")
                 .map(|write_reg| mem::take(&mut write_reg.value).into_owned()),
         })
+    }
+}
+
+impl InstallSpec for Nsis {
+    fn r#type(&self) -> InstallerType {
+        InstallerType::Nullsoft
+    }
+
+    fn architecture(&mut self) -> Option<Architecture> {
+        Some(self.architecture)
+    }
+
+    fn display_name(&mut self) -> Option<String> {
+        self.display_name.take()
+    }
+
+    fn display_publisher(&mut self) -> Option<String> {
+        self.display_publisher.take()
+    }
+
+    fn display_version(&mut self) -> Option<String> {
+        self.display_version.take()
+    }
+
+    fn locale(&mut self) -> Option<LanguageTag> {
+        self.install_locale.take()
+    }
+
+    fn scope(&self) -> Option<Scope> {
+        self.scope
+    }
+
+    fn install_location(&mut self) -> Option<Utf8PathBuf> {
+        self.install_dir.take()
     }
 }

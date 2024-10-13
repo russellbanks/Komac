@@ -1,13 +1,12 @@
 use byteorder::{ReadBytesExt, LE};
 use encoding_rs::Encoding;
-use std::io;
-use std::io::Read;
+use std::io::{Read, Result};
 
 /// Read an encoded String where the length is stored in the 4 bytes immediately prior
 pub fn encoded_string<R: Read>(
     reader: &mut R,
     encoding: &'static Encoding,
-) -> io::Result<Option<String>> {
+) -> Result<Option<String>> {
     let length = reader.read_u32::<LE>()?;
     if length == 0 {
         return Ok(None);
@@ -22,7 +21,7 @@ pub fn sized_encoded_string<R: Read>(
     reader: &mut R,
     length: u32,
     encoding: &'static Encoding,
-) -> io::Result<Option<String>> {
+) -> Result<Option<String>> {
     if length == 0 {
         return Ok(None);
     }

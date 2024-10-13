@@ -1,8 +1,7 @@
 use crate::installers::nsis::header::block::BlockType;
 use crate::installers::nsis::header::Header;
-use color_eyre::eyre::OptionExt;
-use color_eyre::Result;
 use itertools::Itertools;
+use std::io::{Error, ErrorKind, Result};
 use zerocopy::little_endian::{U16, U32};
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
@@ -24,6 +23,6 @@ impl LanguageTable {
             .chunks_exact(header.langtable_size.get() as usize)
             .flat_map(Self::ref_from_bytes)
             .find_or_first(|lang_table| lang_table.language_id == EN_US_LANG_CODE)
-            .ok_or_eyre("No NSIS language table found")
+            .ok_or_else(|| Error::new(ErrorKind::NotFound, "No NSIS language table found"))
     }
 }

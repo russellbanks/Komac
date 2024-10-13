@@ -1,7 +1,6 @@
 use crate::installers::inno::version::InnoVersion;
 use byteorder::{ReadBytesExt, LE};
-use color_eyre::Result;
-use std::io::Read;
+use std::io::{Read, Result};
 
 #[derive(Debug, Default)]
 struct Version {

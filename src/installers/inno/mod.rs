@@ -1,3 +1,4 @@
+mod compression;
 mod encoding;
 mod header;
 mod language;
@@ -6,48 +7,67 @@ pub mod read;
 mod version;
 mod windows_version;
 
-use byteorder::{ReadBytesExt, LE};
-use color_eyre::eyre::{bail, eyre, OptionExt};
-use color_eyre::Result;
-use flate2::read::ZlibDecoder;
-use liblzma::read::XzDecoder;
-use msi::Language;
-use std::collections::BTreeSet;
-use std::io::{Cursor, Read};
-use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::str::FromStr;
-use yara_x::mods::pe::ResourceType;
-use yara_x::mods::PE;
-
+use crate::installers::inno::compression::Compression;
 use crate::installers::inno::header::Header;
 use crate::installers::inno::language::LanguageEntry;
 use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
 use crate::installers::inno::read::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::InnoError::{UnknownVersion, UnsupportedVersion};
+use crate::installers::traits::InstallSpec;
 use crate::installers::utils::read_lzma_stream_header;
 use crate::manifests::installer_manifest::{ElevationRequirement, UnsupportedOSArchitecture};
 use crate::types::architecture::Architecture;
+use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
+use byteorder::{ReadBytesExt, LE};
+use flate2::read::ZlibDecoder;
+use liblzma::read::XzDecoder;
+use msi::Language;
+use std::collections::BTreeSet;
+use std::io::{Cursor, Read};
+use std::str::FromStr;
+use std::{io, mem};
+use thiserror::Error;
+use yara_x::mods::pe::ResourceType;
+use yara_x::mods::PE;
 
 const VERSION_LEN: usize = 1 << 6;
 
 const MAX_SUPPORTED_VERSION: InnoVersion = InnoVersion(6, 3, u8::MAX);
 
-pub struct InnoFile {
-    pub architecture: Option<Architecture>,
-    pub unsupported_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
-    pub uninstall_name: Option<String>,
-    pub app_version: Option<String>,
-    pub app_publisher: Option<String>,
-    pub product_code: Option<String>,
-    pub elevation_requirement: Option<ElevationRequirement>,
-    pub installer_locale: Option<LanguageTag>,
+#[derive(Error, Debug)]
+pub enum InnoError {
+    #[error("File is not an Inno installer")]
+    NotInnoFile,
+    #[error("Invalid Inno header version")]
+    InvalidSetupHeader,
+    #[error("Inno Setup version {0} is newer than the maximum supported version {MAX_SUPPORTED_VERSION}")]
+    UnsupportedVersion(KnownVersion),
+    #[error("Unknown Inno setup version: {0}")]
+    UnknownVersion(String),
+    #[error("Unknown Inno Setup loader signature: {0:?}")]
+    UnknownLoaderSignature([u8; 12]),
+    #[error("CRC32 checksum mismatch. Actual: {actual}. Expected: {expected}.")]
+    CrcChecksumMismatch { actual: u32, expected: u32 },
+    #[error(transparent)]
+    Io(#[from] io::Error),
 }
 
-impl InnoFile {
-    pub fn new(data: &[u8], pe: &PE) -> Result<Self> {
+pub struct Inno {
+    architecture: Option<Architecture>,
+    unsupported_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
+    uninstall_name: Option<String>,
+    app_version: Option<String>,
+    app_publisher: Option<String>,
+    product_code: Option<String>,
+    elevation_requirement: Option<ElevationRequirement>,
+    installer_locale: Option<LanguageTag>,
+}
+
+impl Inno {
+    pub fn new(data: &[u8], pe: &PE) -> Result<Self, InnoError> {
         let setup_loader_data = pe
             .resources
             .iter()
@@ -57,7 +77,7 @@ impl InnoFile {
                 let offset = resource.offset() as usize;
                 data.get(offset..offset + resource.length() as usize)
             })
-            .ok_or_eyre("No setup loader resource was found")?;
+            .ok_or(InnoError::NotInnoFile)?;
 
         let setup_loader = SetupLoader::new(setup_loader_data)?;
 
@@ -65,17 +85,13 @@ impl InnoFile {
         let version_bytes = data
             .get(header_offset..header_offset + VERSION_LEN)
             .and_then(|bytes| memchr::memchr(0, bytes).map(|len| &bytes[..len]))
-            .ok_or_eyre("Invalid Inno header version")?;
+            .ok_or(InnoError::InvalidSetupHeader)?;
 
-        let known_version = KnownVersion::from_version_bytes(version_bytes).ok_or_else(|| {
-            eyre!(
-                "Unknown Inno Setup version: {}",
-                String::from_utf8_lossy(version_bytes)
-            )
-        })?;
+        let known_version = KnownVersion::from_version_bytes(version_bytes)
+            .ok_or_else(|| UnknownVersion(String::from_utf8_lossy(version_bytes).into_owned()))?;
 
         if known_version > MAX_SUPPORTED_VERSION {
-            bail!("Inno Setup version {known_version} is newer than the maximum supported version {MAX_SUPPORTED_VERSION}");
+            return Err(UnsupportedVersion(known_version));
         }
 
         let mut cursor = Cursor::new(data);
@@ -87,9 +103,9 @@ impl InnoFile {
 
         let stored_size = if known_version > InnoVersion(4, 0, 9) {
             let size = actual_checksum.read_u32::<LE>()?;
-            let compressed = actual_checksum.read_u8()?;
+            let compressed = actual_checksum.read_u8()? != 0;
 
-            if compressed != 0 {
+            if compressed {
                 if known_version > InnoVersion(4, 1, 6) {
                     Compression::LZMA1(size)
                 } else {
@@ -116,9 +132,10 @@ impl InnoFile {
 
         let actual_checksum = actual_checksum.finalize();
         if actual_checksum != expected_checksum {
-            bail!(
-                "CRC32 checksum mismatch. Actual: {actual_checksum}. Expected: {expected_checksum}."
-            );
+            return Err(InnoError::CrcChecksumMismatch {
+                actual: actual_checksum,
+                expected: expected_checksum,
+            });
         }
 
         let mut block_filter = InnoBlockFilter::new(cursor.take(u64::from(*stored_size)));
@@ -170,26 +187,40 @@ pub fn to_product_code(mut app_id: String) -> String {
     app_id
 }
 
-enum Compression {
-    Stored(u32),
-    Zlib(u32),
-    LZMA1(u32),
-}
-
-impl Deref for Compression {
-    type Target = u32;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::Stored(size) | Self::Zlib(size) | Self::LZMA1(size) => size,
-        }
+impl InstallSpec for Inno {
+    fn r#type(&self) -> InstallerType {
+        InstallerType::Inno
     }
-}
 
-impl DerefMut for Compression {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        match self {
-            Self::Stored(size) | Self::Zlib(size) | Self::LZMA1(size) => size,
-        }
+    fn architecture(&mut self) -> Option<Architecture> {
+        self.architecture.take()
+    }
+
+    fn display_name(&mut self) -> Option<String> {
+        self.uninstall_name.take()
+    }
+
+    fn display_publisher(&mut self) -> Option<String> {
+        self.app_publisher.take()
+    }
+
+    fn display_version(&mut self) -> Option<String> {
+        self.app_version.take()
+    }
+
+    fn product_code(&mut self) -> Option<String> {
+        self.product_code.take()
+    }
+
+    fn locale(&mut self) -> Option<LanguageTag> {
+        self.installer_locale.take()
+    }
+
+    fn unsupported_os_architectures(&mut self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
+        self.unsupported_architectures.take()
+    }
+
+    fn elevation_requirement(&mut self) -> Option<ElevationRequirement> {
+        self.elevation_requirement.take()
     }
 }
