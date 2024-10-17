@@ -114,8 +114,8 @@ impl RemoveDeadVersions {
         progress_bar.enable_steady_tick(SPINNER_TICK_RATE);
 
         for version in versions.iter().filter(|&version| {
-            self.before.as_ref().map_or(true, |before| version < before)
-                && self.after.as_ref().map_or(true, |after| version > after)
+            self.before.as_ref().is_none_or(|before| version < before)
+                && self.after.as_ref().is_none_or(|after| version > after)
         }) {
             if progress_bar.is_finished() {
                 progress_bar.reset();
