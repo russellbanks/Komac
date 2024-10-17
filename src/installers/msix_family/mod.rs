@@ -1,10 +1,13 @@
 pub mod bundle;
 mod utils;
 
+use crate::file_analyser::MSIX;
 use crate::installers::msix_family::utils::{get_install_location, hash_signature, read_manifest};
+use crate::installers::traits::InstallSpec;
 use crate::manifests::installer_manifest::Platform;
 use crate::types::architecture::Architecture;
 use crate::types::file_extension::FileExtension;
+use crate::types::installer_type::InstallerType;
 use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::sha_256::Sha256String;
 use camino::Utf8PathBuf;
@@ -15,32 +18,36 @@ use quick_xml::Reader;
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::io::{Read, Seek};
+use std::mem;
 use std::str::FromStr;
 use zip::ZipArchive;
 
 pub struct Msix {
-    pub display_name: String,
-    pub publisher_display_name: String,
-    pub version: String,
-    pub signature_sha_256: Sha256String,
-    pub package_family_name: PackageFamilyName,
-    pub target_device_family: BTreeSet<Platform>,
-    pub min_version: MinimumOSVersion,
-    pub processor_architecture: Architecture,
-    pub capabilities: Option<BTreeSet<String>>,
-    pub restricted_capabilities: Option<BTreeSet<String>>,
-    pub file_extensions: Option<BTreeSet<FileExtension>>,
-    pub install_location: Utf8PathBuf,
+    is_appx: bool,
+    display_name: String,
+    publisher_display_name: String,
+    version: String,
+    signature_sha_256: Sha256String,
+    package_family_name: PackageFamilyName,
+    target_device_family: BTreeSet<Platform>,
+    min_version: MinimumOSVersion,
+    processor_architecture: Architecture,
+    capabilities: Option<BTreeSet<String>>,
+    restricted_capabilities: Option<BTreeSet<String>>,
+    file_extensions: Option<BTreeSet<FileExtension>>,
+    install_location: Utf8PathBuf,
 }
 
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
 pub const APPX_SIGNATURE_P7X: &str = "AppxSignature.p7x";
 
+const MSIX_MIN_VERSION: MinimumOSVersion = MinimumOSVersion(10, 0, 17763, 0);
+
 impl Msix {
     pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
         let mut zip = ZipArchive::new(reader)?;
 
-        let appx_manifest = read_manifest(&mut zip, APPX_MANIFEST_XML)?;
+        let mut appx_manifest = read_manifest(&mut zip, APPX_MANIFEST_XML)?;
 
         let signature_sha_256 = hash_signature(&mut zip)?;
 
@@ -149,6 +156,15 @@ impl Msix {
         }
 
         Ok(Self {
+            is_appx: manifest
+                .dependencies
+                .target_device_family
+                .iter()
+                .all(|target_device_family| target_device_family.min_version < MSIX_MIN_VERSION)
+                && {
+                    appx_manifest.make_ascii_lowercase();
+                    !appx_manifest.contains(MSIX)
+                },
             install_location: get_install_location(
                 &manifest.identity.name,
                 &manifest.identity.publisher,
@@ -244,4 +260,62 @@ struct Capabilities {
 #[derive(Default)]
 struct FileTypeAssociation {
     supported_file_types: BTreeSet<FileExtension>,
+}
+
+impl InstallSpec for Msix {
+    fn r#type(&self) -> InstallerType {
+        if self.is_appx {
+            InstallerType::Appx
+        } else {
+            InstallerType::Msix
+        }
+    }
+
+    fn architecture(&mut self) -> Option<Architecture> {
+        Some(self.processor_architecture)
+    }
+
+    fn display_name(&mut self) -> Option<String> {
+        Some(mem::take(&mut self.display_name))
+    }
+
+    fn display_publisher(&mut self) -> Option<String> {
+        Some(mem::take(&mut self.publisher_display_name))
+    }
+
+    fn display_version(&mut self) -> Option<String> {
+        Some(mem::take(&mut self.version))
+    }
+
+    fn platform(&mut self) -> Option<BTreeSet<Platform>> {
+        Some(mem::take(&mut self.target_device_family))
+    }
+
+    fn install_location(&mut self) -> Option<Utf8PathBuf> {
+        Some(mem::take(&mut self.install_location))
+    }
+
+    fn min_version(&self) -> Option<MinimumOSVersion> {
+        Some(self.min_version)
+    }
+
+    fn signature_sha_256(&mut self) -> Option<Sha256String> {
+        Some(mem::take(&mut self.signature_sha_256))
+    }
+
+    fn file_extensions(&mut self) -> Option<BTreeSet<FileExtension>> {
+        self.file_extensions.take()
+    }
+
+    fn package_family_name(&mut self) -> Option<PackageFamilyName> {
+        Some(mem::take(&mut self.package_family_name))
+    }
+
+    fn capabilities(&mut self) -> Option<BTreeSet<String>> {
+        self.capabilities.take()
+    }
+
+    fn restricted_capabilities(&mut self) -> Option<BTreeSet<String>> {
+        self.restricted_capabilities.take()
+    }
 }

@@ -1,11 +1,12 @@
 use std::io::Cursor;
-use std::mem;
 
-use crate::installers::inno::InnoFile;
+use crate::installers::burn::Burn;
+use crate::installers::inno::{Inno, InnoError};
 use crate::installers::msi::Msi;
 use crate::installers::msix_family::bundle::MsixBundle;
 use crate::installers::msix_family::Msix;
-use crate::installers::nsis::Nsis;
+use crate::installers::nsis::{Nsis, NsisError};
+use crate::installers::traits::InstallSpec;
 use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, UpgradeBehavior,
@@ -15,13 +16,10 @@ use crate::types::copyright::Copyright;
 use crate::types::installer_type::InstallerType;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
-use crate::types::sha_256::Sha256String;
-use crate::types::urls::url::DecodedUrl;
 use camino::Utf8Path;
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{bail, Error, Result};
 use memmap2::Mmap;
 use versions::Versioning;
-use yara_x::mods::pe::{Resource, ResourceType};
 use yara_x::mods::PE;
 
 pub const EXE: &str = "exe";
@@ -31,6 +29,10 @@ pub const APPX: &str = "appx";
 pub const MSIX_BUNDLE: &str = "msixbundle";
 pub const APPX_BUNDLE: &str = "appxbundle";
 pub const ZIP: &str = "zip";
+
+const ORIGINAL_FILENAME: &str = "OriginalFilename";
+const FILE_DESCRIPTION: &str = "FileDescription";
+const BASIC_INSTALLER_KEYWORDS: [&str; 3] = ["installer", "setup", "7zs.sfx"];
 
 pub struct FileAnalyser<'data> {
     pub file_name: String,
@@ -47,134 +49,116 @@ impl<'data> FileAnalyser<'data> {
             .extension()
             .unwrap_or_default()
             .to_lowercase();
-        let mut msi = None;
-        let mut msix = None;
-        let mut msix_bundle = None;
         let mut zip = None;
         let mut pe = None;
-        match extension.as_str() {
-            MSI => msi = Some(Msi::new(Cursor::new(data.as_ref()))?),
-            MSIX | APPX => msix = Some(Msix::new(Cursor::new(data.as_ref()))?),
-            MSIX_BUNDLE | APPX_BUNDLE => {
-                msix_bundle = Some(MsixBundle::new(Cursor::new(data.as_ref()))?);
-            }
-            ZIP => zip = Some(Zip::new(Cursor::new(data.as_ref()))?),
-            EXE => pe = yara_x::mods::invoke::<PE>(data.as_ref()),
-            _ => {}
-        }
-        let mut inno = None;
-        let mut nsis = None;
         let mut installer_type = None;
-        let mut pe_arch = None;
-        if let Some(ref pe) = pe {
-            pe_arch = Some(Architecture::from_machine(pe.machine())?);
-            installer_type = Some(InstallerType::get(Some(pe), &extension, msi.as_ref())?);
-            if let Ok(inno_file) = InnoFile::new(data.as_ref(), pe) {
-                inno = Some(inno_file);
-                installer_type = Some(InstallerType::Inno);
-            } else if let Ok(nsis_file) = Nsis::new(data.as_ref(), pe) {
-                nsis = Some(nsis_file);
-                installer_type = Some(InstallerType::Nullsoft);
-            } else if let Some(msi_resource) = get_msi_resource(pe) {
-                installer_type = Some(InstallerType::Burn);
-                msi = Some(extract_msi(data.as_ref(), msi_resource)?);
+        let mut installer: Option<Box<dyn InstallSpec>> = None;
+        match extension.as_str() {
+            MSI => installer = Some(Box::new(Msi::new(Cursor::new(data.as_ref()))?)),
+            MSIX | APPX => installer = Some(Box::new(Msix::new(Cursor::new(data.as_ref()))?)),
+            MSIX_BUNDLE | APPX_BUNDLE => {
+                installer = Some(Box::new(MsixBundle::new(Cursor::new(data.as_ref()))?));
             }
+            ZIP => {
+                zip = Some(Zip::new(Cursor::new(data.as_ref()))?);
+                installer_type = Some(InstallerType::Zip);
+            }
+            EXE => {
+                pe = yara_x::mods::invoke::<PE>(data.as_ref());
+                if let Some(ref pe) = pe {
+                    if let Ok(burn) = Burn::new(data.as_ref(), pe) {
+                        installer = Some(Box::new(burn));
+                    } else {
+                        match Nsis::new(data.as_ref(), pe) {
+                            Ok(nsis_file) => installer = Some(Box::new(nsis_file)),
+                            Err(error) => match error {
+                                NsisError::NotNsisFile => {}
+                                _ => return Err(Error::new(error)),
+                            },
+                        }
+                    }
+
+                    if installer.is_none() {
+                        match Inno::new(data.as_ref(), pe) {
+                            Ok(inno_file) => installer = Some(Box::new(inno_file)),
+                            Err(error) => match error {
+                                InnoError::NotInnoFile => {}
+                                _ => return Err(Error::new(error)),
+                            },
+                        }
+                    }
+
+                    if installer.is_none() {
+                        installer_type = pe
+                            .version_info_list
+                            .iter()
+                            .filter(|key_value| {
+                                matches!(key_value.key(), FILE_DESCRIPTION | ORIGINAL_FILENAME)
+                            })
+                            .filter_map(|key_value| {
+                                key_value.value.as_deref().map(str::to_ascii_lowercase)
+                            })
+                            .any(|value| {
+                                BASIC_INSTALLER_KEYWORDS
+                                    .iter()
+                                    .any(|keyword| value.contains(keyword))
+                            })
+                            .then_some(InstallerType::Exe)
+                            .or(Some(InstallerType::Portable));
+                    }
+                }
+            }
+            _ => bail!(r#"Unsupported file extension: "{extension}""#),
         }
-        if installer_type.is_none() {
-            installer_type = Some(InstallerType::get(pe.as_deref(), &extension, msi.as_ref())?);
-        }
-        let upgrade_code = msi.as_mut().map(|msi| mem::take(&mut msi.upgrade_code));
-        let display_name = msi
-            .as_mut()
-            .map(|msi| mem::take(&mut msi.product_name))
-            .or_else(|| msix.as_mut().map(|msix| mem::take(&mut msix.display_name)))
-            .or_else(|| inno.as_mut().and_then(|inno| inno.uninstall_name.take()))
-            .or_else(|| nsis.as_mut().and_then(|nsis| nsis.display_name.take()));
-        let display_publisher = msi
-            .as_mut()
-            .map(|msi| mem::take(&mut msi.manufacturer))
-            .or_else(|| {
-                msix.as_mut()
-                    .map(|msix| mem::take(&mut msix.publisher_display_name))
-            })
-            .or_else(|| inno.as_mut().and_then(|inno| inno.app_publisher.take()))
-            .or_else(|| nsis.as_mut().and_then(|nsis| nsis.display_publisher.take()));
-        let display_version = msi
-            .as_mut()
-            .map(|msi| mem::take(&mut msi.product_version))
-            .or_else(|| msix.as_mut().map(|msix| mem::take(&mut msix.version)))
-            .or_else(|| inno.as_mut().and_then(|inno| inno.app_version.take()))
-            .or_else(|| nsis.as_mut().and_then(|nsis| nsis.display_version.take()))
+        let upgrade_code = installer.as_deref_mut().and_then(InstallSpec::upgrade_code);
+        let display_name = installer.as_deref_mut().and_then(InstallSpec::display_name);
+        let display_publisher = installer
+            .as_deref_mut()
+            .and_then(InstallSpec::display_publisher);
+        let display_version = installer
+            .as_deref_mut()
+            .and_then(InstallSpec::display_version)
             .and_then(Versioning::new);
-        let product_code = msi
-            .as_mut()
-            .map(|msi| mem::take(&mut msi.product_code))
-            .or_else(|| inno.as_mut().and_then(|inno| inno.product_code.take()));
+        let product_code = installer.as_deref_mut().and_then(InstallSpec::product_code);
         let installer = Installer {
-            installer_locale: msi
-                .as_mut()
-                .map(|msi| mem::take(&mut msi.product_language))
-                .or_else(|| inno.as_mut().and_then(|inno| inno.installer_locale.take()))
+            installer_locale: installer.as_deref_mut().and_then(InstallSpec::locale),
+            platform: installer.as_deref_mut().and_then(InstallSpec::platform),
+            minimum_os_version: installer.as_deref().and_then(InstallSpec::min_version),
+            architecture: installer
+                .as_deref_mut()
+                .and_then(InstallSpec::architecture)
                 .or_else(|| {
-                    nsis.as_mut()
-                        .map(|nsis| mem::take(&mut nsis.install_locale))
-                }),
-            platform: msix
-                .as_mut()
-                .map(|msix| mem::take(&mut msix.target_device_family)),
-            minimum_os_version: msix.as_mut().map(|msix| mem::take(&mut msix.min_version)),
-            architecture: msi
-                .as_ref()
-                .map(|msi| msi.architecture)
-                .or_else(|| msix.as_ref().map(|msix| msix.processor_architecture))
-                .or_else(|| {
-                    msix_bundle.as_ref().and_then(|bundle| {
-                        bundle
-                            .packages
-                            .first()
-                            .map(|package| package.processor_architecture)
-                    })
+                    pe.as_deref()
+                        .and_then(|pe| Architecture::from_machine(pe.machine()).ok())
                 })
-                .or_else(|| inno.as_ref().and_then(|inno| inno.architecture))
-                .or_else(|| nsis.as_ref().map(|nsis| nsis.architecture))
-                .or(pe_arch)
-                .or_else(|| zip.as_mut().and_then(|zip| zip.architecture.take()))
                 .unwrap_or_default(),
-            installer_type,
+            installer_type: installer_type
+                .or_else(|| installer.as_deref().map(InstallSpec::r#type)),
             nested_installer_type: zip
                 .as_mut()
                 .and_then(|zip| zip.nested_installer_type.take()),
             nested_installer_files: zip
                 .as_mut()
                 .and_then(|zip| zip.nested_installer_files.take()),
-            scope: msi
-                .as_ref()
-                .and_then(|msi| msi.all_users)
-                .or_else(|| nsis.as_ref().and_then(|nsis| nsis.scope)),
-            installer_url: DecodedUrl::default(),
-            installer_sha_256: Sha256String::default(),
-            signature_sha_256: msix
-                .as_mut()
-                .map(|msix| mem::take(&mut msix.signature_sha_256))
-                .or_else(|| {
-                    msix_bundle
-                        .as_mut()
-                        .map(|msix_bundle| mem::take(&mut msix_bundle.signature_sha_256))
-                }),
+            scope: installer.as_deref().and_then(InstallSpec::scope),
+            signature_sha_256: installer
+                .as_deref_mut()
+                .and_then(InstallSpec::signature_sha_256),
             upgrade_behavior: installer_type.and_then(UpgradeBehavior::get),
-            file_extensions: msix.as_mut().and_then(|msix| msix.file_extensions.take()),
-            package_family_name: msix
-                .as_mut()
-                .map(|msix| mem::take(&mut msix.package_family_name))
-                .or_else(|| msix_bundle.map(|msix_bundle| msix_bundle.package_family_name)),
+            file_extensions: installer
+                .as_deref_mut()
+                .and_then(InstallSpec::file_extensions),
+            package_family_name: installer
+                .as_deref_mut()
+                .and_then(InstallSpec::package_family_name),
             product_code: product_code.clone(),
-            capabilities: msix.as_mut().and_then(|msix| msix.capabilities.take()),
-            restricted_capabilities: msix
-                .as_mut()
-                .and_then(|msix| msix.restricted_capabilities.take()),
-            unsupported_os_architectures: inno
-                .as_mut()
-                .and_then(|inno| inno.unsupported_architectures.take()),
+            capabilities: installer.as_deref_mut().and_then(InstallSpec::capabilities),
+            restricted_capabilities: installer
+                .as_deref_mut()
+                .and_then(InstallSpec::restricted_capabilities),
+            unsupported_os_architectures: installer
+                .as_deref_mut()
+                .and_then(InstallSpec::unsupported_os_architectures),
             apps_and_features_entries: if display_name.is_some()
                 || display_publisher.is_some()
                 || display_version.is_some()
@@ -191,11 +175,12 @@ impl<'data> FileAnalyser<'data> {
             } else {
                 None
             },
-            elevation_requirement: inno.and_then(|inno| inno.elevation_requirement),
-            installation_metadata: msi
-                .and_then(|msi| msi.install_location)
-                .or_else(|| msix.map(|msix| msix.install_location))
-                .or_else(|| nsis.and_then(|nsis| nsis.install_dir))
+            elevation_requirement: installer
+                .as_deref_mut()
+                .and_then(InstallSpec::elevation_requirement),
+            installation_metadata: installer
+                .as_deref_mut()
+                .and_then(InstallSpec::install_location)
                 .map(|install_location| InstallationMetadata {
                     default_install_location: Some(install_location),
                     ..InstallationMetadata::default()
@@ -217,20 +202,4 @@ impl<'data> FileAnalyser<'data> {
             zip,
         })
     }
-}
-
-fn get_msi_resource(pe: &PE) -> Option<&Resource> {
-    const MSI: &[u8] = b"M\0S\0I\0";
-
-    pe.resources
-        .iter()
-        .filter(|resource| resource.type_() == ResourceType::RESOURCE_TYPE_RCDATA)
-        .find(|resource| resource.name_string() == MSI)
-}
-
-pub fn extract_msi(data: &[u8], msi_resource: &Resource) -> Result<Msi> {
-    let offset = msi_resource.offset() as usize;
-    let data = &data[offset..offset + msi_resource.length() as usize];
-    let msi = Msi::new(Cursor::new(data))?;
-    Ok(msi)
 }

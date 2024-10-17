@@ -18,7 +18,7 @@ use std::str::FromStr;
     PartialOrd,
 )]
 #[display("{_0}.{_1}.{_2}.{_3}")]
-pub struct MinimumOSVersion(u16, u16, u16, u16);
+pub struct MinimumOSVersion(pub u16, pub u16, pub u16, pub u16);
 
 impl FromStr for MinimumOSVersion {
     type Err = color_eyre::Report;

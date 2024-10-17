@@ -3,8 +3,7 @@ mod enums;
 mod flag_reader;
 mod flags;
 
-use std::io;
-use std::io::Read;
+use std::io::{Error, ErrorKind, Read, Result};
 
 use crate::installers::inno::encoding::{encoded_string, sized_encoded_string};
 use crate::installers::inno::header::architecture::{ArchitectureIdentifiers, StoredArchitecture};
@@ -18,7 +17,6 @@ use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
 use byteorder::{ReadBytesExt, LE};
-use color_eyre::eyre::{Error, Result};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use zerocopy::TryFromBytes;
 
@@ -26,7 +24,8 @@ macro_rules! enum_value {
     ($reader:expr, $ty:ty) => {{
         let mut buf = [0; size_of::<$ty>()];
         $reader.read_exact(&mut buf)?;
-        <$ty>::try_read_from_bytes(&buf).map_err(|error| Error::msg(error.to_string()))
+        <$ty>::try_read_from_bytes(&buf)
+            .map_err(|error| Error::new(ErrorKind::InvalidData, error.to_string()))
     }};
 }
 
@@ -414,7 +413,7 @@ impl Header {
         Ok(header)
     }
 
-    fn read_flags<R: Read>(reader: &mut R, version: &KnownVersion) -> io::Result<HeaderFlags> {
+    fn read_flags<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<HeaderFlags> {
         let mut flags = HeaderFlags::empty();
         let mut flag_reader = FlagReader::new(reader);
         flag_reader.add(HeaderFlags::DISABLE_STARTUP_PROMPT)?;
@@ -597,6 +596,9 @@ fn password_salt<R: Read>(reader: &mut R) -> Result<String> {
     let mut password_salt_buf = [0; 8];
     reader.read_exact(&mut password_salt_buf)?;
     let mut password_salt = PASSWORD_CHECK_HASH.to_string();
-    password_salt.push_str(std::str::from_utf8(&password_salt_buf)?);
+    password_salt.push_str(
+        std::str::from_utf8(&password_salt_buf)
+            .map_err(|utf8_err| Error::new(ErrorKind::InvalidData, utf8_err))?,
+    );
     Ok(password_salt)
 }

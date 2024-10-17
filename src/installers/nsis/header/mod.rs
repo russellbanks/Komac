@@ -9,10 +9,9 @@ use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::utils::read_lzma_stream_header;
 use byteorder::{ByteOrder, ReadBytesExt, LE};
 use bzip2::read::BzDecoder;
-use color_eyre::eyre::{bail, Result};
 use flate2::read::DeflateDecoder;
 use liblzma::read::XzDecoder;
-use std::io::Read;
+use std::io::{Error, ErrorKind, Read, Result};
 use zerocopy::little_endian::{I32, U32};
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
@@ -136,7 +135,10 @@ impl Header {
         };
 
         if is_solid && decoder.read_u32::<LE>()? != first_header.length_of_header.get() {
-            bail!("Decompressed header size did not equal size defined in first header");
+            Error::new(
+                ErrorKind::InvalidData,
+                "Decompressed header size did not equal size defined in first header",
+            );
         }
 
         let mut decompressed_data = vec![0; first_header.length_of_header.get() as usize];

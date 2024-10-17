@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::num::NonZeroU32;
 
 #[nutype(
-    sanitize(with = |input| truncate_with_lines(&input, 10000).into_owned(), trim),
+    sanitize(with = |input| truncate_with_lines::<10000>(&input).into_owned(), trim),
     validate(len_char_min = 1, len_char_max = 10000),
     default = "Release Notes",
     derive(Clone, Default, FromStr, Display, Deserialize, Serialize, PartialEq, Eq, Debug)
@@ -169,17 +169,17 @@ fn remove_sha1(input: &str) -> String {
     result
 }
 
-fn truncate_with_lines(input: &str, char_limit: usize) -> Cow<str> {
-    if input.chars().count() <= char_limit {
+fn truncate_with_lines<const N: usize>(input: &str) -> Cow<str> {
+    if input.chars().count() <= N {
         return Cow::Borrowed(input);
     }
 
-    let mut result = String::with_capacity(char_limit);
+    let mut result = String::with_capacity(N);
     let mut current_size = 0;
 
     for (iter_count, line) in input.lines().enumerate() {
-        let prospective_size = current_size + line.chars().count() + 1; // +1 for NewLine
-        if prospective_size > char_limit {
+        let prospective_size = current_size + line.chars().count() + "\n".len();
+        if prospective_size > N {
             break;
         }
         if iter_count != 0 {
@@ -363,7 +363,7 @@ mod tests {
             line_count += 1;
             writeln!(buffer, "Line {line_count}").unwrap();
         }
-        let formatted = truncate_with_lines(&buffer, CHAR_LIMIT);
+        let formatted = truncate_with_lines::<CHAR_LIMIT>(&buffer);
         let formatted_char_count = formatted.chars().count();
         assert!(formatted_char_count < buffer.chars().count());
         assert_eq!(formatted.trim().chars().count(), formatted_char_count);

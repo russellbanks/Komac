@@ -1,9 +1,8 @@
 use crate::installers::inno::encoding::encoded_string;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use byteorder::{ReadBytesExt, LE};
-use color_eyre::Result;
 use encoding_rs::{Encoding, UTF_16LE, WINDOWS_1252};
-use std::io::Read;
+use std::io::{Read, Result};
 
 #[derive(Debug, Default)]
 pub struct LanguageEntry {
@@ -54,11 +53,13 @@ impl LanguageEntry {
         entry.language_id = reader.read_u32::<LE>()?;
 
         if *version < InnoVersion(4, 2, 2) {
-            entry.codepage = codepage::to_encoding(u16::try_from(entry.language_id)?);
+            entry.codepage = u16::try_from(entry.language_id)
+                .ok()
+                .and_then(codepage::to_encoding);
         } else if !version.is_unicode() {
             let codepage = reader.read_u32::<LE>()?;
             entry.codepage = if codepage != 0 {
-                codepage::to_encoding(u16::try_from(codepage)?)
+                u16::try_from(codepage).ok().and_then(codepage::to_encoding)
             } else {
                 Some(WINDOWS_1252)
             };
