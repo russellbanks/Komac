@@ -1,3 +1,4 @@
+use crate::installers::nsis::entry::Entry;
 use crate::installers::nsis::strings::code::NsCode;
 use crate::installers::nsis::strings::lang::LangCode;
 use crate::installers::nsis::strings::shell::Shell;
@@ -18,11 +19,12 @@ const fn decode_number_from_char(mut char: u16) -> u16 {
 }
 
 #[expect(clippy::cast_possible_truncation)] // Truncating u16 `as u8` is intentional
-pub fn nsis_string(
-    strings_block: &[u8],
+pub fn nsis_string<'str_block>(
+    strings_block: &'str_block [u8],
     relative_offset: u32,
+    entries: &[Entry],
     nsis_version: NsisVersion,
-) -> Cow<str> {
+) -> Cow<'str_block, str> {
     // The strings block starts with a UTF-16 null byte if it is Unicode
     let unicode = &strings_block[..size_of::<u16>()] == b"\0\0";
 
@@ -97,7 +99,13 @@ pub fn nsis_string(
                         decode_number_from_char(special_char)
                     };
                     if current == u16::from(NsCode::Var.get(nsis_version)) {
-                        NsVar::resolve(&mut buf, u32::from(index), nsis_version);
+                        NsVar::resolve(
+                            &mut buf,
+                            strings_block,
+                            usize::from(index),
+                            entries,
+                            nsis_version,
+                        );
                     } else if current == u16::from(NsCode::Lang.get(nsis_version)) {
                         LangCode::resolve(&mut buf, index);
                     }

@@ -91,22 +91,24 @@ impl Nsis {
             .or_else(|| NsisVersion::from_branding_text(strings_block, language_table))
             .unwrap_or_else(|| NsisVersion::detect(strings_block));
 
-        let install_dir = (header.install_directory_ptr != U32::ZERO).then(|| {
-            nsis_string(
-                strings_block,
-                header.install_directory_ptr.get(),
-                nsis_version,
-            )
-        });
-
         let entries = <[Entry]>::try_ref_from_bytes(
             BlockType::Entries.get(&decompressed_data, &header.blocks),
         )
         .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
+        let install_dir = (header.install_directory_ptr != U32::ZERO).then(|| {
+            nsis_string(
+                strings_block,
+                header.install_directory_ptr.get(),
+                entries,
+                nsis_version,
+            )
+        });
+
         let app_name = nsis_string(
             strings_block,
             language_table.language_string_offsets[2].get(),
+            entries,
             nsis_version,
         );
 
@@ -179,7 +181,7 @@ impl Nsis {
 
         let mut write_reg = entries
             .iter()
-            .filter_map(|entry| WriteReg::from_entry(entry, strings_block, nsis_version))
+            .filter_map(|entry| WriteReg::from_entry(entry, strings_block, entries, nsis_version))
             .collect::<Vec<_>>();
 
         Ok(Self {

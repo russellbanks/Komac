@@ -57,6 +57,7 @@ impl<'str_block> WriteReg<'str_block> {
     pub fn from_entry(
         entry: &Entry,
         strings_block: &'str_block [u8],
+        entries: &[Entry],
         nsis_version: NsisVersion,
     ) -> Option<Self> {
         if entry.which != WhichEntry::WriteReg {
@@ -65,9 +66,9 @@ impl<'str_block> WriteReg<'str_block> {
         Some(Self {
             r#type: RegActionType::from_entry(entry)?,
             root: try_transmute!(entry.offsets[0]).ok()?,
-            key_name: nsis_string(strings_block, entry.offsets[1].get(), nsis_version),
-            value_name: nsis_string(strings_block, entry.offsets[2].get(), nsis_version),
-            value: nsis_string(strings_block, entry.offsets[3].get(), nsis_version),
+            key_name: nsis_string(strings_block, entry.offsets[1].get(), entries, nsis_version),
+            value_name: nsis_string(strings_block, entry.offsets[2].get(), entries, nsis_version),
+            value: nsis_string(strings_block, entry.offsets[3].get(), entries, nsis_version),
         })
     }
 }

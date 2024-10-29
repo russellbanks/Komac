@@ -4,6 +4,7 @@ use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
 pub mod file;
 pub mod registry;
+pub mod str_copy;
 pub mod which;
 
 const MAX_ENTRY_OFFSETS: usize = 6;

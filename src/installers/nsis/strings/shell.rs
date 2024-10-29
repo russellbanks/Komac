@@ -94,7 +94,7 @@ impl Shell {
         if index1 & 1 << 7 != 0 {
             let offset = index1 & 0x3F;
             let is_64_bit = index1 & 1 << 6 != 0;
-            let shell_string = nsis_string(strings_block, u32::from(offset), nsis_version);
+            let shell_string = nsis_string(strings_block, u32::from(offset), &[], nsis_version);
             if shell_string == PROGRAM_FILES_DIR {
                 buf.push_str(if is_64_bit {
                     RELATIVE_PROGRAM_FILES_64

@@ -61,6 +61,7 @@ impl<'str_block> ExtractFile<'str_block> {
             name: nsis_string(
                 strings_block,
                 entry.offsets[Offsets::Filename as usize].get(),
+                &[],
                 nsis_version,
             ),
             position: entry.offsets[Offsets::FilePosition as usize].get() as usize

@@ -55,6 +55,7 @@ impl NsisVersion {
         let branding_text = nsis_string(
             strings_block,
             language_table.language_string_offsets[0].get(),
+            &[],
             Self::default(),
         );
         Self::from_text(&branding_text)
