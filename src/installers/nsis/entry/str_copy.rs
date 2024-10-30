@@ -1,9 +1,10 @@
 use crate::installers::nsis::entry::which::WhichEntry;
 use crate::installers::nsis::entry::Entry;
 use zerocopy::little_endian::U32;
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 #[expect(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, FromBytes, KnownLayout, Immutable)]
 pub struct StrCopy {
     pub variable: U32,
     pub string_offset: U32,
@@ -12,15 +13,12 @@ pub struct StrCopy {
 }
 
 impl StrCopy {
-    pub fn from_entry(entry: &Entry) -> Option<Self> {
+    pub fn from_entry(entry: &Entry) -> Option<&Self> {
         if entry.which != WhichEntry::StrCpy {
             return None;
         }
-        Some(Self {
-            variable: entry.offsets[0],
-            string_offset: entry.offsets[1],
-            max_length: entry.offsets[2],
-            start_position: entry.offsets[3],
-        })
+        Self::ref_from_prefix(entry.offsets.as_bytes())
+            .map(|(str_copy, _)| str_copy)
+            .ok()
     }
 }
