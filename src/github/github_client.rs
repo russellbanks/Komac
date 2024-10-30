@@ -54,11 +54,9 @@ use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 use base64ct::Encoding;
 use bon::bon;
-use color_eyre::eyre::{bail, eyre, Result, WrapErr};
-use color_eyre::Report;
 use const_format::{formatcp, str_repeat};
-use cynic::http::ReqwestExt;
-use cynic::{Id, MutationBuilder, QueryBuilder};
+use cynic::http::{CynicReqwestError, ReqwestExt};
+use cynic::{GraphQlError, Id, MutationBuilder, QueryBuilder};
 use indexmap::IndexMap;
 use indicatif::ProgressBar;
 use itertools::Itertools;
@@ -71,6 +69,7 @@ use std::env;
 use std::num::NonZeroU32;
 use std::ops::Not;
 use std::str::FromStr;
+use thiserror::Error;
 use url::Url;
 
 pub const MICROSOFT: &str = "microsoft";
@@ -79,11 +78,31 @@ pub const WINGET_PKGS_FULL_NAME: &str = formatcp!("{MICROSOFT}/{WINGET_PKGS}");
 pub const GITHUB_HOST: &str = "github.com";
 const GITHUB_GRAPHQL_URL: &str = "https://api.github.com/graphql";
 
+#[derive(Debug, Error)]
+pub enum GitHubError {
+    #[error("{}", .0.clone().unwrap_or_default().into_iter().next().map_or_else(|| String::from("Unknown GraphQL error"), |err| err.message))]
+    GraphQL(Option<Vec<GraphQlError>>),
+    #[error("{0} does not exist in {WINGET_PKGS_FULL_NAME}")]
+    PackageNonExistent(PackageIdentifier),
+    #[error("No {type} manifest was found in {path}")]
+    ManifestNotFound { r#type: ManifestType, path: String },
+    #[error("No valid files were found for {path}")]
+    NoValidFiles { path: String },
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+    #[error(transparent)]
+    CynicRequest(#[from] CynicReqwestError),
+    #[error(transparent)]
+    YamlError(#[from] serde_yaml::Error),
+    #[error(transparent)]
+    UrlParseError(#[from] url::ParseError),
+}
+
 pub struct GitHub(Client);
 
 #[bon]
 impl GitHub {
-    pub fn new(token: &str) -> Result<Self> {
+    pub fn new(token: &str) -> Result<Self, GitHubError> {
         Ok(Self(
             Client::builder()
                 .default_headers(get_default_headers(Some(token)))
@@ -91,7 +110,7 @@ impl GitHub {
         ))
     }
 
-    pub async fn get_username(&self) -> Result<String> {
+    pub async fn get_username(&self) -> Result<String, GitHubError> {
         const KOMAC_FORK_OWNER: &str = "KOMAC_FORK_OWNER";
 
         if let Ok(login) = env::var(KOMAC_FORK_OWNER) {
@@ -102,26 +121,24 @@ impl GitHub {
                 .post(GITHUB_GRAPHQL_URL)
                 .run_graphql(GetCurrentUserLogin::build(()))
                 .await?;
-            response.data.map(|data| data.viewer.login).ok_or_else(|| {
-                response.errors.unwrap_or_default().into_iter().fold(
-                    eyre!("No data was returned when retrieving the current user's login"),
-                    Report::wrap_err,
-                )
-            })
+            response
+                .data
+                .map(|data| data.viewer.login)
+                .ok_or(GitHubError::GraphQL(response.errors))
         }
     }
 
     pub async fn get_versions(
         &self,
         package_identifier: &PackageIdentifier,
-    ) -> Result<BTreeSet<PackageVersion>> {
+    ) -> Result<BTreeSet<PackageVersion>, GitHubError> {
         self.get_all_versions(
             MICROSOFT,
             WINGET_PKGS,
             &get_package_path(package_identifier, None, None),
         )
         .await
-        .wrap_err_with(|| format!("{package_identifier} does not exist in {WINGET_PKGS_FULL_NAME}"))
+        .map_err(|_| GitHubError::PackageNonExistent(package_identifier.clone()))
     }
 
     async fn get_all_versions(
@@ -129,7 +146,7 @@ impl GitHub {
         owner: &str,
         repo: &str,
         path: &str,
-    ) -> Result<BTreeSet<PackageVersion>> {
+    ) -> Result<BTreeSet<PackageVersion>, GitHubError> {
         const TREE: &str = "tree";
         const SEPARATOR: char = '/';
 
@@ -163,18 +180,20 @@ impl GitHub {
             })
             .collect::<BTreeSet<_>>();
 
-        if files.is_empty() {
-            bail!("No valid files were found for {path}")
+        if !files.is_empty() {
+            Ok(files)
+        } else {
+            Err(GitHubError::NoValidFiles {
+                path: path.to_owned(),
+            })
         }
-
-        Ok(files)
     }
 
     pub async fn get_manifests(
         &self,
         identifier: &PackageIdentifier,
         latest_version: &PackageVersion,
-    ) -> Result<Manifests> {
+    ) -> Result<Manifests, GitHubError> {
         let full_package_path = get_package_path(identifier, Some(latest_version), None);
         let content = self
             .get_directory_content_with_text(MICROSOFT, WINGET_PKGS, &full_package_path)
@@ -185,7 +204,10 @@ impl GitHub {
             .iter()
             .find(|file| is_manifest_file(&file.name, identifier, None, &ManifestType::Version))
             .map(|file| serde_yaml::from_str::<VersionManifest>(&file.text))
-            .ok_or_else(|| eyre!("No version manifest was found in {full_package_path}"))??;
+            .ok_or_else(|| GitHubError::ManifestNotFound {
+                r#type: ManifestType::Version,
+                path: full_package_path.clone(),
+            })??;
 
         let locale_manifests = content
             .iter()
@@ -211,15 +233,19 @@ impl GitHub {
                 )
             })
             .map(|file| serde_yaml::from_str::<DefaultLocaleManifest>(&file.text))
-            .ok_or_else(|| {
-                eyre!("No default locale manifest was found in {full_package_path}")
+            .ok_or_else(|| GitHubError::ManifestNotFound {
+                r#type: ManifestType::DefaultLocale,
+                path: full_package_path.clone(),
             })??;
 
         let installer_manifest = content
             .into_iter()
             .find(|file| is_manifest_file(&file.name, identifier, None, &ManifestType::Installer))
             .map(|file| serde_yaml::from_str::<InstallerManifest>(&file.text))
-            .ok_or_else(|| eyre!("No installer manifest was found in {full_package_path}"))??;
+            .ok_or_else(|| GitHubError::ManifestNotFound {
+                r#type: ManifestType::Installer,
+                path: full_package_path.clone(),
+            })??;
 
         Ok(Manifests {
             installer_manifest,
@@ -234,7 +260,7 @@ impl GitHub {
         owner: &str,
         repo: &str,
         path: &str,
-    ) -> Result<impl Iterator<Item = GitHubFile>> {
+    ) -> Result<impl Iterator<Item = GitHubFile>, GitHubError> {
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
@@ -251,24 +277,13 @@ impl GitHub {
             .and_then(|data| data.repository?.object?.into_tree_entries())
             .map(|entries| {
                 entries.into_iter().filter_map(|entry| {
-                    entry.object?.into_blob_text().map(|text| {
-                        GitHubFile {
-                            name: entry.name,
-                            text
-                        }
+                    entry.object?.into_blob_text().map(|text| GitHubFile {
+                        name: entry.name,
+                        text,
                     })
                 })
             })
-            .ok_or_else(|| {
-                response
-                    .errors
-                    .unwrap_or_default()
-                    .into_iter()
-                    .fold(
-                        eyre!("No directory content was returned when retrieving the directory content of {path}"),
-                        Report::wrap_err,
-                    )
-            })
+            .ok_or(GitHubError::GraphQL(response.errors))
     }
 
     pub async fn get_manifest<T: Manifest + for<'de> Deserialize<'de>>(
@@ -276,14 +291,19 @@ impl GitHub {
         identifier: &PackageIdentifier,
         version: &PackageVersion,
         manifest_type: ManifestTypeWithLocale,
-    ) -> Result<T> {
+    ) -> Result<T, GitHubError> {
         let path = get_package_path(identifier, Some(version), Some(&manifest_type));
         let content = self.get_file_content(MICROSOFT, WINGET_PKGS, &path).await?;
         let manifest = serde_yaml::from_str::<T>(&content)?;
         Ok(manifest)
     }
 
-    async fn get_file_content(&self, owner: &str, repo: &str, path: &str) -> Result<String> {
+    async fn get_file_content(
+        &self,
+        owner: &str,
+        repo: &str,
+        path: &str,
+    ) -> Result<String, GitHubError> {
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
@@ -296,36 +316,45 @@ impl GitHub {
         response
             .data
             .and_then(|data| data.repository?.object?.into_blob_text())
-            .ok_or_else(|| {
-                response.errors.unwrap_or_default().into_iter().fold(
-                    eyre!("No file content was returned when retrieving {path}"),
-                    Report::wrap_err,
-                )
-            })
+            .ok_or(GitHubError::GraphQL(response.errors))
     }
 
     #[builder(finish_fn = send)]
-    pub async fn get_winget_pkgs(&self, owner: Option<&str>) -> Result<RepositoryData> {
+    pub async fn get_winget_pkgs(
+        &self,
+        owner: Option<&str>,
+    ) -> Result<RepositoryData, GitHubError> {
         self.get_repository_info(owner.unwrap_or(MICROSOFT), WINGET_PKGS)
             .await
     }
 
-    async fn get_repository_info(&self, owner: &str, name: &str) -> Result<RepositoryData> {
-        let repository = self.0
+    async fn get_repository_info(
+        &self,
+        owner: &str,
+        name: &str,
+    ) -> Result<RepositoryData, GitHubError> {
+        let response = self
+            .0
             .post(GITHUB_GRAPHQL_URL)
-            .run_graphql(GetRepositoryInfo::build(RepositoryVariables { owner, name }))
-            .await?
+            .run_graphql(GetRepositoryInfo::build(RepositoryVariables {
+                owner,
+                name,
+            }))
+            .await?;
+
+        let repository = response
             .data
             .and_then(|data| data.repository)
-            .ok_or_else(|| eyre!("No repository was returned when requesting repository information for {owner}/{name}"))?;
+            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
 
-        let default_branch = repository.default_branch_ref
-            .ok_or_else(|| eyre!("No default branch reference was returned when requesting repository information for {owner}/{name}"))?;
+        let default_branch = repository
+            .default_branch_ref
+            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
 
         let commits = default_branch
             .target
             .and_then(TargetGitObject::into_commit)
-            .ok_or_else(|| eyre!("No default branch object was returned when requesting repository information for {owner}/{name}"))?;
+            .ok_or(GitHubError::GraphQL(response.errors))?;
 
         Ok(RepositoryData {
             id: repository.id,
@@ -343,7 +372,7 @@ impl GitHub {
         fork_id: &Id,
         branch_name: &str,
         oid: GitObjectId,
-    ) -> Result<CreateBranchRef> {
+    ) -> Result<CreateBranchRef, GitHubError> {
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
@@ -356,12 +385,7 @@ impl GitHub {
         response
             .data
             .and_then(|data| data.create_ref?.ref_)
-            .ok_or_else(|| {
-                response.errors.unwrap_or_default().into_iter().fold(
-                    eyre!("No reference was returned after creating {branch_name}"),
-                    Report::wrap_err,
-                )
-            })
+            .ok_or(GitHubError::GraphQL(response.errors))
     }
 
     #[builder(finish_fn = send)]
@@ -372,7 +396,7 @@ impl GitHub {
         message: &str,
         additions: Option<Vec<FileAddition<'_>>>,
         deletions: Option<Vec<FileDeletion<'_>>>,
-    ) -> Result<Url> {
+    ) -> Result<Url, GitHubError> {
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
@@ -395,12 +419,7 @@ impl GitHub {
             .data
             .and_then(|data| data.create_commit_on_branch?.commit)
             .map(|commit| commit.url)
-            .ok_or_else(|| {
-                response.errors.unwrap_or_default().into_iter().fold(
-                    eyre!("No commit data was returned when creating commit"),
-                    Report::wrap_err,
-                )
-            })
+            .ok_or(GitHubError::GraphQL(response.errors))
     }
 
     pub async fn get_directory_content(
@@ -408,7 +427,7 @@ impl GitHub {
         owner: &str,
         branch_name: &str,
         path: &str,
-    ) -> Result<impl Iterator<Item = String> + Sized> {
+    ) -> Result<impl Iterator<Item = String> + Sized, GitHubError> {
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
@@ -421,12 +440,7 @@ impl GitHub {
         let entries = response
             .data
             .and_then(|data| data.repository?.object?.into_entries())
-            .ok_or_else(|| {
-                response.errors.unwrap_or_default().into_iter().fold(
-                    eyre!("No directory content was returned for {path}"),
-                    Report::wrap_err,
-                )
-            })?;
+            .ok_or(GitHubError::GraphQL(response.errors))?;
 
         Ok(entries.into_iter().filter_map(|entry| entry.path))
     }
@@ -435,31 +449,29 @@ impl GitHub {
         &self,
         user: &str,
         merge_state: &MergeState,
-    ) -> Result<(IndexMap<PullRequest, String>, Id)> {
-        let repository = self
+    ) -> Result<(IndexMap<PullRequest, String>, Id), GitHubError> {
+        let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetBranches::build(RepositoryVariables {
                 owner: user,
                 name: WINGET_PKGS,
             }))
-            .await?
+            .await?;
+
+        let repository = response
             .data
             .and_then(|data| data.repository)
-            .ok_or_else(|| {
-                eyre!("No repository was returned when getting branches for {user}/{WINGET_PKGS}")
-            })?;
+            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
 
         let default_branch = repository
             .default_branch_ref
-            .ok_or_else(|| eyre!("No default branch reference was returned when getting branches for {user}/{WINGET_PKGS}"))?;
+            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
 
         let pr_branch_map = repository
             .refs
             .map(|refs| refs.nodes)
-            .ok_or_else(|| {
-                eyre!("No references were returned when getting branches for {user}/{WINGET_PKGS}")
-            })?
+            .ok_or(GitHubError::GraphQL(response.errors))?
             .into_iter()
             .filter(|branch| branch.name != default_branch.name)
             .filter_map(|branch| {
@@ -498,7 +510,7 @@ impl GitHub {
         branch_name: &str,
         title: &str,
         body: &str,
-    ) -> Result<Url> {
+    ) -> Result<Url, GitHubError> {
         let operation = CreatePullRequest::build(CreatePullRequestVariables {
             input: CreatePullRequestInput {
                 base_ref_name: branch_name,
@@ -520,19 +532,14 @@ impl GitHub {
             .data
             .and_then(|data| data.create_pull_request?.pull_request)
             .map(|pull_request| pull_request.url)
-            .ok_or_else(|| {
-                response
-                    .errors
-                    .unwrap_or_default()
-                    .into_iter()
-                    .fold(
-                        eyre!("No pull request data was returned when creating a pull request from {fork_ref_name}"),
-                        Report::wrap_err,
-                    )
-            })
+            .ok_or(GitHubError::GraphQL(response.errors))
     }
 
-    pub async fn delete_branches(&self, repository_id: &Id, branch_names: &[&str]) -> Result<()> {
+    pub async fn delete_branches(
+        &self,
+        repository_id: &Id,
+        branch_names: &[&str],
+    ) -> Result<(), GitHubError> {
         const DELETE_ID: &str = str_repeat!("0", 40);
 
         let response = self
@@ -554,11 +561,7 @@ impl GitHub {
         if response.data.is_some() {
             Ok(())
         } else {
-            Err(response
-                .errors
-                .unwrap_or_default()
-                .into_iter()
-                .fold(eyre!("Failed to delete branch refs"), Report::wrap_err))
+            Err(GitHubError::GraphQL(response.errors))
         }
     }
 
@@ -566,7 +569,7 @@ impl GitHub {
         &self,
         identifier: &PackageIdentifier,
         version: &PackageVersion,
-    ) -> Result<Option<get_existing_pull_request::PullRequest>> {
+    ) -> Result<Option<get_existing_pull_request::PullRequest>, GitHubError> {
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
@@ -591,8 +594,8 @@ impl GitHub {
         owner: String,
         repo: String,
         tag_name: String,
-    ) -> Result<GitHubValues> {
-        let data = self
+    ) -> Result<GitHubValues, GitHubError> {
+        let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetAllValues::build(GetAllValuesVariables {
@@ -600,17 +603,19 @@ impl GitHub {
                 owner: &owner,
                 tag_name: &tag_name,
             }))
-            .await?
+            .await?;
+
+        let data = response
             .data
-            .ok_or_else(|| eyre!("No data was returned when parsing values from {owner}/{repo}"))?;
+            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
 
-        let repository = data.repository.ok_or_else(|| {
-            eyre!("No repository was returned when parsing values from {owner}/{repo}")
-        })?;
+        let repository = data
+            .repository
+            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
 
-        let object = repository.object.ok_or_else(|| {
-            eyre!("No directory content was returned when getting root directory content for {owner}/{repo}")
-        })?;
+        let object = repository
+            .object
+            .ok_or(GitHubError::GraphQL(response.errors))?;
 
         let license_url = match object {
             GetAllValuesGitObject::Tree(tree) => tree
@@ -623,14 +628,14 @@ impl GitHub {
                         |dot_index| name[..dot_index].to_ascii_lowercase(),
                     ) == "license"
                 })
-                .map(|name| {
+                .and_then(|name| {
                     LicenseUrl::from_str(&format!(
                         "https://github.com/{owner}/{repo}/blob/HEAD/{name}"
                     ))
+                    .ok()
                 }),
             GetAllValuesGitObject::Unknown => None,
-        }
-        .transpose()?;
+        };
 
         let release = repository.release;
 
@@ -641,12 +646,11 @@ impl GitHub {
             .flat_map(|topic_node| Tag::try_new(topic_node.topic.name))
             .collect::<BTreeSet<_>>();
 
-        let publisher_support_url = repository
-            .has_issues_enabled
-            .then(|| {
-                PublisherSupportUrl::from_str(&format!("https://github.com/{owner}/{repo}/issues"))
-            })
-            .transpose()?;
+        let publisher_support_url = if repository.has_issues_enabled {
+            PublisherSupportUrl::from_str(&format!("https://github.com/{owner}/{repo}/issues")).ok()
+        } else {
+            None
+        };
 
         Ok(GitHubValues {
             publisher_url: PublisherUrl::from_str(repository.owner.url.as_str())?,
@@ -678,7 +682,7 @@ impl GitHub {
         branch_ref_id: &Id,
         upstream_target_oid: GitObjectId,
         force: bool,
-    ) -> Result<()> {
+    ) -> Result<(), GitHubError> {
         let response = self
             .0
             .post(GITHUB_GRAPHQL_URL)
@@ -691,10 +695,7 @@ impl GitHub {
         if response.data.is_some() {
             Ok(())
         } else {
-            Err(response.errors.unwrap_or_default().into_iter().fold(
-                eyre!("Failed to merge upstream branch into fork branch"),
-                Report::wrap_err,
-            ))
+            Err(GitHubError::GraphQL(response.errors))
         }
     }
 
@@ -708,7 +709,7 @@ impl GitHub {
         fork: &RepositoryData,
         winget_pkgs: &RepositoryData,
         issue_resolves: Option<Vec<NonZeroU32>>,
-    ) -> Result<Url> {
+    ) -> Result<Url, GitHubError> {
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
             "Creating a pull request to remove {identifier} {version}",
@@ -778,7 +779,7 @@ impl GitHub {
         issue_resolves: Option<Vec<NonZeroU32>>,
         created_with: Option<String>,
         created_with_url: Option<DecodedUrl>,
-    ) -> Result<Url> {
+    ) -> Result<Url, GitHubError> {
         let current_user = self.get_username();
         let winget_pkgs = self.get_winget_pkgs().send().await?;
         let current_user = current_user.await?;
