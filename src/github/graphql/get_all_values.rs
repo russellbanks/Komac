@@ -32,7 +32,6 @@ pub struct GetAllValues {
 #[derive(cynic::QueryFragment)]
 #[cynic(variables = "GetAllValuesVariables")]
 pub struct Repository {
-    pub description: Option<String>,
     pub has_issues_enabled: bool,
     pub license_info: Option<License>,
     pub owner: RepositoryOwner,
@@ -105,7 +104,6 @@ mod tests {
         const GET_ALL_VALUES_QUERY: &str = indoc! {r#"
             query GetAllValues($owner: String!, $name: String!, $tagName: String!) {
               repository(owner: $owner, name: $name) {
-                description
                 hasIssuesEnabled
                 licenseInfo {
                   key

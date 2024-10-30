@@ -170,6 +170,11 @@ impl DefaultLocaleManifest {
                 .as_mut()
                 .and_then(|values| values.publisher_support_url.take());
         }
+        if self.package_url.is_none() {
+            self.package_url = github_values
+                .as_ref()
+                .map(|values| values.package_url.clone());
+        }
         if let Some(github_license) = github_values
             .as_mut()
             .and_then(|values| values.license.take())

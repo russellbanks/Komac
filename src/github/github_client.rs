@@ -651,7 +651,6 @@ impl GitHub {
         Ok(GitHubValues {
             publisher_url: PublisherUrl::from_str(repository.owner.url.as_str())?,
             publisher_support_url,
-            short_description: repository.description.unwrap_or_default(),
             license: repository
                 .license_info
                 .and_then(|mut info| {
@@ -831,7 +830,6 @@ pub struct Manifests {
 pub struct GitHubValues {
     pub publisher_url: PublisherUrl,
     pub publisher_support_url: Option<PublisherSupportUrl>,
-    pub short_description: String,
     pub license: Option<License>,
     pub license_url: Option<LicenseUrl>,
     pub package_url: PackageUrl,
