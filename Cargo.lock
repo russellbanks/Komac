@@ -3038,9 +3038,9 @@ dependencies = [
 
 [[package]]
 name = "package-family-name"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c6637b43cf3b938c4c54632354c8cf62ae2e7d8d421baa86a61568be9d10a47"
+checksum = "17e0b6e868b2ad3ca065deb7109753fcdf999cc2f82d8afe38356156a552b713"
 dependencies = [
  "fast32",
  "heapless",
