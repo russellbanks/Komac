@@ -83,7 +83,7 @@ tokio = { version = "1.41.0", features = ["rt-multi-thread", "macros", "fs"] }
 tree-sitter-highlight = "0.24.3"
 tree-sitter-yaml = "0.6.1"
 tui-textarea = { version = "0.7.0", features = ["search"] }
-url = { version = "2.5.2", features = ["serde"] }
+url = { version = "2.5.3", features = ["serde"] }
 uuid = { version = "1.11.0", features = ["v4"] }
 versions = "6.3.2"
 yara-x = { version = "0.10.0", default-features = false, features = ["pe-module"] }
