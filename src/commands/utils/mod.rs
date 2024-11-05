@@ -1,5 +1,3 @@
-pub mod ordinal;
-
 use anstream::println;
 use camino::Utf8Path;
 use chrono::Local;

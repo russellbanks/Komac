@@ -60,6 +60,7 @@ msi = "0.8.0"
 num_cpus = "1.16.0"
 nutype = { version = "0.5.0", features = ["serde"] }
 open = "5.3.0"
+ordinal-trait = "0.1.0"
 owo-colors = "4.1.0"
 oxilangtag = { version = "0.1.5", features = ["serde"] }
 package-family-name = { version = "2.0.1", features = ["serde"] }

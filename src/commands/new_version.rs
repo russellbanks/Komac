@@ -2,7 +2,6 @@ use std::collections::BTreeSet;
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 
-use crate::commands::utils::ordinal::Ordinal;
 use crate::commands::utils::{
     deduplicate_display_version, prompt_existing_pull_request, prompt_submit_option,
     write_changes_to_dir, SubmitOption, SPINNER_TICK_RATE,
@@ -56,6 +55,7 @@ use color_eyre::eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use inquire::{Confirm, CustomType};
+use ordinal_trait::Ordinal;
 use owo_colors::OwoColorize;
 use reqwest::Client;
 use strum::IntoEnumIterator;
@@ -198,7 +198,7 @@ impl NewVersion {
         let mut urls = self.urls;
         if urls.is_empty() {
             while urls.len() < 1024 {
-                let message = format!("{} Installer URL", Ordinal(urls.len() + 1));
+                let message = format!("{} Installer URL", (urls.len() + 1).to_number());
                 let url_prompt = CustomType::<DecodedUrl>::new(&message)
                     .with_error_message("Please enter a valid URL");
                 let installer_url = if urls.len() + 1 == 1 {

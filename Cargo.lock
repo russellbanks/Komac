@@ -2452,6 +2452,7 @@ dependencies = [
  "num_cpus",
  "nutype",
  "open",
+ "ordinal-trait",
  "owo-colors 4.1.0",
  "oxilangtag",
  "package-family-name",
@@ -3100,6 +3101,12 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
 ]
+
+[[package]]
+name = "ordinal-trait"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d88f06978c42066afd84d80074ca309a6d518004a15876efa33f5d65ffe963"
 
 [[package]]
 name = "ouroboros"
