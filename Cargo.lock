@@ -803,15 +803,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
-name = "counter"
-version = "0.5.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d458e66999348f56fd3ffcfbb7f7951542075ca8359687c703de6500c1ddccd"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
 name = "countme"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1047,9 +1038,9 @@ dependencies = [
 
 [[package]]
 name = "cynic"
-version = "3.8.0"
+version = "3.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "394a4797bda697d5e028f3bc3fcb8c8c374a2b72cf8d22e0efc0e127c95fd11f"
+checksum = "9a41762e03383d7bf4213b9b4e5fb15e232853400b0b738b764d1d2df9649400"
 dependencies = [
  "cynic-proc-macros",
  "ref-cast",
@@ -1062,11 +1053,10 @@ dependencies = [
 
 [[package]]
 name = "cynic-codegen"
-version = "3.8.0"
+version = "3.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "408ad3d9c8d729e4d89e1aaed76eab918f76169f1bb3aa017c9fc1b39dac3066"
+checksum = "3b9e35b6ceec97e397c422585aa7d8c057158c63d2727f15d4ddc47563862798"
 dependencies = [
- "counter",
  "cynic-parser",
  "darling",
  "once_cell",
@@ -1081,9 +1071,9 @@ dependencies = [
 
 [[package]]
 name = "cynic-parser"
-version = "0.4.5"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "718f6cd8c54ae5249fd42b0c86639df0100b8a86eea2e5f1b915cde2e1481453"
+checksum = "f1ba4980ec0f37095cd010eba27602e6b0f411652330c9a675f5a799e8c281b7"
 dependencies = [
  "indexmap 2.6.0",
  "lalrpop-util",
@@ -1092,9 +1082,9 @@ dependencies = [
 
 [[package]]
 name = "cynic-proc-macros"
-version = "3.8.0"
+version = "3.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f72af69ebf914a975468c4f7e3f81ddc5482e140dd98032d90e7602c535681d"
+checksum = "beb9f1756c97b93a7e2faf9c5d58cc21655de6a32984dd8aa7aa076c7e246601"
 dependencies = [
  "cynic-codegen",
  "darling",
@@ -2489,11 +2479,11 @@ dependencies = [
 
 [[package]]
 name = "lalrpop-util"
-version = "0.20.2"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "507460a910eb7b32ee961886ff48539633b788a36b65692b95f225b844c82553"
+checksum = "feee752d43abd0f4807a921958ab4131f692a44d4d599733d4419c5d586176ce"
 dependencies = [
- "regex-automata",
+ "rustversion",
 ]
 
 [[package]]
