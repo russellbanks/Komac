@@ -48,7 +48,7 @@ futures = "0.3.31"
 futures-util = "0.3.31"
 heapless = { version = "0.8.0", features = ["serde"] }
 indexmap = "2.6.0"
-indicatif = "0.17.8"
+indicatif = "0.17.9"
 inquire = "0.7.5"
 itertools = "0.13.0"
 itoa = "1.0.11"
