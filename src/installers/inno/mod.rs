@@ -160,7 +160,7 @@ impl Inno {
 
         let mut header = Header::load(&mut reader, &known_version)?;
 
-        let mut language_entries = Vec::new();
+        let mut language_entries = Vec::with_capacity(header.language_count as usize);
         for _ in 0..header.language_count {
             language_entries.push(LanguageEntry::load(&mut reader, &known_version)?);
         }
