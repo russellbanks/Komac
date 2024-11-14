@@ -16,12 +16,20 @@ use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::InnoError::{UnknownVersion, UnsupportedVersion};
 use crate::installers::traits::InstallSpec;
-use crate::installers::utils::read_lzma_stream_header;
-use crate::manifests::installer_manifest::{ElevationRequirement, UnsupportedOSArchitecture};
+use crate::installers::utils::{
+    read_lzma_stream_header, RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64,
+    RELATIVE_LOCAL_APP_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
+    RELATIVE_SYSTEM_ROOT, RELATIVE_TEMP_FOLDER, RELATIVE_WINDOWS_DIR,
+};
+use crate::manifests::installer_manifest::{
+    ElevationRequirement, Scope, UnsupportedOSArchitecture,
+};
 use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use byteorder::{ReadBytesExt, LE};
+use camino::Utf8PathBuf;
+use const_format::formatcp;
 use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
 use msi::Language;
@@ -57,6 +65,8 @@ pub enum InnoError {
 
 pub struct Inno {
     architecture: Option<Architecture>,
+    scope: Option<Scope>,
+    install_dir: Option<Utf8PathBuf>,
     unsupported_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
     uninstall_name: Option<String>,
     app_version: Option<String>,
@@ -155,8 +165,21 @@ impl Inno {
             language_entries.push(LanguageEntry::load(&mut reader, &known_version)?);
         }
 
+        let auto_install_directory = header
+            .default_dir_name
+            .as_deref()
+            .is_some_and(|dir| dir.starts_with("{auto"));
+
+        let install_dir = header.default_dir_name.take().map(to_relative_install_dir);
+
         Ok(Self {
             architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
+            scope: if auto_install_directory {
+                None
+            } else {
+                install_dir.as_deref().and_then(Scope::from_install_dir)
+            },
+            install_dir: install_dir.map(Utf8PathBuf::from),
             unsupported_architectures: mem::take(&mut header.architectures_disallowed)
                 .to_unsupported_architectures(),
             uninstall_name: header.uninstall_name.take(),
@@ -185,6 +208,88 @@ pub fn to_product_code(mut app_id: String) -> String {
     // Inno tags '_is1' onto the end of the app_id to create the Uninstall registry key
     app_id.push_str("_is1");
     app_id
+}
+
+pub fn to_relative_install_dir(mut install_dir: String) -> String {
+    const WINDOWS: &str = "{win}";
+    const SYSTEM: &str = "{sys}";
+    const SYSTEM_NATIVE: &str = "{sysnative}";
+
+    const PROGRAM_FILES: &str = "{commonpf}";
+    const PROGRAM_FILES_32: &str = "{commonpf32}";
+    const PROGRAM_FILES_64: &str = "{commonpf64}";
+    const COMMON_FILES: &str = "{commoncf}";
+    const COMMON_FILES_32: &str = "{commoncf32}";
+    const COMMON_FILES_64: &str = "{commoncf64}";
+
+    const PROGRAM_FILES_OLD: &str = "{pf}";
+    const PROGRAM_FILES_32_OLD: &str = "{pf32}";
+    const PROGRAM_FILES_64_OLD: &str = "{pf64}";
+    const COMMON_FILES_OLD: &str = "{cf}";
+    const COMMON_FILES_32_OLD: &str = "{cf32}";
+    const COMMON_FILES_64_OLD: &str = "{cf64}";
+
+    const AUTO_PROGRAM_FILES: &str = "{autopf}";
+    const AUTO_PROGRAM_FILES_32: &str = "{autopf32}";
+    const AUTO_PROGRAM_FILES_64: &str = "{autopf64}";
+    const AUTO_COMMON_FILES: &str = "{autocf}";
+    const AUTO_COMMON_FILES_32: &str = "{autocf32}";
+    const AUTO_COMMON_FILES_64: &str = "{autocf64}";
+    const AUTO_APP_DATA: &str = "{autoappdata}";
+
+    const TEMP: &str = "{tmp}";
+
+    const LOCAL_APP_DATA: &str = "{localappdata}";
+    const USER_APP_DATA: &str = "{userappdata}";
+    const COMMON_APP_DATA: &str = "{commonappdata}";
+
+    const USER_PROGRAM_FILES: &str = "{userpf}";
+    const USER_COMMON_FILES: &str = "{usercf}";
+
+    const RELATIVE_USER_PROGRAM_FILES: &str = formatcp!(r"{RELATIVE_LOCAL_APP_DATA}\Programs");
+
+    const DIRECTORIES: [(&str, &str); 28] = [
+        (WINDOWS, RELATIVE_WINDOWS_DIR),
+        (SYSTEM, RELATIVE_SYSTEM_ROOT),
+        (SYSTEM_NATIVE, RELATIVE_SYSTEM_ROOT),
+        (PROGRAM_FILES, RELATIVE_PROGRAM_FILES_64),
+        (PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_32),
+        (PROGRAM_FILES_64, RELATIVE_PROGRAM_FILES_64),
+        (COMMON_FILES, RELATIVE_COMMON_FILES_64),
+        (COMMON_FILES_32, RELATIVE_COMMON_FILES_32),
+        (COMMON_FILES_64, RELATIVE_COMMON_FILES_64),
+        (PROGRAM_FILES_OLD, RELATIVE_PROGRAM_FILES_64),
+        (PROGRAM_FILES_32_OLD, RELATIVE_PROGRAM_FILES_32),
+        (PROGRAM_FILES_64_OLD, RELATIVE_PROGRAM_FILES_64),
+        (COMMON_FILES_OLD, RELATIVE_COMMON_FILES_64),
+        (COMMON_FILES_32_OLD, RELATIVE_COMMON_FILES_32),
+        (COMMON_FILES_64_OLD, RELATIVE_COMMON_FILES_64),
+        (AUTO_PROGRAM_FILES, RELATIVE_PROGRAM_FILES_64),
+        (AUTO_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_32),
+        (AUTO_PROGRAM_FILES_64, RELATIVE_PROGRAM_FILES_64),
+        (AUTO_COMMON_FILES, RELATIVE_COMMON_FILES_64),
+        (AUTO_COMMON_FILES_32, RELATIVE_COMMON_FILES_32),
+        (AUTO_COMMON_FILES_64, RELATIVE_COMMON_FILES_64),
+        (AUTO_APP_DATA, RELATIVE_APP_DATA),
+        (TEMP, RELATIVE_TEMP_FOLDER),
+        (LOCAL_APP_DATA, RELATIVE_LOCAL_APP_DATA),
+        (USER_APP_DATA, RELATIVE_APP_DATA),
+        (COMMON_APP_DATA, RELATIVE_APP_DATA),
+        (USER_PROGRAM_FILES, RELATIVE_USER_PROGRAM_FILES),
+        (
+            USER_COMMON_FILES,
+            formatcp!(r"{RELATIVE_USER_PROGRAM_FILES}\Common"),
+        ),
+    ];
+
+    for (inno_directory, relative_directory) in DIRECTORIES {
+        if let Some(index) = install_dir.find(inno_directory) {
+            install_dir.replace_range(index..index + inno_directory.len(), relative_directory);
+            break;
+        }
+    }
+
+    install_dir
 }
 
 impl InstallSpec for Inno {
@@ -216,11 +321,19 @@ impl InstallSpec for Inno {
         self.installer_locale.take()
     }
 
+    fn scope(&self) -> Option<Scope> {
+        self.scope
+    }
+
     fn unsupported_os_architectures(&mut self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
         self.unsupported_architectures.take()
     }
 
     fn elevation_requirement(&mut self) -> Option<ElevationRequirement> {
         self.elevation_requirement.take()
+    }
+
+    fn install_location(&mut self) -> Option<Utf8PathBuf> {
+        self.install_dir.take()
     }
 }
