@@ -1,37 +1,19 @@
 use std::collections::BTreeSet;
 use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
-use std::time::Duration;
-
-use anstream::println;
-use base64ct::Encoding;
-use camino::Utf8PathBuf;
-use clap::Parser;
-use color_eyre::eyre::Result;
-use futures_util::{stream, StreamExt, TryStreamExt};
-use indicatif::{MultiProgress, ProgressBar};
-use inquire::{Confirm, CustomType};
-use ordinal::Ordinal;
-use owo_colors::OwoColorize;
-use reqwest::Client;
-use strum::IntoEnumIterator;
 
 use crate::commands::utils::{
-    prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
+    deduplicate_display_version, prompt_existing_pull_request, prompt_submit_option,
+    write_changes_to_dir, SubmitOption, SPINNER_TICK_RATE,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
 use crate::github::github_client::{GitHub, Manifests, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
-use crate::github::graphql::create_commit::FileAddition;
-use crate::github::graphql::types::Base64String;
-use crate::github::pr_changes::PRChangesBuilder;
-use crate::github::utils::{
-    get_branch_name, get_commit_title, get_package_path, get_pull_request_body,
-};
+use crate::github::utils::get_package_path;
+use crate::github::utils::pull_request::pr_changes;
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallModes, InstallationMetadata, Installer, InstallerManifest,
-    InstallerSwitches, Scope, UpgradeBehavior,
+    InstallModes, InstallerManifest, InstallerSwitches, UpgradeBehavior,
 };
 use crate::manifests::version_manifest::VersionManifest;
 use crate::prompts::list_prompt::list_prompt;
@@ -66,8 +48,19 @@ use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::DecodedUrl;
-use crate::update_state::UpdateState;
+use anstream::println;
+use camino::Utf8PathBuf;
+use clap::Parser;
+use color_eyre::eyre::Result;
+use futures_util::{stream, StreamExt, TryStreamExt};
+use indicatif::{MultiProgress, ProgressBar};
+use inquire::{Confirm, CustomType};
+use ordinal_trait::Ordinal;
+use owo_colors::OwoColorize;
+use reqwest::Client;
+use strum::IntoEnumIterator;
 
+/// Create a new package from scratch
 #[derive(Parser)]
 pub struct NewVersion {
     /// The package's unique identifier
@@ -133,7 +126,7 @@ pub struct NewVersion {
 
     /// List of issues that adding this package or version would resolve
     #[arg(long)]
-    resolves: Vec<NonZeroU32>,
+    resolves: Option<Vec<NonZeroU32>>,
 
     /// Automatically submit a pull request
     #[arg(short, long)]
@@ -176,7 +169,7 @@ impl NewVersion {
 
         let versions = github.get_versions(&package_identifier).await.ok();
 
-        let latest_version = versions.as_ref().and_then(|versions| versions.iter().max());
+        let latest_version = versions.as_ref().and_then(BTreeSet::last);
 
         if let Some(latest_version) = latest_version {
             println!("Latest version of {package_identifier}: {latest_version}");
@@ -205,7 +198,7 @@ impl NewVersion {
         let mut urls = self.urls;
         if urls.is_empty() {
             while urls.len() < 1024 {
-                let message = format!("{} Installer URL", Ordinal(urls.len() + 1));
+                let message = format!("{} Installer URL", (urls.len() + 1).to_number());
                 let url_prompt = CustomType::<DecodedUrl>::new(&message)
                     .with_error_message("Please enter a valid URL");
                 let installer_url = if urls.len() + 1 == 1 {
@@ -234,85 +227,44 @@ impl NewVersion {
             .find(|download| download.url.host_str() == Some(GITHUB_HOST))
             .map(|download| {
                 let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
-                github.get_all_values(
-                    parts[0].to_owned(),
-                    parts[1].to_owned(),
-                    parts[4..parts.len() - 1].join("/"),
-                )
+                github
+                    .get_all_values()
+                    .owner(parts[0].to_owned())
+                    .repo(parts[1].to_owned())
+                    .tag_name(parts[4..parts.len() - 1].join("/"))
+                    .send()
             });
         let mut download_results = process_files(&mut files).await?;
         let mut installers = Vec::new();
         for (url, analyser) in &mut download_results {
-            if analyser.installer_type == InstallerType::Exe
+            if analyser.installer.installer_type == Some(InstallerType::Exe)
                 && Confirm::new(&format!("Is {} a portable exe?", analyser.file_name)).prompt()?
             {
-                analyser.installer_type = InstallerType::Portable;
+                analyser.installer.installer_type = Some(InstallerType::Portable);
             }
             let mut installer_switches = InstallerSwitches::default();
-            if analyser.installer_type == InstallerType::Exe {
+            if analyser.installer.installer_type == Some(InstallerType::Exe) {
                 installer_switches.silent = optional_prompt::<SilentSwitch>(None)?;
                 installer_switches.silent_with_progress =
                     optional_prompt::<SilentWithProgressSwitch>(None)?;
             }
-            if analyser.installer_type != InstallerType::Portable {
+            if analyser.installer.installer_type != Some(InstallerType::Portable) {
                 installer_switches.custom = optional_prompt::<CustomSwitch>(None)?;
             }
             if let Some(zip) = &mut analyser.zip {
                 zip.prompt()?;
-                analyser.architecture = zip.architecture;
+                analyser.installer.architecture = zip.architecture.unwrap();
             }
-            installers.push(Installer {
-                installer_locale: mem::take(&mut analyser.product_language),
-                platform: mem::take(&mut analyser.platform),
-                minimum_os_version: mem::take(&mut analyser.minimum_os_version),
-                architecture: analyser.architecture.unwrap(),
-                installer_type: Some(analyser.installer_type),
-                nested_installer_type: analyser
-                    .zip
-                    .as_mut()
-                    .and_then(|zip| mem::take(&mut zip.nested_installer_type)),
-                nested_installer_files: analyser
-                    .zip
-                    .as_mut()
-                    .and_then(|zip| mem::take(&mut zip.nested_installer_files)),
-                scope: mem::take(&mut analyser.scope).or_else(|| Scope::get_from_url(url.as_str())),
-                installer_url: url.clone(),
-                installer_sha_256: mem::take(&mut analyser.installer_sha_256),
-                signature_sha_256: mem::take(&mut analyser.signature_sha_256),
-                installer_switches: installer_switches
-                    .is_any_some()
-                    .then_some(installer_switches),
-                file_extensions: mem::take(&mut analyser.file_extensions),
-                package_family_name: mem::take(&mut analyser.package_family_name),
-                apps_and_features_entries: (analyser.display_name.is_some()
-                    || analyser.display_publisher.is_some()
-                    || analyser.display_version.is_some()
-                    || analyser.upgrade_code.is_some())
-                .then(|| {
-                    BTreeSet::from([AppsAndFeaturesEntry {
-                        display_name: mem::take(&mut analyser.display_name),
-                        publisher: mem::take(&mut analyser.display_publisher),
-                        display_version: mem::take(&mut analyser.display_version)
-                            .filter(|version| *version != package_version.to_string()),
-                        product_code: analyser.product_code.clone(),
-                        upgrade_code: mem::take(&mut analyser.upgrade_code),
-                        ..AppsAndFeaturesEntry::default()
-                    }])
-                }),
-                product_code: mem::take(&mut analyser.product_code),
-                capabilities: mem::take(&mut analyser.capabilities),
-                restricted_capabilities: mem::take(&mut analyser.restricted_capabilities),
-                release_date: analyser.last_modified,
-                unsupported_os_architectures: mem::take(&mut analyser.unsupported_os_architectures),
-                elevation_requirement: mem::take(&mut analyser.elevation_requirement),
-                installation_metadata: mem::take(&mut analyser.default_install_location).map(
-                    |install_location| InstallationMetadata {
-                        default_install_location: Some(install_location),
-                        ..InstallationMetadata::default()
-                    },
-                ),
-                ..Installer::default()
-            });
+            let mut installer = mem::take(&mut analyser.installer);
+            installer.installer_url = url.clone();
+            if installer_switches.is_any_some() {
+                installer.installer_switches = Some(installer_switches);
+            }
+            deduplicate_display_version(
+                installer.apps_and_features_entries.as_mut(),
+                &package_version,
+            );
+            installers.push(installer);
         }
         let default_locale = required_prompt(self.package_locale)?;
         let manifests = match manifests {
@@ -359,7 +311,7 @@ impl NewVersion {
             publisher: download_results
                 .values_mut()
                 .find(|analyser| analyser.publisher.is_some())
-                .and_then(|analyser| mem::take(&mut analyser.publisher))
+                .and_then(|analyser| analyser.publisher.take())
                 .unwrap_or_else(|| required_prompt(self.publisher).unwrap_or_default()),
             publisher_url: optional_prompt(self.publisher_url)?,
             publisher_support_url: optional_prompt(self.publisher_support_url)?,
@@ -367,7 +319,7 @@ impl NewVersion {
             package_name: download_results
                 .values_mut()
                 .find(|analyser| analyser.package_name.is_some())
-                .and_then(|analyser| mem::take(&mut analyser.package_name))
+                .and_then(|analyser| analyser.package_name.take())
                 .unwrap_or_else(|| required_prompt(self.package_name).unwrap_or_default()),
             package_url: optional_prompt(self.package_url)?,
             license: required_prompt(self.license)?,
@@ -375,7 +327,7 @@ impl NewVersion {
             copyright: download_results
                 .values_mut()
                 .find(|analyser| analyser.copyright.is_some())
-                .and_then(|analyser| mem::take(&mut analyser.copyright))
+                .and_then(|analyser| analyser.copyright.take())
                 .or_else(|| optional_prompt(self.copyright).ok()?),
             copyright_url: optional_prompt(self.copyright_url)?,
             short_description: required_prompt(self.short_description)?,
@@ -383,7 +335,7 @@ impl NewVersion {
             moniker: optional_prompt(self.moniker)?,
             tags: github_values
                 .as_mut()
-                .and_then(|values| mem::take(&mut values.topics))
+                .and_then(|values| values.topics.take())
                 .or_else(|| list_prompt::<Tag>().ok()?),
             release_notes_url: optional_prompt(self.release_notes_url)?,
             manifest_type: ManifestType::DefaultLocale,
@@ -406,13 +358,12 @@ impl NewVersion {
                 .unwrap_or_default(),
         };
 
-        let package_path = get_package_path(&package_identifier, Some(&package_version));
-        let mut changes = PRChangesBuilder::default()
+        let package_path = get_package_path(&package_identifier, Some(&package_version), None);
+        let mut changes = pr_changes()
             .package_identifier(&package_identifier)
-            .manifests(manifests)
+            .manifests(&manifests)
             .package_path(&package_path)
             .created_with(&self.created_with)
-            .build()?
             .create()?;
 
         let submit_option = prompt_submit_option(
@@ -439,53 +390,18 @@ impl NewVersion {
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
             "Creating a pull request for {package_identifier} version {package_version}"
         ));
-        pr_progress.enable_steady_tick(Duration::from_millis(50));
+        pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
-        let current_user = github.get_username().await?;
-        let winget_pkgs = github.get_winget_pkgs(None).await?;
-        let fork = github.get_winget_pkgs(Some(&current_user)).await?;
-        let branch_name = get_branch_name(&package_identifier, &package_version);
-        let pull_request_branch = github
-            .create_branch(&fork.id, &branch_name, &winget_pkgs.default_branch_oid.0)
-            .await?;
-        let commit_title = get_commit_title(
-            &package_identifier,
-            &package_version,
-            &UpdateState::get(&package_version, versions.as_ref(), latest_version),
-        );
-        let changes = changes
-            .iter()
-            .map(|(path, content)| FileAddition {
-                contents: Base64String(base64ct::Base64::encode_string(content.as_bytes())),
-                path,
-            })
-            .collect::<Vec<_>>();
-        let _commit_url = github
-            .create_commit(
-                &pull_request_branch.id,
-                &pull_request_branch
-                    .target
-                    .map(|target| target.oid.0)
-                    .unwrap(),
-                &commit_title,
-                Some(changes),
-                None,
-            )
-            .await?;
         let pull_request_url = github
-            .create_pull_request(
-                &winget_pkgs.id,
-                &fork.id,
-                &format!("{current_user}:{}", pull_request_branch.name),
-                &winget_pkgs.default_branch_name,
-                &commit_title,
-                &get_pull_request_body(
-                    self.resolves,
-                    None,
-                    self.created_with,
-                    self.created_with_url,
-                ),
-            )
+            .add_version()
+            .identifier(&package_identifier)
+            .version(&package_version)
+            .maybe_versions(versions.as_ref())
+            .changes(changes)
+            .maybe_issue_resolves(self.resolves)
+            .maybe_created_with(self.created_with)
+            .maybe_created_with_url(self.created_with_url)
+            .send()
             .await?;
 
         pr_progress.finish_and_clear();

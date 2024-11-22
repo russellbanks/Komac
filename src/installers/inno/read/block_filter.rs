@@ -1,4 +1,4 @@
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 use color_eyre::eyre::bail;
 use color_eyre::Result;
 use crc32fast::Hasher;
@@ -26,7 +26,7 @@ impl<R: Read> InnoBlockFilter<R> {
     }
 
     fn read_chunk(&mut self) -> Result<bool> {
-        let Ok(block_crc32) = self.inner.read_u32::<LittleEndian>() else {
+        let Ok(block_crc32) = self.inner.read_u32::<LE>() else {
             bail!("Unexpected block end")
         };
 

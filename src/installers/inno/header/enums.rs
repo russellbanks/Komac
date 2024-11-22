@@ -1,11 +1,12 @@
-use crate::installers::inno::header::flags::PrivilegesRequiredOverrides;
+use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
 use crate::manifests::installer_manifest::ElevationRequirement;
-use strum::FromRepr;
+use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+
 // This file defines enums corresponding to Inno Setup's header values. Each enum is represented as
 // a u8 as Inno Setup stores these values in a single byte. For example, 0 = Classic, 1 = Modern.
 
 /// <https://jrsoftware.org/ishelp/index.php?topic=setup_wizardstyle>
-#[derive(Debug, Default, FromRepr)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum InnoStyle {
     #[default]
@@ -14,7 +15,8 @@ pub enum InnoStyle {
 }
 
 /// <https://jrsoftware.org/ishelp/index.php?topic=setup_wizardimagealphaformat>
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum ImageAlphaFormat {
     #[default]
@@ -23,7 +25,8 @@ pub enum ImageAlphaFormat {
     Premultiplied,
 }
 
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum InstallVerbosity {
     #[default]
@@ -32,7 +35,8 @@ pub enum InstallVerbosity {
     VerySilent,
 }
 
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum LogMode {
     Append,
@@ -41,7 +45,7 @@ pub enum LogMode {
     Overwrite,
 }
 
-#[derive(Debug, Default, FromRepr)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum AutoBool {
     #[default]
@@ -50,7 +54,18 @@ pub enum AutoBool {
     Yes,
 }
 
-#[derive(Debug, Default, PartialEq, Eq, FromRepr)]
+impl AutoBool {
+    pub const fn from_header_flags(flags: &HeaderFlags, flag: HeaderFlags) -> Self {
+        if flags.contains(flag) {
+            Self::Yes
+        } else {
+            Self::No
+        }
+    }
+}
+
+#[expect(dead_code)]
+#[derive(Debug, Default, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum PrivilegeLevel {
     #[default]
@@ -61,6 +76,14 @@ pub enum PrivilegeLevel {
 }
 
 impl PrivilegeLevel {
+    pub const fn from_header_flags(flags: &HeaderFlags) -> Self {
+        if flags.contains(HeaderFlags::ADMIN_PRIVILEGES_REQUIRED) {
+            Self::Admin
+        } else {
+            Self::None
+        }
+    }
+
     pub const fn to_elevation_requirement(
         &self,
         overrides: &PrivilegesRequiredOverrides,
@@ -74,16 +97,28 @@ impl PrivilegeLevel {
 }
 
 /// <https://jrsoftware.org/ishelp/index.php?topic=setup_languagedetectionmethod>
-#[derive(Debug, Default, FromRepr)]
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum LanguageDetection {
     #[default]
     UILanguage,
     LocaleLanguage,
-    NoLanguageDetection,
+    None,
 }
 
-#[derive(Debug, Default, FromRepr)]
+impl LanguageDetection {
+    pub const fn from_header_flags(flags: &HeaderFlags) -> Self {
+        if flags.contains(HeaderFlags::DETECT_LANGUAGE_USING_LOCALE) {
+            Self::LocaleLanguage
+        } else {
+            Self::UILanguage
+        }
+    }
+}
+
+#[expect(dead_code)]
+#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum Compression {
     Stored,
@@ -93,4 +128,14 @@ pub enum Compression {
     LZMA2,
     #[default]
     Unknown = u8::MAX, // Set to u8::MAX to avoid conflicts with future variants
+}
+
+impl Compression {
+    pub const fn from_header_flags(flags: &HeaderFlags) -> Self {
+        if flags.contains(HeaderFlags::BZIP_USED) {
+            Self::BZip2
+        } else {
+            Self::Zlib
+        }
+    }
 }

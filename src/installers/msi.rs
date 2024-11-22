@@ -1,29 +1,19 @@
 use std::collections::HashMap;
-use std::io::{Read, Seek};
+use std::io::{Error, ErrorKind, Read, Result, Seek};
 use std::str::FromStr;
 
-use camino::Utf8PathBuf;
-use color_eyre::eyre::{bail, Result};
-use msi::{Language, Package, Select};
-
+use crate::installers::traits::InstallSpec;
+use crate::installers::utils::{
+    RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
+    RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_TEMP_FOLDER,
+    RELATIVE_WINDOWS_DIR,
+};
 use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
+use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
-
-pub struct Msi {
-    pub architecture: Architecture,
-    pub product_code: String,
-    pub upgrade_code: String,
-    pub product_name: String,
-    pub product_version: String,
-    pub manufacturer: String,
-    pub product_language: LanguageTag,
-    pub all_users: Option<Scope>,
-    pub install_location: Option<Utf8PathBuf>,
-    pub is_wix: bool,
-}
-
-pub const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";
+use camino::Utf8PathBuf;
+use msi::{Language, Package, Select};
 
 const PRODUCT_CODE: &str = "ProductCode";
 const PRODUCT_LANGUAGE: &str = "ProductLanguage";
@@ -37,16 +27,34 @@ const WIX: &str = "wix";
 const INSTALL_DIR: &str = "INSTALLDIR";
 const TARGET_DIR: &str = "TARGETDIR";
 
+pub struct Msi {
+    pub architecture: Architecture,
+    pub product_code: Option<String>,
+    pub upgrade_code: Option<String>,
+    pub product_name: Option<String>,
+    pub product_version: Option<String>,
+    pub manufacturer: Option<String>,
+    pub product_language: Option<LanguageTag>,
+    pub all_users: Option<Scope>,
+    pub install_location: Option<Utf8PathBuf>,
+    pub is_wix: bool,
+}
+
 impl Msi {
     pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
         let mut msi = Package::open(reader)?;
 
         let architecture = match msi.summary_info().arch() {
             Some("x64" | "Intel64" | "AMD64") => Architecture::X64,
-            Some("Intel") => Architecture::X86,
+            Some("Intel") | None => Architecture::X86,
             Some("Arm64") => Architecture::Arm64,
             Some("Arm") => Architecture::Arm,
-            _ => bail!("No architecture was found in the MSI"),
+            Some(arch) => {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    format!(r#"Unknown MSI architecture: "{arch}""#),
+                ))
+            }
         };
 
         let mut property_table = Self::get_property_table(&mut msi)?;
@@ -57,17 +65,14 @@ impl Msi {
                 &Self::get_directory_table(&mut msi)?,
                 &property_table,
             ),
-            product_code: property_table.remove(PRODUCT_CODE).unwrap(),
-            upgrade_code: property_table.remove(UPGRADE_CODE).unwrap(),
-            product_name: property_table.remove(PRODUCT_NAME).unwrap(),
-            product_version: property_table.remove(PRODUCT_VERSION).unwrap(),
-            manufacturer: property_table.remove(MANUFACTURER).unwrap(),
-            product_language: LanguageTag::from_str(
-                Language::from_code(u16::from_str(
-                    property_table.get(PRODUCT_LANGUAGE).unwrap(),
-                )?)
-                .tag(),
-            )?,
+            product_code: property_table.remove(PRODUCT_CODE),
+            upgrade_code: property_table.remove(UPGRADE_CODE),
+            product_name: property_table.remove(PRODUCT_NAME),
+            product_version: property_table.remove(PRODUCT_VERSION),
+            manufacturer: property_table.remove(MANUFACTURER),
+            product_language: property_table.get(PRODUCT_LANGUAGE).and_then(|code| {
+                LanguageTag::from_str(Language::from_code(u16::from_str(code).ok()?).tag()).ok()
+            }),
             // https://learn.microsoft.com/windows/win32/msi/allusers
             all_users: match property_table
                 .remove(ALL_USERS)
@@ -220,27 +225,13 @@ impl Msi {
 
     fn get_property_relative_path(property: &str) -> Option<&str> {
         const PROGRAM_FILES_64_FOLDER: &str = "ProgramFiles64Folder";
-
         const PROGRAM_FILES_FOLDER: &str = "ProgramFilesFolder";
-        const RELATIVE_PROGRAM_FILES_32: &str = "%ProgramFiles(x86)%";
-
         const COMMON_FILES_64_FOLDER: &str = "CommonFiles64Folder";
-        const RELATIVE_COMMON_FILES_64: &str = "%CommonProgramFiles%";
-
         const COMMON_FILES_FOLDER: &str = "CommonFilesFolder";
-        const RELATIVE_COMMON_FILES_32: &str = "%CommonProgramFiles(x86)%";
-
         const APP_DATA_FOLDER: &str = "AppDataFolder";
-        const RELATIVE_APP_DATA: &str = "%AppData%";
-
         const LOCAL_APP_DATA_FOLDER: &str = "LocalAppDataFolder";
-        const RELATIVE_LOCAL_APP_DATA: &str = "%LocalAppData%";
-
         const TEMP_FOLDER: &str = "TempFolder";
-        const RELATIVE_TEMP_FOLDER: &str = "%Temp%";
-
         const WINDOWS_FOLDER: &str = "WindowsFolder";
-        const RELATIVE_SYSTEM_ROOT: &str = "%SystemRoot%";
 
         match property {
             PROGRAM_FILES_64_FOLDER => Some(RELATIVE_PROGRAM_FILES_64),
@@ -250,8 +241,54 @@ impl Msi {
             APP_DATA_FOLDER => Some(RELATIVE_APP_DATA),
             LOCAL_APP_DATA_FOLDER => Some(RELATIVE_LOCAL_APP_DATA),
             TEMP_FOLDER => Some(RELATIVE_TEMP_FOLDER),
-            WINDOWS_FOLDER => Some(RELATIVE_SYSTEM_ROOT),
+            WINDOWS_FOLDER => Some(RELATIVE_WINDOWS_DIR),
             _ => None,
         }
+    }
+}
+
+impl InstallSpec for Msi {
+    fn r#type(&self) -> InstallerType {
+        if self.is_wix {
+            InstallerType::Wix
+        } else {
+            InstallerType::Msi
+        }
+    }
+
+    fn architecture(&mut self) -> Option<Architecture> {
+        Some(self.architecture)
+    }
+
+    fn display_name(&mut self) -> Option<String> {
+        self.product_name.take()
+    }
+
+    fn display_publisher(&mut self) -> Option<String> {
+        self.manufacturer.take()
+    }
+
+    fn display_version(&mut self) -> Option<String> {
+        self.product_version.take()
+    }
+
+    fn product_code(&mut self) -> Option<String> {
+        self.product_code.take()
+    }
+
+    fn locale(&mut self) -> Option<LanguageTag> {
+        self.product_language.take()
+    }
+
+    fn scope(&self) -> Option<Scope> {
+        self.all_users
+    }
+
+    fn install_location(&mut self) -> Option<Utf8PathBuf> {
+        self.install_location.take()
+    }
+
+    fn upgrade_code(&mut self) -> Option<String> {
+        self.upgrade_code.take()
     }
 }

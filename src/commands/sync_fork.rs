@@ -1,5 +1,4 @@
-use std::time::Duration;
-
+use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
 use crate::hyperlink::Hyperlink;
@@ -11,7 +10,7 @@ use owo_colors::OwoColorize;
 
 /// Merges changes from microsoft/winget-pkgs into the fork repository
 #[derive(Parser)]
-#[clap(alias = "merge-upstream")]
+#[clap(visible_aliases = ["sync", "merge-upstream"])]
 pub struct SyncFork {
     /// Merges changes even if the fork's default branch is not fast-forward. This is not
     /// recommended as you should instead have a clean default branch that has not diverged from the
@@ -30,9 +29,11 @@ impl SyncFork {
         let github = GitHub::new(&token)?;
 
         // Fetch repository data from both upstream and fork repositories asynchronously
-        let winget_pkgs = github.get_winget_pkgs(None);
+        let winget_pkgs = github.get_winget_pkgs().send();
         let winget_pkgs_fork = github
-            .get_winget_pkgs(Some(&github.get_username().await?))
+            .get_winget_pkgs()
+            .owner(&github.get_username().await?)
+            .send()
             .await?;
         let winget_pkgs = winget_pkgs.await?;
 
@@ -64,7 +65,7 @@ impl SyncFork {
             winget_pkgs.full_name.as_str().blue(),
             winget_pkgs_fork.full_name.as_str().blue(),
         ));
-        pb.enable_steady_tick(Duration::from_millis(50));
+        pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         github
             .merge_upstream(

@@ -19,7 +19,7 @@ impl MultiPrompt for InstallModes {
 
 pub fn radio_prompt<T>() -> Result<T>
 where
-    T: MultiPrompt + IntoEnumIterator + Display + Ord,
+    T: MultiPrompt + IntoEnumIterator + Display,
 {
     Select::new(T::MESSAGE, T::iter().collect())
         .prompt()

@@ -1,13 +1,8 @@
-use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
-use crossterm::terminal::{
-    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-};
-use ratatui::backend::CrosstermBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
-use ratatui::Terminal;
+use ratatui::DefaultTerminal;
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::io;
@@ -112,29 +107,25 @@ impl<'a> Buffer<'a> {
 pub struct Editor<'a> {
     current: usize,
     buffers: Vec<Buffer<'a>>,
-    term: Terminal<CrosstermBackend<io::Stdout>>,
+    terminal: DefaultTerminal,
     message: Option<Cow<'static, str>>,
     search: SearchBox<'a>,
 }
 
 impl<'a> Editor<'a> {
-    pub fn new(content: &'a mut [(String, String)]) -> io::Result<Self> {
+    pub fn new(content: &'a mut [(String, String)]) -> Self {
         let buffers = content
             .iter_mut()
             .map(|(path, content)| Buffer::new(path, content))
             .collect::<Vec<_>>();
-        let mut stdout = io::stdout();
-        enable_raw_mode()?;
-        crossterm::execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-        let backend = CrosstermBackend::new(stdout);
-        let term = Terminal::new(backend)?;
-        Ok(Self {
+        let terminal = ratatui::init();
+        Self {
             current: 0,
             buffers,
-            term,
+            terminal,
             message: None,
             search: SearchBox::default(),
-        })
+        }
     }
 
     pub fn run(&mut self) -> io::Result<()> {
@@ -152,7 +143,7 @@ impl<'a> Editor<'a> {
                     .as_ref(),
                 );
 
-            self.term.draw(|f| {
+            self.terminal.draw(|f| {
                 let chunks = layout.split(f.area());
 
                 if search_height > 0 {
@@ -335,13 +326,6 @@ impl<'a> Editor<'a> {
 
 impl<'a> Drop for Editor<'a> {
     fn drop(&mut self) {
-        self.term.show_cursor().unwrap();
-        disable_raw_mode().unwrap();
-        crossterm::execute!(
-            self.term.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )
-        .unwrap();
+        ratatui::restore();
     }
 }

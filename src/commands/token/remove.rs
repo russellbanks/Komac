@@ -5,7 +5,9 @@ use color_eyre::eyre::Result;
 use inquire::Confirm;
 use owo_colors::OwoColorize;
 
+/// Remove the stored token
 #[derive(Parser)]
+#[clap(visible_alias = "delete")]
 pub struct RemoveToken {
     /// Skip the confirmation prompt to delete the token
     #[arg(short = 'y', long = "yes")]

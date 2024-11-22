@@ -5,7 +5,9 @@ use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
 use reqwest::Client;
 
+/// Update the stored token
 #[derive(Parser)]
+#[clap(visible_alias = "new")]
 pub struct UpdateToken {
     /// The new token to store
     #[arg(short, long)]

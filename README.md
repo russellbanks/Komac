@@ -14,7 +14,7 @@ Komac is both blazingly fast 🔥 and incredibly low on memory, using just ~3.5M
 
 ## Installation
 
-Komac is cross-platform and binaries are built for Windows, Linux, macOS, and FreeBSD.
+Komac is cross-platform and binaries are built for Windows, Linux, and macOS.
 
 ### All platforms
 
@@ -29,6 +29,12 @@ Komac also supports [cargo-binstall](https://github.com/cargo-bins/cargo-binstal
 ```bash
 cargo binstall komac
 ```
+
+#### Nightly
+
+Nightly releases that are built on every commit are
+available [here](https://github.com/russellbanks/Komac/releases/tag/nightly). These are useful for debugging or if you
+want the latest features and fixes.
 
 ### Windows
 
@@ -75,14 +81,18 @@ A classic token with the `public_repo` scope.
 
 ## Commands
 
-| Command        | Description                                                                   | Usage          |
-|----------------|-------------------------------------------------------------------------------|----------------|
-| New            | Create a package from scratch                                                 | `new`          |
-| Update         | Update a pre-existing package in winget-pkgs                                  | `update`       |
-| Remove         | Remove a version from winget-pkgs                                             | `remove`       |
-| Branch Cleanup | Deletes branches that have had a merged or closed pull request to winget-pkgs | `cleanup`      |
-| Token update   | Update stored GitHub OAuth token                                              | `token update` |
-| Token remove   | Delete stored GitHub OAuth token                                              | `token remove` |
+| Command        | Description                                                                                         | Usage                      |
+|----------------|-----------------------------------------------------------------------------------------------------|----------------------------|
+| New            | Create a package from scratch                                                                       | `new`                      |
+| Update         | Update a pre-existing package in winget-pkgs                                                        | `update`                   |
+| Remove         | Remove a version from winget-pkgs                                                                   | `remove`                   |
+| Sync Fork      | Syncs your fork of winget-pkgs to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) | `sync-fork`, `sync`        |
+| Branch Cleanup | Deletes branches that have had a merged or closed pull request to winget-pkgs                       | `cleanup`                  |
+| List Versions  | Lists all the versions for a given package                                                          | `list-versions`, `list`    |
+| Analyse        | Analyses a file and outputs information about it. Useful for debugging                              | `analyse`                  |
+| Token update   | Update stored GitHub OAuth token                                                                    | `token update`             |
+| Token remove   | Delete stored GitHub OAuth token                                                                    | `token remove`             |
+| Complete       | Outputs an autocompletion script for the given shell                                                | `complete`, `autocomplete` |
 
 ### Update an existing package with a new version
 
@@ -100,34 +110,32 @@ komac update Package.Identifier --version 1.2.3 --urls https://www.firstUrl.com 
 
 ## Komac vs other tools 🏆
 
-While other manifest creation tools have made remarkable strides in the winget-pkgs community, their development pace is
-notably slow and lacks the advanced detection capabilities that come with Komac.
+While other manifest creation tools have made a solid foundation for the manifests in winget-pkgs, they development pace
+is notably slow and lacks the advanced detection capabilities that come with Komac.
 
 |                                          | Komac  | WingetCreate |                           YamlCreate                           |
 |------------------------------------------|:------:|:------------:|:--------------------------------------------------------------:|
 | Parameters                               |   ✅    |      ✅       |                               ❌                                |
-| Works without Git                        |   ✅    |      ✅       |                               ❌                                |
-| Optimised manifest ordering [^1]         |   ✅    |      ✅️      |                               ✅                                |
+| Download progress bar & ETA              |   ✅    |      ❌       |                               ❌                                |
 | Fully cross-platform                     |   ✅    |      ❌       |                            Limited                             |
+| Works without Git                        |   ✅    |      ✅       |                               ❌                                |
+| Full Inno Setup value retrieval          |   ✅    |      ❌       |                               ❌                                |
 | Full MSI value retrieval                 |   ✅    |   Partial    |                            Partial                             |
 | Linux & macOS MSI support                |   ✅    |      ❌       |                               ❌                                |
 | Full MSIX value retrieval                |   ✅    |   Partial    |   Partial - https://github.com/Trenly/winget-pkgs/issues/180   |
 | Get information from GitHub              |   ✅    |      ✅       |                               ❌                                |
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                               ❌                                |
 | Release date identification              |   ✅    |      ❌       |                               ❌                                |
-| No telemetry                             |   ✅    |    ⭕ [^2]    |                               ✅                                |
+| No telemetry                             |   ✅    |    ⭕ [^1]    |                               ✅                                |
 | Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                               ❌                                |
-| Type-safety                              |   ✅    |      ✅       |                               ❌                                |
-| Inno setup detection                     | ✅ [^3] |      ✅       |                             ✅ [^4]                             |
-| Nullsoft detection                       | ✅ [^3] |      ✅       |                             ✅ [^4]                             |
-| Burn installer detection                 | ✅ [^3] |      ✅       | Opt-in feature (not enabled by default due to slow processing) |
-| Progress bar & ETA while downloading     |   ✅    |      ❌       |                               ❌                                |
+| Inno setup detection                     | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
+| Nullsoft detection                       | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
+| Burn installer detection                 | ✅ [^2] |      ✅       | Opt-in feature (not enabled by default due to slow processing) |
 | Programming Language                     |  Rust  |      C#      |                           PowerShell                           |
 
-[^1]: If all installers have the same value, that value is put at the root of the manifest to reduce redundancy.
-[^2]: Telemetry is enabled by default in WingetCreate. Use `wingetcreate settings` to manually disable telemetry.
-[^3]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
-[^4]: The logic for this was contributed by me :)
+[^1]: Telemetry is enabled by default in WingetCreate. Use `wingetcreate settings` to manually disable telemetry.
+[^2]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
+[^3]: The logic for this was contributed by me :)
 Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request
 this feature for YamlCreate.
 

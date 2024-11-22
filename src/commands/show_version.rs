@@ -3,10 +3,11 @@ use color_eyre::Result;
 
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
-use crate::manifest::print_changes;
+use crate::manifests::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 
+/// Output the manifests for a given package and version
 #[derive(Parser)]
 pub struct ShowVersion {
     /// The package's unique identifier
@@ -44,7 +45,7 @@ impl ShowVersion {
         let github = GitHub::new(&token)?;
 
         // Get a list of all versions for the given package
-        let versions = github.get_versions(&self.package_identifier).await?;
+        let mut versions = github.get_versions(&self.package_identifier).await?;
 
         // Get the manifests for the latest or specified version
         let manifests = github
@@ -52,7 +53,7 @@ impl ShowVersion {
                 &self.package_identifier,
                 &self
                     .package_version
-                    .unwrap_or_else(|| versions.into_iter().max().unwrap()),
+                    .unwrap_or_else(|| versions.pop_last().unwrap_or_else(|| unreachable!())),
             )
             .await?;
 
@@ -78,7 +79,7 @@ impl ShowVersion {
                 manifests
                     .locale_manifests
                     .into_iter()
-                    .filter_map(|locale_manifest| serde_yaml::to_string(&locale_manifest).ok()),
+                    .flat_map(|locale_manifest| serde_yaml::to_string(&locale_manifest)),
             );
         }
         if all || self.version_manifest {

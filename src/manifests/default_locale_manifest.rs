@@ -1,11 +1,12 @@
-use std::collections::BTreeSet;
-use std::mem;
-
+use const_format::formatcp;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use std::collections::BTreeSet;
+use std::mem;
 use url::Url;
 
 use crate::github::github_client::GitHubValues;
+use crate::manifests::Manifest;
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
 use crate::types::description::Description;
@@ -13,7 +14,7 @@ use crate::types::installation_notes::InstallationNotes;
 use crate::types::language_tag::LanguageTag;
 use crate::types::license::License;
 use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::ManifestVersion;
+use crate::types::manifest_version::{ManifestVersion, MANIFEST_VERSION};
 use crate::types::moniker::Moniker;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_name::PackageName;
@@ -62,6 +63,12 @@ pub struct DefaultLocaleManifest {
     pub manifest_type: ManifestType,
     #[serde(default)]
     pub manifest_version: ManifestVersion,
+}
+
+impl Manifest for DefaultLocaleManifest {
+    const SCHEMA: &'static str =
+        formatcp!("https://aka.ms/winget-manifest.defaultLocale.{MANIFEST_VERSION}.schema.json");
+    const TYPE: ManifestType = ManifestType::DefaultLocale;
 }
 
 #[skip_serializing_none]
@@ -161,32 +168,37 @@ impl DefaultLocaleManifest {
         if self.publisher_support_url.is_none() {
             self.publisher_support_url = github_values
                 .as_mut()
-                .and_then(|values| mem::take(&mut values.publisher_support_url));
+                .and_then(|values| values.publisher_support_url.take());
+        }
+        if self.package_url.is_none() {
+            self.package_url = github_values
+                .as_ref()
+                .map(|values| values.package_url.clone());
         }
         if let Some(github_license) = github_values
             .as_mut()
-            .and_then(|values| mem::take(&mut values.license))
+            .and_then(|values| values.license.take())
         {
             self.license = github_license;
         }
         if let Some(github_license_url) = github_values
             .as_mut()
-            .and_then(|values| mem::take(&mut values.license_url))
+            .and_then(|values| values.license_url.take())
         {
             self.license_url = Some(github_license_url);
         }
         if self.tags.is_none() {
             self.tags = github_values
                 .as_mut()
-                .and_then(|values| mem::take(&mut values.topics));
+                .and_then(|values| values.topics.take());
         }
         self.release_notes = github_values
             .as_mut()
-            .and_then(|values| mem::take(&mut values.release_notes));
+            .and_then(|values| values.release_notes.take());
         self.release_notes_url = github_values
-            .as_ref()
-            .map(|values| values.release_notes_url.clone());
-        self.manifest_type = ManifestType::DefaultLocale;
+            .as_mut()
+            .and_then(|values| values.release_notes_url.take());
+        self.manifest_type = Self::TYPE;
         self.manifest_version = ManifestVersion::default();
     }
 }

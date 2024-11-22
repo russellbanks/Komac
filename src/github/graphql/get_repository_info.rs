@@ -1,32 +1,11 @@
 use crate::github::graphql::github_schema::github_schema as schema;
 use crate::github::graphql::types::GitObjectId;
 use url::Url;
-/*
-query GetRepositoryInfo($owner: String!, $name: String!) {
-  repository(owner: $owner, name: $name) {
-    id
-    nameWithOwner
-    url
-    defaultBranchRef {
-      name
-      id
-      target {
-        ... on Commit {
-          oid
-          history {
-            totalCount
-          }
-        }
-      }
-    }
-  }
-}
-*/
 
 #[derive(cynic::QueryVariables)]
 pub struct RepositoryVariables<'a> {
-    pub name: &'a str,
     pub owner: &'a str,
+    pub name: &'a str,
 }
 
 #[derive(cynic::QueryFragment)]
@@ -68,4 +47,54 @@ pub enum TargetGitObject {
     Commit(Commit),
     #[cynic(fallback)]
     Unknown,
+}
+
+impl TargetGitObject {
+    pub fn into_commit(self) -> Option<Commit> {
+        match self {
+            Self::Commit(commit) => Some(commit),
+            Self::Unknown => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::github::github_client::{MICROSOFT, WINGET_PKGS};
+    use crate::github::graphql::get_repository_info::{GetRepositoryInfo, RepositoryVariables};
+    use cynic::QueryBuilder;
+    use indoc::indoc;
+
+    #[test]
+    fn get_repository_info_output() {
+        const GET_REPOSITORY_INFO_QUERY: &str = indoc! {r#"
+            query GetRepositoryInfo($owner: String!, $name: String!) {
+              repository(owner: $owner, name: $name) {
+                id
+                nameWithOwner
+                url
+                defaultBranchRef {
+                  name
+                  id
+                  target {
+                    __typename
+                    ... on Commit {
+                      oid
+                      history {
+                        totalCount
+                      }
+                    }
+                  }
+                }
+              }
+            }
+        "#};
+
+        let operation = GetRepositoryInfo::build(RepositoryVariables {
+            owner: MICROSOFT,
+            name: WINGET_PKGS,
+        });
+
+        assert_eq!(operation.query, GET_REPOSITORY_INFO_QUERY);
+    }
 }

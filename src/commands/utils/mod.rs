@@ -1,12 +1,13 @@
-use std::env;
-use std::str::FromStr;
-
 use anstream::println;
 use camino::Utf8Path;
+use chrono::Local;
 use color_eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::{Confirm, Select};
 use owo_colors::OwoColorize;
+use std::env;
+use std::str::FromStr;
+use std::time::Duration;
 use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::fs;
 use tokio::fs::File;
@@ -14,25 +15,26 @@ use tokio::io::AsyncWriteExt;
 
 use crate::editor::Editor;
 use crate::github::graphql::get_existing_pull_request::PullRequest;
-use crate::github::graphql::get_pull_request_from_branch::PullRequestState;
-use crate::manifest::print_changes;
+use crate::manifests::installer_manifest::AppsAndFeaturesEntry;
+use crate::manifests::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
+
+pub const SPINNER_TICK_RATE: Duration = Duration::from_millis(50);
+
+pub const SPINNER_SLOW_TICK_RATE: Duration = Duration::from_millis(100);
 
 pub fn prompt_existing_pull_request(
     identifier: &PackageIdentifier,
     version: &PackageVersion,
     pull_request: &PullRequest,
 ) -> Result<bool> {
+    let created_at = pull_request.created_at.with_timezone(&Local);
     println!(
         "There is already {} pull request for {identifier} {version} that was created on {} at {}",
-        match pull_request.state {
-            PullRequestState::Merged => "a merged",
-            PullRequestState::Open => "an open",
-            _ => "a closed",
-        },
-        pull_request.created_at.date_naive(),
-        pull_request.created_at.time()
+        pull_request.state,
+        created_at.date_naive(),
+        created_at.time()
     );
     println!("{}", pull_request.url.blue());
     let proceed = if env::var("CI").is_ok_and(|ci| bool::from_str(&ci) == Ok(true)) {
@@ -67,7 +69,7 @@ pub fn prompt_submit_option(
         };
 
         if submit_option == SubmitOption::Edit {
-            Editor::new(changes)?.run()?;
+            Editor::new(changes).run()?;
         } else {
             break;
         }
@@ -95,4 +97,15 @@ pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Utf8Pat
         .buffer_unordered(2)
         .try_collect()
         .await
+}
+
+pub fn deduplicate_display_version(
+    arp_entries: Option<&mut Vec<AppsAndFeaturesEntry>>,
+    package_version: &PackageVersion,
+) {
+    if let Some(arp) = arp_entries {
+        arp.iter_mut()
+            .filter(|entry| entry.display_version.as_ref() == Some(&**package_version))
+            .for_each(|entry| entry.display_version = None);
+    }
 }

@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use derive_more::Display;
 use memchr::memchr;
 use std::cmp::Ordering;
 
@@ -10,10 +11,12 @@ bitflags! {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, Default, Display, PartialEq, Eq, PartialOrd)]
+#[display("{_0}.{_1}.{_2}")]
 pub struct InnoVersion(pub u8, pub u8, pub u8);
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Default, Display, PartialEq, Eq)]
+#[display("{version}")]
 pub struct KnownVersion {
     pub version: InnoVersion,
     pub variant: VersionFlags,
@@ -21,7 +24,7 @@ pub struct KnownVersion {
 
 impl PartialEq<InnoVersion> for KnownVersion {
     fn eq(&self, other: &InnoVersion) -> bool {
-        self.version == *other
+        self.version.eq(other)
     }
 }
 
@@ -49,7 +52,7 @@ impl KnownVersion {
 
         let inno_version = InnoVersion(parts.next()?, parts.next()?, parts.next()?);
 
-        // Inno Setup 6 and above is always only unicode
+        // Inno Setup 6 and above is always only Unicode
         if inno_version >= InnoVersion(6, 0, 0) {
             return Some(Self {
                 version: inno_version,
@@ -61,7 +64,7 @@ impl KnownVersion {
 
         let remaining_data = &data[end_index..];
 
-        // Check for a unicode flag within parentheses
+        // Check for a Unicode flag within parentheses
         if let Some(u_start_index) = memchr(b'(', remaining_data) {
             if let Some(u_end_index) = memchr(b')', &remaining_data[u_start_index..]) {
                 let unicode_flag = &remaining_data[u_start_index + 1..u_start_index + u_end_index];
@@ -171,7 +174,7 @@ mod tests {
         #[case] expected_variant: VersionFlags,
     ) {
         let actual = KnownVersion::from_version_bytes(input).unwrap_or_default();
-        assert_eq!(expected_inno_version, actual.version);
-        assert_eq!(expected_variant, actual.variant)
+        assert_eq!(actual.version, expected_inno_version);
+        assert_eq!(actual.variant, expected_variant)
     }
 }

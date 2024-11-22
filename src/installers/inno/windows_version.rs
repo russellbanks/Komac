@@ -1,7 +1,6 @@
 use crate::installers::inno::version::InnoVersion;
-use byteorder::{LittleEndian, ReadBytesExt};
-use color_eyre::Result;
-use std::io::Read;
+use byteorder::{ReadBytesExt, LE};
+use std::io::{Read, Result};
 
 #[derive(Debug, Default)]
 struct Version {
@@ -14,7 +13,7 @@ impl Version {
     fn load<R: Read>(reader: &mut R, inno_version: &InnoVersion) -> Result<Self> {
         let mut version = Self::default();
         if *inno_version >= InnoVersion(1, 3, 19) {
-            version.build = reader.read_u16::<LittleEndian>()?;
+            version.build = reader.read_u16::<LE>()?;
         }
         version.minor = reader.read_u8()?;
         version.major = reader.read_u8()?;
@@ -28,6 +27,7 @@ struct ServicePack {
     minor: u8,
 }
 
+#[expect(dead_code)]
 #[derive(Debug, Default)]
 struct WindowsVersion {
     pub win_version: Version,
@@ -52,6 +52,7 @@ impl WindowsVersion {
     }
 }
 
+#[expect(dead_code)]
 #[derive(Debug, Default)]
 pub struct WindowsVersionRange {
     begin: WindowsVersion,

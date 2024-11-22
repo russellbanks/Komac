@@ -19,7 +19,7 @@ pub fn match_installers(
         .iter()
         .filter_map(|installer| {
             let url = &installer.installer_url;
-            Scope::get_from_url(url.as_str()).map(|scope| (url, scope))
+            Scope::from_url(url.as_str()).map(|scope| (url, scope))
         })
         .collect::<HashMap<_, _>>();
 
@@ -138,8 +138,8 @@ mod tests {
             (previous_machine_x64, &installer_x64),
         ]);
         assert_eq!(
-            expected,
-            match_installers(previous_installers, &new_installers)
+            match_installers(previous_installers, &new_installers),
+            expected
         );
     }
 }

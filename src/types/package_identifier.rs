@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(AsRef, Clone, Default, Deref, Display, Deserialize, Serialize)]
+#[derive(AsRef, Clone, Default, Deref, Display, Deserialize, Serialize, Debug)]
 pub struct PackageIdentifier(String);
 
 /// A Package Identifier parser and validator modelled off the regex pattern:
@@ -108,7 +108,7 @@ pub enum PackageIdentifierError {
 mod tests {
     use crate::types::package_identifier::{PackageIdentifier, PackageIdentifierError};
     use const_format::str_repeat;
-    use itertools::repeat_n;
+    use std::iter::repeat_n;
 
     // Replace itertools::intersperse with std::iter::Intersperse once it's stabilised
 

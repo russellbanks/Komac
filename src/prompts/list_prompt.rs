@@ -1,7 +1,7 @@
 use inquire::validator::Validation;
 use inquire::Text;
 use std::collections::BTreeSet;
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 use std::str::FromStr;
 
 pub trait ListPrompt {
@@ -13,7 +13,7 @@ pub trait ListPrompt {
 pub fn list_prompt<T>() -> color_eyre::Result<Option<BTreeSet<T>>>
 where
     T: FromStr + ListPrompt + Ord,
-    <T as FromStr>::Err: Display + Debug + Sync + Send + 'static,
+    <T as FromStr>::Err: Display,
 {
     const DELIMITERS: [char; 2] = [' ', ','];
     let items = Text::new(T::MESSAGE)
@@ -42,7 +42,7 @@ where
         })
         .prompt()?
         .split(|char| DELIMITERS.contains(&char))
-        .filter_map(|str| T::from_str(str).ok())
+        .flat_map(T::from_str)
         .collect::<BTreeSet<_>>();
     if items.is_empty() {
         Ok(None)

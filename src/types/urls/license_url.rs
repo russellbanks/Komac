@@ -3,7 +3,7 @@ use crate::types::urls::url::DecodedUrl;
 use derive_more::{Display, FromStr};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, FromStr, Default, Display, Deserialize, Serialize)]
+#[derive(Clone, FromStr, Display, Deserialize, Serialize)]
 pub struct LicenseUrl(DecodedUrl);
 
 impl OptionalPrompt for LicenseUrl {
