@@ -3,8 +3,8 @@ use std::num::NonZeroI64;
 
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
-    RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_ROOT,
-    RELATIVE_WINDOWS_DIR,
+    RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
+    RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
 };
 use crate::manifests::Manifest;
 use crate::types::architecture::Architecture;
@@ -260,11 +260,12 @@ impl Scope {
 
     pub fn from_install_dir(install_dir: &str) -> Option<Self> {
         const USER_INSTALL_DIRS: [&str; 2] = [RELATIVE_APP_DATA, RELATIVE_LOCAL_APP_DATA];
-        const MACHINE_INSTALL_DIRS: [&str; 6] = [
+        const MACHINE_INSTALL_DIRS: [&str; 7] = [
             RELATIVE_PROGRAM_FILES_64,
             RELATIVE_PROGRAM_FILES_32,
             RELATIVE_COMMON_FILES_64,
             RELATIVE_COMMON_FILES_32,
+            RELATIVE_PROGRAM_DATA,
             RELATIVE_WINDOWS_DIR,
             RELATIVE_SYSTEM_ROOT,
         ];

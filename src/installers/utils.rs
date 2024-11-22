@@ -7,6 +7,7 @@ pub const RELATIVE_COMMON_FILES_64: &str = "%CommonProgramFiles%";
 pub const RELATIVE_COMMON_FILES_32: &str = "%CommonProgramFiles(x86)%";
 pub const RELATIVE_LOCAL_APP_DATA: &str = "%LocalAppData%";
 pub const RELATIVE_APP_DATA: &str = "%AppData%";
+pub const RELATIVE_PROGRAM_DATA: &str = "%ProgramData%";
 pub const RELATIVE_WINDOWS_DIR: &str = "%WinDir%";
 pub const RELATIVE_SYSTEM_ROOT: &str = "%SystemRoot%";
 pub const RELATIVE_TEMP_FOLDER: &str = "%Temp%";
