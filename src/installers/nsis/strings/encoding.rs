@@ -70,7 +70,7 @@ pub fn nsis_string<'str_block>(
                 .map(LE::read_u16),
         )
     } else {
-        Either::Right(string_bytes.iter().map(|&char| u16::from(char)))
+        Either::Right(string_bytes.iter().copied().map(u16::from))
     };
 
     let mut buf = String::new();
