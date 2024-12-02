@@ -2,10 +2,9 @@ use crate::installers::nsis::entry::which::WhichEntry;
 use crate::installers::nsis::entry::Entry;
 use crate::installers::nsis::strings::encoding::nsis_string;
 use crate::installers::nsis::version::NsisVersion;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
+use nt_time::FileTime;
 use std::borrow::Cow;
-use std::ops::{BitOr, Shl};
-use std::time::Duration;
 use zerocopy::{try_transmute, Immutable, KnownLayout, TryFromBytes};
 
 #[expect(dead_code)]
@@ -29,18 +28,6 @@ pub struct ExtractFile<'str_block> {
     allow_ignore: u32,
 }
 
-/// Number of 100-nanosecond intervals per second
-#[expect(clippy::cast_possible_truncation)]
-const FILETIME_INTERVALS_PER_SEC: u64 = (Duration::from_secs(1).as_nanos() / 100) as u64;
-
-/// Duration between 1601-01-01 and 1970-01-01 in seconds
-const UNIX_EPOCH_DIFF_SECS: u64 = NaiveDate::from_ymd_opt(1970, 1, 1)
-    .unwrap()
-    .signed_duration_since(NaiveDate::from_ymd_opt(1601, 1, 1).unwrap())
-    .num_seconds()
-    .unsigned_abs();
-
-#[expect(dead_code)]
 enum Offsets {
     OverwriteFlag,
     Filename,
@@ -70,16 +57,13 @@ impl<'str_block> ExtractFile<'str_block> {
             ),
             position: entry.offsets[Offsets::FilePosition as usize].get() as usize
                 + size_of::<u32>(),
-            filetime: u64::from(entry.offsets[Offsets::FileDateTimeHigh as usize].get())
-                .shl(u32::BITS)
-                .bitor(u64::from(
-                    entry.offsets[Offsets::FileDateTimeLow as usize].get(),
-                ))
-                .div_euclid(FILETIME_INTERVALS_PER_SEC)
-                .checked_sub(UNIX_EPOCH_DIFF_SECS)
-                .and_then(|secs| DateTime::<Utc>::from_timestamp(i64::try_from(secs).ok()?, 0))
-                .unwrap_or_default(),
-            allow_ignore: entry.offsets[5].get(),
+            filetime: {
+                let high = u64::from(entry.offsets[Offsets::FileDateTimeHigh as usize].get());
+                let low = u64::from(entry.offsets[Offsets::FileDateTimeLow as usize].get());
+
+                FileTime::new(high << u32::BITS | low).into()
+            },
+            allow_ignore: entry.offsets[Offsets::AllowIgnore as usize].get(),
         })
     }
 }
