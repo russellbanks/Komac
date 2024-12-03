@@ -41,7 +41,7 @@ color-eyre = { version = "0.6.3", default-features = false }
 const_format = "0.2.33"
 crc32fast = "1.4.2"
 crossterm = "0.28.1"
-cynic = { version = "3.9.0", features = ["http-reqwest"] }
+cynic = { version = "3.9.1", features = ["http-reqwest"] }
 derive_more = { version = "1.0.0", features = ["as_ref", "deref", "deref_mut", "display", "from_str"] }
 encoding_rs = "0.8.35"
 flate2 = "1.0.35"
