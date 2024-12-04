@@ -28,7 +28,7 @@ jobs:
     name: Rust project - latest
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -37,6 +37,7 @@ jobs:
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
+        cache: false
 
       - name: Check
         run: cargo check --verbose
