@@ -40,7 +40,7 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
 
     static YAML_CONFIG: LazyLock<HighlightConfiguration> = LazyLock::new(|| {
         let mut config = HighlightConfiguration::new(
-            tree_sitter_yaml::language(),
+            tree_sitter_yaml::LANGUAGE.into(),
             YAML,
             tree_sitter_yaml::HIGHLIGHTS_QUERY,
             <&str>::default(),
