@@ -37,7 +37,8 @@ jobs:
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
-        cache: false
+        with:
+          cache: false
 
       - name: Check
         run: cargo check --verbose

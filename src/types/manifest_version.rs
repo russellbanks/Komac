@@ -3,7 +3,7 @@ use derive_more::Display;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;
 
-pub const MANIFEST_VERSION: &str = "1.6.0";
+pub const MANIFEST_VERSION: &str = "1.9.0";
 
 #[derive(SerializeDisplay, DeserializeFromStr, Display)]
 #[display("{_0}.{_1}.{_2}")]
@@ -37,7 +37,7 @@ impl FromStr for ManifestVersion {
 }
 
 impl ManifestVersion {
-    const DEFAULT_VERSION: Self = Self(1, 6, 0);
+    const DEFAULT_VERSION: Self = Self(1, 9, 0);
     const PARTS_COUNT: u8 = 3;
     const SEPARATOR: char = '.';
 }

@@ -76,6 +76,8 @@ pub struct InstallerManifest {
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
     pub download_command_prohibited: Option<bool>,
+    pub repair_behavior: Option<RepairBehavior>,
+    pub archive_binaries_depend_on_path: Option<bool>,
     pub installers: Vec<Installer>,
     pub manifest_type: ManifestType,
     #[serde(default)]
@@ -191,7 +193,10 @@ impl InstallerManifest {
             unsupported_arguments,
             apps_and_features_entries,
             elevation_requirement,
-            installation_metadata
+            installation_metadata,
+            download_command_prohibited,
+            repair_behavior,
+            archive_binaries_depend_on_path
         );
         root_struct_key!(
             installer_switches,
@@ -202,7 +207,8 @@ impl InstallerManifest {
             log,
             silent_with_progress,
             upgrade,
-            custom
+            custom,
+            repair
         );
         self.manifest_version = ManifestVersion::default();
     }
@@ -304,6 +310,7 @@ pub struct InstallerSwitches {
     pub log: Option<InstallerSwitch>,
     pub upgrade: Option<InstallerSwitch>,
     pub custom: Option<CustomSwitch>,
+    pub repair: Option<InstallerSwitch>,
 }
 
 impl InstallerSwitches {
@@ -472,6 +479,14 @@ pub enum MetadataFileType {
     Other,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[serde(rename_all = "lowercase")]
+pub enum RepairBehavior {
+    Modify,
+    Uninstaller,
+    Installer,
+}
+
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -514,6 +529,8 @@ pub struct Installer {
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
     pub download_command_prohibited: Option<bool>,
+    pub repair_behavior: Option<RepairBehavior>,
+    pub archive_binaries_depend_on_path: Option<bool>,
 }
 
 impl Installer {
@@ -559,7 +576,9 @@ impl Installer {
             unsupported_arguments,
             elevation_requirement,
             installation_metadata,
-            download_command_prohibited
+            download_command_prohibited,
+            repair_behavior,
+            archive_binaries_depend_on_path
         );
 
         self
