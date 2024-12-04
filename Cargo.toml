@@ -84,7 +84,7 @@ tempfile = "3.14.0"
 thiserror = "2.0.4"
 tokio = { version = "1.42.0", features = ["rt-multi-thread", "macros", "fs"] }
 tree-sitter-highlight = "0.24.4"
-tree-sitter-yaml = "0.6.1"
+tree-sitter-yaml = "0.7.0"
 tui-textarea = { version = "0.7.0", features = ["search"] }
 url = { version = "2.5.3", features = ["serde"] }
 uuid = { version = "1.11.0", features = ["v4"] }
