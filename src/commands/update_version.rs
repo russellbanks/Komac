@@ -199,7 +199,6 @@ impl UpdateVersion {
         manifests
             .installer_manifest
             .reorder_keys(&self.package_identifier, &self.package_version);
-        manifests.installer_manifest.installers.sort_unstable();
 
         let mut github_values = match github_values {
             Some(future) => Some(future.await?),

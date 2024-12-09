@@ -211,6 +211,9 @@ impl InstallerManifest {
             repair
         );
         self.manifest_version = ManifestVersion::default();
+
+        self.installers.sort_unstable();
+        self.installers.dedup();
     }
 }
 
