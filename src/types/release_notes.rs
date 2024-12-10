@@ -136,7 +136,7 @@ impl ReleaseNotes {
                     result.push_str(rest);
                     buffer.push_str(&result);
                 }
-                Code(code) => buffer.push_str(&code),
+                Code(code) => buffer.push_str(&code.replace('\t', " ")),
                 Event::SoftBreak | Event::HardBreak | Event::Rule => buffer.push('\n'),
                 _ => (),
             }
