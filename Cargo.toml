@@ -31,7 +31,7 @@ bit-set = "0.8.0"
 bitflags = "2.6.0"
 bon = "3.3.0"
 byteorder = "1.5.0"
-bzip2 = "0.4.4"
+bzip2 = "0.5.0"
 camino = { version = "1.1.9", features = ["serde1"] }
 chrono = { version = "0.4.39", features = ["serde"] }
 clap = { version = "4.5.23", features = ["derive", "cargo", "env"] }
