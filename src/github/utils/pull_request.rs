@@ -14,17 +14,17 @@ pub fn pr_changes(
     let mut path_content_map = vec![
         (
             format!("{package_path}/{package_identifier}.installer.yaml"),
-            build_manifest_string(&manifests.installer_manifest, created_with)?,
+            build_manifest_string(&manifests.installer, created_with)?,
         ),
         (
             format!(
                 "{}/{}.locale.{}.yaml",
-                package_path, package_identifier, manifests.version_manifest.default_locale
+                package_path, package_identifier, manifests.version.default_locale
             ),
-            build_manifest_string(&manifests.default_locale_manifest, created_with)?,
+            build_manifest_string(&manifests.default_locale, created_with)?,
         ),
     ];
-    for locale_manifest in &manifests.locale_manifests {
+    for locale_manifest in &manifests.locales {
         path_content_map.push((
             format!(
                 "{package_path}/{package_identifier}.locale.{}.yaml",
@@ -35,7 +35,7 @@ pub fn pr_changes(
     }
     path_content_map.push((
         format!("{package_path}/{package_identifier}.yaml"),
-        build_manifest_string(&manifests.version_manifest, created_with)?,
+        build_manifest_string(&manifests.version, created_with)?,
     ));
     Ok(path_content_map)
 }

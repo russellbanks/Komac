@@ -14,8 +14,8 @@ use reqwest::Client;
 use strsim::levenshtein;
 
 use crate::commands::utils::{
-    deduplicate_display_version, prompt_existing_pull_request, prompt_submit_option,
-    write_changes_to_dir, SubmitOption, SPINNER_TICK_RATE,
+    prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
+    SPINNER_TICK_RATE,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
@@ -144,18 +144,17 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
         let mut manifests = manifests.await?;
-        let previous_installers = mem::take(&mut manifests.installer_manifest.installers)
+        let previous_installers = mem::take(&mut manifests.installer.installers)
             .into_iter()
             .map(|mut installer| {
-                if manifests.installer_manifest.installer_type.is_some() {
-                    installer.installer_type = manifests.installer_manifest.installer_type;
+                if manifests.installer.installer_type.is_some() {
+                    installer.installer_type = manifests.installer.installer_type;
                 }
-                if manifests.installer_manifest.nested_installer_type.is_some() {
-                    installer.nested_installer_type =
-                        manifests.installer_manifest.nested_installer_type;
+                if manifests.installer.nested_installer_type.is_some() {
+                    installer.nested_installer_type = manifests.installer.nested_installer_type;
                 }
-                if manifests.installer_manifest.scope.is_some() {
-                    installer.scope = manifests.installer_manifest.scope;
+                if manifests.installer.scope.is_some() {
+                    installer.scope = manifests.installer.scope;
                 }
                 installer
             })
@@ -179,25 +178,26 @@ impl UpdateVersion {
                     .clone_from(&new_installer.installer_url);
                 installer.nested_installer_files = installer
                     .nested_installer_files
-                    .or_else(|| manifests.installer_manifest.nested_installer_files.clone())
+                    .or_else(|| manifests.installer.nested_installer_files.clone())
                     .and_then(|nested_installer_files| {
                         validate_relative_paths(nested_installer_files, &analyser.zip)
                     });
-                deduplicate_display_version(
-                    installer.apps_and_features_entries.as_mut(),
-                    &self.package_version,
-                );
+                if let Some(entries) = installer.apps_and_features_entries.as_mut() {
+                    for entry in entries {
+                        entry.deduplicate(&self.package_version, &manifests.default_locale);
+                    }
+                }
                 installer
             })
             .collect::<Vec<_>>();
 
-        manifests.installer_manifest.minimum_os_version = manifests
-            .installer_manifest
+        manifests.installer.minimum_os_version = manifests
+            .installer
             .minimum_os_version
             .filter(|minimum_os_version| *minimum_os_version != MinimumOSVersion::removable());
-        manifests.installer_manifest.installers = installers;
+        manifests.installer.installers = installers;
         manifests
-            .installer_manifest
+            .installer
             .reorder_keys(&self.package_identifier, &self.package_version);
 
         let mut github_values = match github_values {
@@ -206,15 +206,15 @@ impl UpdateVersion {
         };
 
         manifests
-            .default_locale_manifest
+            .default_locale
             .update(&self.package_version, &mut github_values);
 
         manifests
-            .locale_manifests
+            .locales
             .iter_mut()
             .for_each(|locale| locale.update(&self.package_version, &github_values));
 
-        manifests.version_manifest.update(&self.package_version);
+        manifests.version.update(&self.package_version);
 
         let package_path =
             get_package_path(&self.package_identifier, Some(&self.package_version), None);

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 #[nutype(
     validate(len_char_min = 2, len_char_max = 256),
     default = "Publisher",
-    derive(Clone, Default, FromStr, Display, Deserialize, Serialize)
+    derive(Clone, Default, Deref, FromStr, Display, Deserialize, Serialize)
 )]
 pub struct Publisher(String);
 

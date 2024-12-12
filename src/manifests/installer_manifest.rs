@@ -6,6 +6,7 @@ use crate::installers::utils::{
     RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
     RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
 };
+use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::Manifest;
 use crate::types::architecture::Architecture;
 use crate::types::command::Command;
@@ -445,6 +446,24 @@ pub struct AppsAndFeaturesEntry {
     pub product_code: Option<String>,
     pub upgrade_code: Option<String>,
     pub installer_type: Option<InstallerType>,
+}
+
+impl AppsAndFeaturesEntry {
+    pub fn deduplicate(
+        &mut self,
+        package_version: &PackageVersion,
+        locale_manifest: &DefaultLocaleManifest,
+    ) {
+        if self.display_name.as_ref() == Some(&*locale_manifest.package_name) {
+            self.display_name = None;
+        }
+        if self.publisher.as_ref() == Some(&*locale_manifest.publisher) {
+            self.publisher = None;
+        }
+        if self.display_version.as_ref() == Some(&**package_version) {
+            self.display_version = None;
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]

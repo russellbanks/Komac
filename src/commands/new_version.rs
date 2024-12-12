@@ -3,8 +3,8 @@ use std::mem;
 use std::num::{NonZeroU32, NonZeroU8};
 
 use crate::commands::utils::{
-    deduplicate_display_version, prompt_existing_pull_request, prompt_submit_option,
-    write_changes_to_dir, SubmitOption, SPINNER_TICK_RATE,
+    prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
+    SPINNER_TICK_RATE,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
@@ -260,10 +260,6 @@ impl NewVersion {
             if installer_switches.is_any_some() {
                 installer.installer_switches = Some(installer_switches);
             }
-            deduplicate_display_version(
-                installer.apps_and_features_entries.as_mut(),
-                &package_version,
-            );
             installers.push(installer);
         }
         let default_locale = required_prompt(self.package_locale)?;
@@ -294,11 +290,10 @@ impl NewVersion {
             } else {
                 None
             },
+            installers,
             manifest_type: ManifestType::Installer,
             ..InstallerManifest::default()
         };
-        installer_manifest.installers = installers;
-        installer_manifest.reorder_keys(&package_identifier, &package_version);
 
         let mut github_values = match github_values {
             Some(future) => Some(future.await?),
@@ -341,6 +336,16 @@ impl NewVersion {
             manifest_type: ManifestType::DefaultLocale,
             ..DefaultLocaleManifest::default()
         };
+
+        installer_manifest
+            .installers
+            .iter_mut()
+            .filter_map(|installer| installer.apps_and_features_entries.as_mut())
+            .flatten()
+            .for_each(|entry| entry.deduplicate(&package_version, &default_locale_manifest));
+
+        installer_manifest.reorder_keys(&package_identifier, &package_version);
+
         let version_manifest = VersionManifest {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
@@ -350,11 +355,11 @@ impl NewVersion {
         };
 
         let manifests = Manifests {
-            installer_manifest,
-            default_locale_manifest,
-            version_manifest,
-            locale_manifests: manifests
-                .map(|manifests| manifests.locale_manifests)
+            installer: installer_manifest,
+            default_locale: default_locale_manifest,
+            version: version_manifest,
+            locales: manifests
+                .map(|manifests| manifests.locales)
                 .unwrap_or_default(),
         };
 

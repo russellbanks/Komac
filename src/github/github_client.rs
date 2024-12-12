@@ -248,10 +248,10 @@ impl GitHub {
             })??;
 
         Ok(Manifests {
-            installer_manifest,
-            default_locale_manifest,
-            version_manifest,
-            locale_manifests,
+            installer: installer_manifest,
+            default_locale: default_locale_manifest,
+            version: version_manifest,
+            locales: locale_manifests,
         })
     }
 
@@ -822,10 +822,10 @@ impl GitHub {
 }
 
 pub struct Manifests {
-    pub installer_manifest: InstallerManifest,
-    pub default_locale_manifest: DefaultLocaleManifest,
-    pub version_manifest: VersionManifest,
-    pub locale_manifests: Vec<LocaleManifest>,
+    pub installer: InstallerManifest,
+    pub default_locale: DefaultLocaleManifest,
+    pub version: VersionManifest,
+    pub locales: Vec<LocaleManifest>,
 }
 
 pub struct GitHubValues {

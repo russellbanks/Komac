@@ -69,21 +69,21 @@ impl ShowVersion {
 
         let mut contents = Vec::new();
         if all || self.installer_manifest {
-            contents.push(serde_yaml::to_string(&manifests.installer_manifest)?);
+            contents.push(serde_yaml::to_string(&manifests.installer)?);
         }
         if all || self.default_locale_manifest {
-            contents.push(serde_yaml::to_string(&manifests.default_locale_manifest)?);
+            contents.push(serde_yaml::to_string(&manifests.default_locale)?);
         }
         if all || self.locale_manifests {
             contents.extend(
                 manifests
-                    .locale_manifests
+                    .locales
                     .into_iter()
                     .flat_map(|locale_manifest| serde_yaml::to_string(&locale_manifest)),
             );
         }
         if all || self.version_manifest {
-            contents.push(serde_yaml::to_string(&manifests.version_manifest)?);
+            contents.push(serde_yaml::to_string(&manifests.version)?);
         }
 
         print_changes(contents.iter().map(String::as_str));
