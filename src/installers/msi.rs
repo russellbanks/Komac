@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Read, Result, Seek};
-use std::str::FromStr;
+use std::str::{FromStr, SplitAsciiWhitespace};
 
 use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{
@@ -24,6 +24,7 @@ const UPGRADE_CODE: &str = "UpgradeCode";
 const ALL_USERS: &str = "ALLUSERS";
 const WIX: &str = "wix";
 const WINDOWS_INSTALLER_XML: &str = "windows installer xml";
+const GOOGLE_CHROME: &str = "Google Chrome";
 
 const INSTALL_DIR: &str = "INSTALLDIR";
 const TARGET_DIR: &str = "TARGETDIR";
@@ -60,6 +61,8 @@ impl Msi {
 
         let mut property_table = Self::get_property_table(&mut msi)?;
 
+        let product_name = property_table.remove(PRODUCT_NAME);
+
         Ok(Self {
             architecture,
             install_location: Self::find_install_directory(
@@ -68,11 +71,15 @@ impl Msi {
             ),
             product_code: property_table.remove(PRODUCT_CODE),
             upgrade_code: property_table.remove(UPGRADE_CODE),
-            product_name: property_table.remove(PRODUCT_NAME),
-            product_version: property_table.remove(PRODUCT_VERSION),
+            product_version: product_name
+                .as_deref()
+                .is_some_and(|product_name| product_name == GOOGLE_CHROME)
+                .then(|| Self::get_actual_chrome_version(&mut msi).map(str::to_owned))
+                .unwrap_or_else(|| property_table.remove(PRODUCT_VERSION)),
+            product_name,
             manufacturer: property_table.remove(MANUFACTURER),
             product_language: property_table.get(PRODUCT_LANGUAGE).and_then(|code| {
-                LanguageTag::from_str(Language::from_code(u16::from_str(code).ok()?).tag()).ok()
+                LanguageTag::from_str(Language::from_code(code.parse::<u16>().ok()?).tag()).ok()
             }),
             // https://learn.microsoft.com/windows/win32/msi/allusers
             all_users: match property_table
@@ -250,6 +257,19 @@ impl Msi {
             WINDOWS_FOLDER => Some(RELATIVE_WINDOWS_DIR),
             _ => None,
         }
+    }
+
+    /// Google Chrome translates its ProductVersion into a different one. The actual DisplayVersion
+    /// can be retrieved from the MSI Summary Info Comments.
+    ///
+    /// https://issues.chromium.org/issues/382215764#comment8
+    fn get_actual_chrome_version<R: Read + Seek>(msi: &mut Package<R>) -> Option<&str> {
+        msi.summary_info()
+            .comments()
+            .map(str::split_ascii_whitespace)
+            .as_mut()
+            .and_then(SplitAsciiWhitespace::next)
+            .filter(|version| version.split('.').all(|part| part.parse::<u16>().is_ok()))
     }
 }
 
