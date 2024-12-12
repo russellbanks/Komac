@@ -23,6 +23,7 @@ const MANUFACTURER: &str = "Manufacturer";
 const UPGRADE_CODE: &str = "UpgradeCode";
 const ALL_USERS: &str = "ALLUSERS";
 const WIX: &str = "wix";
+const WINDOWS_INSTALLER_XML: &str = "windows installer xml";
 
 const INSTALL_DIR: &str = "INSTALLDIR";
 const TARGET_DIR: &str = "TARGETDIR";
@@ -83,13 +84,18 @@ impl Msi {
                 "2" => None, // Installs depending on installation context and user privileges
                 _ => Some(Scope::User), // No value or an empty string specifies per-user context
             },
-            is_wix: property_table.into_iter().any(|(mut property, mut value)| {
-                property.make_ascii_lowercase();
-                property.contains(WIX) || {
-                    value.make_ascii_lowercase();
-                    value.contains(WIX)
-                }
-            }),
+            is_wix: msi
+                .summary_info()
+                .creating_application()
+                .map(str::to_ascii_lowercase)
+                .is_some_and(|app| app.contains(WIX) || app.contains(WINDOWS_INSTALLER_XML))
+                || property_table.into_iter().any(|(mut property, mut value)| {
+                    property.make_ascii_lowercase();
+                    property.contains(WIX) || {
+                        value.make_ascii_lowercase();
+                        value.contains(WIX)
+                    }
+                }),
         })
     }
 
