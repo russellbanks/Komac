@@ -368,7 +368,7 @@ impl NewVersion {
             .package_identifier(&package_identifier)
             .manifests(&manifests)
             .package_path(&package_path)
-            .created_with(&self.created_with)
+            .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
         let submit_option = prompt_submit_option(

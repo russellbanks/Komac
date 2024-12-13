@@ -66,7 +66,7 @@ impl LocaleManifest {
     pub fn update(
         &mut self,
         package_version: &PackageVersion,
-        github_values: &Option<GitHubValues>,
+        github_values: Option<&GitHubValues>,
     ) {
         self.package_version.clone_from(package_version);
         self.release_notes_url = github_values

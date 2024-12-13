@@ -9,7 +9,7 @@ pub fn pr_changes(
     package_identifier: &PackageIdentifier,
     manifests: &Manifests,
     package_path: &str,
-    created_with: &Option<String>,
+    created_with: Option<&str>,
 ) -> Result<Vec<(String, String)>> {
     let mut path_content_map = vec![
         (

@@ -88,7 +88,7 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
 
 pub fn build_manifest_string<T: Manifest + Serialize>(
     manifest: &T,
-    created_with: &Option<String>,
+    created_with: Option<&str>,
 ) -> Result<String> {
     let mut result = Vec::from("# Created with ");
     if let Some(created_with_tool) = created_with {

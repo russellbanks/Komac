@@ -180,7 +180,7 @@ impl UpdateVersion {
                     .nested_installer_files
                     .or_else(|| manifests.installer.nested_installer_files.clone())
                     .and_then(|nested_installer_files| {
-                        validate_relative_paths(nested_installer_files, &analyser.zip)
+                        validate_relative_paths(nested_installer_files, analyser.zip.as_ref())
                     });
                 if let Some(entries) = installer.apps_and_features_entries.as_mut() {
                     for entry in entries {
@@ -212,7 +212,7 @@ impl UpdateVersion {
         manifests
             .locales
             .iter_mut()
-            .for_each(|locale| locale.update(&self.package_version, &github_values));
+            .for_each(|locale| locale.update(&self.package_version, github_values.as_ref()));
 
         manifests.version.update(&self.package_version);
 
@@ -222,7 +222,7 @@ impl UpdateVersion {
             .package_identifier(&self.package_identifier)
             .manifests(&manifests)
             .package_path(&package_path)
-            .created_with(&self.created_with)
+            .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
         let submit_option = prompt_submit_option(
@@ -282,7 +282,7 @@ impl UpdateVersion {
 
 fn validate_relative_paths<R: Read + Seek>(
     nested_installer_files: BTreeSet<NestedInstallerFiles>,
-    zip: &Option<Zip<R>>,
+    zip: Option<&Zip<R>>,
 ) -> Option<BTreeSet<NestedInstallerFiles>> {
     let relative_paths = nested_installer_files
         .into_iter()

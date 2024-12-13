@@ -14,7 +14,7 @@ struct SearchBox<'a> {
     open: bool,
 }
 
-impl<'a> Default for SearchBox<'a> {
+impl Default for SearchBox<'_> {
     fn default() -> Self {
         let mut textarea = TextArea::default();
         textarea.set_block(Block::default().borders(Borders::ALL).title("Search"));
@@ -25,7 +25,7 @@ impl<'a> Default for SearchBox<'a> {
     }
 }
 
-impl<'a> SearchBox<'a> {
+impl SearchBox<'_> {
     fn open(&mut self) {
         self.open = true;
     }
@@ -324,7 +324,7 @@ impl<'a> Editor<'a> {
     }
 }
 
-impl<'a> Drop for Editor<'a> {
+impl Drop for Editor<'_> {
     fn drop(&mut self) {
         ratatui::restore();
     }

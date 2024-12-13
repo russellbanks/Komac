@@ -74,7 +74,7 @@ impl Msi {
             product_version: product_name
                 .as_deref()
                 .is_some_and(|product_name| product_name == GOOGLE_CHROME)
-                .then(|| Self::get_actual_chrome_version(&mut msi).map(str::to_owned))
+                .then(|| Self::get_actual_chrome_version(&msi).map(str::to_owned))
                 .unwrap_or_else(|| property_table.remove(PRODUCT_VERSION)),
             product_name,
             manufacturer: property_table.remove(MANUFACTURER),
@@ -259,11 +259,11 @@ impl Msi {
         }
     }
 
-    /// Google Chrome translates its ProductVersion into a different one. The actual DisplayVersion
-    /// can be retrieved from the MSI Summary Info Comments.
+    /// Google Chrome translates its `ProductVersion` into a different one. The actual
+    /// `DisplayVersion` can be retrieved from the MSI Summary Info Comments.
     ///
-    /// https://issues.chromium.org/issues/382215764#comment8
-    fn get_actual_chrome_version<R: Read + Seek>(msi: &mut Package<R>) -> Option<&str> {
+    /// <https://issues.chromium.org/issues/382215764#comment8>
+    fn get_actual_chrome_version<R: Read + Seek>(msi: &Package<R>) -> Option<&str> {
         msi.summary_info()
             .comments()
             .map(str::split_ascii_whitespace)
