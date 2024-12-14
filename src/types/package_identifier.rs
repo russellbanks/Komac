@@ -1,4 +1,4 @@
-use crate::prompts::prompt::RequiredPrompt;
+use crate::prompts::prompt::Prompt;
 use derive_more::{AsRef, Deref, Display};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -58,7 +58,7 @@ impl PackageIdentifier {
     }
 }
 
-impl RequiredPrompt for PackageIdentifier {
+impl Prompt for PackageIdentifier {
     const MESSAGE: &'static str = "Package identifier:";
     const HELP_MESSAGE: Option<&'static str> =
         Some("Package Identifiers are in the format of Package.Identifier");

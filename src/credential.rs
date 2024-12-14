@@ -1,3 +1,4 @@
+use crate::prompts::prompt::handle_inquire_error;
 use color_eyre::eyre::{bail, Result};
 use inquire::error::InquireResult;
 use inquire::validator::Validation;
@@ -51,6 +52,7 @@ pub fn token_prompt(client: Client, prompt: Option<&str>) -> InquireResult<Strin
             .with_validator(validator)
             .without_confirmation()
             .prompt()
+            .map_err(handle_inquire_error)
     })
 }
 

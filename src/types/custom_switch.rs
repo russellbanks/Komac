@@ -1,4 +1,4 @@
-use crate::prompts::prompt::OptionalPrompt;
+use crate::prompts::prompt::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -19,7 +19,7 @@ use nutype::nutype;
 )]
 pub struct CustomSwitch(String);
 
-impl OptionalPrompt for CustomSwitch {
+impl Prompt for CustomSwitch {
     const MESSAGE: &'static str = "Custom installer switch:";
     const HELP_MESSAGE: Option<&'static str> = Some("Example: /norestart, -norestart");
     const PLACEHOLDER: Option<&'static str> = None;

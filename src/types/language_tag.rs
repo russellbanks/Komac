@@ -1,4 +1,4 @@
-use crate::prompts::prompt::RequiredPrompt;
+use crate::prompts::prompt::Prompt;
 use derive_more::{AsRef, Deref, Display, FromStr};
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +25,7 @@ impl Default for LanguageTag {
     }
 }
 
-impl RequiredPrompt for LanguageTag {
+impl Prompt for LanguageTag {
     const MESSAGE: &'static str = "Package locale:";
     const HELP_MESSAGE: Option<&'static str> = Some("Example: en-US");
     const PLACEHOLDER: Option<&'static str> = None;

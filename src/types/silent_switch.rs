@@ -1,23 +1,25 @@
-use crate::prompts::prompt::OptionalPrompt;
-use crate::types::installer_switch::InstallerSwitch;
+use crate::prompts::prompt::Prompt;
 use nutype::nutype;
 
-#[nutype(derive(
-    Clone,
-    FromStr,
-    Debug,
-    Display,
-    Deserialize,
-    Serialize,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Hash
-))]
-pub struct SilentSwitch(InstallerSwitch);
+#[nutype(
+    validate(len_char_min = 1, len_char_max = 512),
+    derive(
+        Clone,
+        FromStr,
+        Debug,
+        Display,
+        Deserialize,
+        Serialize,
+        Eq,
+        PartialEq,
+        PartialOrd,
+        Ord,
+        Hash
+    )
+)]
+pub struct SilentSwitch(String);
 
-impl OptionalPrompt for SilentSwitch {
+impl Prompt for SilentSwitch {
     const MESSAGE: &'static str = "Silent installer switch:";
     const HELP_MESSAGE: Option<&'static str> =
         Some("Example: /S, -verysilent, /qn, --silent, /exenoui");

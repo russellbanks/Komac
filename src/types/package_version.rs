@@ -1,4 +1,4 @@
-use crate::prompts::prompt::RequiredPrompt;
+use crate::prompts::prompt::Prompt;
 use derive_more::{Deref, Display};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;
@@ -32,7 +32,7 @@ impl FromStr for PackageVersion {
     }
 }
 
-impl RequiredPrompt for PackageVersion {
+impl Prompt for PackageVersion {
     const MESSAGE: &'static str = "Package version:";
     const HELP_MESSAGE: Option<&'static str> = Some("Example: 1.2.3");
     const PLACEHOLDER: Option<&'static str> = None;

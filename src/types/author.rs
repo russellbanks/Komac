@@ -1,4 +1,4 @@
-use crate::prompts::prompt::OptionalPrompt;
+use crate::prompts::prompt::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -7,7 +7,7 @@ use nutype::nutype;
 )]
 pub struct Author(String);
 
-impl OptionalPrompt for Author {
+impl Prompt for Author {
     const MESSAGE: &'static str = "Author:";
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;

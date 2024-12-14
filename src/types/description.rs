@@ -1,4 +1,4 @@
-use crate::prompts::prompt::OptionalPrompt;
+use crate::prompts::prompt::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -7,7 +7,7 @@ use nutype::nutype;
 )]
 pub struct Description(String);
 
-impl OptionalPrompt for Description {
+impl Prompt for Description {
     const MESSAGE: &'static str = "Description:";
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;

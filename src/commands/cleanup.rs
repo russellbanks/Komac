@@ -1,6 +1,7 @@
 use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
+use crate::prompts::prompt::handle_inquire_error;
 use anstream::println;
 use bitflags::bitflags;
 use clap::Parser;
@@ -70,7 +71,8 @@ impl Cleanup {
             )
             .with_all_selected_by_default()
             .with_page_size(10)
-            .prompt()?
+            .prompt()
+            .map_err(handle_inquire_error)?
         };
 
         if chosen_pr_branches.is_empty() {

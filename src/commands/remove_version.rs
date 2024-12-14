@@ -3,6 +3,7 @@ use std::num::NonZeroU32;
 use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
+use crate::prompts::prompt::handle_inquire_error;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use anstream::println;
@@ -85,14 +86,16 @@ impl RemoveVersion {
             ))
             .with_validator(MinLengthValidator::new(Self::MIN_REASON_LENGTH))
             .with_validator(MaxLengthValidator::new(Self::MAX_REASON_LENGTH))
-            .prompt()?,
+            .prompt()
+            .map_err(handle_inquire_error)?,
         };
         let should_remove_manifest = self.submit
             || Confirm::new(&format!(
                 "Would you like to make a pull request to remove {} {}?",
                 self.package_identifier, self.package_version
             ))
-            .prompt()?;
+            .prompt()
+            .map_err(handle_inquire_error)?;
 
         if !should_remove_manifest {
             return Ok(());

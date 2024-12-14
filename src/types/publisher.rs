@@ -1,4 +1,4 @@
-use crate::prompts::prompt::RequiredPrompt;
+use crate::prompts::prompt::Prompt;
 use nutype::nutype;
 use std::collections::HashMap;
 
@@ -17,7 +17,7 @@ impl Publisher {
     }
 }
 
-impl RequiredPrompt for Publisher {
+impl Prompt for Publisher {
     const MESSAGE: &'static str = "Publisher:";
     const HELP_MESSAGE: Option<&'static str> = Some("Example: Microsoft Corporation");
     const PLACEHOLDER: Option<&'static str> = None;

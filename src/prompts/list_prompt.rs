@@ -1,3 +1,4 @@
+use crate::prompts::prompt::handle_inquire_error;
 use inquire::validator::Validation;
 use inquire::Text;
 use std::collections::BTreeSet;
@@ -40,7 +41,8 @@ where
             }
             Ok(Validation::Valid)
         })
-        .prompt()?
+        .prompt()
+        .map_err(handle_inquire_error)?
         .split(|char| DELIMITERS.contains(&char))
         .flat_map(T::from_str)
         .collect::<BTreeSet<_>>();

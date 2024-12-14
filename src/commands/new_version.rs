@@ -18,7 +18,7 @@ use crate::manifests::installer_manifest::{
 use crate::manifests::version_manifest::VersionManifest;
 use crate::prompts::list_prompt::list_prompt;
 use crate::prompts::multi_prompt::{check_prompt, radio_prompt};
-use crate::prompts::prompt::{optional_prompt, required_prompt};
+use crate::prompts::prompt::{handle_inquire_error, optional_prompt, required_prompt};
 use crate::types::author::Author;
 use crate::types::command::Command;
 use crate::types::copyright::Copyright;
@@ -202,11 +202,12 @@ impl NewVersion {
                 let url_prompt = CustomType::<DecodedUrl>::new(&message)
                     .with_error_message("Please enter a valid URL");
                 let installer_url = if urls.len() + 1 == 1 {
-                    Some(url_prompt.prompt()?)
+                    Some(url_prompt.prompt().map_err(handle_inquire_error)?)
                 } else {
                     url_prompt
                         .with_help_message("Press ESC if you do not have any more URLs")
-                        .prompt_skippable()?
+                        .prompt_skippable()
+                        .map_err(handle_inquire_error)?
                 };
                 if let Some(url) = installer_url {
                     urls.push(url);
@@ -238,15 +239,17 @@ impl NewVersion {
         let mut installers = Vec::new();
         for (url, analyser) in &mut download_results {
             if analyser.installer.installer_type == Some(InstallerType::Exe)
-                && Confirm::new(&format!("Is {} a portable exe?", analyser.file_name)).prompt()?
+                && Confirm::new(&format!("Is {} a portable exe?", analyser.file_name))
+                    .prompt()
+                    .map_err(handle_inquire_error)?
             {
                 analyser.installer.installer_type = Some(InstallerType::Portable);
             }
             let mut installer_switches = InstallerSwitches::default();
             if analyser.installer.installer_type == Some(InstallerType::Exe) {
-                installer_switches.silent = optional_prompt::<SilentSwitch>(None)?;
+                installer_switches.silent = Some(required_prompt::<SilentSwitch>(None)?);
                 installer_switches.silent_with_progress =
-                    optional_prompt::<SilentWithProgressSwitch>(None)?;
+                    Some(required_prompt::<SilentWithProgressSwitch>(None)?);
             }
             if analyser.installer.installer_type != Some(InstallerType::Portable) {
                 installer_switches.custom = optional_prompt::<CustomSwitch>(None)?;

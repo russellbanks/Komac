@@ -16,6 +16,7 @@ use tokio::io::AsyncWriteExt;
 use crate::editor::Editor;
 use crate::github::graphql::get_existing_pull_request::PullRequest;
 use crate::manifests::print_changes;
+use crate::prompts::prompt::handle_inquire_error;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 
@@ -39,7 +40,9 @@ pub fn prompt_existing_pull_request(
     let proceed = if env::var("CI").is_ok_and(|ci| bool::from_str(&ci) == Ok(true)) {
         false
     } else {
-        Confirm::new("Would you like to proceed?").prompt()?
+        Confirm::new("Would you like to proceed?")
+            .prompt()
+            .map_err(handle_inquire_error)?
     };
     Ok(proceed)
 }
@@ -64,7 +67,8 @@ pub fn prompt_submit_option(
                 &format!("What would you like to do with {identifier} {version}?"),
                 SubmitOption::iter().collect(),
             )
-            .prompt()?
+            .prompt()
+            .map_err(handle_inquire_error)?
         };
 
         if submit_option == SubmitOption::Edit {

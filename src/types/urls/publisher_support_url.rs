@@ -1,4 +1,4 @@
-use crate::prompts::prompt::OptionalPrompt;
+use crate::prompts::prompt::Prompt;
 use crate::types::urls::url::DecodedUrl;
 use derive_more::{Display, FromStr};
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, FromStr, Display, Deserialize, Serialize)]
 pub struct PublisherSupportUrl(DecodedUrl);
 
-impl OptionalPrompt for PublisherSupportUrl {
+impl Prompt for PublisherSupportUrl {
     const MESSAGE: &'static str = "Publisher Support Url:";
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;

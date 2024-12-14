@@ -10,6 +10,7 @@ use zip::ZipArchive;
 
 use crate::file_analyser::FileAnalyser;
 use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
+use crate::prompts::prompt::handle_inquire_error;
 use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 
@@ -109,7 +110,8 @@ impl<R: Read + Seek> Zip<R> {
                 mem::take(&mut self.identified_files),
             )
             .with_validator(min_length!(1))
-            .prompt()?;
+            .prompt()
+            .map_err(handle_inquire_error)?;
             let first_choice = chosen.first().unwrap();
             let mut temp_file = tempfile::tempfile()?;
             io::copy(
@@ -121,20 +123,27 @@ impl<R: Read + Seek> Zip<R> {
             self.nested_installer_files = Some(
                 chosen
                     .into_iter()
-                    .map(|path| NestedInstallerFiles {
-                        portable_command_alias: if file_analyser.installer.installer_type
-                            == Some(InstallerType::Portable)
-                        {
-                            Text::new(&format!("Portable command alias for {}:", path.as_str()))
-                                .prompt()
-                                .ok()
+                    .map(|path| {
+                        Ok(NestedInstallerFiles {
+                            portable_command_alias: if file_analyser.installer.installer_type
+                                == Some(InstallerType::Portable)
+                            {
+                                Some(
+                                    Text::new(&format!(
+                                        "Portable command alias for {}:",
+                                        path.as_str()
+                                    ))
+                                    .prompt()
+                                    .map_err(handle_inquire_error)?,
+                                )
                                 .filter(|alias| !alias.trim().is_empty())
-                        } else {
-                            None
-                        },
-                        relative_file_path: path,
+                            } else {
+                                None
+                            },
+                            relative_file_path: path,
+                        })
                     })
-                    .collect(),
+                    .collect::<Result<BTreeSet<_>>>()?,
             );
             self.architecture = Some(file_analyser.installer.architecture);
             self.nested_installer_type = file_analyser

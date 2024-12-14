@@ -1,4 +1,4 @@
-use crate::prompts::prompt::RequiredPrompt;
+use crate::prompts::prompt::Prompt;
 use nutype::nutype;
 use std::collections::HashMap;
 
@@ -17,7 +17,7 @@ impl PackageName {
     }
 }
 
-impl RequiredPrompt for PackageName {
+impl Prompt for PackageName {
     const MESSAGE: &'static str = "Package name:";
     const HELP_MESSAGE: Option<&'static str> = Some("Example: Microsoft Teams");
     const PLACEHOLDER: Option<&'static str> = None;
