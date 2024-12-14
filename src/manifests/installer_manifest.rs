@@ -99,54 +99,52 @@ impl InstallerManifest {
     ) {
         fn reorder_key<T>(
             installers: &mut [Installer],
-            get_key: impl Fn(&mut Installer) -> &mut Option<T>,
-            set_root: &mut Option<T>,
+            get_installer_key: impl Fn(&mut Installer) -> &mut Option<T>,
+            root_key: &mut Option<T>,
         ) where
             T: PartialEq,
         {
-            if let Ok(value) = installers.iter_mut().map(&get_key).all_equal_value() {
+            if let Ok(value) = installers
+                .iter_mut()
+                .map(|installer| get_installer_key(installer))
+                .all_equal_value()
+            {
                 if value.is_some() {
-                    *set_root = value.take();
+                    *root_key = value.take();
                     installers
                         .iter_mut()
-                        .for_each(|installer| *get_key(installer) = None);
+                        .for_each(|installer| *get_installer_key(installer) = None);
                 }
             }
         }
 
         fn reorder_struct_key<T, R>(
             installers: &mut [Installer],
-            field: impl Fn(&mut Installer) -> &mut Option<T>,
-            nested_field: impl Fn(&mut T) -> &mut Option<R>,
-            set_self: &mut Option<T>,
+            get_installer_struct: impl Fn(&mut Installer) -> &mut Option<T>,
+            get_struct_key: impl Fn(&mut T) -> &mut Option<R>,
+            root_struct: &mut Option<T>,
         ) where
             T: Default,
             R: PartialEq,
         {
-            if let Ok(Some(nested_value)) = installers
+            if let Ok(Some(common_value)) = installers
                 .iter_mut()
-                .map(&field)
-                .map(|opt| opt.as_mut().map(&nested_field))
+                .map(|installer| get_installer_struct(installer))
+                .map(|r#struct| r#struct.as_mut().map(|s| get_struct_key(s)))
                 .all_equal_value()
             {
-                if nested_value.is_some() {
-                    if let Some(s) = set_self.as_mut() {
-                        *nested_field(s) = nested_value.take();
-                    } else {
-                        *set_self = Some(T::default());
-                        if let Some(s) = set_self.as_mut() {
-                            *nested_field(s) = nested_value.take();
-                        }
-                    }
+                if common_value.is_some() {
+                    *get_struct_key(root_struct.get_or_insert_default()) = common_value.take();
+
                     installers
                         .iter_mut()
-                        .filter_map(|installer| field(installer).as_mut())
-                        .for_each(|s| *nested_field(s) = None);
+                        .filter_map(|installer| get_installer_struct(installer).as_mut())
+                        .for_each(|r#struct| *get_struct_key(r#struct) = None);
                 }
             }
         }
 
-        macro_rules! root_keys {
+        macro_rules! reorder_root_keys {
             ($($field:ident),*) => {
                 $(
                     reorder_key(&mut self.installers, |installer| &mut installer.$field, &mut self.$field);
@@ -154,17 +152,24 @@ impl InstallerManifest {
             };
         }
 
-        macro_rules! root_struct_key {
+        macro_rules! reorder_struct_key {
             ($struct:ident, $( $field:ident ),*) => {
                 $(
                     reorder_struct_key(&mut self.installers, |installer| &mut installer.$struct, |s| &mut s.$field, &mut self.$struct);
                 )*
+                self.installers.iter_mut().for_each(|installer| {
+                    if let Some(r#struct) = &mut installer.$struct {
+                        if !r#struct.is_any_some() {
+                            installer.$struct = None;
+                        }
+                    }
+                });
             };
         }
 
         self.package_identifier.clone_from(package_identifier);
         self.package_version.clone_from(package_version);
-        root_keys!(
+        reorder_root_keys!(
             installer_locale,
             platform,
             minimum_os_version,
@@ -199,7 +204,7 @@ impl InstallerManifest {
             repair_behavior,
             archive_binaries_depend_on_path
         );
-        root_struct_key!(
+        reorder_struct_key!(
             installer_switches,
             silent,
             silent_with_progress,
