@@ -8,6 +8,7 @@ use crate::commands::new_version::NewVersion;
 use crate::commands::remove_dead_versions::RemoveDeadVersions;
 use crate::commands::remove_version::RemoveVersion;
 use crate::commands::show_version::ShowVersion;
+use crate::commands::submit::Submit;
 use crate::commands::sync_fork::SyncFork;
 use crate::commands::token::commands::{TokenArgs, TokenCommands};
 use crate::commands::update_version::UpdateVersion;
@@ -51,6 +52,7 @@ async fn main() -> Result<()> {
         }
         Commands::Analyse(analyse) => analyse.run(),
         Commands::RemoveDeadVersions(remove_dead_versions) => remove_dead_versions.run().await,
+        Commands::Submit(submit) => submit.run().await,
     }
 }
 
@@ -76,4 +78,5 @@ enum Commands {
     Complete(Complete),
     Analyse(Analyse),
     RemoveDeadVersions(RemoveDeadVersions),
+    Submit(Submit),
 }

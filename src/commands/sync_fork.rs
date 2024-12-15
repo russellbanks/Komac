@@ -25,7 +25,7 @@ pub struct SyncFork {
 
 impl SyncFork {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token).await?;
+        let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
         // Fetch repository data from both upstream and fork repositories asynchronously

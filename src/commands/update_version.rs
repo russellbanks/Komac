@@ -86,7 +86,7 @@ pub struct UpdateVersion {
 
 impl UpdateVersion {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token).await?;
+        let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
         let client = Client::builder()
             .default_headers(get_default_headers(None))
@@ -225,14 +225,6 @@ impl UpdateVersion {
             .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
-        let submit_option = prompt_submit_option(
-            &mut changes,
-            self.submit,
-            &self.package_identifier,
-            &self.package_version,
-            self.dry_run,
-        )?;
-
         if let Some(output) = self.output.map(|out| out.join(package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
@@ -240,6 +232,14 @@ impl UpdateVersion {
                 "Successfully".green()
             );
         }
+
+        let submit_option = prompt_submit_option(
+            &mut changes,
+            self.submit,
+            &self.package_identifier,
+            &self.package_version,
+            self.dry_run,
+        )?;
 
         if submit_option == SubmitOption::Exit {
             return Ok(());

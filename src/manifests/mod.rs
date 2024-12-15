@@ -1,3 +1,7 @@
+use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
+use crate::manifests::installer_manifest::InstallerManifest;
+use crate::manifests::locale_manifest::LocaleManifest;
+use crate::manifests::version_manifest::VersionManifest;
 use crate::types::manifest_type::ManifestType;
 use anstream::AutoStream;
 use clap::{crate_name, crate_version};
@@ -6,6 +10,7 @@ use owo_colors::colors::css::SlateGrey;
 use owo_colors::{OwoColorize, Style};
 use serde::Serialize;
 use std::env;
+use std::fmt::{Display, Formatter};
 use std::io::StdoutLock;
 use std::io::Write;
 use std::sync::LazyLock;
@@ -20,6 +25,23 @@ pub trait Manifest {
     const SCHEMA: &'static str;
 
     const TYPE: ManifestType;
+}
+
+pub struct Manifests {
+    pub installer: InstallerManifest,
+    pub default_locale: DefaultLocaleManifest,
+    pub locales: Vec<LocaleManifest>,
+    pub version: VersionManifest,
+}
+
+impl Display for Manifests {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} version {}",
+            self.version.package_identifier, self.version.package_version
+        )
+    }
 }
 
 pub fn print_changes<'a>(contents: impl Iterator<Item = &'a str>) {

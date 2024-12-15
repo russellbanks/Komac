@@ -87,7 +87,7 @@ pub struct RemoveDeadVersions {
 
 impl RemoveDeadVersions {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token).await?;
+        let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
         let client = Client::builder()
             .default_headers(get_default_headers(None))

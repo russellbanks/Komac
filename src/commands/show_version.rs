@@ -41,7 +41,7 @@ pub struct ShowVersion {
 
 impl ShowVersion {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token).await?;
+        let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
         // Get a list of all versions for the given package

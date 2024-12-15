@@ -6,6 +6,7 @@ pub mod new_version;
 pub mod remove_dead_versions;
 pub mod remove_version;
 pub mod show_version;
+pub mod submit;
 pub mod sync_fork;
 pub mod token;
 pub mod update_version;

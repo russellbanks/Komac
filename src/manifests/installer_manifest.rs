@@ -17,7 +17,7 @@ use crate::types::installer_switch::InstallerSwitch;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::{ManifestVersion, MANIFEST_VERSION};
+use crate::types::manifest_version::ManifestVersion;
 use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -28,7 +28,7 @@ use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::DecodedUrl;
 use camino::Utf8PathBuf;
 use chrono::NaiveDate;
-use const_format::formatcp;
+use const_format::formatc;
 use itertools::Itertools;
 use package_family_name::PackageFamilyName;
 use serde::{Deserialize, Serialize};
@@ -86,8 +86,10 @@ pub struct InstallerManifest {
 }
 
 impl Manifest for InstallerManifest {
-    const SCHEMA: &'static str =
-        formatcp!("https://aka.ms/winget-manifest.installer.{MANIFEST_VERSION}.schema.json");
+    const SCHEMA: &'static str = formatc!(
+        "https://aka.ms/winget-manifest.installer.{}.schema.json",
+        ManifestVersion::DEFAULT
+    );
     const TYPE: ManifestType = ManifestType::Installer;
 }
 
@@ -106,7 +108,7 @@ impl InstallerManifest {
         {
             if let Ok(value) = installers
                 .iter_mut()
-                .map(|installer| get_installer_key(installer))
+                .map(&get_installer_key)
                 .all_equal_value()
             {
                 if value.is_some() {
@@ -129,8 +131,8 @@ impl InstallerManifest {
         {
             if let Ok(Some(common_value)) = installers
                 .iter_mut()
-                .map(|installer| get_installer_struct(installer))
-                .map(|r#struct| r#struct.as_mut().map(|s| get_struct_key(s)))
+                .map(&get_installer_struct)
+                .map(|r#struct| r#struct.as_mut().map(&get_struct_key))
                 .all_equal_value()
             {
                 if common_value.is_some() {

@@ -1,10 +1,10 @@
 use crate::manifests::Manifest;
 use crate::types::language_tag::LanguageTag;
 use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::{ManifestVersion, MANIFEST_VERSION};
+use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
-use const_format::formatcp;
+use const_format::formatc;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -27,7 +27,9 @@ impl VersionManifest {
 }
 
 impl Manifest for VersionManifest {
-    const SCHEMA: &'static str =
-        formatcp!("https://aka.ms/winget-manifest.version.{MANIFEST_VERSION}.schema.json");
+    const SCHEMA: &'static str = formatc!(
+        "https://aka.ms/winget-manifest.version.{}.schema.json",
+        ManifestVersion::DEFAULT
+    );
     const TYPE: ManifestType = ManifestType::Version;
 }

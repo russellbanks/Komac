@@ -1,3 +1,10 @@
+use crate::manifests::Manifest;
+use crate::types::language_tag::LanguageTag;
+use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
+use crate::types::package_identifier::PackageIdentifier;
+use crate::types::package_version::PackageVersion;
+use crate::types::urls::url::DecodedUrl;
+use crate::update_state::UpdateState;
 use bon::builder;
 use clap::{crate_name, crate_version};
 use rand::{thread_rng, Rng};
@@ -6,13 +13,6 @@ use std::env;
 use std::fmt::Write;
 use std::num::NonZeroU32;
 use uuid::Uuid;
-
-use crate::types::language_tag::LanguageTag;
-use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
-use crate::types::urls::url::DecodedUrl;
-use crate::update_state::UpdateState;
 
 pub mod pull_request;
 
@@ -58,11 +58,10 @@ pub fn get_package_path(
     result
 }
 
-pub fn is_manifest_file(
+pub fn is_manifest_file<M: Manifest>(
     file_name: &str,
     package_identifier: &PackageIdentifier,
     default_locale: Option<&LanguageTag>,
-    manifest_type: &ManifestType,
 ) -> bool {
     let identifier_len = package_identifier.len();
     let file_name_len = file_name.len();
@@ -77,7 +76,7 @@ pub fn is_manifest_file(
         return false;
     }
 
-    match manifest_type {
+    match M::TYPE {
         ManifestType::Version => file_name_len == identifier_len + YAML_EXTENSION.len(),
         ManifestType::Installer => {
             file_name.get(identifier_len..file_name_len - YAML_EXTENSION.len())
@@ -95,7 +94,7 @@ pub fn is_manifest_file(
                 .get(identifier_len + LOCALE_PART.len()..file_name_len - YAML_EXTENSION.len());
 
             locale.is_some_and(|locale| {
-                default_locale.is_some_and(|default_locale| match manifest_type {
+                default_locale.is_some_and(|default_locale| match M::TYPE {
                     ManifestType::DefaultLocale => default_locale.as_str() == locale,
                     ManifestType::Locale => default_locale.as_str() != locale,
                     _ => false,
@@ -195,8 +194,12 @@ pub fn get_commit_title(
 #[cfg(test)]
 mod tests {
     use crate::github::utils::{get_package_path, is_manifest_file};
+    use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
+    use crate::manifests::installer_manifest::InstallerManifest;
+    use crate::manifests::locale_manifest::LocaleManifest;
+    use crate::manifests::version_manifest::VersionManifest;
     use crate::types::language_tag::LanguageTag;
-    use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
+    use crate::types::manifest_type::ManifestTypeWithLocale;
     use crate::types::package_identifier::PackageIdentifier;
     use crate::types::package_version::PackageVersion;
     use rstest::rstest;
@@ -248,79 +251,75 @@ mod tests {
         )
     }
 
-    #[rstest]
-    #[case(
-        "Package.Identifier.installer.yaml",
-        "Package.Identifier",
-        None,
-        ManifestType::Installer
-    )]
-    #[case(
-        "Package.Identifier.locale.en-US.yaml",
-        "Package.Identifier",
-        Some("en-US"),
-        ManifestType::DefaultLocale
-    )]
-    #[case(
-        "Package.Identifier.locale.zh-CN.yaml",
-        "Package.Identifier",
-        Some("en-US"),
-        ManifestType::Locale
-    )]
-    #[case(
-        "Package.Identifier.yaml",
-        "Package.Identifier",
-        None,
-        ManifestType::Version
-    )]
-    fn valid_manifest_files(
-        #[case] file_name: &str,
-        #[case] identifier: &str,
-        #[case] default_locale: Option<&str>,
-        #[case] manifest_type: ManifestType,
-    ) {
-        let identifier = PackageIdentifier::parse(identifier).unwrap();
-        let default_locale = default_locale.and_then(|locale| LanguageTag::from_str(locale).ok());
-        assert!(is_manifest_file(
-            file_name,
-            &identifier,
-            default_locale.as_ref(),
-            &manifest_type
+    #[test]
+    fn valid_installer_manifest_file() {
+        assert!(is_manifest_file::<InstallerManifest>(
+            "Package.Identifier.installer.yaml",
+            &PackageIdentifier::parse("Package.Identifier").unwrap(),
+            None,
         ))
     }
 
-    #[rstest]
-    #[case(
-        "Package.Identifier.yaml",
-        "Package.Identifier",
-        None,
-        ManifestType::Installer
-    )]
-    #[case(
-        "Package.Identifier.locale.en-US.yaml",
-        "Package.Identifier",
-        Some("zh-CN"),
-        ManifestType::DefaultLocale
-    )]
-    #[case(
-        "Package.Identifier.locale.en-US.yaml",
-        "Package.Identifier",
-        Some("en-US"),
-        ManifestType::Locale
-    )]
-    fn invalid_manifest_files(
-        #[case] file_name: &str,
-        #[case] identifier: &str,
-        #[case] default_locale: Option<&str>,
-        #[case] manifest_type: ManifestType,
-    ) {
-        let identifier = PackageIdentifier::parse(identifier).unwrap();
-        let default_locale = default_locale.and_then(|locale| LanguageTag::from_str(locale).ok());
-        assert!(!is_manifest_file(
-            file_name,
-            &identifier,
-            default_locale.as_ref(),
-            &manifest_type
+    #[test]
+    fn invalid_installer_manifest_file() {
+        assert!(!is_manifest_file::<InstallerManifest>(
+            "Package.Identifier.yaml",
+            &PackageIdentifier::parse("Package.Identifier").unwrap(),
+            None,
+        ))
+    }
+
+    #[test]
+    fn valid_default_locale_manifest_file() {
+        assert!(is_manifest_file::<DefaultLocaleManifest>(
+            "Package.Identifier.locale.en-US.yaml",
+            &PackageIdentifier::parse("Package.Identifier").unwrap(),
+            LanguageTag::from_str("en-US").ok().as_ref(),
+        ))
+    }
+
+    #[test]
+    fn invalid_default_locale_manifest_file() {
+        assert!(!is_manifest_file::<DefaultLocaleManifest>(
+            "Package.Identifier.locale.en-US.yaml",
+            &PackageIdentifier::parse("Package.Identifier").unwrap(),
+            LanguageTag::from_str("zh-CN").ok().as_ref(),
+        ))
+    }
+
+    #[test]
+    fn valid_locale_manifest_file() {
+        assert!(is_manifest_file::<LocaleManifest>(
+            "Package.Identifier.locale.zh-CN.yaml",
+            &PackageIdentifier::parse("Package.Identifier").unwrap(),
+            LanguageTag::from_str("en-US").ok().as_ref(),
+        ))
+    }
+
+    #[test]
+    fn invalid_locale_manifest_file() {
+        assert!(!is_manifest_file::<LocaleManifest>(
+            "Package.Identifier.locale.en-US.yaml",
+            &PackageIdentifier::parse("Package.Identifier").unwrap(),
+            LanguageTag::from_str("en-US").ok().as_ref(),
+        ))
+    }
+
+    #[test]
+    fn valid_version_manifest_file() {
+        assert!(is_manifest_file::<VersionManifest>(
+            "Package.Identifier.yaml",
+            &PackageIdentifier::parse("Package.Identifier").unwrap(),
+            None,
+        ))
+    }
+
+    #[test]
+    fn invalid_version_manifest_file() {
+        assert!(!is_manifest_file::<VersionManifest>(
+            "Package.Identifier.installer.yaml",
+            &PackageIdentifier::parse("Package.Identifier").unwrap(),
+            None,
         ))
     }
 }

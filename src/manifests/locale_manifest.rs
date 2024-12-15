@@ -8,7 +8,7 @@ use crate::types::installation_notes::InstallationNotes;
 use crate::types::language_tag::LanguageTag;
 use crate::types::license::License;
 use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::{ManifestVersion, MANIFEST_VERSION};
+use crate::types::manifest_version::ManifestVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_name::PackageName;
 use crate::types::package_version::PackageVersion;
@@ -17,7 +17,7 @@ use crate::types::release_notes::ReleaseNotes;
 use crate::types::short_description::ShortDescription;
 use crate::types::tag::Tag;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use const_format::formatcp;
+use const_format::formatc;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::BTreeSet;
@@ -57,8 +57,10 @@ pub struct LocaleManifest {
 }
 
 impl Manifest for LocaleManifest {
-    const SCHEMA: &'static str =
-        formatcp!("https://aka.ms/winget-manifest.locale.{MANIFEST_VERSION}.schema.json");
+    const SCHEMA: &'static str = formatc!(
+        "https://aka.ms/winget-manifest.locale.{}.schema.json",
+        ManifestVersion::DEFAULT
+    );
     const TYPE: ManifestType = ManifestType::Locale;
 }
 

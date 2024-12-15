@@ -8,7 +8,7 @@ use crate::commands::utils::{
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::{GitHub, Manifests, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
+use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
 use crate::github::utils::get_package_path;
 use crate::github::utils::pull_request::pr_changes;
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
@@ -16,6 +16,7 @@ use crate::manifests::installer_manifest::{
     InstallModes, InstallerManifest, InstallerSwitches, UpgradeBehavior,
 };
 use crate::manifests::version_manifest::VersionManifest;
+use crate::manifests::Manifests;
 use crate::prompts::list_prompt::list_prompt;
 use crate::prompts::multi_prompt::{check_prompt, radio_prompt};
 use crate::prompts::prompt::{handle_inquire_error, optional_prompt, required_prompt};
@@ -159,7 +160,7 @@ pub struct NewVersion {
 
 impl NewVersion {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token).await?;
+        let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
         let client = Client::builder()
             .default_headers(get_default_headers(None))
@@ -360,10 +361,10 @@ impl NewVersion {
         let manifests = Manifests {
             installer: installer_manifest,
             default_locale: default_locale_manifest,
-            version: version_manifest,
             locales: manifests
                 .map(|manifests| manifests.locales)
                 .unwrap_or_default(),
+            version: version_manifest,
         };
 
         let package_path = get_package_path(&package_identifier, Some(&package_version), None);
@@ -374,14 +375,6 @@ impl NewVersion {
             .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
-        let submit_option = prompt_submit_option(
-            &mut changes,
-            self.submit,
-            &package_identifier,
-            &package_version,
-            self.dry_run,
-        )?;
-
         if let Some(output) = self.output.map(|out| out.join(package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
@@ -389,6 +382,14 @@ impl NewVersion {
                 "Successfully".green()
             );
         }
+
+        let submit_option = prompt_submit_option(
+            &mut changes,
+            self.submit,
+            &package_identifier,
+            &package_version,
+            self.dry_run,
+        )?;
 
         if submit_option == SubmitOption::Exit {
             return Ok(());

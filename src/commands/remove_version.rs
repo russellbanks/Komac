@@ -55,7 +55,7 @@ impl RemoveVersion {
     const MAX_REASON_LENGTH: usize = 1000;
 
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token).await?;
+        let token = handle_token(self.token.as_deref()).await?;
         if !self.no_warning {
             println!(
                 "{}",

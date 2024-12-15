@@ -1,5 +1,4 @@
-use crate::github::github_client::Manifests;
-use crate::manifests::build_manifest_string;
+use crate::manifests::{build_manifest_string, Manifests};
 use crate::types::package_identifier::PackageIdentifier;
 use bon::builder;
 use color_eyre::Result;

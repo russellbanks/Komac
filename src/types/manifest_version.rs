@@ -1,17 +1,16 @@
 use color_eyre::eyre::OptionExt;
+use const_format::{writec, ConstDebug, Error, Formatter};
 use derive_more::Display;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;
 
-pub const MANIFEST_VERSION: &str = "1.9.0";
-
-#[derive(SerializeDisplay, DeserializeFromStr, Display)]
+#[derive(SerializeDisplay, DeserializeFromStr, Display, ConstDebug)]
 #[display("{_0}.{_1}.{_2}")]
 pub struct ManifestVersion(u16, u16, u16);
 
 impl Default for ManifestVersion {
     fn default() -> Self {
-        Self::DEFAULT_VERSION
+        Self::DEFAULT
     }
 }
 
@@ -37,7 +36,11 @@ impl FromStr for ManifestVersion {
 }
 
 impl ManifestVersion {
-    const DEFAULT_VERSION: Self = Self(1, 9, 0);
+    pub const DEFAULT: Self = Self(1, 9, 0);
     const PARTS_COUNT: u8 = 3;
     const SEPARATOR: char = '.';
+
+    pub const fn const_display_fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        writec!(f, "{}.{}.{}", self.0, self.1, self.2)
+    }
 }

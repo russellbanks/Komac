@@ -41,7 +41,7 @@ struct OutputType {
 
 impl ListVersions {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token).await?;
+        let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
         let versions = github.get_versions(&self.package_identifier).await?;

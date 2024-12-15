@@ -35,7 +35,7 @@ pub struct Cleanup {
 
 impl Cleanup {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token).await?;
+        let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
         let merge_state = MergeState::from_bools(self.only_merged, self.only_closed);

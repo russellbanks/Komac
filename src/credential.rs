@@ -6,6 +6,7 @@ use inquire::Password;
 use keyring::Entry;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, DNT, USER_AGENT};
 use reqwest::{Client, StatusCode};
+use std::borrow::Cow;
 use tokio::runtime::Handle;
 
 const SERVICE: &str = "komac";
@@ -16,13 +17,15 @@ pub fn get_komac_credential() -> keyring::Result<Entry> {
     Entry::new(SERVICE, USERNAME)
 }
 
-pub async fn handle_token(token: Option<String>) -> Result<String> {
+pub async fn handle_token(token: Option<&str>) -> Result<Cow<str>> {
     let client = Client::builder()
         .default_headers(get_default_headers(None))
         .build()?;
 
     if let Some(token) = token {
-        return validate_token(&client, &token).await.map(|()| token);
+        return validate_token(&client, token)
+            .await
+            .map(|()| Cow::Borrowed(token));
     }
 
     let credential_entry = get_komac_credential()?;
@@ -30,13 +33,13 @@ pub async fn handle_token(token: Option<String>) -> Result<String> {
     if let Ok(stored_token) = credential_entry.get_password() {
         validate_token(&client, &stored_token)
             .await
-            .map(|()| stored_token)
+            .map(|()| Cow::Owned(stored_token))
     } else {
         let token = token_prompt(client, None)?;
         if credential_entry.set_password(&token).is_ok() {
             println!("Successfully stored token in platform's secure storage");
         }
-        Ok(token)
+        Ok(Cow::Owned(token))
     }
 }
 

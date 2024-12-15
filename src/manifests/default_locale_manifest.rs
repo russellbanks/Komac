@@ -1,4 +1,4 @@
-use const_format::formatcp;
+use const_format::formatc;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::collections::BTreeSet;
@@ -14,7 +14,7 @@ use crate::types::installation_notes::InstallationNotes;
 use crate::types::language_tag::LanguageTag;
 use crate::types::license::License;
 use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::{ManifestVersion, MANIFEST_VERSION};
+use crate::types::manifest_version::ManifestVersion;
 use crate::types::moniker::Moniker;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_name::PackageName;
@@ -66,8 +66,10 @@ pub struct DefaultLocaleManifest {
 }
 
 impl Manifest for DefaultLocaleManifest {
-    const SCHEMA: &'static str =
-        formatcp!("https://aka.ms/winget-manifest.defaultLocale.{MANIFEST_VERSION}.schema.json");
+    const SCHEMA: &'static str = formatc!(
+        "https://aka.ms/winget-manifest.defaultLocale.{}.schema.json",
+        ManifestVersion::DEFAULT
+    );
     const TYPE: ManifestType = ManifestType::DefaultLocale;
 }
 

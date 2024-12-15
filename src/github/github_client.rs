@@ -38,7 +38,7 @@ use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
-use crate::manifests::Manifest;
+use crate::manifests::{Manifest, Manifests};
 use crate::types::license::License;
 use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
 use crate::types::package_identifier::PackageIdentifier;
@@ -202,7 +202,7 @@ impl GitHub {
 
         let version_manifest = content
             .iter()
-            .find(|file| is_manifest_file(&file.name, identifier, None, &ManifestType::Version))
+            .find(|file| is_manifest_file::<VersionManifest>(&file.name, identifier, None))
             .map(|file| serde_yaml::from_str::<VersionManifest>(&file.text))
             .ok_or_else(|| GitHubError::ManifestNotFound {
                 r#type: ManifestType::Version,
@@ -212,11 +212,10 @@ impl GitHub {
         let locale_manifests = content
             .iter()
             .filter(|file| {
-                is_manifest_file(
+                is_manifest_file::<LocaleManifest>(
                     &file.name,
                     identifier,
                     Some(&version_manifest.default_locale),
-                    &ManifestType::Locale,
                 )
             })
             .map(|file| serde_yaml::from_str::<LocaleManifest>(&file.text))
@@ -225,11 +224,10 @@ impl GitHub {
         let default_locale_manifest = content
             .iter()
             .find(|file| {
-                is_manifest_file(
+                is_manifest_file::<DefaultLocaleManifest>(
                     &file.name,
                     identifier,
                     Some(&version_manifest.default_locale),
-                    &ManifestType::DefaultLocale,
                 )
             })
             .map(|file| serde_yaml::from_str::<DefaultLocaleManifest>(&file.text))
@@ -240,7 +238,7 @@ impl GitHub {
 
         let installer_manifest = content
             .into_iter()
-            .find(|file| is_manifest_file(&file.name, identifier, None, &ManifestType::Installer))
+            .find(|file| is_manifest_file::<InstallerManifest>(&file.name, identifier, None))
             .map(|file| serde_yaml::from_str::<InstallerManifest>(&file.text))
             .ok_or_else(|| GitHubError::ManifestNotFound {
                 r#type: ManifestType::Installer,
@@ -250,8 +248,8 @@ impl GitHub {
         Ok(Manifests {
             installer: installer_manifest,
             default_locale: default_locale_manifest,
-            version: version_manifest,
             locales: locale_manifests,
+            version: version_manifest,
         })
     }
 
@@ -819,13 +817,6 @@ impl GitHub {
         )
         .await
     }
-}
-
-pub struct Manifests {
-    pub installer: InstallerManifest,
-    pub default_locale: DefaultLocaleManifest,
-    pub version: VersionManifest,
-    pub locales: Vec<LocaleManifest>,
 }
 
 pub struct GitHubValues {
