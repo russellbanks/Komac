@@ -32,7 +32,7 @@ pub const ZIP: &str = "zip";
 
 const ORIGINAL_FILENAME: &str = "OriginalFilename";
 const FILE_DESCRIPTION: &str = "FileDescription";
-const BASIC_INSTALLER_KEYWORDS: [&str; 3] = ["installer", "setup", "7zs.sfx"];
+const BASIC_INSTALLER_KEYWORDS: [&str; 4] = ["installer", "setup", "7zs.sfx", "7zsd.sfx"];
 
 pub struct FileAnalyser<'data> {
     pub file_name: String,
