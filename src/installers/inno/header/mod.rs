@@ -17,6 +17,7 @@ use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
 use byteorder::{ReadBytesExt, LE};
+use derive_more::Debug;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use zerocopy::TryFromBytes;
 
@@ -91,9 +92,13 @@ pub struct Header {
     pub run_entry_count: u32,
     pub uninstall_run_entry_count: u32,
     pub windows_version_range: WindowsVersionRange,
+    #[debug("#{back_color:06X}")]
     pub back_color: u32,
+    #[debug("#{back_color2:06X}")]
     pub back_color2: u32,
+    #[debug("#{image_back_color:06X}")]
     pub image_back_color: u32,
+    #[debug("#{small_image_back_color:06X}")]
     pub small_image_back_color: u32,
     pub wizard_style: InnoStyle,
     pub wizard_resize_percent_x: u32,
