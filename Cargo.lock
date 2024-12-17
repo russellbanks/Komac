@@ -159,9 +159,9 @@ dependencies = [
 
 [[package]]
 name = "array-bytes"
-version = "6.2.3"
+version = "7.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d5dde061bd34119e902bbb2d9b90c5692635cf59fb91d582c2b68043f1b8293"
+checksum = "ede2733fdd21c8fde19f3d16cebc409666f2fc2b623a22c5078a6775708db5de"
 
 [[package]]
 name = "ascii_tree"
@@ -1065,7 +1065,7 @@ checksum = "86a21da88ae46f2be6a622880a72f968d05c50b5a797e525332d0c988f693f70"
 dependencies = [
  "indexmap 2.7.0",
  "lalrpop-util",
- "logos",
+ "logos 0.14.4",
 ]
 
 [[package]]
@@ -2610,7 +2610,16 @@ version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7251356ef8cb7aec833ddf598c6cb24d17b689d20b993f9d11a3d764e34e6458"
 dependencies = [
- "logos-derive",
+ "logos-derive 0.14.4",
+]
+
+[[package]]
+name = "logos"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab6f536c1af4c7cc81edf73da1f8029896e7e1e16a219ef09b184e76a296f3db"
+dependencies = [
+ "logos-derive 0.15.0",
 ]
 
 [[package]]
@@ -2629,12 +2638,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "logos-codegen"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "189bbfd0b61330abea797e5e9276408f2edbe4f822d7ad08685d67419aafb34e"
+dependencies = [
+ "beef",
+ "fnv",
+ "lazy_static",
+ "proc-macro2",
+ "quote",
+ "regex-syntax 0.8.5",
+ "rustc_version",
+ "syn 2.0.90",
+]
+
+[[package]]
 name = "logos-derive"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24fb722b06a9dc12adb0963ed585f19fc61dc5413e6a9be9422ef92c091e731d"
 dependencies = [
- "logos-codegen",
+ "logos-codegen 0.14.4",
+]
+
+[[package]]
+name = "logos-derive"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ebfe8e1a19049ddbfccbd14ac834b215e11b85b90bab0c2dba7c7b92fb5d5cba"
+dependencies = [
+ "logos-codegen 0.15.0",
 ]
 
 [[package]]
@@ -5662,9 +5696,9 @@ checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yara-x"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30c1d7713b38bc42e4dee8166c403a056759506853f577800dfbcda54f26a0a9"
+checksum = "ddbcfdcbf65b96e662b720ad924e4bc6bf168239b13a6e3570970835d20a5d30"
 dependencies = [
  "aho-corasick",
  "annotate-snippets",
@@ -5721,9 +5755,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-macros"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "378b8293d18c90c1dcc155f7f4e30a556802c0111ce3ee0168d819f7fd0645c3"
+checksum = "98e32c78321a4a3eedb9a5c285616cf44359855e77d6bdb343b8d853a49e1857"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -5733,16 +5767,16 @@ dependencies = [
 
 [[package]]
 name = "yara-x-parser"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63a910117d58a52678d891d6485114a132b7bbd0ce926fa9c8bf9f6cab14c639"
+checksum = "c8dfa30d8d039faf44707b81992edadf31fb8b9b0cff10ccbead099929939d2a"
 dependencies = [
  "ascii_tree",
  "bitmask",
  "bstr",
  "indexmap 2.7.0",
  "itertools 0.13.0",
- "logos",
+ "logos 0.15.0",
  "num-traits",
  "rowan",
  "rustc-hash 2.1.0",
@@ -5752,9 +5786,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-proto"
-version = "0.11.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2bc2178cfb95e4d5ed06dc7b8fbd2281d4e16dcac82df7e07f5992f0deea8d6"
+checksum = "dd9db4c7916b5e6303a6271386f51af7d07f1ce866950cbfc55c0556f24e823c"
 dependencies = [
  "protobuf",
  "protobuf-codegen",
