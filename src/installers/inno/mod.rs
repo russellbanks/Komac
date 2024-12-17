@@ -165,20 +165,11 @@ impl Inno {
             language_entries.push(LanguageEntry::load(&mut reader, &known_version)?);
         }
 
-        let auto_install_directory = header
-            .default_dir_name
-            .as_deref()
-            .is_some_and(|dir| dir.starts_with("{auto"));
-
         let install_dir = header.default_dir_name.take().map(to_relative_install_dir);
 
         Ok(Self {
             architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
-            scope: if auto_install_directory {
-                None
-            } else {
-                install_dir.as_deref().and_then(Scope::from_install_dir)
-            },
+            scope: install_dir.as_deref().and_then(Scope::from_install_dir),
             install_dir: install_dir.map(Utf8PathBuf::from),
             unsupported_architectures: mem::take(&mut header.architectures_disallowed)
                 .to_unsupported_architectures(),
