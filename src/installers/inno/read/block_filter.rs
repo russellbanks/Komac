@@ -1,10 +1,7 @@
 use byteorder::{ReadBytesExt, LE};
-use color_eyre::eyre::bail;
-use color_eyre::Result;
 use crc32fast::Hasher;
 use std::cmp::min;
-use std::io;
-use std::io::Read;
+use std::io::{Error, ErrorKind, Read, Result};
 
 pub const INNO_BLOCK_SIZE: u16 = 1 << 12;
 
@@ -27,13 +24,13 @@ impl<R: Read> InnoBlockFilter<R> {
 
     fn read_chunk(&mut self) -> Result<bool> {
         let Ok(block_crc32) = self.inner.read_u32::<LE>() else {
-            bail!("Unexpected block end")
+            return Err(Error::new(ErrorKind::UnexpectedEof, "Unexpected block end"));
         };
 
         self.length = self.inner.read(&mut self.buffer)?;
 
         if self.length == 0 {
-            bail!("Unexpected block end");
+            return Err(Error::new(ErrorKind::UnexpectedEof, "Unexpected block end"));
         }
 
         let mut hasher = Hasher::new();
@@ -41,7 +38,7 @@ impl<R: Read> InnoBlockFilter<R> {
         let actual_crc32 = hasher.finalize();
 
         if actual_crc32 != block_crc32 {
-            bail!("Block CRC32 mismatch");
+            return Err(Error::new(ErrorKind::InvalidData, "Block CRC32 mismatch"));
         }
 
         self.pos = 0;
@@ -51,28 +48,23 @@ impl<R: Read> InnoBlockFilter<R> {
 }
 
 impl<R: Read> Read for InnoBlockFilter<R> {
-    fn read(&mut self, dest: &mut [u8]) -> io::Result<usize> {
-        let mut read_count = 0;
-        let mut remaining = dest.len();
+    fn read(&mut self, dest: &mut [u8]) -> Result<usize> {
+        let mut total_read = 0;
 
-        while remaining > 0 {
-            if self.pos == self.length {
-                match self.read_chunk() {
-                    Ok(true) => {}
-                    Ok(false) => return Ok(read_count),
-                    Err(e) => return Err(io::Error::new(io::ErrorKind::Other, e)),
-                }
+        while total_read < dest.len() {
+            if self.pos == self.length && !self.read_chunk()? {
+                return Ok(total_read);
             }
 
-            let to_copy = min(remaining, self.length - self.pos);
-            dest[read_count..read_count + to_copy]
+            let to_copy = min(dest.len() - total_read, self.length - self.pos);
+
+            dest[total_read..total_read + to_copy]
                 .copy_from_slice(&self.buffer[self.pos..self.pos + to_copy]);
 
             self.pos += to_copy;
-            read_count += to_copy;
-            remaining -= to_copy;
+            total_read += to_copy;
         }
 
-        Ok(read_count)
+        Ok(total_read)
     }
 }

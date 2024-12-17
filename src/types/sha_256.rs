@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 // 256 bits / 4 bits per hex character
-const SHA256_DIGEST_LEN: usize = 256 / 4;
+const SHA256_DIGEST_LEN: usize = 256 / 0xFu8.count_ones() as usize;
 
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct Sha256String(String<SHA256_DIGEST_LEN>);
