@@ -591,14 +591,7 @@ impl Header {
 }
 
 fn password_salt<R: Read>(reader: &mut R) -> Result<String> {
-    const PASSWORD_CHECK_HASH: &str = "PasswordCheckHash";
-
     let mut password_salt_buf = [0; 8];
     reader.read_exact(&mut password_salt_buf)?;
-    let mut password_salt = PASSWORD_CHECK_HASH.to_string();
-    password_salt.push_str(
-        std::str::from_utf8(&password_salt_buf)
-            .map_err(|utf8_err| Error::new(ErrorKind::InvalidData, utf8_err))?,
-    );
-    Ok(password_salt)
+    Ok(String::from_utf8_lossy(&password_salt_buf).into_owned())
 }
