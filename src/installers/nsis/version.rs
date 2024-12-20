@@ -71,10 +71,15 @@ impl NsisVersion {
         }
 
         let mut parts = version
-            .chars()
-            .filter_map(|char| u8::try_from(char.to_digit(10)?).ok());
+            .trim_start_matches('v')
+            .split('.')
+            .flat_map(str::parse::<u8>);
 
-        Some(Self(parts.next()?, parts.next()?, parts.next()?))
+        Some(Self(
+            parts.next()?,
+            parts.next()?,
+            parts.next().unwrap_or_default(),
+        ))
     }
 
     pub fn detect(strings_block: &[u8]) -> Self {
@@ -176,7 +181,7 @@ mod tests {
 
         assert_eq!(
             NsisVersion::from_manifest(MANIFEST, &pe).unwrap(),
-            NsisVersion(3, 1, 0)
+            NsisVersion(3, 10, 0)
         );
     }
 
