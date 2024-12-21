@@ -66,6 +66,7 @@ jobs:
       - name: Create Inno Installer
         shell: pwsh
         run: |
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl" -OutFile "C:\Program Files (x86)\Inno Setup 6\Languages\ChineseSimplified.isl"
           $input = "../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
           iscc.exe assets/installer.iss `
             /DInputExecutable=$input `

@@ -37,6 +37,7 @@ ArchitecturesInstallIn64BitMode={#ArchAllowed}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [Files]
 Source: "{#InputExecutable}"; DestDir: "{app}\bin"; DestName: "{#ExeName}"
