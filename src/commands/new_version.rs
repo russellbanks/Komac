@@ -173,7 +173,7 @@ impl NewVersion {
         let latest_version = versions.as_ref().and_then(BTreeSet::last);
 
         if let Some(latest_version) = latest_version {
-            println!("{} 的最新版本: {}", package_identifier, latest_version);
+            println!("{} 的最新版本是: {}", package_identifier, latest_version);
         }
 
         let manifests =

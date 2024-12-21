@@ -11,11 +11,11 @@ pub trait MultiPrompt {
 }
 
 impl MultiPrompt for UpgradeBehavior {
-    const MESSAGE: &'static str = "Upgrade behaviour:";
+    const MESSAGE: &'static str = "升级操作:";
 }
 
 impl MultiPrompt for InstallModes {
-    const MESSAGE: &'static str = "Install modes:";
+    const MESSAGE: &'static str = "安装模式:";
 }
 
 pub fn radio_prompt<T>() -> InquireResult<T>

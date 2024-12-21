@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct PackageUrl(DecodedUrl);
 
 impl Prompt for PackageUrl {
-    const MESSAGE: &'static str = "Package Url:";
+    const MESSAGE: &'static str = "软件包链接:";
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;
 }

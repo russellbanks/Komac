@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct LicenseUrl(DecodedUrl);
 
 impl Prompt for LicenseUrl {
-    const MESSAGE: &'static str = "License Url:";
+    const MESSAGE: &'static str = "许可证/文件链接:";
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;
 }

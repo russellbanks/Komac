@@ -99,7 +99,7 @@ impl UpdateVersion {
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
         println!(
-            "{} 的最新版本: {latest_version}",
+            "{} 的最新版本是: {latest_version}",
             self.package_identifier
         );
 
@@ -228,8 +228,8 @@ impl UpdateVersion {
         if let Some(output) = self.output.map(|out| out.join(package_path)) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
-                "{} written all manifest files to {output}",
-                "Successfully".green()
+                "{} 将所有清单文件写入 {output}",
+                "成功".green()
             );
         }
 

@@ -75,13 +75,13 @@ impl RemoveVersion {
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
         println!(
-            "{} 的最新版本: {latest_version}",
+            "{} 的最新版本是: {latest_version}",
             &self.package_identifier
         );
         let deletion_reason = match self.deletion_reason {
             Some(reason) => reason,
             None => Text::new(&format!(
-                "给出删除 {} 版本 {} 的理由",
+                "请给出删除 {} 版本 {} 的理由",
                 &self.package_identifier, &self.package_version
             ))
             .with_validator(MinLengthValidator::new(Self::MIN_REASON_LENGTH))
