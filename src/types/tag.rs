@@ -18,7 +18,7 @@ use nutype::nutype;
 pub struct Tag(String);
 
 impl ListPrompt for Tag {
-    const MESSAGE: &'static str = "Tags:";
-    const HELP_MESSAGE: &'static str = "Example: zip, c++, photos, OBS";
+    const MESSAGE: &'static str = "标记:";
+    const HELP_MESSAGE: &'static str = "例如: zip, c++, 图片, OBS, 音乐";
     const MAX_ITEMS: u16 = 16;
 }

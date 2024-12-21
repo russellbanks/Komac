@@ -27,22 +27,22 @@ use std::ops::Sub;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
-/// GitHub has an undocumented limit of 150 pull requests per hour
-///
+/// GitHub 有一个未公开的限制，每小时
+/// 
 /// <https://github.com/cli/cli/issues/4801#issuecomment-1430651377>
 const MAX_PULL_REQUESTS_PER_HOUR: u8 = 150;
 
-/// Minimum delay to not go above 150 pull requests per hour
+/// 最小延迟以不超过每小时 150 个拉取请求
 const HOURLY_RATE_LIMIT_DELAY: Duration = Duration::from_secs(
     TimeDelta::hours(1).num_seconds().unsigned_abs() / MAX_PULL_REQUESTS_PER_HOUR as u64,
 );
 
-/// GitHub has an undocumented limit of 20 pull requests per minute
-///
+/// GitHub 有一个未公开的限制，每分钟
+/// 
 /// <https://github.com/cli/cli/issues/4801#issuecomment-1430651377>
 const MAX_PULL_REQUESTS_PER_MINUTE: u8 = 20;
 
-/// Minimum delay to not go above 20 pull requests per minute
+/// 最小延迟以不超过每分钟 20 个拉取请求
 const PER_MINUTE_RATE_LIMIT_DELAY: Duration = Duration::from_secs(
     TimeDelta::minutes(1).num_seconds().unsigned_abs() / MAX_PULL_REQUESTS_PER_MINUTE as u64,
 );
@@ -50,9 +50,8 @@ const PER_MINUTE_RATE_LIMIT_DELAY: Duration = Duration::from_secs(
 const RESOURCE_MISSING_STATUS_CODES: [StatusCode; 2] = [StatusCode::NOT_FOUND, StatusCode::GONE];
 
 /*
-This command is hidden because it's mainly for moderation and could be misused.
-If you're reading this, feel free to use it, but please be mindful not to spam winget-pkgs
-with unnecessary pull requests.
+此命令是隐藏的，因为它主要用于管理，可能会被滥用。
+如果你正在阅读这段文字，请随意使用，但请注意不要向 winget-pkgs 提交不必要的拉取请求。
 */
 #[derive(Parser)]
 #[clap(alias = "rdv", hide = true)]
@@ -60,27 +59,27 @@ pub struct RemoveDeadVersions {
     #[arg()]
     package_identifier: PackageIdentifier,
 
-    /// Check versions lesser than a given version
+    /// 检查小于给定版本的版本
     #[arg(long)]
     before: Option<PackageVersion>,
 
-    /// Check versions greater than a given version
+    /// 检查大于给定版本的版本
     #[arg(long)]
     after: Option<PackageVersion>,
 
-    /// Use the per-minute rate limit, potentially hitting the hourly rate limit in 7.5 minutes
+    /// 使用每分钟速率限制，可能在 7.5 分钟内达到每小时速率限制
     #[arg(long, hide = true)]
     fast: bool,
 
-    /// Automatically create pull requests to remove dead versions without prompting
+    /// 自动创建拉取请求以删除死版本而无需提示
     #[arg(long, hide = true, env = "CI")]
     auto: bool,
 
-    /// Number of installer URLs to check concurrently
+    /// 并发检查安装程序 URL 的数量
     #[arg(short, long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
     concurrent_head_requests: NonZeroUsize,
 
-    /// GitHub personal access token with the `public_repo` scope
+    /// 具有 `public_repo` 范围的 GitHub 个人访问令牌
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
@@ -108,7 +107,7 @@ impl RemoveDeadVersions {
             HOURLY_RATE_LIMIT_DELAY
         };
 
-        // Set a default last PR time to before the rate limit delay to do the first PR immediately
+        // 设置默认的最后 PR 时间为速率限制延迟之前，以便立即进行第一次 PR
         let mut last_pr_time = Instant::now().sub(rate_limit_delay);
 
         let progress_bar = ProgressBar::new_spinner();
@@ -122,7 +121,7 @@ impl RemoveDeadVersions {
                 progress_bar.reset();
                 progress_bar.enable_steady_tick(SPINNER_TICK_RATE);
             }
-            progress_bar.set_message(format!("Checking {} {version}", self.package_identifier));
+            progress_bar.set_message(format!("正在检查 {} {version}", self.package_identifier));
 
             let installer_urls = github
                 .get_manifest::<InstallerManifest>(
@@ -177,7 +176,7 @@ impl RemoveDeadVersions {
                 let wait_time = rate_limit_delay - time_since_last_pr;
                 let wait_pb = ProgressBar::new_spinner()
                     .with_message(format!(
-                        "Last pull request was created {time_since_last_pr:?} ago. Waiting for {wait_time:?}",
+                        "上次拉取请求创建于 {time_since_last_pr:?} 之前。等待 {wait_time:?}",
                     ));
                 wait_pb.enable_steady_tick(SPINNER_SLOW_TICK_RATE);
                 sleep(wait_time).await;
@@ -202,7 +201,7 @@ impl RemoveDeadVersions {
     }
 
     fn get_deletion_reason(url_statuses: Vec<(DecodedUrl, StatusCode)>) -> Result<String> {
-        let mut deletion_reason = String::from("All InstallerUrls returned ");
+        let mut deletion_reason = String::from("所有 InstallerUrls 返回 ");
         if let Ok(status) = url_statuses
             .iter()
             .map(|(_url, status)| status)
@@ -213,7 +212,7 @@ impl RemoveDeadVersions {
                 writeln!(&mut deletion_reason, "- {url}")?;
             }
         } else {
-            deletion_reason.push_str("missing resources");
+            deletion_reason.push_str("缺少资源");
             for (url, status) in url_statuses {
                 writeln!(&mut deletion_reason, "- {url} - `{status}`")?;
             }
@@ -235,7 +234,7 @@ async fn confirm_removal(
     {
         if pull_request.state == PullRequestState::Open {
             println!(
-                "{identifier} {version} returned {} in all its InstallerUrls but there is already {} pull request for this version that was created on {} at {}.",
+                "{identifier} {version} 在所有 InstallerUrls 中返回 {}，但已经有一个 {} 拉取请求，该请求创建于 {} {}。",
                 StatusCode::NOT_FOUND.red(),
                 pull_request.state,
                 pull_request.created_at.date_naive(),
@@ -244,7 +243,7 @@ async fn confirm_removal(
             return if auto {
                 Ok(false)
             } else {
-                Confirm::new("Remove anyway?")
+                Confirm::new("仍然删除？")
                     .prompt()
                     .map_err(handle_inquire_error)
                     .map_err(Error::from)
@@ -254,7 +253,7 @@ async fn confirm_removal(
 
     Ok(auto
         || Confirm::new(&format!(
-            "{identifier} {version} returned {} in all its InstallerUrls. Remove?",
+            "{identifier} {version} 在所有 InstallerUrls 中返回 {}。删除？",
             StatusCode::NOT_FOUND.red()
         ))
         .prompt()

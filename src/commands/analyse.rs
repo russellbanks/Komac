@@ -10,7 +10,7 @@ use memmap2::Mmap;
 use sha2::{Digest, Sha256};
 use std::fs::File;
 
-/// Analyses a file and outputs information about it
+/// 分析文件并输出有关信息
 #[derive(Parser)]
 pub struct Analyse {
     #[arg(value_parser = is_valid_file, value_hint = clap::ValueHint::FilePath)]
@@ -36,7 +36,7 @@ impl Analyse {
 
 fn is_valid_file(path: &str) -> Result<Utf8PathBuf> {
     let path = Utf8Path::new(path);
-    ensure!(path.exists(), "{path} does not exist");
-    ensure!(path.is_file(), "{path} is not a file");
+    ensure!(path.exists(), "{path} 不存在");
+    ensure!(path.is_file(), "{path} 不是一个文件");
     Ok(path.to_path_buf())
 }

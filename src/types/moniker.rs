@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct Moniker(Tag);
 
 impl Prompt for Moniker {
-    const MESSAGE: &'static str = "Moniker:";
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: vscode");
+    const MESSAGE: &'static str = "别名:";
+    const HELP_MESSAGE: Option<&'static str> = Some("例如: vscode");
     const PLACEHOLDER: Option<&'static str> = None;
 }

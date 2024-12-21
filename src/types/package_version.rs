@@ -33,7 +33,7 @@ impl FromStr for PackageVersion {
 }
 
 impl Prompt for PackageVersion {
-    const MESSAGE: &'static str = "Package version:";
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: 1.2.3");
+    const MESSAGE: &'static str = "软件包版本:";
+    const HELP_MESSAGE: Option<&'static str> = Some("例如: 1.2.3 (应与控制面板或设置中的版本号相匹配)"); // 温馨提示，欸嘿
     const PLACEHOLDER: Option<&'static str> = None;
 }

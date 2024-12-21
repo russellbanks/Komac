@@ -17,7 +17,7 @@ struct SearchBox<'a> {
 impl Default for SearchBox<'_> {
     fn default() -> Self {
         let mut textarea = TextArea::default();
-        textarea.set_block(Block::default().borders(Borders::ALL).title("Search"));
+        textarea.set_block(Block::default().borders(Borders::ALL).title("搜索"));
         Self {
             textarea,
             open: false,
@@ -63,11 +63,11 @@ impl SearchBox<'_> {
 
     fn set_error(&mut self, err: Option<impl Display>) {
         let b = err.map_or_else(
-            || Block::default().borders(Borders::ALL).title("Search"),
+            || Block::default().borders(Borders::ALL).title("搜索"),
             |err| {
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(format!("Search: {err}"))
+                    .title(format!("搜索: {err}"))
                     .style(Style::default().fg(Color::Red))
             },
         );
@@ -154,8 +154,8 @@ impl<'a> Editor<'a> {
                 let textarea = &buffer.textarea;
                 f.render_widget(textarea, chunks[1]);
 
-                // Render status line
-                let modified = if buffer.modified { " [modified]" } else { "" };
+                // 渲染状态行
+                let modified = if buffer.modified { " [已修改]" } else { "" };
                 let slot = format!("[{}/{}]", self.current + 1, self.buffers.len());
                 let path = format!(" {}{} ", buffer.path, modified);
                 let (row, col) = textarea.cursor();
@@ -176,41 +176,41 @@ impl<'a> Editor<'a> {
                 f.render_widget(Paragraph::new(path).style(status_style), status_chunks[1]);
                 f.render_widget(Paragraph::new(cursor).style(status_style), status_chunks[2]);
 
-                // Render message at bottom
+                // 在底部渲染消息
                 let message = self.message.take().map_or_else(
                     || {
                         if search_height > 0 {
                             Line::from(vec![
-                                Span::raw("Press "),
+                                Span::raw("按 "),
                                 Span::styled(
                                     "Enter",
                                     Style::default().add_modifier(Modifier::BOLD),
                                 ),
-                                Span::raw(" to jump to first match and close, "),
+                                Span::raw(" 跳转到第一个匹配并关闭, "),
                                 Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to close, "),
+                                Span::raw(" 关闭, "),
                                 Span::styled(
-                                    "^G or ↓ or ^N",
+                                    "^G 或 ↓ 或 ^N",
                                     Style::default().add_modifier(Modifier::BOLD),
                                 ),
-                                Span::raw(" to search next, "),
+                                Span::raw(" 搜索下一个, "),
                                 Span::styled(
-                                    "M-G or ↑ or ^P",
+                                    "M-G 或 ↑ 或 ^P",
                                     Style::default().add_modifier(Modifier::BOLD),
                                 ),
-                                Span::raw(" to search previous"),
+                                Span::raw(" 搜索上一个"),
                             ])
                         } else {
                             Line::from(vec![
-                                Span::raw("Press "),
+                                Span::raw("按 "),
                                 Span::styled("^Q", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to quit, "),
+                                Span::raw(" 退出, "),
                                 Span::styled("^S", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to save, "),
+                                Span::raw(" 保存, "),
                                 Span::styled("^G", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to search, "),
+                                Span::raw(" 搜索, "),
                                 Span::styled("^T", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to switch buffer"),
+                                Span::raw(" 切换缓冲区"),
                             ])
                         }
                     },
@@ -230,7 +230,7 @@ impl<'a> Editor<'a> {
                     }
                     | Input { key: Key::Down, .. } => {
                         if !textarea.search_forward(false) {
-                            self.search.set_error(Some("Pattern not found"));
+                            self.search.set_error(Some("未找到模式"));
                         }
                     }
                     Input {
@@ -247,14 +247,14 @@ impl<'a> Editor<'a> {
                     }
                     | Input { key: Key::Up, .. } => {
                         if !textarea.search_back(false) {
-                            self.search.set_error(Some("Pattern not found"));
+                            self.search.set_error(Some("未找到模式"));
                         }
                     }
                     Input {
                         key: Key::Enter, ..
                     } => {
                         if !textarea.search_forward(true) {
-                            self.message = Some("Pattern not found".into());
+                            self.message = Some("未找到模式".into());
                         }
                         self.search.close();
                         textarea.set_search_pattern("").unwrap();
@@ -284,7 +284,7 @@ impl<'a> Editor<'a> {
                     } => {
                         self.current = (self.current + 1) % self.buffers.len();
                         self.message =
-                            Some(format!("Switched to buffer #{}", self.current + 1).into());
+                            Some(format!("切换到缓冲区 #{}", self.current + 1).into());
                     }
                     Input {
                         key: Key::Char('s'),
@@ -292,7 +292,7 @@ impl<'a> Editor<'a> {
                         ..
                     } => {
                         self.buffers[self.current].save();
-                        self.message = Some("Saved!".into());
+                        self.message = Some("已保存!".into());
                     }
                     Input {
                         key: Key::Char('g'),

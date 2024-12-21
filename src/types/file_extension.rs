@@ -20,7 +20,7 @@ use nutype::nutype;
 pub struct FileExtension(String);
 
 impl ListPrompt for FileExtension {
-    const MESSAGE: &'static str = "File extensions:";
-    const HELP_MESSAGE: &'static str = "List of file extensions the package could support";
+    const MESSAGE: &'static str = "文件类型:";
+    const HELP_MESSAGE: &'static str = "软件包可以支持的文件类型的列表";
     const MAX_ITEMS: u16 = 512;
 }

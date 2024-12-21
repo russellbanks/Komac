@@ -1,24 +1,26 @@
-name: 'Bug Report'
-description: File a bug report
-title: '[Bug]: '
+name: '错误报告'
+description: 提交错误报告
+title: '[错误]: '
 labels: [bug, help wanted]
-assignees: russellbanks
+assignees: DuckDuckStudio
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
+        感谢你花时间填写此错误报告！
   - type: checkboxes
     attributes:
-      label: Is there an existing issue for this?
-      description: Please search to see if an issue already exists for the bug you noticed.
+      label: 是否已有此问题的现有问题？
+      description: 请搜索是否已存在你注意到的错误问题。
       options:
-        - label: I have searched the existing issues
+        - label: 我已搜索现有问题
+          required: true
+        - label: 我知道本仓库仅限于翻译，不负责修 BUG
           required: true
   - type: textarea
     attributes:
-      label: What happened?
-      description: Also tell us, what did you expect to happen?
-      placeholder: Tell us what you see!
+      label: 发生了什么？
+      description: 还请告诉我们，你期望发生什么？
+      placeholder: 告诉我们你看到了什么！
     validations:
       required: true

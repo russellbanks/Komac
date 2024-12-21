@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 #[nutype(
     validate(len_char_min = 2, len_char_max = 256),
-    default = "Publisher",
+    default = "发布者",
     derive(Clone, Default, Deref, FromStr, Display, Deserialize, Serialize)
 )]
 pub struct Publisher(String);
@@ -18,7 +18,7 @@ impl Publisher {
 }
 
 impl Prompt for Publisher {
-    const MESSAGE: &'static str = "Publisher:";
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: Microsoft Corporation");
+    const MESSAGE: &'static str = "发布者:";
+    const HELP_MESSAGE: Option<&'static str> = Some("例如: 某某公司 (发布者不一定是作者)");
     const PLACEHOLDER: Option<&'static str> = None;
 }

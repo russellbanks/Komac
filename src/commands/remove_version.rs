@@ -14,38 +14,38 @@ use inquire::validator::{MaxLengthValidator, MinLengthValidator};
 use inquire::{Confirm, Text};
 use owo_colors::OwoColorize;
 
-/// Remove a version from winget-pkgs
+/// 从 winget-pkgs 中删除一个版本
 ///
-/// To remove a package, all versions of that package must be removed
+/// 要删除一个包，必须删除该包的所有版本
 #[derive(Parser)]
 pub struct RemoveVersion {
-    /// The package's unique identifier
+    /// 包的唯一标识符
     #[arg()]
     package_identifier: PackageIdentifier,
 
-    /// The package's version
+    /// 包的版本
     #[arg(short = 'v', long = "version")]
     package_version: PackageVersion,
 
     #[arg(short = 'r', long = "reason")]
     deletion_reason: Option<String>,
 
-    /// List of issues that removing this version would resolve
+    /// 删除此版本将解决的问题列表
     #[arg(long)]
     resolves: Option<Vec<NonZeroU32>>,
 
     #[arg(short, long)]
     submit: bool,
 
-    /// Don't show the package removal warning
+    /// 不显示包删除警告
     #[arg(long)]
     no_warning: bool,
 
-    /// Open pull request link automatically
+    /// 自动打开拉取请求链接
     #[arg(long, env = "OPEN_PR")]
     open_pr: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
+    /// 具有 `public_repo` 范围的 GitHub 个人访问令牌
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
@@ -56,18 +56,18 @@ impl RemoveVersion {
 
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token.as_deref()).await?;
-        if !self.no_warning {
+        if (!self.no_warning) {
             println!(
                 "{}",
-                "Packages should only be removed when necessary".yellow()
+                "只有在必要时才应删除包".yellow()
             );
         }
         let github = GitHub::new(&token)?;
         let versions = github.get_versions(&self.package_identifier).await?;
 
-        if !versions.contains(&self.package_version) {
+        if (!versions.contains(&self.package_version)) {
             bail!(
-                "{} version {} does not exist in {WINGET_PKGS_FULL_NAME}",
+                "{} 版本 {} 不存在于 {WINGET_PKGS_FULL_NAME}",
                 self.package_identifier,
                 self.package_version,
             );
@@ -75,13 +75,13 @@ impl RemoveVersion {
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
         println!(
-            "Latest version of {}: {latest_version}",
+            "{} 的最新版本: {latest_version}",
             &self.package_identifier
         );
         let deletion_reason = match self.deletion_reason {
             Some(reason) => reason,
             None => Text::new(&format!(
-                "Give a reason for removing {} version {}",
+                "给出删除 {} 版本 {} 的理由",
                 &self.package_identifier, &self.package_version
             ))
             .with_validator(MinLengthValidator::new(Self::MIN_REASON_LENGTH))
@@ -91,19 +91,19 @@ impl RemoveVersion {
         };
         let should_remove_manifest = self.submit
             || Confirm::new(&format!(
-                "Would you like to make a pull request to remove {} {}?",
+                "您想创建一个拉取请求来删除 {} {} 吗?",
                 self.package_identifier, self.package_version
             ))
             .prompt()
             .map_err(handle_inquire_error)?;
 
-        if !should_remove_manifest {
+        if (!should_remove_manifest) {
             return Ok(());
         }
 
-        // Create an indeterminate progress bar to show as a pull request is being created
+        // 创建一个不确定的进度条，以显示正在创建拉取请求
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request to remove {} version {}",
+            "正在创建一个拉取请求以删除 {} 版本 {}",
             self.package_identifier, self.package_version
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
@@ -124,7 +124,7 @@ impl RemoveVersion {
             .send()
             .await?;
 
-        if self.open_pr {
+        if (self.open_pr) {
             open::that(pull_request_url.as_str())?;
         }
 

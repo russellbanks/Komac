@@ -20,7 +20,7 @@ use nutype::nutype;
 pub struct SilentWithProgressSwitch(String);
 
 impl Prompt for SilentWithProgressSwitch {
-    const MESSAGE: &'static str = "Silent with progress installer switch:";
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: /S, -silent, /qb, /exebasicui");
+    const MESSAGE: &'static str = "带进度的静默安装开关:";
+    const HELP_MESSAGE: Option<&'static str> = Some("例如: /S, -silent, /qb, /exebasicui");
     const PLACEHOLDER: Option<&'static str> = None;
 }

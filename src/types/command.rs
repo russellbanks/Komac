@@ -20,7 +20,7 @@ use nutype::nutype;
 pub struct Command(String);
 
 impl ListPrompt for Command {
-    const MESSAGE: &'static str = "Commands:";
-    const HELP_MESSAGE: &'static str = "List of commands or aliases to run the package";
+    const MESSAGE: &'static str = "命令:";
+    const HELP_MESSAGE: &'static str = "用于运行软件包的命令或别名的列表";
     const MAX_ITEMS: u16 = 16;
 }

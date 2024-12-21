@@ -5,7 +5,7 @@ use clap_complete::{generate, Shell};
 
 use crate::Cli;
 
-/// Outputs an autocompletion script for the given shell
+/// 输出给定 shell 的自动补全脚本
 #[derive(Parser)]
 #[clap(visible_alias = "autocomplete")]
 pub struct Complete {

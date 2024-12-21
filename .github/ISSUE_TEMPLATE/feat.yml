@@ -1,17 +1,17 @@
-name: 'Feature Request'
-description: Request a new feature
-title: '[Feature/Idea]: '
+name: '功能请求'
+description: 请求新功能
+title: '[功能/想法]: '
 labels: [feat]
-assignees: russellbanks
+assignees: DuckDuckStudio
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to request a new feature!
+        感谢你花时间请求新功能！
   - type: textarea
     attributes:
-      label: What would you like to see changed/added?
-      description: Try to give some examples to make it really clear!
-      placeholder: Tell us what you would like to see! Something new and amazing!
+      label: 你希望看到哪些更改/添加？
+      description: 尽量给出一些例子，使其非常清晰！
+      placeholder: 告诉我们你想看到什么！一些新的和令人惊叹的东西！
     validations:
       required: true

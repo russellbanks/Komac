@@ -8,7 +8,7 @@ use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
 use crate::types::package_identifier::PackageIdentifier;
 
-/// Lists all versions for a given package
+/// 列出给定包的所有版本
 #[derive(Parser)]
 #[clap(visible_alias = "list")]
 pub struct ListVersions {
@@ -18,7 +18,7 @@ pub struct ListVersions {
     #[command(flatten)]
     output_type: OutputType,
 
-    /// GitHub personal access token with the `public_repo` scope
+    /// 具有 `public_repo` 范围的 GitHub 个人访问令牌
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
@@ -26,15 +26,15 @@ pub struct ListVersions {
 #[derive(Args)]
 #[group(multiple = false)]
 struct OutputType {
-    /// Output the versions as JSON
+    /// 以 JSON 格式输出版本
     #[arg(long)]
     json: bool,
 
-    /// Output the versions as prettified JSON
+    /// 以美化的 JSON 格式输出版本
     #[arg(long)]
     pretty_json: bool,
 
-    /// Output the versions as YAML
+    /// 以 YAML 格式输出版本
     #[arg(long)]
     yaml: bool,
 }

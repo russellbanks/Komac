@@ -92,7 +92,7 @@ impl Architecture {
             Machine::MACHINE_ARM64 => Self::Arm64,
             Machine::MACHINE_ARM | Machine::MACHINE_ARMNT | Machine::MACHINE_THUMB => Self::Arm,
             Machine::MACHINE_UNKNOWN => Self::Neutral,
-            machine => bail!("Unexpected architecture: {:?}", machine),
+            machine => bail!("不支持的架构: {:?}", machine),
         })
     }
 

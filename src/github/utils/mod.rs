@@ -111,38 +111,15 @@ pub fn pull_request_body(
     created_with: Option<String>,
     created_with_url: Option<DecodedUrl>,
 ) -> String {
-    const FRUITS: [&str; 16] = [
-        "apple",
-        "banana",
-        "blueberries",
-        "cherries",
-        "grapes",
-        "green_apple",
-        "kiwi_fruit",
-        "lemon",
-        "mango",
-        "melon",
-        "peach",
-        "pear",
-        "pineapple",
-        "strawberry",
-        "tangerine",
-        "watermelon",
-    ];
-
     let mut body = String::new();
     if let Some(alternative_text) = alternative_text {
         let _ = writeln!(body, "### {alternative_text}");
     } else {
         let mut rng = thread_rng();
 
-        let emoji = if rng.gen_range(0..50) == 0 {
-            FRUITS[rng.gen_range(0..FRUITS.len())]
-        } else {
-            "rocket"
-        };
+        let emoji = "rocket";
 
-        body.push_str("### Pull request has been created with ");
+        body.push_str("### 拉取请求使用此工具创建： ");
 
         if let (Some(tool_name), Some(tool_url)) = (created_with, created_with_url) {
             let _ = write!(body, "[{tool_name}]({tool_url})");

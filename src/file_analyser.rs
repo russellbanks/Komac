@@ -108,7 +108,7 @@ impl<'data> FileAnalyser<'data> {
                     }
                 }
             }
-            _ => bail!(r#"Unsupported file extension: "{extension}""#),
+            _ => bail!(r#"不支持的文件扩展名: "{extension}""#),
         }
         let upgrade_code = installer.as_deref_mut().and_then(InstallSpec::upgrade_code);
         let display_name = installer.as_deref_mut().and_then(InstallSpec::display_name);

@@ -59,9 +59,9 @@ impl PackageIdentifier {
 }
 
 impl Prompt for PackageIdentifier {
-    const MESSAGE: &'static str = "Package identifier:";
+    const MESSAGE: &'static str = "软件包标识符:";
     const HELP_MESSAGE: Option<&'static str> =
-        Some("Package Identifiers are in the format of Package.Identifier");
+        Some("软件包标识符的格式为 发布者.软件包名称");
     const PLACEHOLDER: Option<&'static str> = Some("Package.Identifier");
 }
 
@@ -76,28 +76,28 @@ impl FromStr for PackageIdentifier {
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum PackageIdentifierError {
     #[error(
-        "Package identifier length must be between {} and {} characters",
+        "软件包标识符长度必须在 {} 和 {} 之间",
         PackageIdentifier::MIN_LENGTH,
         PackageIdentifier::MAX_LENGTH
     )]
     InvalidLength,
-    #[error("Package identifier may not contain whitespace")]
+    #[error("软件包标识符不得包含空白")]
     ContainsWhitespace,
-    #[error("Package identifier may not contain any control characters")]
+    #[error("软件包标识符不得包含任何控制字符")]
     ContainsControlChars,
     #[error(
-        "Package identifier may not contain any of the following characters: {:?}",
+        "软件包标识符不得包含以下任何字符: {:?}",
         PackageIdentifier::DISALLOWED_CHARACTERS
     )]
     DisallowedCharacters,
     #[error(
-        "The number of parts in the package identifier must be between {} and {}",
+        "软件包标识符最少有 {} 部分，最多只能有 {} 部分",
         PackageIdentifier::MIN_PART_LENGTH,
         PackageIdentifier::MAX_PART_LENGTH
     )]
-    InvalidPartLength,
+    InvalidPartLength, // 一样？
     #[error(
-        "The number of parts in the package identifier must be between {} and {}",
+        "软件包标识符最少有 {} 部分，最多只能有 {} 部分",
         PackageIdentifier::MIN_PARTS,
         PackageIdentifier::MAX_PARTS
     )]

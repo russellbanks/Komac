@@ -17,7 +17,7 @@ impl Copyright {
 }
 
 impl Prompt for Copyright {
-    const MESSAGE: &'static str = "Copyright:";
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: Copyright (c) Microsoft Corporation");
+    const MESSAGE: &'static str = "版权:";
+    const HELP_MESSAGE: Option<&'static str> = Some("例如: 版权所有 (c) 某某有限公司");
     const PLACEHOLDER: Option<&'static str> = None;
 }

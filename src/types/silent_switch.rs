@@ -20,8 +20,8 @@ use nutype::nutype;
 pub struct SilentSwitch(String);
 
 impl Prompt for SilentSwitch {
-    const MESSAGE: &'static str = "Silent installer switch:";
+    const MESSAGE: &'static str = "静默安装开关:";
     const HELP_MESSAGE: Option<&'static str> =
-        Some("Example: /S, -verysilent, /qn, --silent, /exenoui");
+        Some("例如: /S, -verysilent, /qn, --silent, /exenoui (winget目前不接受仅交互式安装程序)");
     const PLACEHOLDER: Option<&'static str> = None;
 }

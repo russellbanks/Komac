@@ -32,7 +32,7 @@ use crate::types::package_version::PackageVersion;
 use crate::types::path::NormalizePath;
 use crate::types::urls::url::DecodedUrl;
 
-/// Add a version to a pre-existing package
+/// 添加版本到预先存在的软件包
 #[derive(Parser)]
 pub struct UpdateVersion {
     /// The package's unique identifier
@@ -99,7 +99,7 @@ impl UpdateVersion {
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
         println!(
-            "Latest version of {}: {latest_version}",
+            "{} 的最新版本: {latest_version}",
             self.package_identifier
         );
 
@@ -245,9 +245,9 @@ impl UpdateVersion {
             return Ok(());
         }
 
-        // Create an indeterminate progress bar to show as a pull request is being created
+        // 创建一个不确定的进度条，以显示正在创建拉取请求
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request for {} version {}",
+            "为 {} 版本 {} 创建拉取请求",
             self.package_identifier, self.package_version
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
@@ -267,8 +267,8 @@ impl UpdateVersion {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a pull request to {WINGET_PKGS_FULL_NAME}",
-            "Successfully".green()
+            "{} 创建了一个拉取请求到 {WINGET_PKGS_FULL_NAME}",
+            "成功".green()
         );
         println!("{}", pull_request_url.as_str());
 

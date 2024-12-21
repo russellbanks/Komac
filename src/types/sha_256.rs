@@ -19,7 +19,7 @@ impl Sha256String {
         let sha_256 = base16ct::upper::encode_str(data, &mut encode_buf)?;
         Ok(Self(
             String::<SHA256_DIGEST_LEN>::from_str(sha_256)
-                .map_err(|()| eyre!("SHA256 must be {SHA256_DIGEST_LEN} bytes long"))?,
+                .map_err(|()| eyre!("SHA256 必须 {SHA256_DIGEST_LEN} 字节 (bytes) 长"))?,
         ))
     }
 

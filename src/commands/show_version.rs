@@ -7,34 +7,34 @@ use crate::manifests::print_changes;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 
-/// Output the manifests for a given package and version
+/// 输出给定包和版本的清单
 #[derive(Parser)]
 pub struct ShowVersion {
-    /// The package's unique identifier
+    /// 包的唯一标识符
     #[arg()]
     package_identifier: PackageIdentifier,
 
-    /// The package's version
+    /// 包的版本
     #[arg(short = 'v', long = "version")]
     package_version: Option<PackageVersion>,
 
-    /// Switch to display the installer manifest
+    /// 显示安装程序清单的开关
     #[arg(short, long)]
     installer_manifest: bool,
 
-    /// Switch to display the default locale manifest
+    /// 显示默认语言环境清单的开关
     #[arg(short, long = "defaultlocale-manifest")]
     default_locale_manifest: bool,
 
-    /// Switch to display all locale manifests
+    /// 显示所有语言环境清单的开关
     #[arg(short, long)]
     locale_manifests: bool,
 
-    /// Switch to display the version manifest
+    /// 显示版本清单的开关
     #[arg(long)]
     version_manifest: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
+    /// 具有 `public_repo` 范围的 GitHub 个人访问令牌
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
 }
@@ -44,10 +44,10 @@ impl ShowVersion {
         let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
-        // Get a list of all versions for the given package
+        // 获取给定包的所有版本列表
         let mut versions = github.get_versions(&self.package_identifier).await?;
 
-        // Get the manifests for the latest or specified version
+        // 获取最新或指定版本的清单
         let manifests = github
             .get_manifests(
                 &self.package_identifier,

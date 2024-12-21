@@ -82,11 +82,11 @@ const GITHUB_GRAPHQL_URL: &str = "https://api.github.com/graphql";
 pub enum GitHubError {
     #[error("{}", .0.clone().unwrap_or_default().into_iter().next().map_or_else(|| String::from("Unknown GraphQL error"), |err| err.message))]
     GraphQL(Option<Vec<GraphQlError>>),
-    #[error("{0} does not exist in {WINGET_PKGS_FULL_NAME}")]
+    #[error("{0} 在 {WINGET_PKGS_FULL_NAME} 中不存在")]
     PackageNonExistent(PackageIdentifier),
-    #[error("No {type} manifest was found in {path}")]
+    #[error("在 {path} 中没有找到 {type} 清单")]
     ManifestNotFound { r#type: ManifestType, path: String },
-    #[error("No valid files were found for {path}")]
+    #[error("在 {path} 中没有找到有效的文件")]
     NoValidFiles { path: String },
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
@@ -710,7 +710,7 @@ impl GitHub {
     ) -> Result<Url, GitHubError> {
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request to remove {identifier} {version}",
+            "正在创建拉取请求来移除 {identifier} {version}",
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
@@ -760,8 +760,8 @@ impl GitHub {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a pull request to remove {identifier} {version}",
-            "Successfully".green(),
+            "{} 创建拉取请求来移除 {identifier} {version}",
+            "成功".green(),
         );
         println!("{}", pull_request_url.as_str());
         Ok(pull_request_url)

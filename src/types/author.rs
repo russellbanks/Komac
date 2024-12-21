@@ -8,7 +8,7 @@ use nutype::nutype;
 pub struct Author(String);
 
 impl Prompt for Author {
-    const MESSAGE: &'static str = "Author:";
+    const MESSAGE: &'static str = "作者:";
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;
 }

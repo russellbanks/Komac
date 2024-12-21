@@ -8,6 +8,7 @@ on:
       - completed
   release:
     types: [ released ]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -30,16 +31,6 @@ jobs:
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             inno_arch: arm64
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            bins: cargo-deb, cargo-generate-rpm
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            bins: cross, cargo-deb, cargo-generate-rpm
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
 
     runs-on: ${{ matrix.platform.os }}
     steps:
@@ -49,7 +40,6 @@ jobs:
       - uses: moonrepo/setup-rust@v1
         with:
           targets: ${{ matrix.platform.target }}
-          bins: ${{ matrix.platform.bins }}
           cache: false
 
       - name: Build binary
@@ -58,49 +48,22 @@ jobs:
           $tool = if ("${{ matrix.platform.bins }}".Contains("cross")) { "cross" } else { "cargo" }
           & $tool build --target ${{ matrix.platform.target }} --release --locked
 
-      - name: Create Deb package
-        if: contains(matrix.platform.bins, 'cargo-deb')
-        shell: pwsh
-        run: |
-          $nightly = if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') { "--deb-version=2.nightly" } else { "" }
-          cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip $nightly
-
-      - name: Create RPM package
-        if: contains(matrix.platform.bins, 'cargo-generate-rpm')
-        shell: pwsh
-        run: |
-          if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
-            cargo generate-rpm --target ${{ matrix.platform.target }} --set-metadata='version="nightly"'
-          } else {
-            cargo generate-rpm --target ${{ matrix.platform.target }}
-          }
-
       - name: Rename binary
         id: rename_binary
         shell: pwsh
         run: |
-          $bin = if ($env:RUNNER_OS -eq 'Windows') { "komac.exe" } else { "komac" }
+          $bin = "komac.exe"
           $newName = "komac"
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
             $newName += "-nightly"
           } else {
             $newName += "-$($env:GITHUB_REF_NAME.TrimStart('v'))"
           }
-          $newName += "-${{ matrix.platform.target }}"
-          if ($env:RUNNER_OS -eq 'Windows') {
-            $newName += ".exe"
-            Rename-Item -Path "target/${{ matrix.platform.target }}/release/$bin" -NewName "$newName"
-          }
+          $newName += "-${{ matrix.platform.target }}.exe"
+          Rename-Item -Path "target/${{ matrix.platform.target }}/release/$bin" -NewName "$newName"
           "name=$newName" >> $env:GITHUB_OUTPUT
 
-      - name: Create Tar archive
-        if: ${{ runner.os != 'Windows' }}
-        run: |
-          tar -czvf ${{ steps.rename_binary.outputs.name }}.tar.gz -C target/${{ matrix.platform.target }}/release komac
-          rm target/${{ matrix.platform.target }}/release/komac
-
       - name: Create Inno Installer
-        if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
           $input = "../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
@@ -112,7 +75,7 @@ jobs:
       - name: Compute SHA256 checksum
         shell: pwsh
         run: |
-          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*","target/${{ matrix.platform.target }}/generate-rpm/*" -Include "komac-*", "komac*.deb", "komac*.rpm" | ForEach-Object {
+          Get-Item -ErrorAction SilentlyContinue -Path "target/${{ matrix.platform.target }}/release/*" -Include "komac-*.exe" | ForEach-Object {
             $FileHash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
             New-Item -Force -ItemType File -Path $_.DirectoryName -Name "$($_.Name).sha256" -Value "$FileHash *$($_.Name)`n"
           }
@@ -141,65 +104,5 @@ jobs:
           files: |
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}.sha256
-            target/${{ matrix.platform.target }}/debian/*.deb
-            target/${{ matrix.platform.target }}/debian/*.sha256
-            target/${{ matrix.platform.target }}/generate-rpm/*.rpm
-            target/${{ matrix.platform.target }}/generate-rpm/*.sha256
-            ${{ steps.rename_binary.outputs.name }}.tar.gz
-            ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/Output/*
 
-  publish-winget:
-    needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: vedantmgoyal9/winget-releaser@main
-        with:
-          identifier: RussellBanks.Komac
-          installers-regex: 'komac-setup.*\.exe$'
-          token: ${{ secrets.WINGET_TOKEN }}
-
-  publish-homebrew-tap:
-    needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger update formula workflow (homebrew-tap)
-        run: gh workflow run komac.yml -f version=$($env:GITHUB_REF_NAME.TrimStart('v')) -R russellbanks/homebrew-tap
-        env:
-          GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
-        shell: pwsh
-
-  upload-virus-total:
-    needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: VirusTotal Scan
-        uses: crazy-max/ghaction-virustotal@v4
-        with:
-          vt_api_key: ${{ secrets.VT_API_KEY }}
-          request_rate: 4
-          files: |
-            .exe$
-            .deb$
-            .rpm$
-            .tar.gz$
-
-  publish-crates-io:
-    needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v4
-
-      - uses: moonrepo/setup-rust@v1
-        with:
-          cache: false
-
-      - name: Publish to crates.io
-        run: cargo publish
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

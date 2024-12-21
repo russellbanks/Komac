@@ -1,30 +1,30 @@
-<h1><img src="assets/logo.svg" align="left" height="39" alt="Komac logo">Komac - Another WinGet Manifest Creator <img src="assets/banner.svg" align="right" height="39" alt="Komac banner"></h1>
+<h1><img src="assets/logo.svg" align="left" height="39" alt="Komac logo">Komac - 一个 WinGet 清单创建器 <img src="assets/banner.svg" align="right" height="39" alt="Komac banner"></h1>
 
 ![GitHub release (release name instead of tag name)](https://img.shields.io/github/v/release/russellbanks/komac)
 ![GitHub Repo stars](https://img.shields.io/github/stars/russellbanks/komac)
 ![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
 ![License](https://img.shields.io/github/license/russellbanks/Komac)
 
-Komac is an advanced CLI designed to create manifests for
-the [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
+Komac 是一个高级 CLI，旨在为 [WinGet 社区仓库](https://github.com/microsoft/winget-pkgs) 创建清单。
 
-Komac is both blazingly fast 🔥 and incredibly low on memory, using just ~3.5MB of memory on my machine.
+Komac 既快速 🔥 又非常节省内存，在原作者的机器上仅使用约 3.5MB 的内存。
 
 ![Komac-demo](assets/demo.gif)
 
-## Installation
+<!--
+## 安装
 
-Komac is cross-platform and binaries are built for Windows, Linux, and macOS.
+Komac 是跨平台的，提供了适用于 Windows、Linux 和 macOS 的二进制文件。
 
-### All platforms
+### 所有平台
 
-If you have cargo installed, you can compile Rust for any platform
+如果你已经安装了 cargo，你可以为任何平台编译 Rust
 
 ```bash
 cargo install --locked komac
 ```
 
-Komac also supports [cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
+Komac 还支持 [cargo-binstall](https://github.com/cargo-bins/cargo-binstall)：
 
 ```bash
 cargo binstall komac
@@ -32,13 +32,11 @@ cargo binstall komac
 
 #### Nightly
 
-Nightly releases that are built on every commit are
-available [here](https://github.com/russellbanks/Komac/releases/tag/nightly). These are useful for debugging or if you
-want the latest features and fixes.
+每次提交都会构建的 Nightly 版本可在 [这里](https://github.com/russellbanks/Komac/releases/tag/nightly) 获取。这些版本对于调试或获取最新功能和修复非常有用。
 
 ### Windows
 
-Both portable EXEs and installers are available from the [releases](https://github.com/russellbanks/Komac/releases).
+可以从 [releases](https://github.com/russellbanks/Komac/releases) 获取便携式 EXE 和安装程序。
 
 #### WinGet
 
@@ -54,126 +52,94 @@ scoop install komac
 
 ### Linux
 
-Portable binaries are available from the [releases](https://github.com/russellbanks/Komac/releases). Debian (`.deb`) and
-Red Hat (`.rpm`) installers are also available.
+可以从 [releases](https://github.com/russellbanks/Komac/releases) 获取便携式二进制文件。还提供了 Debian (`.deb`) 和 Red Hat (`.rpm`) 安装程序。
 
 ### macOS
 
-Portable binaries for macOS are available from the [releases](https://github.com/russellbanks/Komac/releases).
+可以从 [releases](https://github.com/russellbanks/Komac/releases) 获取 macOS 的便携式二进制文件。
 
 #### Homebrew
 
 ```bash
 brew install russellbanks/tap/komac
-```
+```-->
 
-## GitHub Token
+## GitHub 令牌
 
-Komac is currently only able to use a classic token. Whilst Komac can fully create manifests and commit with a
-fine-grained token, it fails to create a pull request to winget-pkgs. This may change as fine-grained tokens improve.
-See https://github.com/russellbanks/Komac/issues/310.
+Komac 目前只能使用经典令牌。虽然 Komac 可以使用细粒度令牌完全创建清单并提交，但它无法创建到 winget-pkgs 的拉取请求。随着细粒度令牌的改进，这种情况可能会改变。参见 https://github.com/russellbanks/Komac/issues/310。
 
-### Classic
+### 经典
 
-A classic token with the `public_repo` scope.
+具有 `public_repo` 范围的经典令牌。
 
 ![firefox_IYiqtsd0Nl](https://github.com/russellbanks/Komac/assets/74878137/fbe4472e-dc53-4caf-ad2b-3bef75c47b07)
 
-## Commands
+## 命令
 
-| Command        | Description                                                                                         | Usage                      |
-|----------------|-----------------------------------------------------------------------------------------------------|----------------------------|
-| New            | Create a package from scratch                                                                       | `new`                      |
-| Update         | Update a pre-existing package in winget-pkgs                                                        | `update`                   |
-| Remove         | Remove a version from winget-pkgs                                                                   | `remove`                   |
-| Sync Fork      | Syncs your fork of winget-pkgs to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) | `sync-fork`, `sync`        |
-| Branch Cleanup | Deletes branches that have had a merged or closed pull request to winget-pkgs                       | `cleanup`                  |
-| List Versions  | Lists all the versions for a given package                                                          | `list-versions`, `list`    |
-| Analyse        | Analyses a file and outputs information about it. Useful for debugging                              | `analyse`                  |
-| Token update   | Update stored GitHub OAuth token                                                                    | `token update`             |
-| Token remove   | Delete stored GitHub OAuth token                                                                    | `token remove`             |
-| Complete       | Outputs an autocompletion script for the given shell                                                | `complete`, `autocomplete` |
+| 命令            | 描述                                                                                               | 用法                      |
+|-----------------|----------------------------------------------------------------------------------------------------|---------------------------|
+| New             | 从头创建一个包                                                                                     | `new`                     |
+| Update          | 更新 winget-pkgs 中的预先存在的包                                                                  | `update`                  |
+| Remove          | 从 winget-pkgs 中删除一个版本                                                                      | `remove`                  |
+| Sync Fork       | 将你的 winget-pkgs 分叉同步到 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)    | `sync-fork`, `sync`       |
+| Branch Cleanup  | 删除已合并或关闭的拉取请求的分支                                                                   | `cleanup`                 |
+| List Versions   | 列出给定包的所有版本                                                                               | `list-versions`, `list`   |
+| Analyse         | 分析文件并输出信息。对调试很有用                                                                   | `analyse`                 |
+| Token update    | 更新存储的 GitHub OAuth 令牌                                                                       | `token update`            |
+| Token remove    | 删除存储的 GitHub OAuth 令牌                                                                       | `token remove`            |
+| Complete        | 为给定的 shell 输出自动完成脚本                                                                   | `complete`, `autocomplete`|
 
-### Update an existing package with a new version
+### 使用新版本更新现有包
 
 ```
 komac update Package.Identifier --version 1.2.3 --urls https://www.firstUrl.com https://www.secondUrl.com --submit
 ```
 
-| Parameter                            | Usage                             | Notes                                                      |
-|--------------------------------------|-----------------------------------|------------------------------------------------------------|
-| Package Identifier                   | `komac update Package.Identifier` |                                                            |
-| Version                              | `--version`                       |                                                            |
-| URLs                                 | `--urls`                          | URLs are delimited by a space                              |
-| Automatically submit                 | `--submit`                        |                                                            |
-| Token (if one is not already stored) | `--token`                         | Komac will check for a `GITHUB_TOKEN` environment variable |
+| 参数                                | 用法                               | 备注                                                      |
+|-------------------------------------|------------------------------------|-----------------------------------------------------------|
+| 包标识符                            | `komac update Package.Identifier`  |                                                           |
+| 版本                                | `--version`                        |                                                           |
+| URL                                 | `--urls`                           | URL 以空格分隔                                            |
+| 自动提交                            | `--submit`                         |                                                           |
+| 令牌（如果尚未存储）                | `--token`                          | Komac 将检查 `GITHUB_TOKEN` 环境变量                      |
 
-## Komac vs other tools 🏆
+## Komac 与其他工具的比较 🏆
 
-While other manifest creation tools have made a solid foundation for the manifests in winget-pkgs, they development pace
-is notably slow and lacks the advanced detection capabilities that come with Komac.
+虽然其他清单创建工具为 winget-pkgs 中的清单奠定了坚实的基础，但它们的开发速度明显较慢，缺乏 Komac 所具备的高级检测功能。
 
 |                                          | Komac  | WingetCreate |                           YamlCreate                           |
 |------------------------------------------|:------:|:------------:|:--------------------------------------------------------------:|
-| Parameters                               |   ✅    |      ✅       |                               ❌                                |
-| Download progress bar & ETA              |   ✅    |      ❌       |                               ❌                                |
-| Fully cross-platform                     |   ✅    |      ❌       |                            Limited                             |
-| Works without Git                        |   ✅    |      ✅       |                               ❌                                |
-| Full Inno Setup value retrieval          |   ✅    |      ❌       |                               ❌                                |
-| Full MSI value retrieval                 |   ✅    |   Partial    |                            Partial                             |
-| Linux & macOS MSI support                |   ✅    |      ❌       |                               ❌                                |
-| Full MSIX value retrieval                |   ✅    |   Partial    |   Partial - https://github.com/Trenly/winget-pkgs/issues/180   |
-| Get information from GitHub              |   ✅    |      ✅       |                               ❌                                |
-| Formatted GitHub release notes retrieval |   ✅    |      ❌       |                               ❌                                |
-| Release date identification              |   ✅    |      ❌       |                               ❌                                |
-| No telemetry                             |   ✅    |    ⭕ [^1]    |                               ✅                                |
-| Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                               ❌                                |
-| Inno setup detection                     | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
-| Nullsoft detection                       | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
-| Burn installer detection                 | ✅ [^2] |      ✅       | Opt-in feature (not enabled by default due to slow processing) |
-| Programming Language                     |  Rust  |      C#      |                           PowerShell                           |
+| 参数                                     |   ✅    |      ✅       |                               ❌                                |
+| 下载进度条和预计时间                     |   ✅    |      ❌       |                               ❌                                |
+| 完全跨平台                               |   ✅    |      ❌       |                            有限支持                            |
+| 无需 Git 工作                            |   ✅    |      ✅       |                               ❌                                |
+| 完整的 Inno Setup 值检索                 |   ✅    |      ❌       |                               ❌                                |
+| 完整的 MSI 值检索                        |   ✅    |   部分支持   |                            部分支持                            |
+| Linux 和 macOS 的 MSI 支持               |   ✅    |      ❌       |                               ❌                                |
+| 完整的 MSIX 值检索                       |   ✅    |   部分支持   |   部分支持 - https://github.com/Trenly/winget-pkgs/issues/180   |
+| 从 GitHub 获取信息                       |   ✅    |      ✅       |                               ❌                                |
+| 格式化的 GitHub 发布说明检索             |   ✅    |      ❌       |                               ❌                                |
+| 发布日期识别                             |   ✅    |      ❌       |                               ❌                                |
+| 无遥测                                   |   ✅    |    ⭕ [^1]    |                               ✅                                |
+| 完全独立（无需 winget-pkgs 克隆）        |   ✅    |      ✅       |                               ❌                                |
+| Inno setup 检测                          | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
+| Nullsoft 检测                            | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
+| Burn 安装程序检测                        | ✅ [^2] |      ✅       | 选择加入功能（默认未启用，因为处理速度较慢）                   |
+| 编程语言                                 |  Rust  |      C#      |                           PowerShell                           |
 
-[^1]: Telemetry is enabled by default in WingetCreate. Use `wingetcreate settings` to manually disable telemetry.
-[^2]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
-[^3]: The logic for this was contributed by me :)
-Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request
-this feature for YamlCreate.
+[^1]: WingetCreate 默认启用遥测。使用 `wingetcreate settings` 手动禁用遥测。
+[^2]: 自 Komac v2 以来，Inno、Nullsoft 和 Burn 安装程序的检测更加准确。
+[^3]: 该逻辑由原作者贡献 :)
 
-## Usage with GitHub Actions: [WinGet Releaser](https://github.com/vedantmgoyal9/winget-releaser) 🌟
+查看 [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) 了解原作者为 YamlCreate 请求此功能的情况。
 
-WinGet Releaser is a GitHub Action that invokes Komac, passing in your release's URLs. This completely automates
-publishing to WinGet.
+## 我如何支持 Komac？❤️
 
-### Example 📝
+- 🤝 通过 [GitHub Sponsors](https://github.com/sponsors/russellbanks) 赞助这个项目的原作者。
+- ⭐ 给这个项目加星！ :)
+- 🧑‍💻 使用 Komac 并 [创建问题(源仓库)](https://github.com/russellbanks/Komac/issues/new) 提出功能请求或报告错误。
 
-```yaml
-name: Publish to WinGet
-on:
-  release:
-    types: [ released ]
-jobs:
-  publish:
-    runs-on: windows-latest
-    steps:
-      - uses: vedantmgoyal9/winget-releaser@main
-        with:
-          identifier: Package.Identifier
-          token: ${{ secrets.WINGET_TOKEN }}
-          # installers-regex: '\.exe$' # Only .exe files
-```
-
-### Alternative actions 🔄
-
-- Run Komac manually: [michidk/run-komac](https://github.com/michidk/run-komac)
-- Automate releases for external repositories: [michidk/winget-updater](https://github.com/michidk/winget-updater)
-
-## How can I support Komac? ❤️
-
-- 🤝 Sponsor this project through [GitHub Sponsors](https://github.com/sponsors/russellbanks)
-- ⭐ Star this project! :)
-- 🧑‍💻 Use Komac and [create an issue](https://github.com/russellbanks/Komac/issues/new) for feature requests or bugs.
-
-## Star History ⭐
+<!--## Star 历史 ⭐
 
 <a href="https://star-history.com/#russellbanks/Komac&Date">
   <picture>
@@ -181,12 +147,10 @@ jobs:
     <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=russellbanks/Komac&type=Date" />
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=russellbanks/Komac&type=Date" />
   </picture>
-</a>
+</a>-->
 
-## License
+## 许可证
 
 [![GNU GPLv3 Logo](https://www.gnu.org/graphics/gplv3-127x51.png)](http://www.gnu.org/licenses/gpl-3.0.en.html)
 
-Komac is Free Software: You can use, study share and improve it at your will. Specifically you can redistribute and/or
-modify it under the terms of the [GNU General Public License](http://www.gnu.org/licenses/gpl-3.0.en.html) as published
-by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+Komac 是自由软件：你可以随意使用、研究、分享和改进它。具体来说，你可以根据自由软件基金会发布的 [GNU 通用公共许可证](http://www.gnu.org/licenses/gpl-3.0.en.html) 的条款重新分发和/或修改它，许可证版本为 3，或（由你选择）任何更高版本。

@@ -9,7 +9,7 @@ use std::num::NonZeroI64;
 pub struct InstallerSuccessCode(NonZeroI64);
 
 impl ListPrompt for InstallerSuccessCode {
-    const MESSAGE: &'static str = "Installer success codes:";
-    const HELP_MESSAGE: &'static str = "List of additional non-zero installer success exit codes other than known default values by winget";
+    const MESSAGE: &'static str = "安装成功返回代码:";
+    const HELP_MESSAGE: &'static str = "除已知默认值外的其他非零安装程序成功退出代码列表";
     const MAX_ITEMS: u16 = 16;
 }

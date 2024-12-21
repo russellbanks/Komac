@@ -20,7 +20,7 @@ use nutype::nutype;
 pub struct CustomSwitch(String);
 
 impl Prompt for CustomSwitch {
-    const MESSAGE: &'static str = "Custom installer switch:";
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: /norestart, -norestart");
+    const MESSAGE: &'static str = "自定义安装开关:";
+    const HELP_MESSAGE: Option<&'static str> = Some("例如: /norestart, -norestart");
     const PLACEHOLDER: Option<&'static str> = None;
 }

@@ -1,33 +1,33 @@
-## Contributing
+## 贡献
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+贡献使开源社区成为一个令人惊叹的学习、启发和创造的地方。**非常感谢**你所做的任何贡献。
 
-* If you have suggestions for adding or removing projects, feel free to [open an issue](https://github.com/russellbanks/Komac/issues/new) to discuss it, or directly create a pull request after you edit the *README.md* file with necessary changes.
-* Please make sure you check your spelling and grammar.
-* Create individual PR for each suggestion.
-* Please also read through the [Code of Conduct](./CODE_OF_CONDUCT.md) before posting your first idea as well.
+* 如果你有添加或删除项目的建议，请随时 [打开一个问题(源仓库)](https://github.com/russellbanks/Komac/issues/new) 进行讨论，或者在编辑 *README.md* 文件后直接创建一个拉取请求进行必要的更改。
+* 请确保检查你的拼写和语法。
+* 为每个建议创建单独的 PR。
+* 在发布你的第一个想法之前，请务必阅读 [行为准则](./CODE_OF_CONDUCT.md)。
 
-### Creating a Pull Request
+### 创建拉取请求
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feat/new-feature`)
-3. Commit your Changes (`git commit -m 'Add some feature'`)
-4. Push to the Branch (`git push origin feat/new-feature`)
-5. Open a Pull Request
+1. Fork 项目
+2. 创建你的功能分支 (`git checkout -b feat/new-feature`)
+3. 提交你的更改 (`git commit -m 'Add some feature'`)
+4. 推送到分支 (`git push origin feat/new-feature`)
+5. 打开一个拉取请求
 
-### Testing your changes
+### 测试你的更改
 
-Using Docker is the easiest way to to test your code before submitting a pull request. 
+使用 Docker 是测试代码的最简单方法。
 
-> [!NOTE]
-> When using the Docker container on Windows, the WSL engine does not support the default collection for keys or tokens. This means that when testing inside the container GitHub tokens will not be stored, even when `komac token update` is used.
+> [!注意]
+> 在 Windows 上使用 Docker 容器时，WSL 引擎不支持默认的密钥或令牌集合。这意味着在容器内测试时，即使使用 `komac token update`，GitHub 令牌也不会被存储。
 > 
-> This is a [known issue](https://github.com/hwchen/keyring-rs/blob/47c8daf3e6178a2282ae3e8670d1ea7fa736b8cb/src/secret_service.rs#L73-L77) which is documented in the keyring crate.
+> 这是 keyring crate 中的 [已知问题](https://github.com/hwchen/keyring-rs/blob/47c8daf3e6178a2282ae3e8670d1ea7fa736b8cb/src/secret_service.rs#L73-L77)。
 >
-> As a workaround, you can set the `GITHUB_TOKEN` environment variable from within the container, in the `docker run` command, or in the Dockerfile itself
+> 作为解决方法，你可以在容器内、`docker run` 命令中或 Dockerfile 中设置 `GITHUB_TOKEN` 环境变量。
 
-1. Ensure you have docker installed and the docker engine is running.
-2. Run `docker build ./ --tag komac_dev:latest`.
-3. Wait for the build to complete.
-4. Start the container using `docker run -it komac_dev bash`.
-5. Test out any commands. Use the `exit` command to quit the container
+1. 确保你已安装 Docker 并且 Docker 引擎正在运行。
+2. 运行 `docker build ./ --tag komac_dev:latest`。
+3. 等待构建完成。
+4. 使用 `docker run -it komac_dev bash` 启动容器。
+5. 测试任何命令。使用 `exit` 命令退出容器。

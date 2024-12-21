@@ -5,11 +5,11 @@ use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
 use reqwest::Client;
 
-/// Update the stored token
+/// 更新存储的令牌
 #[derive(Parser)]
 #[clap(visible_alias = "new")]
 pub struct UpdateToken {
-    /// The new token to store
+    /// 要存储的新令牌
     #[arg(short, long)]
     token: Option<String>,
 }
@@ -24,13 +24,13 @@ impl UpdateToken {
 
         let token = match self.token {
             Some(token) => validate_token(&client, &token).await.map(|()| token)?,
-            None => token_prompt(client, Some("Please enter the new token to set"))?,
+            None => token_prompt(client, Some("请输入要设置的新令牌"))?,
         };
 
         if credential.set_password(&token).is_ok() {
             println!(
-                "{} stored token in platform's secure storage",
-                "Successfully".green()
+                "{} 已将令牌存储在平台的安全存储中",
+                "成功".green()
             );
         }
 

@@ -9,12 +9,13 @@ pub enum UpdateState {
     NewPackage,
     #[strum(serialize = "New version")]
     NewVersion,
-    #[strum(serialize = "Add version")]
+    #[strum(serialize = "New version")] // 在原先，此处被设置为"Add version"，但我认为这里放"New version"比较好看 :P
     AddVersion,
     #[strum(serialize = "Update version")]
     UpdateVersion,
     #[strum(serialize = "Remove version")]
     RemoveVersion,
+    // 不应该翻译拉取请求标题
 }
 impl UpdateState {
     pub fn get(version: &PackageVersion, versions: Option<&BTreeSet<PackageVersion>>) -> Self {

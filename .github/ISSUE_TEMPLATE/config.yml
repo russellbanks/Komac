@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Review open issues
+  - name: 查看源仓库中的问题
     url: https://github.com/russellbanks/Komac/issues
-    about: Please ensure you have gone through open issues.
+    about: 请确保你已经查看了源仓库中的问题。
+  - name: 查看当前打开的问题
+    url: https://github.com/DuckDuckStudio/Komac/issues
+    about: 请确保你已经查看了本仓库当前打开的问题。

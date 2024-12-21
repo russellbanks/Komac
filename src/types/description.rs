@@ -8,7 +8,7 @@ use nutype::nutype;
 pub struct Description(String);
 
 impl Prompt for Description {
-    const MESSAGE: &'static str = "Description:";
+    const MESSAGE: &'static str = "描述:";
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;
 }
