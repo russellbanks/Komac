@@ -218,6 +218,15 @@ impl InstallerManifest {
             custom,
             repair
         );
+
+        if self
+            .apps_and_features_entries
+            .as_ref()
+            .is_some_and(|entries| !entries.iter().any(AppsAndFeaturesEntry::is_any_some))
+        {
+            self.apps_and_features_entries = None;
+        }
+
         self.manifest_version = ManifestVersion::default();
 
         self.installers.sort_unstable();
@@ -453,6 +462,17 @@ pub struct AppsAndFeaturesEntry {
     pub product_code: Option<String>,
     pub upgrade_code: Option<String>,
     pub installer_type: Option<InstallerType>,
+}
+
+impl AppsAndFeaturesEntry {
+    pub const fn is_any_some(&self) -> bool {
+        self.display_name.is_some()
+            || self.publisher.is_some()
+            || self.display_version.is_some()
+            || self.product_code.is_some()
+            || self.upgrade_code.is_some()
+            || self.installer_type.is_some()
+    }
 }
 
 impl AppsAndFeaturesEntry {
