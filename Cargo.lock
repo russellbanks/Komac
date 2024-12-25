@@ -2429,7 +2429,6 @@ dependencies = [
  "memchr",
  "memmap2",
  "msi",
- "nt-time",
  "num_cpus",
  "nutype",
  "open",
@@ -2872,17 +2871,6 @@ checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
 dependencies = [
  "memchr",
  "minimal-lexical",
-]
-
-[[package]]
-name = "nt-time"
-version = "0.10.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80ed00a745ff41e580c582f92922e7fdedf05e2849e67ba5b638aead6645baf4"
-dependencies = [
- "chrono",
- "rand",
- "time",
 ]
 
 [[package]]

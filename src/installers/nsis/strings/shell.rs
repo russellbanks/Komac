@@ -5,6 +5,7 @@ use crate::installers::utils::{
     RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_ROOT,
     RELATIVE_WINDOWS_DIR,
 };
+use std::borrow::Cow;
 
 /// NSIS can use one name for two CSIDL_*** and `CSIDL_COMMON`_*** items (`CurrentUser` / `AllUsers`)
 /// Some NSIS shell names are not identical to WIN32 CSIDL_* names.
@@ -94,7 +95,12 @@ impl Shell {
         if index1 & 1 << 7 != 0 {
             let offset = index1 & 0x3F;
             let is_64_bit = index1 & 1 << 6 != 0;
-            let shell_string = nsis_string(strings_block, u32::from(offset), &[], nsis_version);
+            let shell_string = nsis_string(
+                strings_block,
+                u32::from(offset),
+                &<[Cow<str>; 9]>::default(),
+                nsis_version,
+            );
             if shell_string == PROGRAM_FILES_DIR {
                 buf.push_str(if is_64_bit {
                     RELATIVE_PROGRAM_FILES_64

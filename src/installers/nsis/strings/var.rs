@@ -1,7 +1,5 @@
-use crate::installers::nsis::entry::str_copy::StrCopy;
-use crate::installers::nsis::entry::Entry;
-use crate::installers::nsis::strings::encoding::nsis_string;
 use crate::installers::nsis::version::NsisVersion;
+use std::borrow::Cow;
 
 const STRINGS: [&str; 12] = [
     // INST_0 through INST_9
@@ -37,34 +35,20 @@ pub struct NsVar;
 impl NsVar {
     pub fn resolve(
         buf: &mut String,
-        strings_block: &[u8],
         mut index: usize,
-        entries: &[Entry],
+        variables: &[Cow<str>; 9],
         nsis_version: NsisVersion,
     ) {
+        if index < NUM_R_INT_VARS {
+            if let Some(var) = variables.get(index) {
+                return buf.push_str(var);
+            }
+        }
         buf.push('$');
         if index < TOTAL_INT_VARS {
             if index >= NUM_R_INT_VARS {
                 buf.push(R_PREFIX);
                 index -= NUM_R_INT_VARS;
-            }
-            let resolved_var = entries
-                .iter()
-                .filter_map(StrCopy::from_entry)
-                .rfind(|str_copy| str_copy.variable.get() as usize == index)
-                .map(|str_copy| {
-                    nsis_string(
-                        strings_block,
-                        str_copy.string_offset.get(),
-                        entries,
-                        nsis_version,
-                    )
-                });
-            if let Some(resolved_var) = resolved_var {
-                if buf.pop() == Some(R_PREFIX) {
-                    buf.pop();
-                }
-                return buf.push_str(&resolved_var);
             }
             buf.push_str(itoa::Buffer::new().format(index));
         } else if index < NUM_INTERNAL_VARS {

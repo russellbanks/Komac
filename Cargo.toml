@@ -58,7 +58,6 @@ liblzma = { version = "0.3.5", features = ["static"] }
 memchr = "2.7.4"
 memmap2 = "0.9.5"
 msi = "0.8.0"
-nt-time = { version = "0.10.4", features = ["chrono"] }
 num_cpus = "1.16.0"
 nutype = { version = "0.5.1", features = ["serde"] }
 open = "5.3.1"

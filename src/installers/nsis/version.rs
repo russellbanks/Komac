@@ -6,6 +6,7 @@ use derive_more::Display;
 use itertools::{Either, Itertools};
 use quick_xml::de::from_str;
 use serde::Deserialize;
+use std::borrow::Cow;
 use yara_x::mods::pe::ResourceType::RESOURCE_TYPE_MANIFEST;
 use yara_x::mods::PE;
 
@@ -55,7 +56,7 @@ impl NsisVersion {
         let branding_text = nsis_string(
             strings_block,
             language_table.language_string_offsets[0].get(),
-            &[],
+            &<[Cow<str>; 9]>::default(),
             Self::default(),
         );
         Self::from_text(&branding_text)

@@ -1,4 +1,3 @@
-use crate::installers::nsis::entry::Entry;
 use crate::installers::nsis::strings::code::NsCode;
 use crate::installers::nsis::strings::lang::LangCode;
 use crate::installers::nsis::strings::shell::Shell;
@@ -22,7 +21,7 @@ const fn decode_number_from_char(mut char: u16) -> u16 {
 pub fn nsis_string<'str_block>(
     strings_block: &'str_block [u8],
     relative_offset: u32,
-    entries: &[Entry],
+    variables: &[Cow<str>; 9],
     nsis_version: NsisVersion,
 ) -> Cow<'str_block, str> {
     // The strings block starts with a UTF-16 null byte if it is Unicode
@@ -99,13 +98,7 @@ pub fn nsis_string<'str_block>(
                         decode_number_from_char(special_char)
                     };
                     if current == u16::from(NsCode::Var.get(nsis_version)) {
-                        NsVar::resolve(
-                            &mut buf,
-                            strings_block,
-                            usize::from(index),
-                            entries,
-                            nsis_version,
-                        );
+                        NsVar::resolve(&mut buf, usize::from(index), variables, nsis_version);
                     } else if current == u16::from(NsCode::Lang.get(nsis_version)) {
                         LangCode::resolve(&mut buf, index);
                     }
