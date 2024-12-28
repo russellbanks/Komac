@@ -392,6 +392,11 @@ impl Header {
         } else if *version >= InnoVersion(5, 3, 6) {
             header.uninstall_display_size = u64::from(reader.read_u32::<LE>()?);
         }
+
+        if version.is_blackbox() {
+            reader.read_u8()?;
+        }
+
         header.flags |= Self::read_flags(reader, version)?;
         if *version < InnoVersion(3, 0, 4) {
             header.privileges_required = PrivilegeLevel::from_header_flags(&header.flags);

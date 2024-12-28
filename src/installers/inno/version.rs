@@ -94,6 +94,16 @@ impl KnownVersion {
     pub const fn is_isx(&self) -> bool {
         self.variant.contains(VersionFlags::ISX)
     }
+
+    pub fn is_blackbox(&self) -> bool {
+        const BLACKBOX_VERSIONS: [InnoVersion; 3] = [
+            InnoVersion(5, 3, 10),
+            InnoVersion(5, 4, 2),
+            InnoVersion(5, 5, 0),
+        ];
+
+        self.is_unicode() && BLACKBOX_VERSIONS.contains(&self.version)
+    }
 }
 
 #[cfg(test)]
