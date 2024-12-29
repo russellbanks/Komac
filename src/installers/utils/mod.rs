@@ -1,6 +1,8 @@
 use liblzma::stream::{Filters, Stream};
 use std::io::{Error, ErrorKind, Read, Result};
 
+pub mod registry;
+
 pub const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";
 pub const RELATIVE_PROGRAM_FILES_32: &str = "%ProgramFiles(x86)%";
 pub const RELATIVE_COMMON_FILES_64: &str = "%CommonProgramFiles%";

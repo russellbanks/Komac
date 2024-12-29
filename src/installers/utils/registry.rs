@@ -1,9 +1,10 @@
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
 #[expect(dead_code)]
-#[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Debug, Default, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum RegRoot {
+    #[default]
     ShellContext = 0u32.to_le(),
     HKeyClassesRoot = 0x8000_0000u32.to_le(),
     HKeyCurrentUser = 0x8000_0001u32.to_le(),

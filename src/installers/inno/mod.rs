@@ -1,19 +1,32 @@
 mod compression;
 mod encoding;
+mod entry;
+mod enum_value;
+mod flag_reader;
 mod header;
-mod language;
 mod loader;
 pub mod read;
 mod version;
 mod windows_version;
+mod wizard;
 
 use crate::installers::inno::compression::Compression;
+use crate::installers::inno::entry::component::Component;
+use crate::installers::inno::entry::directory::Directory;
+use crate::installers::inno::entry::file::File;
+use crate::installers::inno::entry::icon::Icon;
+use crate::installers::inno::entry::ini::Ini;
+use crate::installers::inno::entry::message::Message;
+use crate::installers::inno::entry::permission::Permission;
+use crate::installers::inno::entry::r#type::Type;
+use crate::installers::inno::entry::registry::Registry;
+use crate::installers::inno::entry::task::Task;
 use crate::installers::inno::header::Header;
-use crate::installers::inno::language::LanguageEntry;
 use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
 use crate::installers::inno::read::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::wizard::Wizard;
 use crate::installers::inno::InnoError::{UnknownVersion, UnsupportedVersion};
 use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{
@@ -30,9 +43,12 @@ use crate::types::language_tag::LanguageTag;
 use byteorder::{ReadBytesExt, LE};
 use camino::Utf8PathBuf;
 use const_format::formatcp;
+use encoding_rs::{UTF_16LE, WINDOWS_1252};
+use entry::language::Language;
 use flate2::read::ZlibDecoder;
+use itertools::Itertools;
 use liblzma::read::XzDecoder;
-use msi::Language;
+use msi::Language as CodePageLanguage;
 use std::collections::BTreeSet;
 use std::io::{Cursor, Read};
 use std::str::FromStr;
@@ -158,12 +174,69 @@ impl Inno {
             Compression::Stored(_) => Box::new(block_filter),
         };
 
-        let mut header = Header::load(&mut reader, &known_version)?;
+        let mut codepage = if known_version.is_unicode() {
+            UTF_16LE
+        } else {
+            WINDOWS_1252
+        };
 
-        let mut language_entries = Vec::with_capacity(header.language_count as usize);
-        for _ in 0..header.language_count {
-            language_entries.push(LanguageEntry::load(&mut reader, &known_version)?);
+        let mut header = Header::load(&mut reader, codepage, &known_version)?;
+
+        let languages = (0..header.language_count)
+            .map(|_| Language::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        if !known_version.is_unicode() {
+            codepage = languages
+                .iter()
+                .map(|language| language.codepage)
+                .find_or_first(|&codepage| codepage == WINDOWS_1252)
+                .unwrap_or(WINDOWS_1252);
         }
+
+        if known_version < InnoVersion(4, 0, 0) {
+            Wizard::load(&mut reader, &known_version, &header)?;
+        }
+
+        let _messages = (0..header.message_count)
+            .map(|_| Message::load(&mut reader, &languages, codepage))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _permissions = (0..header.permission_count)
+            .map(|_| Permission::load(&mut reader, codepage))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _type_entries = (0..header.type_count)
+            .map(|_| Type::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _components = (0..header.component_count)
+            .map(|_| Component::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _tasks = (0..header.task_count)
+            .map(|_| Task::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _directories = (0..header.directory_count)
+            .map(|_| Directory::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _files = (0..header.file_count)
+            .map(|_| File::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _icons = (0..header.icon_count)
+            .map(|_| Icon::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _ini = (0..header.ini_entry_count)
+            .map(|_| Ini::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
+
+        let _registry = (0..header.registry_entry_count)
+            .map(|_| Registry::load(&mut reader, codepage, &known_version))
+            .collect::<io::Result<Vec<_>>>()?;
 
         let install_dir = header.default_dir_name.take().map(to_relative_install_dir);
 
@@ -180,9 +253,10 @@ impl Inno {
             elevation_requirement: header
                 .privileges_required
                 .to_elevation_requirement(&header.privileges_required_overrides_allowed),
-            installer_locale: language_entries.first().and_then(|language_entry| {
+            installer_locale: languages.first().and_then(|language_entry| {
                 LanguageTag::from_str(
-                    Language::from_code(u16::try_from(language_entry.language_id).ok()?).tag(),
+                    CodePageLanguage::from_code(u16::try_from(language_entry.language_id).ok()?)
+                        .tag(),
                 )
                 .ok()
             }),

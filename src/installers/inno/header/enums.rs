@@ -118,7 +118,7 @@ impl LanguageDetection {
 }
 
 #[expect(dead_code)]
-#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Debug, Default, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum Compression {
     Stored,

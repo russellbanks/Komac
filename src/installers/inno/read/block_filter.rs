@@ -24,13 +24,19 @@ impl<R: Read> InnoBlockFilter<R> {
 
     fn read_chunk(&mut self) -> Result<bool> {
         let Ok(block_crc32) = self.inner.read_u32::<LE>() else {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "Unexpected block end"));
+            return Err(Error::new(
+                ErrorKind::UnexpectedEof,
+                "Unexpected Inno block end",
+            ));
         };
 
         self.length = self.inner.read(&mut self.buffer)?;
 
         if self.length == 0 {
-            return Err(Error::new(ErrorKind::UnexpectedEof, "Unexpected block end"));
+            return Err(Error::new(
+                ErrorKind::UnexpectedEof,
+                "Unexpected Inno block length defined as 0",
+            ));
         }
 
         let mut hasher = Hasher::new();
@@ -38,7 +44,10 @@ impl<R: Read> InnoBlockFilter<R> {
         let actual_crc32 = hasher.finalize();
 
         if actual_crc32 != block_crc32 {
-            return Err(Error::new(ErrorKind::InvalidData, "Block CRC32 mismatch"));
+            return Err(Error::new(
+                ErrorKind::InvalidData,
+                "Inno Block CRC32 mismatch",
+            ));
         }
 
         self.pos = 0;

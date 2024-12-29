@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+#[derive(Debug)]
 pub enum Compression {
     Stored(u32),
     Zlib(u32),

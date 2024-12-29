@@ -1,39 +1,30 @@
 mod architecture;
-mod enums;
-mod flag_reader;
-mod flags;
+pub mod enums;
+pub mod flags;
 
-use std::io::{Error, ErrorKind, Read, Result};
+use std::io::{Read, Result};
 
-use crate::installers::inno::encoding::{encoded_string, sized_encoded_string};
+use crate::installers::inno::encoding::InnoValue;
+use crate::installers::inno::enum_value::enum_value::enum_value;
+use crate::installers::inno::flag_reader::read_flags::read_flags;
 use crate::installers::inno::header::architecture::{ArchitectureIdentifiers, StoredArchitecture};
 use crate::installers::inno::header::enums::{
     AutoBool, Compression, ImageAlphaFormat, InnoStyle, InstallVerbosity, LanguageDetection,
     LogMode, PrivilegeLevel,
 };
-use crate::installers::inno::header::flag_reader::FlagReader;
 use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
 use byteorder::{ReadBytesExt, LE};
 use derive_more::Debug;
-use encoding_rs::{UTF_16LE, WINDOWS_1252};
+use encoding_rs::{Encoding, WINDOWS_1252};
 use zerocopy::TryFromBytes;
-
-macro_rules! enum_value {
-    ($reader:expr, $ty:ty) => {{
-        let mut buf = [0; size_of::<$ty>()];
-        $reader.read_exact(&mut buf)?;
-        <$ty>::try_read_from_bytes(&buf)
-            .map_err(|error| Error::new(ErrorKind::InvalidData, error.to_string()))
-    }};
-}
 
 // https://github.com/jrsoftware/issrc/blob/main/Projects/Src/Shared.Struct.pas
 #[derive(Debug, Default)]
 pub struct Header {
-    flags: HeaderFlags,
+    pub flags: HeaderFlags,
     pub app_name: Option<String>,
     pub app_versioned_name: Option<String>,
     /// <https://jrsoftware.org/ishelp/index.php?topic=setup_appid>
@@ -73,7 +64,8 @@ pub struct Header {
     pub info_before: Option<String>,
     pub info_after: Option<String>,
     pub uninstaller_signature: Option<String>,
-    pub compiled_code: Option<String>,
+    #[debug(skip)]
+    pub compiled_code: Option<Vec<u8>>,
     pub lead_bytes: BitSet,
     pub language_count: u32,
     pub message_count: u32,
@@ -124,7 +116,11 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn load<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<Self> {
+    pub fn load<R: Read>(
+        reader: &mut R,
+        codepage: &'static Encoding,
+        version: &KnownVersion,
+    ) -> Result<Self> {
         let mut header = Self::default();
 
         if *version < InnoVersion(1, 3, 0) {
@@ -132,81 +128,81 @@ impl Header {
             reader.read_u32::<LE>()?;
         }
 
-        header.app_name = encoded_string(reader, UTF_16LE)?;
-        header.app_versioned_name = encoded_string(reader, UTF_16LE)?;
+        header.app_name = InnoValue::new_string(reader, codepage)?;
+        header.app_versioned_name = InnoValue::new_string(reader, codepage)?;
         if *version >= InnoVersion(1, 3, 0) {
-            header.app_id = encoded_string(reader, UTF_16LE)?;
+            header.app_id = InnoValue::new_string(reader, codepage)?;
         }
-        header.app_copyright = encoded_string(reader, UTF_16LE)?;
+        header.app_copyright = InnoValue::new_string(reader, codepage)?;
         if *version >= InnoVersion(1, 3, 0) {
-            header.app_publisher = encoded_string(reader, UTF_16LE)?;
-            header.app_publisher_url = encoded_string(reader, UTF_16LE)?;
+            header.app_publisher = InnoValue::new_string(reader, codepage)?;
+            header.app_publisher_url = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(5, 1, 13) {
-            header.app_support_phone = encoded_string(reader, UTF_16LE)?;
+            header.app_support_phone = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(1, 3, 0) {
-            header.app_support_url = encoded_string(reader, UTF_16LE)?;
-            header.app_updates_url = encoded_string(reader, UTF_16LE)?;
-            header.app_version = encoded_string(reader, UTF_16LE)?;
+            header.app_support_url = InnoValue::new_string(reader, codepage)?;
+            header.app_updates_url = InnoValue::new_string(reader, codepage)?;
+            header.app_version = InnoValue::new_string(reader, codepage)?;
         }
-        header.default_dir_name = encoded_string(reader, UTF_16LE)?;
-        header.default_group_name = encoded_string(reader, UTF_16LE)?;
+        header.default_dir_name = InnoValue::new_string(reader, codepage)?;
+        header.default_group_name = InnoValue::new_string(reader, codepage)?;
         if *version < InnoVersion(3, 0, 0) {
-            header.uninstall_icon_name = encoded_string(reader, WINDOWS_1252)?;
+            header.uninstall_icon_name = InnoValue::new_string(reader, WINDOWS_1252)?;
         }
-        header.base_filename = encoded_string(reader, UTF_16LE)?;
+        header.base_filename = InnoValue::new_string(reader, codepage)?;
         if *version >= InnoVersion(1, 3, 0) && *version < InnoVersion(5, 2, 5) {
-            header.license_text = encoded_string(reader, WINDOWS_1252)?;
-            header.info_before = encoded_string(reader, WINDOWS_1252)?;
-            header.info_after = encoded_string(reader, WINDOWS_1252)?;
+            header.license_text = InnoValue::new_string(reader, WINDOWS_1252)?;
+            header.info_before = InnoValue::new_string(reader, WINDOWS_1252)?;
+            header.info_after = InnoValue::new_string(reader, WINDOWS_1252)?;
         }
         if *version >= InnoVersion(1, 3, 3) {
-            header.uninstall_files_dir = encoded_string(reader, UTF_16LE)?;
+            header.uninstall_files_dir = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(1, 3, 6) {
-            header.uninstall_name = encoded_string(reader, UTF_16LE)?;
-            header.uninstall_icon = encoded_string(reader, UTF_16LE)?;
+            header.uninstall_name = InnoValue::new_string(reader, codepage)?;
+            header.uninstall_icon = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(1, 3, 14) {
-            header.app_mutex = encoded_string(reader, UTF_16LE)?;
+            header.app_mutex = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(3, 0, 0) {
-            header.default_user_name = encoded_string(reader, UTF_16LE)?;
-            header.default_user_organisation = encoded_string(reader, UTF_16LE)?;
+            header.default_user_name = InnoValue::new_string(reader, codepage)?;
+            header.default_user_organisation = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(4, 0, 0) {
-            header.default_serial = encoded_string(reader, UTF_16LE)?;
+            header.default_serial = InnoValue::new_string(reader, codepage)?;
         }
         if (*version >= InnoVersion(4, 0, 0) && *version < InnoVersion(5, 2, 5))
             || (version.is_isx() && *version >= InnoVersion(1, 3, 24))
         {
-            header.compiled_code = encoded_string(reader, UTF_16LE)?;
+            header.compiled_code = InnoValue::new_raw(reader)?;
         }
         if *version >= InnoVersion(4, 2, 4) {
-            header.app_readme_file = encoded_string(reader, UTF_16LE)?;
-            header.app_contact = encoded_string(reader, UTF_16LE)?;
-            header.app_comments = encoded_string(reader, UTF_16LE)?;
-            header.app_modify_path = encoded_string(reader, UTF_16LE)?;
+            header.app_readme_file = InnoValue::new_string(reader, codepage)?;
+            header.app_contact = InnoValue::new_string(reader, codepage)?;
+            header.app_comments = InnoValue::new_string(reader, codepage)?;
+            header.app_modify_path = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(5, 3, 8) {
-            header.create_uninstall_registry_key = encoded_string(reader, UTF_16LE)?;
+            header.create_uninstall_registry_key = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(5, 3, 10) {
-            header.uninstallable = encoded_string(reader, UTF_16LE)?;
+            header.uninstallable = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(5, 5, 0) {
-            header.close_applications_filter = encoded_string(reader, UTF_16LE)?;
+            header.close_applications_filter = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(5, 5, 6) {
-            header.setup_mutex = encoded_string(reader, UTF_16LE)?;
+            header.setup_mutex = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(5, 6, 1) {
-            header.changes_environment = encoded_string(reader, UTF_16LE)?;
-            header.changes_associations = encoded_string(reader, UTF_16LE)?;
+            header.changes_environment = InnoValue::new_string(reader, codepage)?;
+            header.changes_associations = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(6, 3, 0) {
-            let (allowed, disallowed) = encoded_string(reader, UTF_16LE)?.map_or_else(
+            let (allowed, disallowed) = InnoValue::new_string(reader, codepage)?.map_or_else(
                 || {
                     (
                         ArchitectureIdentifiers::X86_COMPATIBLE,
@@ -217,21 +213,21 @@ impl Header {
             );
             header.architectures_allowed = allowed;
             header.architectures_disallowed = disallowed;
-            header.architectures_install_in_64_bit_mode = encoded_string(reader, UTF_16LE)?
+            header.architectures_install_in_64_bit_mode = InnoValue::new_string(reader, codepage)?
                 .map_or(ArchitectureIdentifiers::X86_COMPATIBLE, |architecture| {
                     ArchitectureIdentifiers::from_expression(&architecture).0
                 });
         }
         if *version >= InnoVersion(5, 2, 5) {
-            header.license_text = encoded_string(reader, WINDOWS_1252)?;
-            header.info_before = encoded_string(reader, WINDOWS_1252)?;
-            header.info_after = encoded_string(reader, WINDOWS_1252)?;
+            header.license_text = InnoValue::new_string(reader, WINDOWS_1252)?;
+            header.info_before = InnoValue::new_string(reader, WINDOWS_1252)?;
+            header.info_after = InnoValue::new_string(reader, WINDOWS_1252)?;
         }
         if *version >= InnoVersion(5, 2, 1) && *version < InnoVersion(5, 3, 10) {
-            header.uninstaller_signature = encoded_string(reader, UTF_16LE)?;
+            header.uninstaller_signature = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= InnoVersion(5, 2, 5) {
-            header.compiled_code = encoded_string(reader, UTF_16LE)?;
+            header.compiled_code = InnoValue::new_raw(reader)?;
         }
         if *version >= InnoVersion(2, 0, 6) && !version.is_unicode() {
             let mut buf = [0; 256 / u8::BITS as usize];
@@ -416,187 +412,103 @@ impl Header {
                 AutoBool::from_header_flags(&header.flags, HeaderFlags::DISABLE_PROGRAM_GROUP_PAGE);
         }
         if *version < InnoVersion(1, 3, 0) {
-            header.license_text = sized_encoded_string(reader, license_size, WINDOWS_1252)?;
-            header.info_before = sized_encoded_string(reader, info_before_size, WINDOWS_1252)?;
-            header.info_after = sized_encoded_string(reader, info_after_size, WINDOWS_1252)?;
+            header.license_text = InnoValue::new_sized_string(reader, license_size, WINDOWS_1252)?;
+            header.info_before =
+                InnoValue::new_sized_string(reader, info_before_size, WINDOWS_1252)?;
+            header.info_after = InnoValue::new_sized_string(reader, info_after_size, WINDOWS_1252)?;
         }
         Ok(header)
     }
 
     fn read_flags<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<HeaderFlags> {
-        let mut flags = HeaderFlags::empty();
-        let mut flag_reader = FlagReader::new(reader);
-        flag_reader.add(HeaderFlags::DISABLE_STARTUP_PROMPT)?;
-        if *version < InnoVersion(5, 3, 10) {
-            flag_reader.add(HeaderFlags::UNINSTALLABLE)?;
-        }
-        flag_reader.add(HeaderFlags::CREATE_APP_DIR)?;
-        if *version < InnoVersion(5, 3, 3) {
-            flag_reader.add(HeaderFlags::DISABLE_DIR_PAGE)?;
-        }
-        if *version < InnoVersion(1, 3, 6) {
-            flag_reader.add(HeaderFlags::DISABLE_DIR_EXISTS_WARNING)?;
-        }
-        if *version < InnoVersion(5, 3, 3) {
-            flag_reader.add(HeaderFlags::DISABLE_PROGRAM_GROUP_PAGE)?;
-        }
-        flag_reader.add(HeaderFlags::ALLOW_NO_ICONS)?;
-        if *version < InnoVersion(3, 0, 0) || *version >= InnoVersion(3, 0, 3) {
-            flag_reader.add(HeaderFlags::ALWAYS_RESTART)?;
-        }
-        if *version < InnoVersion(1, 3, 3) {
-            flag_reader.add(HeaderFlags::BACK_SOLID)?;
-        }
-        flag_reader.add_all([
-            HeaderFlags::ALWAYS_USE_PERSONAL_GROUP,
-            HeaderFlags::WINDOW_VISIBLE,
-            HeaderFlags::WINDOW_SHOW_CAPTION,
-            HeaderFlags::WINDOW_RESIZABLE,
-            HeaderFlags::WINDOW_START_MAXIMISED,
-            HeaderFlags::ENABLED_DIR_DOESNT_EXIST_WARNING,
-        ])?;
-        if *version < InnoVersion(4, 1, 2) {
-            flag_reader.add(HeaderFlags::DISABLE_APPEND_DIR)?;
-        }
-        flag_reader.add(HeaderFlags::PASSWORD)?;
-        if *version >= InnoVersion(1, 2, 6) {
-            flag_reader.add(HeaderFlags::ALLOW_ROOT_DIRECTORY)?;
-        }
-        if *version >= InnoVersion(1, 2, 14) {
-            flag_reader.add(HeaderFlags::DISABLE_FINISHED_PAGE)?;
-        }
-        if *version < InnoVersion(3, 0, 4) {
-            flag_reader.add(HeaderFlags::ADMIN_PRIVILEGES_REQUIRED)?;
-        }
-        if *version < InnoVersion(3, 0, 0) {
-            flag_reader.add(HeaderFlags::ALWAYS_CREATE_UNINSTALL_ICON)?;
-        }
-        if *version < InnoVersion(1, 3, 6) {
-            flag_reader.add(HeaderFlags::OVERWRITE_UNINSTALL_REG_ENTRIES)?;
-        }
-        if *version < InnoVersion(5, 6, 1) {
-            flag_reader.add(HeaderFlags::CHANGES_ASSOCIATIONS)?;
-        }
-        if *version >= InnoVersion(1, 3, 0) && *version < InnoVersion(5, 3, 8) {
-            flag_reader.add(HeaderFlags::CREATE_UNINSTALL_REG_KEY)?;
-        }
-        if *version >= InnoVersion(1, 3, 1) {
-            flag_reader.add(HeaderFlags::USE_PREVIOUS_APP_DIR)?;
-        }
-        if *version >= InnoVersion(1, 3, 3) {
-            flag_reader.add(HeaderFlags::BACK_COLOR_HORIZONTAL)?;
-        }
-        if *version >= InnoVersion(1, 3, 10) {
-            flag_reader.add(HeaderFlags::USE_PREVIOUS_GROUP)?;
-        }
-        if *version >= InnoVersion(1, 3, 20) {
-            flag_reader.add(HeaderFlags::UPDATE_UNINSTALL_LOG_APP_NAME)?;
-        }
-        if *version >= InnoVersion(2, 0, 0)
-            || (version.is_isx() && *version >= InnoVersion(1, 3, 10))
-        {
-            flag_reader.add(HeaderFlags::USE_PREVIOUS_SETUP_TYPE)?;
-        }
-        if *version >= InnoVersion(2, 0, 0) {
-            flag_reader.add_all([
+        read_flags!(reader,
+            HeaderFlags::DISABLE_STARTUP_PROMPT,
+            if *version < InnoVersion(5, 3, 10) => HeaderFlags::UNINSTALLABLE,
+            HeaderFlags::CREATE_APP_DIR,
+            if *version < InnoVersion(5, 3, 3) => HeaderFlags::DISABLE_DIR_PAGE,
+            if *version < InnoVersion(1, 3, 6) => HeaderFlags::DISABLE_DIR_EXISTS_WARNING,
+            if *version < InnoVersion(5, 3, 3) => HeaderFlags::DISABLE_PROGRAM_GROUP_PAGE,
+            HeaderFlags::ALLOW_NO_ICONS,
+            if *version < InnoVersion(3, 0, 0) || *version >= InnoVersion(3, 0, 3) => HeaderFlags::ALWAYS_RESTART,
+            if *version < InnoVersion(1, 3, 3) => HeaderFlags::BACK_SOLID,
+            [
+                HeaderFlags::ALWAYS_USE_PERSONAL_GROUP,
+                HeaderFlags::WINDOW_VISIBLE,
+                HeaderFlags::WINDOW_SHOW_CAPTION,
+                HeaderFlags::WINDOW_RESIZABLE,
+                HeaderFlags::WINDOW_START_MAXIMISED,
+                HeaderFlags::ENABLED_DIR_DOESNT_EXIST_WARNING,
+            ],
+            if *version < InnoVersion(4, 1, 2) => HeaderFlags::DISABLE_APPEND_DIR,
+            HeaderFlags::PASSWORD,
+            if *version >= InnoVersion(1, 2, 6) => HeaderFlags::ALLOW_ROOT_DIRECTORY,
+            if *version >= InnoVersion(1, 2, 14) => HeaderFlags::DISABLE_FINISHED_PAGE,
+            if *version < InnoVersion(3, 0, 4) => HeaderFlags::ADMIN_PRIVILEGES_REQUIRED,
+            if *version < InnoVersion(3, 0, 0) => HeaderFlags::ALWAYS_CREATE_UNINSTALL_ICON,
+            if *version < InnoVersion(1, 3, 6) => HeaderFlags::OVERWRITE_UNINSTALL_REG_ENTRIES,
+            if *version < InnoVersion(5, 6, 1) => HeaderFlags::CHANGES_ASSOCIATIONS,
+            if *version >= InnoVersion(1, 3, 0) && *version < InnoVersion(5, 3, 8) => HeaderFlags::CREATE_UNINSTALL_REG_KEY,
+            if *version >= InnoVersion(1, 3, 1) => HeaderFlags::USE_PREVIOUS_APP_DIR,
+            if *version >= InnoVersion(1, 3, 3) => HeaderFlags::BACK_COLOR_HORIZONTAL,
+            if *version >= InnoVersion(1, 3, 10) => HeaderFlags::USE_PREVIOUS_GROUP,
+            if *version >= InnoVersion(1, 3, 20) => HeaderFlags::UPDATE_UNINSTALL_LOG_APP_NAME,
+            if *version >= InnoVersion(2, 0, 0) || (version.is_isx() && *version >= InnoVersion(1, 3, 10)) => HeaderFlags::USE_PREVIOUS_SETUP_TYPE,
+            if *version >= InnoVersion(2, 0, 0) => [
                 HeaderFlags::DISABLE_READY_MEMO,
                 HeaderFlags::ALWAYS_SHOW_COMPONENTS_LIST,
                 HeaderFlags::FLAT_COMPONENTS_LIST,
                 HeaderFlags::SHOW_COMPONENT_SIZES,
                 HeaderFlags::USE_PREVIOUS_TASKS,
                 HeaderFlags::DISABLE_READY_PAGE,
-            ])?;
-        }
-        if *version >= InnoVersion(2, 0, 7) {
-            flag_reader.add_all([
+            ],
+            if *version >= InnoVersion(2, 0, 7) => [
                 HeaderFlags::ALWAYS_SHOW_DIR_ON_READY_PAGE,
                 HeaderFlags::ALWAYS_SHOW_GROUP_ON_READY_PAGE,
-            ])?;
-        }
-        if *version >= InnoVersion(2, 0, 17) && *version < InnoVersion(4, 1, 5) {
-            flag_reader.add(HeaderFlags::BZIP_USED)?;
-        }
-        if *version >= InnoVersion(2, 0, 18) {
-            flag_reader.add(HeaderFlags::ALLOW_UNC_PATH)?;
-        }
-        if *version >= InnoVersion(3, 0, 0) {
-            flag_reader.add_all([
+            ],
+            if *version >= InnoVersion(2, 0, 17) && *version < InnoVersion(4, 1, 5) => HeaderFlags::BZIP_USED,
+            if *version >= InnoVersion(2, 0, 18) => HeaderFlags::ALLOW_UNC_PATH,
+            if *version >= InnoVersion(3, 0, 0) => [
                 HeaderFlags::USER_INFO_PAGE,
                 HeaderFlags::USE_PREVIOUS_USER_INFO,
-            ])?;
-        }
-        if *version >= InnoVersion(3, 0, 1) {
-            flag_reader.add(HeaderFlags::UNINSTALL_RESTART_COMPUTER)?;
-        }
-        if *version >= InnoVersion(3, 0, 3) {
-            flag_reader.add(HeaderFlags::RESTART_IF_NEEDED_BY_RUN)?;
-        }
-        if *version >= InnoVersion(4, 0, 0)
-            || (version.is_isx() && *version >= InnoVersion(3, 0, 3))
-        {
-            flag_reader.add(HeaderFlags::SHOW_TASKS_TREE_LINES)?;
-        }
-        if *version >= InnoVersion(4, 0, 1) && *version < InnoVersion(4, 0, 10) {
-            flag_reader.add(HeaderFlags::DETECT_LANGUAGE_USING_LOCALE)?;
-        }
-        if *version >= InnoVersion(4, 0, 9) {
-            flag_reader.add(HeaderFlags::ALLOW_CANCEL_DURING_INSTALL)?;
-        } else {
-            flags |= HeaderFlags::ALLOW_CANCEL_DURING_INSTALL;
-        }
-        if *version >= InnoVersion(4, 1, 3) {
-            flag_reader.add(HeaderFlags::WIZARD_IMAGE_STRETCH)?;
-        }
-        if *version >= InnoVersion(4, 1, 8) {
-            flag_reader.add_all([
+            ],
+            if *version >= InnoVersion(3, 0, 1) => HeaderFlags::UNINSTALL_RESTART_COMPUTER,
+            if *version >= InnoVersion(3, 0, 3) => HeaderFlags::RESTART_IF_NEEDED_BY_RUN,
+            if *version >= InnoVersion(4, 0, 0) || (version.is_isx() && *version >= InnoVersion(3, 0, 3)) => HeaderFlags::SHOW_TASKS_TREE_LINES,
+            if *version >= InnoVersion(4, 0, 1) && *version < InnoVersion(4, 0, 10) => HeaderFlags::DETECT_LANGUAGE_USING_LOCALE,
+            if *version >= InnoVersion(4, 0, 9) => HeaderFlags::ALLOW_CANCEL_DURING_INSTALL,
+            if *version >= InnoVersion(4, 1, 3) => HeaderFlags::WIZARD_IMAGE_STRETCH,
+            if *version >= InnoVersion(4, 1, 8) => [
                 HeaderFlags::APPEND_DEFAULT_DIR_NAME,
                 HeaderFlags::APPEND_DEFAULT_GROUP_NAME,
-            ])?;
-        }
-        if *version >= InnoVersion(4, 2, 2) {
-            flag_reader.add(HeaderFlags::ENCRYPTION_USED)?;
-        }
-        if *version >= InnoVersion(5, 0, 4) && *version < InnoVersion(5, 6, 1) {
-            flag_reader.add(HeaderFlags::CHANGES_ENVIRONMENT)?;
-        }
-        if *version >= InnoVersion(5, 1, 7) && !version.is_unicode() {
-            flag_reader.add(HeaderFlags::SHOW_UNDISPLAYABLE_LANGUAGES)?;
-        }
-        if *version >= InnoVersion(5, 1, 13) {
-            flag_reader.add(HeaderFlags::SETUP_LOGGING)?;
-        }
-        if *version >= InnoVersion(5, 2, 1) {
-            flag_reader.add(HeaderFlags::SIGNED_UNINSTALLER)?;
-        }
-        if *version >= InnoVersion(5, 3, 8) {
-            flag_reader.add(HeaderFlags::USE_PREVIOUS_LANGUAGE)?;
-        }
-        if *version >= InnoVersion(5, 3, 9) {
-            flag_reader.add(HeaderFlags::DISABLE_WELCOME_PAGE)?;
-        }
-        if *version >= InnoVersion(5, 5, 0) {
-            flag_reader.add_all([
+            ],
+            if *version >= InnoVersion(4, 2, 2) => HeaderFlags::ENCRYPTION_USED,
+            if *version >= InnoVersion(5, 0, 4) && *version < InnoVersion(5, 6, 1) => HeaderFlags::CHANGES_ENVIRONMENT,
+            if *version >= InnoVersion(5, 1, 7) && !version.is_unicode() => HeaderFlags::SHOW_UNDISPLAYABLE_LANGUAGES,
+            if *version >= InnoVersion(5, 1, 13) => HeaderFlags::SETUP_LOGGING,
+            if *version >= InnoVersion(5, 2, 1) => HeaderFlags::SIGNED_UNINSTALLER,
+            if *version >= InnoVersion(5, 3, 8) => HeaderFlags::USE_PREVIOUS_LANGUAGE,
+            if *version >= InnoVersion(5, 3, 9) => HeaderFlags::DISABLE_WELCOME_PAGE,
+            if *version >= InnoVersion(5, 5, 0) => [
                 HeaderFlags::CLOSE_APPLICATIONS,
                 HeaderFlags::RESTART_APPLICATIONS,
                 HeaderFlags::ALLOW_NETWORK_DRIVE,
-            ])?;
-        } else {
-            flags |= HeaderFlags::ALLOW_NETWORK_DRIVE;
-        }
-        if *version >= InnoVersion(5, 5, 7) {
-            flag_reader.add(HeaderFlags::FORCE_CLOSE_APPLICATIONS)?;
-        }
-        if *version >= InnoVersion(6, 0, 0) {
-            flag_reader.add_all([
+            ],
+            if *version >= InnoVersion(5, 5, 7) => HeaderFlags::FORCE_CLOSE_APPLICATIONS,
+            if *version >= InnoVersion(6, 0, 0) => [
                 HeaderFlags::APP_NAME_HAS_CONSTS,
                 HeaderFlags::USE_PREVIOUS_PRIVILEGES,
                 HeaderFlags::WIZARD_RESIZABLE,
-            ])?;
-        }
-        if *version >= InnoVersion(6, 3, 0) {
-            flag_reader.add(HeaderFlags::UNINSTALL_LOGGING)?;
-        }
-        flag_reader.finalize().map(|read_flags| flags | read_flags)
+            ],
+            if *version >= InnoVersion(6, 3, 0) => HeaderFlags::UNINSTALL_LOGGING
+        ).map(|mut read_flags| {
+            if *version < InnoVersion(4, 0, 9) {
+                read_flags |= HeaderFlags::ALLOW_CANCEL_DURING_INSTALL;
+            }
+            if *version < InnoVersion(5, 5, 0) {
+                read_flags |= HeaderFlags::ALLOW_NETWORK_DRIVE;
+            }
+            read_flags
+        })
     }
 }
 

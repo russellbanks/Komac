@@ -1,6 +1,6 @@
 use bitflags::bitflags;
-use derive_more::Display;
-use memchr::memchr;
+use derive_more::{Deref, Display};
+use memchr::{memchr, memmem};
 use std::cmp::Ordering;
 
 bitflags! {
@@ -15,9 +15,10 @@ bitflags! {
 #[display("{_0}.{_1}.{_2}")]
 pub struct InnoVersion(pub u8, pub u8, pub u8);
 
-#[derive(Debug, Default, Display, PartialEq, Eq)]
+#[derive(Debug, Default, Deref, Display, PartialEq, Eq)]
 #[display("{version}")]
 pub struct KnownVersion {
+    #[deref]
     pub version: InnoVersion,
     pub variant: VersionFlags,
 }
@@ -36,7 +37,8 @@ impl PartialOrd<InnoVersion> for KnownVersion {
 
 impl KnownVersion {
     pub fn from_version_bytes(data: &[u8]) -> Option<Self> {
-        const ISX: &[u8; 3] = b"isx";
+        const ISX: &[u8; 3] = b"ISX";
+        const INNO_SETUP_EXTENSIONS: &[u8; 21] = b"Inno Setup Extensions";
 
         // Find the first '(' and ')'
         let start_index = memchr(b'(', data)?;
@@ -74,9 +76,8 @@ impl KnownVersion {
             }
         }
 
-        if remaining_data
-            .windows(ISX.len())
-            .any(|window| window.eq_ignore_ascii_case(ISX))
+        if memmem::find(remaining_data, ISX).is_some()
+            || memmem::find(remaining_data, INNO_SETUP_EXTENSIONS).is_some()
         {
             flags |= VersionFlags::ISX;
         }

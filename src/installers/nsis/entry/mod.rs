@@ -1,12 +1,10 @@
-use crate::installers::nsis::entry::registry::RegRoot;
 use crate::installers::nsis::strings::encoding::nsis_string;
 use crate::installers::nsis::version::NsisVersion;
+use crate::installers::utils::registry::RegRoot;
 use std::borrow::Cow;
 use std::ops::Not;
 use zerocopy::little_endian::{I32, U32};
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
-
-pub mod registry;
 
 #[expect(dead_code)]
 #[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
