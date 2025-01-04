@@ -18,6 +18,8 @@ use crate::types::installer_type::InstallerType;
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
     ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];
 
+const MACOS_X_FOLDER: &str = "__MACOSX";
+
 pub struct Zip<R: Read + Seek> {
     archive: ZipArchive<R>,
     pub nested_installer_type: Option<NestedInstallerType>,
@@ -40,6 +42,11 @@ impl<R: Read + Seek> Zip<R> {
                         .extension()
                         .is_some_and(|extension| extension.eq_ignore_ascii_case(file_extension))
                 })
+            })
+            .filter(|file_name| {
+                file_name
+                    .components()
+                    .all(|component| component.as_str() != MACOS_X_FOLDER)
             })
             .map(Utf8Path::to_path_buf)
             .collect::<Vec<_>>();
