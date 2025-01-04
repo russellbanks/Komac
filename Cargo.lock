@@ -2048,6 +2048,7 @@ checksum = "13acbb8371917fc971be86fc8057c41a64b521c184808a698c02acc242dbf637"
 dependencies = [
  "displaydoc",
  "litemap",
+ "serde",
  "tinystr",
  "writeable",
  "zerovec",
@@ -2427,6 +2428,7 @@ dependencies = [
  "futures",
  "futures-util",
  "heapless",
+ "icu_locid",
  "indexmap 2.7.0",
  "indicatif",
  "indoc",
@@ -2443,7 +2445,6 @@ dependencies = [
  "open",
  "ordinal-trait",
  "owo-colors 4.1.0",
- "oxilangtag",
  "package-family-name",
  "percent-encoding",
  "protobuf",
@@ -3183,15 +3184,6 @@ name = "owo-colors"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb37767f6569cd834a413442455e0f066d0d522de8630436e2a1761d9726ba56"
-
-[[package]]
-name = "oxilangtag"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23f3f87617a86af77fa3691e6350483e7154c2ead9f1261b75130e21ca0f8acb"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "p256"
@@ -4622,6 +4614,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9117f5d4db391c1cf6927e7bea3db74b9a1c1add8f7eda9ffd5364f40f57b82f"
 dependencies = [
  "displaydoc",
+ "serde",
  "zerovec",
 ]
 

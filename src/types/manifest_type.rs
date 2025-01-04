@@ -1,5 +1,5 @@
-use crate::types::language_tag::LanguageTag;
 use derive_more::Display;
+use icu_locid::LanguageIdentifier;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Display, Deserialize, Serialize)]
@@ -15,6 +15,6 @@ pub enum ManifestType {
 #[expect(dead_code)]
 pub enum ManifestTypeWithLocale {
     Installer,
-    Locale(LanguageTag),
+    Locale(LanguageIdentifier),
     Version,
 }

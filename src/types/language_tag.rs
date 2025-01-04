@@ -1,27 +1,29 @@
 use crate::prompts::prompt::Prompt;
 use derive_more::{AsRef, Deref, Display, FromStr};
+use icu_locid::{langid, LanguageIdentifier};
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 
 #[derive(
-    AsRef,
-    Clone,
-    Debug,
-    Deref,
-    Display,
-    Deserialize,
-    Serialize,
-    FromStr,
-    Eq,
-    PartialEq,
-    Hash,
-    Ord,
-    PartialOrd,
+    AsRef, Clone, Debug, Deref, Display, Deserialize, Serialize, FromStr, Eq, PartialEq, Hash,
 )]
-pub struct LanguageTag(oxilangtag::LanguageTag<String>);
+pub struct LanguageTag(LanguageIdentifier);
 
 impl Default for LanguageTag {
     fn default() -> Self {
-        Self::from_str("en-US").unwrap()
+        Self(langid!("en-US"))
+    }
+}
+
+impl Ord for LanguageTag {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.0.total_cmp(&self.0)
+    }
+}
+
+impl PartialOrd for LanguageTag {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

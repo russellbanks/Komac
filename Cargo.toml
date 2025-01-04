@@ -48,6 +48,7 @@ flate2 = "1.0.35"
 futures = "0.3.31"
 futures-util = "0.3.31"
 heapless = { version = "0.8.0", features = ["serde"] }
+icu_locid = { version = "1.5.0", features = ["serde", "std"] }
 indexmap = "2.7.0"
 indicatif = "0.17.9"
 inquire = "0.7.5"
@@ -63,7 +64,6 @@ nutype = { version = "0.5.1", features = ["serde"] }
 open = "5.3.1"
 ordinal-trait = "0.1.0"
 owo-colors = "4.1.0"
-oxilangtag = { version = "0.1.5", features = ["serde"] }
 package-family-name = { version = "2.0.1", features = ["serde"] }
 percent-encoding = "2.3.1"
 protobuf = "3.7.1"

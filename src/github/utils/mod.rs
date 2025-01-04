@@ -1,5 +1,4 @@
 use crate::manifests::Manifest;
-use crate::types::language_tag::LanguageTag;
 use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -7,6 +6,7 @@ use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 use bon::builder;
 use clap::{crate_name, crate_version};
+use icu_locid::LanguageIdentifier;
 use rand::{thread_rng, Rng};
 use std::collections::BTreeSet;
 use std::env;
@@ -50,7 +50,7 @@ pub fn get_package_path(
                 result.push_str(INSTALLER_PART);
             } else if let ManifestTypeWithLocale::Locale(tag) = manifest_type {
                 result.push_str(LOCALE_PART);
-                result.push_str(tag.as_str());
+                result.push_str(&tag.to_string());
             }
             result.push_str(YAML_EXTENSION);
         }
@@ -61,7 +61,7 @@ pub fn get_package_path(
 pub fn is_manifest_file<M: Manifest>(
     file_name: &str,
     package_identifier: &PackageIdentifier,
-    default_locale: Option<&LanguageTag>,
+    default_locale: Option<&LanguageIdentifier>,
 ) -> bool {
     let identifier_len = package_identifier.len();
     let file_name_len = file_name.len();
@@ -95,8 +95,8 @@ pub fn is_manifest_file<M: Manifest>(
 
             locale.is_some_and(|locale| {
                 default_locale.is_some_and(|default_locale| match M::TYPE {
-                    ManifestType::DefaultLocale => default_locale.as_str() == locale,
-                    ManifestType::Locale => default_locale.as_str() != locale,
+                    ManifestType::DefaultLocale => default_locale.to_string() == locale,
+                    ManifestType::Locale => default_locale.to_string() != locale,
                     _ => false,
                 })
             })
@@ -198,10 +198,10 @@ mod tests {
     use crate::manifests::installer_manifest::InstallerManifest;
     use crate::manifests::locale_manifest::LocaleManifest;
     use crate::manifests::version_manifest::VersionManifest;
-    use crate::types::language_tag::LanguageTag;
     use crate::types::manifest_type::ManifestTypeWithLocale;
     use crate::types::package_identifier::PackageIdentifier;
     use crate::types::package_version::PackageVersion;
+    use icu_locid::langid;
     use rstest::rstest;
     use std::str::FromStr;
 
@@ -222,13 +222,13 @@ mod tests {
     #[case(
         "Package.Identifier",
         Some("1.2.3"),
-        Some(ManifestTypeWithLocale::Locale(LanguageTag::from_str("en-US").unwrap())),
+        Some(ManifestTypeWithLocale::Locale(langid!("en-US"))),
         "manifests/p/Package/Identifier/1.2.3/Package.Identifier.locale.en-US.yaml"
     )]
     #[case(
         "Package.Identifier",
         Some("1.2.3"),
-        Some(ManifestTypeWithLocale::Locale(LanguageTag::from_str("zh-CN").unwrap())),
+        Some(ManifestTypeWithLocale::Locale(langid!("zh-CN"))),
         "manifests/p/Package/Identifier/1.2.3/Package.Identifier.locale.zh-CN.yaml"
     )]
     #[case(
@@ -274,7 +274,7 @@ mod tests {
         assert!(is_manifest_file::<DefaultLocaleManifest>(
             "Package.Identifier.locale.en-US.yaml",
             &PackageIdentifier::parse("Package.Identifier").unwrap(),
-            LanguageTag::from_str("en-US").ok().as_ref(),
+            Some(&langid!("en-US")),
         ))
     }
 
@@ -283,7 +283,7 @@ mod tests {
         assert!(!is_manifest_file::<DefaultLocaleManifest>(
             "Package.Identifier.locale.en-US.yaml",
             &PackageIdentifier::parse("Package.Identifier").unwrap(),
-            LanguageTag::from_str("zh-CN").ok().as_ref(),
+            Some(&langid!("zh-CN")),
         ))
     }
 
@@ -292,7 +292,7 @@ mod tests {
         assert!(is_manifest_file::<LocaleManifest>(
             "Package.Identifier.locale.zh-CN.yaml",
             &PackageIdentifier::parse("Package.Identifier").unwrap(),
-            LanguageTag::from_str("en-US").ok().as_ref(),
+            Some(&langid!("en-US")),
         ))
     }
 
@@ -301,7 +301,7 @@ mod tests {
         assert!(!is_manifest_file::<LocaleManifest>(
             "Package.Identifier.locale.en-US.yaml",
             &PackageIdentifier::parse("Package.Identifier").unwrap(),
-            LanguageTag::from_str("en-US").ok().as_ref(),
+            Some(&langid!("en-US")),
         ))
     }
 
