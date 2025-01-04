@@ -47,7 +47,7 @@ impl Cleanup {
 
         // Get all fork branches with an associated pull request to microsoft/winget-pkgs
         let (pr_branch_map, repository_id) = github
-            .get_branches(&github.get_username().await?, &merge_state)
+            .get_branches(&github.get_username().await?, merge_state)
             .await?;
 
         pb.finish_and_clear();
@@ -115,7 +115,7 @@ impl Cleanup {
 
 // Using bitflags instead of an enum to allow combining multiple states (MERGED, CLOSED)
 bitflags! {
-    #[derive(PartialEq, Eq)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
     pub struct MergeState: u8 {
         const MERGED = 1 << 0;
         const CLOSED = 1 << 1;

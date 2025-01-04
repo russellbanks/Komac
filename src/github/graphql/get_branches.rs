@@ -1,10 +1,16 @@
-use crate::github::graphql::get_repository_info::RepositoryVariablesFields;
 use crate::github::graphql::github_schema::github_schema as schema;
 use std::fmt::{Display, Formatter};
 use url::Url;
 
+#[derive(cynic::QueryVariables)]
+pub struct GetBranchesVariables<'a> {
+    pub owner: &'a str,
+    pub name: &'a str,
+    pub cursor: Option<&'a str>,
+}
+
 #[derive(cynic::QueryFragment)]
-#[cynic(graphql_type = "Query", variables = "RepositoryVariables")]
+#[cynic(graphql_type = "Query", variables = "GetBranchesVariables")]
 pub struct GetBranches {
     #[arguments(owner: $owner, name: $name)]
     pub repository: Option<Repository>,
@@ -12,18 +18,26 @@ pub struct GetBranches {
 
 /// <https://docs.github.com/graphql/reference/objects#repository>
 #[derive(cynic::QueryFragment)]
+#[cynic(variables = "GetBranchesVariables")]
 pub struct Repository {
     pub id: cynic::Id,
     pub default_branch_ref: Option<DefaultBranchRef>,
-    #[arguments(first: 100, refPrefix: "refs/heads/")]
+    #[arguments(first: 100, after: $cursor, refPrefix: "refs/heads/")]
     pub refs: Option<RefConnection>,
 }
 
 /// <https://docs.github.com/graphql/reference/objects#refconnection>
 #[derive(cynic::QueryFragment)]
 pub struct RefConnection {
-    #[cynic(flatten)]
-    pub nodes: Vec<PullRequestBranchRef>,
+    #[cynic(rename = "nodes", flatten)]
+    pub branches: Vec<PullRequestBranchRef>,
+    pub page_info: PageInfo,
+}
+
+#[derive(cynic::QueryFragment)]
+pub struct PageInfo {
+    pub end_cursor: Option<String>,
+    pub has_next_page: bool,
 }
 
 /// <https://docs.github.com/graphql/reference/objects#ref>
@@ -45,8 +59,8 @@ pub struct DefaultBranchRef {
 /// <https://docs.github.com/graphql/reference/objects#pullrequestconnection>
 #[derive(cynic::QueryFragment, Hash, PartialEq, Eq)]
 pub struct PullRequestConnection {
-    #[cynic(flatten)]
-    pub nodes: Vec<PullRequest>,
+    #[cynic(rename = "nodes", flatten)]
+    pub pull_requests: Vec<PullRequest>,
 }
 
 /// <https://docs.github.com/graphql/reference/objects#pullrequest>
@@ -96,21 +110,20 @@ impl Display for PullRequestState {
 #[cfg(test)]
 mod tests {
     use crate::github::github_client::{MICROSOFT, WINGET_PKGS};
-    use crate::github::graphql::get_branches::GetBranches;
-    use crate::github::graphql::get_repository_info::RepositoryVariables;
+    use crate::github::graphql::get_branches::{GetBranches, GetBranchesVariables};
     use cynic::QueryBuilder;
     use indoc::indoc;
 
     #[test]
     fn get_branches_query_output() {
         const GET_BRANCHES_QUERY: &str = indoc! {r#"
-            query GetBranches($owner: String!, $name: String!) {
+            query GetBranches($owner: String!, $name: String!, $cursor: String) {
               repository(owner: $owner, name: $name) {
                 id
                 defaultBranchRef {
                   name
                 }
-                refs(first: 100, refPrefix: "refs/heads/") {
+                refs(first: 100, after: $cursor, refPrefix: "refs/heads/") {
                   nodes {
                     name
                     associatedPullRequests(first: 5) {
@@ -124,14 +137,19 @@ mod tests {
                       }
                     }
                   }
+                  pageInfo {
+                    endCursor
+                    hasNextPage
+                  }
                 }
               }
             }
         "#};
 
-        let operation = GetBranches::build(RepositoryVariables {
+        let operation = GetBranches::build(GetBranchesVariables {
             owner: MICROSOFT,
             name: WINGET_PKGS,
+            cursor: None,
         });
 
         assert_eq!(operation.query, GET_BRANCHES_QUERY);

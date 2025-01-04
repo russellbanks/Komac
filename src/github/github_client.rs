@@ -10,14 +10,18 @@ use crate::github::graphql::create_pull_request::{
 };
 use crate::github::graphql::create_ref::{CreateRef, CreateRefVariables, Ref as CreateBranchRef};
 use crate::github::graphql::get_all_values::{
-    GetAllValues, GetAllValuesGitObject, GetAllValuesVariables,
+    GetAllValues, GetAllValuesGitObject, GetAllValuesVariables, Tree,
 };
-use crate::github::graphql::get_branches::{GetBranches, PullRequest, PullRequestState};
+use crate::github::graphql::get_branches::{
+    GetBranches, GetBranchesVariables, PullRequest, PullRequestState, RefConnection,
+};
 use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
 use crate::github::graphql::get_directory_content::{
     GetDirectoryContent, GetDirectoryContentVariables,
 };
-use crate::github::graphql::get_directory_content_with_text::GetDirectoryContentWithText;
+use crate::github::graphql::get_directory_content_with_text::{
+    GetDirectoryContentWithText, TreeEntry,
+};
 use crate::github::graphql::get_existing_pull_request;
 use crate::github::graphql::get_existing_pull_request::{
     GetExistingPullRequest, GetExistingPullRequestVariables,
@@ -56,7 +60,7 @@ use base64ct::Encoding;
 use bon::bon;
 use const_format::{formatcp, str_repeat};
 use cynic::http::{CynicReqwestError, ReqwestExt};
-use cynic::{GraphQlError, Id, MutationBuilder, QueryBuilder};
+use cynic::{GraphQlError, GraphQlResponse, Id, MutationBuilder, QueryBuilder};
 use indexmap::IndexMap;
 use indicatif::ProgressBar;
 use itertools::Itertools;
@@ -116,15 +120,13 @@ impl GitHub {
         if let Ok(login) = env::var(KOMAC_FORK_OWNER) {
             Ok(login)
         } else {
-            let response = self
+            let GraphQlResponse { data, errors } = self
                 .0
                 .post(GITHUB_GRAPHQL_URL)
                 .run_graphql(GetCurrentUserLogin::build(()))
                 .await?;
-            response
-                .data
-                .map(|data| data.viewer.login)
-                .ok_or(GitHubError::GraphQL(response.errors))
+            data.map(|data| data.viewer.login)
+                .ok_or(GitHubError::GraphQL(errors))
         }
     }
 
@@ -153,7 +155,8 @@ impl GitHub {
         let endpoint = format!(
             "https://api.github.com/repos/{owner}/{repo}/git/trees/HEAD:{path}?recursive=true"
         );
-        let response = self
+
+        let GitTree { tree, .. } = self
             .0
             .get(endpoint)
             .header(ACCEPT, GITHUB_JSON_MIME)
@@ -161,8 +164,8 @@ impl GitHub {
             .await?
             .json::<GitTree>()
             .await?;
-        let files = response
-            .tree
+
+        let files = tree
             .iter()
             .filter(|entry| (0..=1).contains(&entry.path.matches(SEPARATOR).count()))
             .chunk_by(|entry| {
@@ -180,13 +183,11 @@ impl GitHub {
             })
             .collect::<BTreeSet<_>>();
 
-        if !files.is_empty() {
-            Ok(files)
-        } else {
-            Err(GitHubError::NoValidFiles {
+        Option::from(files)
+            .filter(|files| !files.is_empty())
+            .ok_or_else(|| GitHubError::NoValidFiles {
                 path: path.to_owned(),
             })
-        }
     }
 
     pub async fn get_manifests(
@@ -259,7 +260,7 @@ impl GitHub {
         repo: &str,
         path: &str,
     ) -> Result<impl Iterator<Item = GitHubFile>, GitHubError> {
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetDirectoryContentWithText::build(
@@ -270,18 +271,17 @@ impl GitHub {
                 },
             ))
             .await?;
-        response
-            .data
-            .and_then(|data| data.repository?.object?.into_tree_entries())
+        data.and_then(|data| data.repository?.object?.into_tree_entries())
             .map(|entries| {
-                entries.into_iter().filter_map(|entry| {
-                    entry.object?.into_blob_text().map(|text| GitHubFile {
-                        name: entry.name,
-                        text,
+                entries
+                    .into_iter()
+                    .filter_map(|TreeEntry { name, object }| {
+                        object?
+                            .into_blob_text()
+                            .map(|text| GitHubFile { name, text })
                     })
-                })
             })
-            .ok_or(GitHubError::GraphQL(response.errors))
+            .ok_or(GitHubError::GraphQL(errors))
     }
 
     pub async fn get_manifest<T: Manifest + for<'de> Deserialize<'de>>(
@@ -302,7 +302,7 @@ impl GitHub {
         repo: &str,
         path: &str,
     ) -> Result<String, GitHubError> {
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetFileContent::build(GetDirectoryContentVariables {
@@ -311,10 +311,8 @@ impl GitHub {
                 expression: &format!("HEAD:{path}"),
             }))
             .await?;
-        response
-            .data
-            .and_then(|data| data.repository?.object?.into_blob_text())
-            .ok_or(GitHubError::GraphQL(response.errors))
+        data.and_then(|data| data.repository?.object?.into_blob_text())
+            .ok_or(GitHubError::GraphQL(errors))
     }
 
     #[builder(finish_fn = send)]
@@ -331,7 +329,7 @@ impl GitHub {
         owner: &str,
         name: &str,
     ) -> Result<RepositoryData, GitHubError> {
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetRepositoryInfo::build(RepositoryVariables {
@@ -340,19 +338,18 @@ impl GitHub {
             }))
             .await?;
 
-        let repository = response
-            .data
+        let repository = data
             .and_then(|data| data.repository)
-            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
+            .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
 
         let default_branch = repository
             .default_branch_ref
-            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
+            .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
 
         let commits = default_branch
             .target
             .and_then(TargetGitObject::into_commit)
-            .ok_or(GitHubError::GraphQL(response.errors))?;
+            .ok_or(GitHubError::GraphQL(errors))?;
 
         Ok(RepositoryData {
             id: repository.id,
@@ -371,7 +368,7 @@ impl GitHub {
         branch_name: &str,
         oid: GitObjectId,
     ) -> Result<CreateBranchRef, GitHubError> {
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(CreateRef::build(CreateRefVariables {
@@ -380,10 +377,8 @@ impl GitHub {
                 repository_id: fork_id,
             }))
             .await?;
-        response
-            .data
-            .and_then(|data| data.create_ref?.ref_)
-            .ok_or(GitHubError::GraphQL(response.errors))
+        data.and_then(|data| data.create_ref?.ref_)
+            .ok_or(GitHubError::GraphQL(errors))
     }
 
     #[builder(finish_fn = send)]
@@ -395,7 +390,7 @@ impl GitHub {
         additions: Option<Vec<FileAddition<'_>>>,
         deletions: Option<Vec<FileDeletion<'_>>>,
     ) -> Result<Url, GitHubError> {
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(CreateCommit::build(CreateCommitVariables {
@@ -413,11 +408,9 @@ impl GitHub {
                 },
             }))
             .await?;
-        response
-            .data
-            .and_then(|data| data.create_commit_on_branch?.commit)
+        data.and_then(|data| data.create_commit_on_branch?.commit)
             .map(|commit| commit.url)
-            .ok_or(GitHubError::GraphQL(response.errors))
+            .ok_or(GitHubError::GraphQL(errors))
     }
 
     pub async fn get_directory_content(
@@ -426,7 +419,7 @@ impl GitHub {
         branch_name: &str,
         path: &str,
     ) -> Result<impl Iterator<Item = String> + Sized, GitHubError> {
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetDirectoryContent::build(GetDirectoryContentVariables {
@@ -435,10 +428,9 @@ impl GitHub {
                 owner,
             }))
             .await?;
-        let entries = response
-            .data
+        let entries = data
             .and_then(|data| data.repository?.object?.into_entries())
-            .ok_or(GitHubError::GraphQL(response.errors))?;
+            .ok_or(GitHubError::GraphQL(errors))?;
 
         Ok(entries.into_iter().filter_map(|entry| entry.path))
     }
@@ -446,46 +438,51 @@ impl GitHub {
     pub async fn get_branches(
         &self,
         user: &str,
-        merge_state: &MergeState,
+        merge_state: MergeState,
     ) -> Result<(IndexMap<PullRequest, String>, Id), GitHubError> {
-        let response = self
-            .0
-            .post(GITHUB_GRAPHQL_URL)
-            .run_graphql(GetBranches::build(RepositoryVariables {
-                owner: user,
-                name: WINGET_PKGS,
-            }))
-            .await?;
+        let mut pr_branch_map = IndexMap::new();
+        let mut cursor = None;
 
-        let repository = response
-            .data
-            .and_then(|data| data.repository)
-            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
+        loop {
+            let GraphQlResponse { data, errors } = self
+                .0
+                .post(GITHUB_GRAPHQL_URL)
+                .run_graphql(GetBranches::build(GetBranchesVariables {
+                    owner: user,
+                    name: WINGET_PKGS,
+                    cursor: cursor.as_deref(),
+                }))
+                .await?;
 
-        let default_branch = repository
-            .default_branch_ref
-            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
+            let repository = data
+                .and_then(|data| data.repository)
+                .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
 
-        let pr_branch_map = repository
-            .refs
-            .map(|refs| refs.nodes)
-            .ok_or(GitHubError::GraphQL(response.errors))?
-            .into_iter()
-            .filter(|branch| branch.name != default_branch.name)
-            .filter_map(|branch| {
-                let associated_pull_requests = branch.associated_pull_requests.nodes;
+            let default_branch = repository
+                .default_branch_ref
+                .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
 
-                // If any associated pull request is still open, skip this branch
-                if associated_pull_requests
-                    .iter()
-                    .any(|pull_request| pull_request.state == PullRequestState::Open)
-                {
-                    return None;
-                }
+            let RefConnection {
+                branches,
+                page_info,
+            } = repository.refs.ok_or(GitHubError::GraphQL(errors))?;
 
-                associated_pull_requests
+            for branch in branches
+                .into_iter()
+                .filter(|branch| branch.name != default_branch.name)
+                .filter(|branch| {
+                    branch
+                        .associated_pull_requests
+                        .pull_requests
+                        .iter()
+                        .all(|pull_request| pull_request.state != PullRequestState::Open)
+                })
+            {
+                if let Some(pull_request) = branch
+                    .associated_pull_requests
+                    .pull_requests
                     .into_iter()
-                    .filter(|pull_request| match *merge_state {
+                    .filter(|pull_request| match merge_state {
                         MergeState::MERGED => pull_request.state == PullRequestState::Merged,
                         MergeState::CLOSED => pull_request.state == PullRequestState::Closed,
                         _ => pull_request.state != PullRequestState::Open,
@@ -493,11 +490,17 @@ impl GitHub {
                     .find(|pull_request| {
                         pull_request.repository.name_with_owner == WINGET_PKGS_FULL_NAME
                     })
-                    .map(|pull_request| (pull_request, branch.name))
-            })
-            .collect::<IndexMap<_, _>>();
+                {
+                    pr_branch_map.insert(pull_request, branch.name);
+                }
+            }
 
-        Ok((pr_branch_map, repository.id))
+            if page_info.has_next_page {
+                cursor = page_info.end_cursor;
+            } else {
+                return Ok((pr_branch_map, repository.id));
+            }
+        }
     }
 
     pub async fn create_pull_request(
@@ -521,16 +524,14 @@ impl GitHub {
                 title,
             },
         });
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(operation)
             .await?;
-        response
-            .data
-            .and_then(|data| data.create_pull_request?.pull_request)
+        data.and_then(|data| data.create_pull_request?.pull_request)
             .map(|pull_request| pull_request.url)
-            .ok_or(GitHubError::GraphQL(response.errors))
+            .ok_or(GitHubError::GraphQL(errors))
     }
 
     pub async fn delete_branches(
@@ -540,7 +541,7 @@ impl GitHub {
     ) -> Result<(), GitHubError> {
         const DELETE_ID: &str = str_repeat!("0", 40);
 
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(UpdateRefs::build(UpdateRefsVariables {
@@ -556,10 +557,10 @@ impl GitHub {
                 repository_id,
             }))
             .await?;
-        if response.data.is_some() {
+        if data.is_some() {
             Ok(())
         } else {
-            Err(GitHubError::GraphQL(response.errors))
+            Err(GitHubError::GraphQL(errors))
         }
     }
 
@@ -568,22 +569,22 @@ impl GitHub {
         identifier: &PackageIdentifier,
         version: &PackageVersion,
     ) -> Result<Option<get_existing_pull_request::PullRequest>, GitHubError> {
-        let response = self
+        self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetExistingPullRequest::build(GetExistingPullRequestVariables {
                 query: &format!("repo:{WINGET_PKGS_FULL_NAME} is:pull-request in:title {identifier} {version}"),
             }))
-            .await?;
-
-        Ok(response.data.and_then(|data| {
-            data.search
-                .edges
-                .into_iter()
-                .next()?
-                .node?
-                .into_pull_request()
-        }))
+            .await
+            .map(|response| response.data.and_then(|data| {
+                data.search
+                    .edges
+                    .into_iter()
+                    .next()?
+                    .node?
+                    .into_pull_request()
+            }))
+            .map_err(GitHubError::CynicRequest)
     }
 
     #[builder(finish_fn = send)]
@@ -593,7 +594,7 @@ impl GitHub {
         repo: String,
         tag_name: String,
     ) -> Result<GitHubValues, GitHubError> {
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(GetAllValues::build(GetAllValuesVariables {
@@ -603,21 +604,16 @@ impl GitHub {
             }))
             .await?;
 
-        let data = response
-            .data
-            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
+        let values = data.ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
 
-        let repository = data
+        let repository = values
             .repository
-            .ok_or_else(|| GitHubError::GraphQL(response.errors.clone()))?;
+            .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
 
-        let object = repository
-            .object
-            .ok_or(GitHubError::GraphQL(response.errors))?;
+        let object = repository.object.ok_or(GitHubError::GraphQL(errors))?;
 
         let license_url = match object {
-            GetAllValuesGitObject::Tree(tree) => tree
-                .entries
+            GetAllValuesGitObject::Tree(Tree { entries }) => entries
                 .into_iter()
                 .filter_map(|entry| (entry.type_ == "blob").then_some(entry.name))
                 .find(|name| {
@@ -681,7 +677,7 @@ impl GitHub {
         upstream_target_oid: GitObjectId,
         force: bool,
     ) -> Result<(), GitHubError> {
-        let response = self
+        let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(MergeUpstream::build(MergeUpstreamVariables {
@@ -690,10 +686,10 @@ impl GitHub {
                 force,
             }))
             .await?;
-        if response.data.is_some() {
+        if data.is_some() {
             Ok(())
         } else {
-            Err(GitHubError::GraphQL(response.errors))
+            Err(GitHubError::GraphQL(errors))
         }
     }
 
