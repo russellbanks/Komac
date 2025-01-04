@@ -137,18 +137,18 @@ impl ArchitectureIdentifiers {
         (positive, negated)
     }
 
-    pub const fn to_winget_architecture(&self) -> Option<Architecture> {
+    pub const fn to_winget_architecture(&self) -> Architecture {
         if self.contains(Self::X64_OS)
             || self.contains(Self::WIN64)
             || self.contains(Self::X64_COMPATIBLE)
         {
-            Some(Architecture::X64)
+            Architecture::X64
         } else if self.contains(Self::ARM64) || self.contains(Self::ARM32_COMPATIBLE) {
-            Some(Architecture::Arm64)
-        } else if self.contains(Self::X86_OS) || self.contains(Self::X86_COMPATIBLE) {
-            Some(Architecture::X86)
+            Architecture::Arm64
         } else {
-            None
+            // If the architectures contain X86_COMPATIBLE, X86_OS, or are empty, it is X86
+            // https://jrsoftware.org/ishelp/index.php?topic=setup_architecturesallowed
+            Architecture::X86
         }
     }
 

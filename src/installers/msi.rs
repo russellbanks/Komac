@@ -14,6 +14,7 @@ use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use camino::Utf8PathBuf;
 use msi::{Language, Package, Select};
+use versions::Versioning;
 
 const PRODUCT_CODE: &str = "ProductCode";
 const PRODUCT_LANGUAGE: &str = "ProductLanguage";
@@ -282,39 +283,39 @@ impl InstallSpec for Msi {
         }
     }
 
-    fn architecture(&mut self) -> Option<Architecture> {
+    fn architecture(&self) -> Option<Architecture> {
         Some(self.architecture)
     }
 
-    fn display_name(&mut self) -> Option<String> {
-        self.product_name.take()
+    fn display_name(&self) -> Option<String> {
+        self.product_name.clone()
     }
 
-    fn display_publisher(&mut self) -> Option<String> {
-        self.manufacturer.take()
+    fn display_publisher(&self) -> Option<String> {
+        self.manufacturer.clone()
     }
 
-    fn display_version(&mut self) -> Option<String> {
-        self.product_version.take()
+    fn display_version(&self) -> Option<Versioning> {
+        self.product_version.as_deref().and_then(Versioning::new)
     }
 
-    fn product_code(&mut self) -> Option<String> {
-        self.product_code.take()
+    fn product_code(&self) -> Option<String> {
+        self.product_code.clone()
     }
 
-    fn locale(&mut self) -> Option<LanguageTag> {
-        self.product_language.take()
+    fn locale(&self) -> Option<LanguageTag> {
+        self.product_language.clone()
     }
 
     fn scope(&self) -> Option<Scope> {
         self.all_users
     }
 
-    fn install_location(&mut self) -> Option<Utf8PathBuf> {
-        self.install_location.take()
+    fn install_location(&self) -> Option<Utf8PathBuf> {
+        self.install_location.clone()
     }
 
-    fn upgrade_code(&mut self) -> Option<String> {
-        self.upgrade_code.take()
+    fn upgrade_code(&self) -> Option<String> {
+        self.upgrade_code.clone()
     }
 }

@@ -19,7 +19,6 @@ use crate::types::publisher::Publisher;
 use camino::Utf8Path;
 use color_eyre::eyre::{bail, Error, Result};
 use memmap2::Mmap;
-use versions::Versioning;
 use yara_x::mods::PE;
 
 pub const EXE: &str = "exe";
@@ -40,6 +39,7 @@ pub struct FileAnalyser<'data> {
     pub package_name: Option<PackageName>,
     pub publisher: Option<Publisher>,
     pub installer: Installer,
+    pub install_spec: Option<Box<dyn InstallSpec>>,
     pub zip: Option<Zip<Cursor<&'data [u8]>>>,
 }
 
@@ -61,6 +61,7 @@ impl<'data> FileAnalyser<'data> {
             }
             ZIP => {
                 zip = Some(Zip::new(Cursor::new(data.as_ref()))?);
+                installer = zip.as_mut().and_then(|zip| zip.install_spec.take());
                 installer_type = Some(InstallerType::Zip);
             }
             EXE => {
@@ -110,28 +111,25 @@ impl<'data> FileAnalyser<'data> {
             }
             _ => bail!(r#"Unsupported file extension: "{extension}""#),
         }
-        let upgrade_code = installer.as_deref_mut().and_then(InstallSpec::upgrade_code);
-        let display_name = installer.as_deref_mut().and_then(InstallSpec::display_name);
+        let upgrade_code = installer.as_deref().and_then(InstallSpec::upgrade_code);
+        let display_name = installer.as_deref().and_then(InstallSpec::display_name);
         let display_publisher = installer
-            .as_deref_mut()
+            .as_deref()
             .and_then(InstallSpec::display_publisher);
-        let display_version = installer
-            .as_deref_mut()
-            .and_then(InstallSpec::display_version)
-            .and_then(Versioning::new);
-        let product_code = installer.as_deref_mut().and_then(InstallSpec::product_code);
-        let installer = Installer {
-            installer_locale: installer.as_deref_mut().and_then(InstallSpec::locale),
-            platform: installer.as_deref_mut().and_then(InstallSpec::platform),
+        let display_version = installer.as_deref().and_then(InstallSpec::display_version);
+        let product_code = installer.as_deref().and_then(InstallSpec::product_code);
+        let manifest_installer = Installer {
+            installer_locale: installer.as_deref().and_then(InstallSpec::locale),
+            platform: installer.as_deref().and_then(InstallSpec::platform),
             minimum_os_version: installer.as_deref().and_then(InstallSpec::min_version),
             architecture: installer
-                .as_deref_mut()
+                .as_deref()
                 .and_then(InstallSpec::architecture)
                 .or_else(|| {
                     pe.as_deref()
                         .and_then(|pe| Architecture::from_machine(pe.machine()).ok())
                 })
-                .unwrap_or_default(),
+                .unwrap_or(Architecture::X86),
             installer_type: installer_type
                 .or_else(|| installer.as_deref().map(InstallSpec::r#type)),
             nested_installer_type: zip
@@ -142,22 +140,20 @@ impl<'data> FileAnalyser<'data> {
                 .and_then(|zip| zip.nested_installer_files.take()),
             scope: installer.as_deref().and_then(InstallSpec::scope),
             signature_sha_256: installer
-                .as_deref_mut()
+                .as_deref()
                 .and_then(InstallSpec::signature_sha_256),
             upgrade_behavior: installer_type.and_then(UpgradeBehavior::get),
-            file_extensions: installer
-                .as_deref_mut()
-                .and_then(InstallSpec::file_extensions),
+            file_extensions: installer.as_deref().and_then(InstallSpec::file_extensions),
             package_family_name: installer
-                .as_deref_mut()
+                .as_deref()
                 .and_then(InstallSpec::package_family_name),
             product_code: product_code.clone(),
-            capabilities: installer.as_deref_mut().and_then(InstallSpec::capabilities),
+            capabilities: installer.as_deref().and_then(InstallSpec::capabilities),
             restricted_capabilities: installer
-                .as_deref_mut()
+                .as_deref()
                 .and_then(InstallSpec::restricted_capabilities),
             unsupported_os_architectures: installer
-                .as_deref_mut()
+                .as_deref()
                 .and_then(InstallSpec::unsupported_os_architectures),
             apps_and_features_entries: if display_name.is_some()
                 || display_publisher.is_some()
@@ -176,10 +172,10 @@ impl<'data> FileAnalyser<'data> {
                 None
             },
             elevation_requirement: installer
-                .as_deref_mut()
+                .as_deref()
                 .and_then(InstallSpec::elevation_requirement),
             installation_metadata: installer
-                .as_deref_mut()
+                .as_deref()
                 .and_then(InstallSpec::install_location)
                 .map(|install_location| InstallationMetadata {
                     default_install_location: Some(install_location),
@@ -188,7 +184,7 @@ impl<'data> FileAnalyser<'data> {
             ..Installer::default()
         };
         Ok(Self {
-            installer,
+            installer: manifest_installer,
             file_name: String::new(),
             copyright: pe
                 .as_ref()
@@ -199,6 +195,7 @@ impl<'data> FileAnalyser<'data> {
             publisher: pe
                 .as_ref()
                 .and_then(|pe| Publisher::get_from_exe(&pe.version_info)),
+            install_spec: installer,
             zip,
         })
     }

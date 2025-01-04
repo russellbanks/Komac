@@ -33,6 +33,7 @@ use std::str::FromStr;
 use strings::encoding::nsis_string;
 use strsim::levenshtein;
 use thiserror::Error;
+use versions::Versioning;
 use yara_x::mods::pe::Machine;
 use yara_x::mods::PE;
 use zerocopy::little_endian::U32;
@@ -227,31 +228,31 @@ impl InstallSpec for Nsis {
         InstallerType::Nullsoft
     }
 
-    fn architecture(&mut self) -> Option<Architecture> {
+    fn architecture(&self) -> Option<Architecture> {
         self.architecture
     }
 
-    fn display_name(&mut self) -> Option<String> {
-        self.display_name.take()
+    fn display_name(&self) -> Option<String> {
+        self.display_name.clone()
     }
 
-    fn display_publisher(&mut self) -> Option<String> {
-        self.display_publisher.take()
+    fn display_publisher(&self) -> Option<String> {
+        self.display_publisher.clone()
     }
 
-    fn display_version(&mut self) -> Option<String> {
-        self.display_version.take()
+    fn display_version(&self) -> Option<Versioning> {
+        self.display_version.as_deref().and_then(Versioning::new)
     }
 
-    fn locale(&mut self) -> Option<LanguageTag> {
-        self.install_locale.take()
+    fn locale(&self) -> Option<LanguageTag> {
+        self.install_locale.clone()
     }
 
     fn scope(&self) -> Option<Scope> {
         self.scope
     }
 
-    fn install_location(&mut self) -> Option<Utf8PathBuf> {
-        self.install_dir.take()
+    fn install_location(&self) -> Option<Utf8PathBuf> {
+        self.install_dir.clone()
     }
 }

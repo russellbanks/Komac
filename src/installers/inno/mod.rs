@@ -54,6 +54,7 @@ use std::io::{Cursor, Read};
 use std::str::FromStr;
 use std::{io, mem};
 use thiserror::Error;
+use versions::Versioning;
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 
@@ -80,7 +81,7 @@ pub enum InnoError {
 }
 
 pub struct Inno {
-    architecture: Option<Architecture>,
+    architecture: Architecture,
     scope: Option<Scope>,
     install_dir: Option<Utf8PathBuf>,
     unsupported_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
@@ -359,43 +360,43 @@ impl InstallSpec for Inno {
         InstallerType::Inno
     }
 
-    fn architecture(&mut self) -> Option<Architecture> {
-        self.architecture.take()
+    fn architecture(&self) -> Option<Architecture> {
+        Some(self.architecture)
     }
 
-    fn display_name(&mut self) -> Option<String> {
-        self.uninstall_name.take()
+    fn display_name(&self) -> Option<String> {
+        self.uninstall_name.clone()
     }
 
-    fn display_publisher(&mut self) -> Option<String> {
-        self.app_publisher.take()
+    fn display_publisher(&self) -> Option<String> {
+        self.app_publisher.clone()
     }
 
-    fn display_version(&mut self) -> Option<String> {
-        self.app_version.take()
+    fn display_version(&self) -> Option<Versioning> {
+        self.app_version.as_deref().and_then(Versioning::new)
     }
 
-    fn product_code(&mut self) -> Option<String> {
-        self.product_code.take()
+    fn product_code(&self) -> Option<String> {
+        self.product_code.clone()
     }
 
-    fn locale(&mut self) -> Option<LanguageTag> {
-        self.installer_locale.take()
+    fn locale(&self) -> Option<LanguageTag> {
+        self.installer_locale.clone()
     }
 
     fn scope(&self) -> Option<Scope> {
         self.scope
     }
 
-    fn unsupported_os_architectures(&mut self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
-        self.unsupported_architectures.take()
+    fn unsupported_os_architectures(&self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
+        self.unsupported_architectures.clone()
     }
 
-    fn elevation_requirement(&mut self) -> Option<ElevationRequirement> {
-        self.elevation_requirement.take()
+    fn elevation_requirement(&self) -> Option<ElevationRequirement> {
+        self.elevation_requirement.clone()
     }
 
-    fn install_location(&mut self) -> Option<Utf8PathBuf> {
-        self.install_dir.take()
+    fn install_location(&self) -> Option<Utf8PathBuf> {
+        self.install_dir.clone()
     }
 }

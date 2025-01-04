@@ -18,8 +18,8 @@ use quick_xml::Reader;
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::io::{Read, Seek};
-use std::mem;
 use std::str::FromStr;
+use versions::Versioning;
 use zip::ZipArchive;
 
 pub struct Msix {
@@ -271,51 +271,51 @@ impl InstallSpec for Msix {
         }
     }
 
-    fn architecture(&mut self) -> Option<Architecture> {
+    fn architecture(&self) -> Option<Architecture> {
         Some(self.processor_architecture)
     }
 
-    fn display_name(&mut self) -> Option<String> {
-        Some(mem::take(&mut self.display_name))
+    fn display_name(&self) -> Option<String> {
+        Some(self.display_name.clone())
     }
 
-    fn display_publisher(&mut self) -> Option<String> {
-        Some(mem::take(&mut self.publisher_display_name))
+    fn display_publisher(&self) -> Option<String> {
+        Some(self.publisher_display_name.clone())
     }
 
-    fn display_version(&mut self) -> Option<String> {
-        Some(mem::take(&mut self.version))
+    fn display_version(&self) -> Option<Versioning> {
+        Versioning::new(&self.version)
     }
 
-    fn platform(&mut self) -> Option<BTreeSet<Platform>> {
-        Some(mem::take(&mut self.target_device_family))
+    fn platform(&self) -> Option<BTreeSet<Platform>> {
+        Some(self.target_device_family.clone())
     }
 
-    fn install_location(&mut self) -> Option<Utf8PathBuf> {
-        Some(mem::take(&mut self.install_location))
+    fn install_location(&self) -> Option<Utf8PathBuf> {
+        Some(self.install_location.clone())
     }
 
     fn min_version(&self) -> Option<MinimumOSVersion> {
         Some(self.min_version)
     }
 
-    fn signature_sha_256(&mut self) -> Option<Sha256String> {
-        Some(mem::take(&mut self.signature_sha_256))
+    fn signature_sha_256(&self) -> Option<Sha256String> {
+        Some(self.signature_sha_256.clone())
     }
 
-    fn file_extensions(&mut self) -> Option<BTreeSet<FileExtension>> {
-        self.file_extensions.take()
+    fn file_extensions(&self) -> Option<BTreeSet<FileExtension>> {
+        self.file_extensions.clone()
     }
 
-    fn package_family_name(&mut self) -> Option<PackageFamilyName> {
-        Some(mem::take(&mut self.package_family_name))
+    fn package_family_name(&self) -> Option<PackageFamilyName> {
+        Some(self.package_family_name.clone())
     }
 
-    fn capabilities(&mut self) -> Option<BTreeSet<String>> {
-        self.capabilities.take()
+    fn capabilities(&self) -> Option<BTreeSet<String>> {
+        self.capabilities.clone()
     }
 
-    fn restricted_capabilities(&mut self) -> Option<BTreeSet<String>> {
-        self.restricted_capabilities.take()
+    fn restricted_capabilities(&self) -> Option<BTreeSet<String>> {
+        self.restricted_capabilities.clone()
     }
 }

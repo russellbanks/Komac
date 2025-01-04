@@ -9,6 +9,7 @@ use memmap2::Mmap;
 use zip::ZipArchive;
 
 use crate::file_analyser::FileAnalyser;
+use crate::installers::traits::InstallSpec;
 use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
 use crate::prompts::prompt::handle_inquire_error;
 use crate::types::architecture::Architecture;
@@ -22,14 +23,15 @@ pub struct Zip<R: Read + Seek> {
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub architecture: Option<Architecture>,
-    pub identified_files: Vec<Utf8PathBuf>,
+    pub possible_installer_files: Vec<Utf8PathBuf>,
+    pub install_spec: Option<Box<dyn InstallSpec>>,
 }
 
 impl<R: Read + Seek> Zip<R> {
     pub fn new(reader: R) -> Result<Self> {
         let mut zip = ZipArchive::new(reader)?;
 
-        let identified_files = zip
+        let possible_installer_files = zip
             .file_names()
             .map(Utf8Path::new)
             .filter(|file_name| {
@@ -47,13 +49,12 @@ impl<R: Read + Seek> Zip<R> {
             .map(|file_extension| {
                 (
                     file_extension,
-                    zip.file_names()
+                    possible_installer_files
+                        .iter()
                         .filter(|file_name| {
-                            Utf8Path::new(file_name)
-                                .extension()
-                                .is_some_and(|extension| {
-                                    extension.eq_ignore_ascii_case(file_extension)
-                                })
+                            file_name.extension().is_some_and(|extension| {
+                                extension.eq_ignore_ascii_case(file_extension)
+                            })
                         })
                         .count(),
                 )
@@ -62,6 +63,8 @@ impl<R: Read + Seek> Zip<R> {
 
         let mut nested_installer_type = None;
         let mut architecture = None;
+        let mut nested_installer_files = None;
+        let mut install_spec = None;
 
         // If there's only one valid file in the zip, extract and analyse it
         if installer_type_counts
@@ -70,7 +73,7 @@ impl<R: Read + Seek> Zip<R> {
             .count()
             == 1
         {
-            let chosen_file_name = identified_files.first().unwrap();
+            let chosen_file_name = &possible_installer_files[0];
             if let Ok(mut chosen_file) = zip.by_name(chosen_file_name.as_str()) {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
@@ -81,33 +84,29 @@ impl<R: Read + Seek> Zip<R> {
                     .installer_type
                     .and_then(InstallerType::to_nested);
                 architecture = Some(file_analyser.installer.architecture);
+                install_spec = file_analyser.install_spec;
             }
-            return Ok(Self {
-                archive: zip,
-                nested_installer_type,
-                nested_installer_files: Some(BTreeSet::from([NestedInstallerFiles {
-                    relative_file_path: chosen_file_name.clone(),
-                    portable_command_alias: None,
-                }])),
-                architecture,
-                identified_files,
-            });
+            nested_installer_files = Some(BTreeSet::from([NestedInstallerFiles {
+                relative_file_path: chosen_file_name.clone(),
+                portable_command_alias: None,
+            }]));
         }
 
         Ok(Self {
             archive: zip,
             nested_installer_type,
-            nested_installer_files: None,
+            nested_installer_files,
             architecture,
-            identified_files,
+            possible_installer_files,
+            install_spec,
         })
     }
 
     pub fn prompt(&mut self) -> Result<()> {
-        if !&self.identified_files.is_empty() {
+        if !&self.possible_installer_files.is_empty() {
             let chosen = MultiSelect::new(
                 "Select the nested files",
-                mem::take(&mut self.identified_files),
+                mem::take(&mut self.possible_installer_files),
             )
             .with_validator(min_length!(1))
             .prompt()

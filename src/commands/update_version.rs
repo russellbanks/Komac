@@ -289,12 +289,12 @@ fn validate_relative_paths<R: Read + Seek>(
         .filter_map(|nested_installer_files| {
             if let Some(zip) = zip {
                 return if zip
-                    .identified_files
+                    .possible_installer_files
                     .contains(&nested_installer_files.relative_file_path.normalize())
                 {
                     Some(nested_installer_files)
                 } else {
-                    zip.identified_files
+                    zip.possible_installer_files
                         .iter()
                         .min_by_key(|file_path| {
                             levenshtein(

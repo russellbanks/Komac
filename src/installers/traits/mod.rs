@@ -10,35 +10,36 @@ use crate::types::sha_256::Sha256String;
 use camino::Utf8PathBuf;
 use package_family_name::PackageFamilyName;
 use std::collections::BTreeSet;
+use versions::Versioning;
 
 pub trait InstallSpec {
     fn r#type(&self) -> InstallerType;
 
-    fn architecture(&mut self) -> Option<Architecture> {
+    fn architecture(&self) -> Option<Architecture> {
         None
     }
 
-    fn display_name(&mut self) -> Option<String> {
+    fn display_name(&self) -> Option<String> {
         None
     }
 
-    fn display_publisher(&mut self) -> Option<String> {
+    fn display_publisher(&self) -> Option<String> {
         None
     }
 
-    fn display_version(&mut self) -> Option<String> {
+    fn display_version(&self) -> Option<Versioning> {
         None
     }
 
-    fn product_code(&mut self) -> Option<String> {
+    fn product_code(&self) -> Option<String> {
         None
     }
 
-    fn locale(&mut self) -> Option<LanguageTag> {
+    fn locale(&self) -> Option<LanguageTag> {
         None
     }
 
-    fn platform(&mut self) -> Option<BTreeSet<Platform>> {
+    fn platform(&self) -> Option<BTreeSet<Platform>> {
         None
     }
 
@@ -46,15 +47,15 @@ pub trait InstallSpec {
         None
     }
 
-    fn unsupported_os_architectures(&mut self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
+    fn unsupported_os_architectures(&self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
         None
     }
 
-    fn elevation_requirement(&mut self) -> Option<ElevationRequirement> {
+    fn elevation_requirement(&self) -> Option<ElevationRequirement> {
         None
     }
 
-    fn install_location(&mut self) -> Option<Utf8PathBuf> {
+    fn install_location(&self) -> Option<Utf8PathBuf> {
         None
     }
 
@@ -62,27 +63,27 @@ pub trait InstallSpec {
         None
     }
 
-    fn signature_sha_256(&mut self) -> Option<Sha256String> {
+    fn signature_sha_256(&self) -> Option<Sha256String> {
         None
     }
 
-    fn file_extensions(&mut self) -> Option<BTreeSet<FileExtension>> {
+    fn file_extensions(&self) -> Option<BTreeSet<FileExtension>> {
         None
     }
 
-    fn package_family_name(&mut self) -> Option<PackageFamilyName> {
+    fn package_family_name(&self) -> Option<PackageFamilyName> {
         None
     }
 
-    fn capabilities(&mut self) -> Option<BTreeSet<String>> {
+    fn capabilities(&self) -> Option<BTreeSet<String>> {
         None
     }
 
-    fn restricted_capabilities(&mut self) -> Option<BTreeSet<String>> {
+    fn restricted_capabilities(&self) -> Option<BTreeSet<String>> {
         None
     }
 
-    fn upgrade_code(&mut self) -> Option<String> {
+    fn upgrade_code(&self) -> Option<String> {
         None
     }
 }

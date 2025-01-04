@@ -9,8 +9,8 @@ use memmap2::Mmap;
 use package_family_name::PackageFamilyName;
 use quick_xml::de::from_str;
 use serde::Deserialize;
+use std::io;
 use std::io::{Cursor, Read, Seek};
-use std::{io, mem};
 use zip::ZipArchive;
 
 pub struct MsixBundle {
@@ -105,17 +105,17 @@ impl InstallSpec for MsixBundle {
         }
     }
 
-    fn architecture(&mut self) -> Option<Architecture> {
+    fn architecture(&self) -> Option<Architecture> {
         self.packages
             .first()
             .map(|msix| msix.processor_architecture)
     }
 
-    fn signature_sha_256(&mut self) -> Option<Sha256String> {
-        Some(mem::take(&mut self.signature_sha_256))
+    fn signature_sha_256(&self) -> Option<Sha256String> {
+        Some(self.signature_sha_256.clone())
     }
 
-    fn package_family_name(&mut self) -> Option<PackageFamilyName> {
-        Some(mem::take(&mut self.package_family_name))
+    fn package_family_name(&self) -> Option<PackageFamilyName> {
+        Some(self.package_family_name.clone())
     }
 }

@@ -7,6 +7,7 @@ use crate::types::language_tag::LanguageTag;
 use camino::Utf8PathBuf;
 use std::io::Cursor;
 use std::io::{Error, ErrorKind, Result};
+use versions::Versioning;
 use yara_x::mods::pe::{Resource, ResourceType};
 use yara_x::mods::PE;
 
@@ -58,39 +59,41 @@ impl InstallSpec for Burn {
         InstallerType::Burn
     }
 
-    fn architecture(&mut self) -> Option<Architecture> {
+    fn architecture(&self) -> Option<Architecture> {
         self.0.as_ref().map(|msi| msi.architecture)
     }
 
-    fn display_name(&mut self) -> Option<String> {
-        self.0.as_mut().and_then(|msi| msi.product_name.take())
+    fn display_name(&self) -> Option<String> {
+        self.0.as_ref().and_then(|msi| msi.product_name.clone())
     }
 
-    fn display_publisher(&mut self) -> Option<String> {
-        self.0.as_mut().and_then(|msi| msi.manufacturer.take())
+    fn display_publisher(&self) -> Option<String> {
+        self.0.as_ref().and_then(|msi| msi.manufacturer.clone())
     }
 
-    fn display_version(&mut self) -> Option<String> {
-        self.0.as_mut().and_then(|msi| msi.product_version.take())
+    fn display_version(&self) -> Option<Versioning> {
+        self.0
+            .as_ref()
+            .and_then(|msi| Versioning::new(msi.product_version.clone()?))
     }
 
-    fn product_code(&mut self) -> Option<String> {
-        self.0.as_mut().and_then(|msi| msi.product_code.take())
+    fn product_code(&self) -> Option<String> {
+        self.0.as_ref().and_then(|msi| msi.product_code.clone())
     }
 
-    fn locale(&mut self) -> Option<LanguageTag> {
-        self.0.as_mut().and_then(|msi| msi.product_language.take())
+    fn locale(&self) -> Option<LanguageTag> {
+        self.0.as_ref().and_then(|msi| msi.product_language.clone())
     }
 
     fn scope(&self) -> Option<Scope> {
         self.0.as_ref().and_then(|msi| msi.all_users)
     }
 
-    fn install_location(&mut self) -> Option<Utf8PathBuf> {
-        self.0.as_mut().and_then(|msi| msi.install_location.take())
+    fn install_location(&self) -> Option<Utf8PathBuf> {
+        self.0.as_ref().and_then(|msi| msi.install_location.clone())
     }
 
-    fn upgrade_code(&mut self) -> Option<String> {
-        self.0.as_mut().and_then(|msi| msi.upgrade_code.take())
+    fn upgrade_code(&self) -> Option<String> {
+        self.0.as_ref().and_then(|msi| msi.upgrade_code.clone())
     }
 }
