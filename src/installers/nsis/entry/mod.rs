@@ -92,8 +92,8 @@ pub enum Entry {
         recursive_flag: U32,
     } = 23u32.to_le(),
     StrLen {
-        output: U32,
-        input: U32,
+        output: I32,
+        input: I32,
     } = 24u32.to_le(),
     AssignVar {
         variable: U32,
@@ -333,7 +333,12 @@ impl Entry {
                 user_vars[0] = nsis_string(strings_block, name.get(), user_vars, nsis_version);
             }
             Self::StrLen { input, .. } => {
-                user_vars[0] = nsis_string(strings_block, input.get(), user_vars, nsis_version);
+                user_vars[0] = nsis_string(
+                    strings_block,
+                    input.get().unsigned_abs(),
+                    user_vars,
+                    nsis_version,
+                );
             }
             Self::AssignVar {
                 string_offset,
