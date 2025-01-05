@@ -30,6 +30,7 @@ impl Directory {
 
         let mut directory = Self {
             name: InnoValue::new_string(reader, codepage)?,
+            permission: -1,
             ..Self::default()
         };
 
@@ -47,8 +48,6 @@ impl Directory {
 
         if *version >= InnoVersion(4, 1, 0) {
             directory.permission = reader.read_i16::<LE>()?;
-        } else {
-            directory.permission = -1;
         }
 
         directory.flags = DirectoryFlags::from_bits_retain(reader.read_u8()?);

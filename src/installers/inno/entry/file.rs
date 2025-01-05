@@ -41,6 +41,7 @@ impl File {
             source: InnoValue::new_string(reader, codepage)?,
             destination: InnoValue::new_string(reader, codepage)?,
             install_font_name: InnoValue::new_string(reader, codepage)?,
+            permission: -1,
             ..Self::default()
         };
 
@@ -60,15 +61,24 @@ impl File {
             u64::from(reader.read_u32::<LE>()?)
         };
 
-        // TODO: File copy mode
+        if *version < InnoVersion(3, 0, 5) {
+            match enum_value!(reader, FileCopyMode)? {
+                FileCopyMode::Normal => file.flags |= FileFlags::PROMPT_IF_OLDER,
+                FileCopyMode::IfDoesntExist => {
+                    file.flags |= FileFlags::ONLY_IF_DOESNT_EXIST | FileFlags::PROMPT_IF_OLDER
+                }
+                FileCopyMode::AlwaysOverwrite => {
+                    file.flags |= FileFlags::IGNORE_VERSION | FileFlags::PROMPT_IF_OLDER
+                }
+                FileCopyMode::AlwaysSkipIfSameOrOlder => {}
+            }
+        }
 
         if *version >= InnoVersion(4, 1, 0) {
             file.permission = reader.read_i16::<LE>()?;
-        } else {
-            file.permission = -1;
         }
 
-        file.flags = read_flags!(reader,
+        file.flags |= read_flags!(reader,
             [
                 FileFlags::CONFIRM_OVERWRITE,
                 FileFlags::NEVER_UNINSTALL,
@@ -125,6 +135,17 @@ enum FileType {
     UserFile,
     UninstallExe,
     RegSvrExe,
+}
+
+#[expect(dead_code)]
+#[derive(Debug, Default, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[repr(u8)]
+enum FileCopyMode {
+    #[default]
+    Normal,
+    IfDoesntExist,
+    AlwaysOverwrite,
+    AlwaysSkipIfSameOrOlder,
 }
 
 bitflags! {

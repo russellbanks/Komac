@@ -38,6 +38,7 @@ impl Registry {
             key: InnoValue::new_string(reader, codepage)?,
             name: InnoValue::new_string(reader, codepage)?,
             value: InnoValue::new_string(reader, codepage)?,
+            permission: -1,
             ..Self::default()
         };
 
@@ -51,10 +52,8 @@ impl Registry {
 
         registry.reg_root = enum_value!(reader, RegRoot)?;
 
-        registry.permission = if *version >= InnoVersion(4, 1, 0) {
-            reader.read_i16::<LE>()?
-        } else {
-            -1
+        if *version >= InnoVersion(4, 1, 0) {
+            registry.permission = reader.read_i16::<LE>()?;
         };
 
         registry.r#type = enum_value!(reader, RegistryType)?;
