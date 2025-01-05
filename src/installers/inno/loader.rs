@@ -5,8 +5,26 @@ use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::InnoError;
 use byteorder::{ReadBytesExt, LE};
+use zerocopy::little_endian::U32;
+use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
+pub const SETUP_LOADER_OFFSET: usize = 0x30;
 pub const SETUP_LOADER_RESOURCE: u32 = 11111;
+
+#[expect(dead_code)]
+#[derive(TryFromBytes, KnownLayout, Immutable)]
+#[repr(u32)]
+enum Magic {
+    Inno = u32::from_le_bytes(*b"Inno"),
+}
+
+#[derive(TryFromBytes, KnownLayout, Immutable)]
+#[repr(C)]
+pub struct SetupLoaderOffset {
+    magic: Magic,
+    pub table_offset: U32,
+    pub not_table_offset: U32,
+}
 
 const SIGNATURE_LEN: usize = 12;
 

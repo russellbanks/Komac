@@ -22,12 +22,13 @@ use crate::installers::inno::entry::r#type::Type;
 use crate::installers::inno::entry::registry::Registry;
 use crate::installers::inno::entry::task::Task;
 use crate::installers::inno::header::Header;
-use crate::installers::inno::loader::{SetupLoader, SETUP_LOADER_RESOURCE};
+use crate::installers::inno::loader::{
+    SetupLoader, SetupLoaderOffset, SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE,
+};
 use crate::installers::inno::read::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::wizard::Wizard;
-use crate::installers::inno::InnoError::{UnknownVersion, UnsupportedVersion};
 use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{
     read_lzma_stream_header, RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64,
@@ -57,6 +58,7 @@ use thiserror::Error;
 use versions::Versioning;
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
+use zerocopy::TryFromBytes;
 
 const VERSION_LEN: usize = 1 << 6;
 
@@ -95,18 +97,26 @@ pub struct Inno {
 
 impl Inno {
     pub fn new(data: &[u8], pe: &PE) -> Result<Self, InnoError> {
-        let setup_loader_data = pe
-            .resources
-            .iter()
-            .filter(|resource| resource.type_() == ResourceType::RESOURCE_TYPE_RCDATA)
-            .find(|resource| resource.id() == SETUP_LOADER_RESOURCE)
-            .and_then(|resource| {
-                let offset = resource.offset() as usize;
-                data.get(offset..offset + resource.length() as usize)
+        // Before Inno 5.1.5, the offset table is found by following a pointer at a constant offset
+        let setup_loader = data
+            .get(SETUP_LOADER_OFFSET..SETUP_LOADER_OFFSET + size_of::<SetupLoaderOffset>())
+            .and_then(|data| SetupLoaderOffset::try_ref_from_bytes(data).ok())
+            .filter(|offset| offset.table_offset == !offset.not_table_offset)
+            .and_then(|offset| data.get(offset.table_offset.get() as usize..))
+            .map(SetupLoader::new)
+            .or_else(|| {
+                // From Inno 5.1.5, the offset table is stored as a PE resource entry
+                pe.resources
+                    .iter()
+                    .filter(|resource| resource.type_() == ResourceType::RESOURCE_TYPE_RCDATA)
+                    .find(|resource| resource.id() == SETUP_LOADER_RESOURCE)
+                    .and_then(|resource| {
+                        let offset = resource.offset() as usize;
+                        data.get(offset..offset + resource.length() as usize)
+                    })
+                    .map(SetupLoader::new)
             })
-            .ok_or(InnoError::NotInnoFile)?;
-
-        let setup_loader = SetupLoader::new(setup_loader_data)?;
+            .ok_or(InnoError::NotInnoFile)??;
 
         let header_offset = setup_loader.header_offset as usize;
         let version_bytes = data
@@ -114,11 +124,12 @@ impl Inno {
             .and_then(|bytes| memchr::memchr(0, bytes).map(|len| &bytes[..len]))
             .ok_or(InnoError::InvalidSetupHeader)?;
 
-        let known_version = KnownVersion::from_version_bytes(version_bytes)
-            .ok_or_else(|| UnknownVersion(String::from_utf8_lossy(version_bytes).into_owned()))?;
+        let known_version = KnownVersion::from_version_bytes(version_bytes).ok_or_else(|| {
+            InnoError::UnknownVersion(String::from_utf8_lossy(version_bytes).into_owned())
+        })?;
 
         if known_version > MAX_SUPPORTED_VERSION {
-            return Err(UnsupportedVersion(known_version));
+            return Err(InnoError::UnsupportedVersion(known_version));
         }
 
         let mut cursor = Cursor::new(data);
