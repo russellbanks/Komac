@@ -61,7 +61,7 @@ memmap2 = "0.9.5"
 msi = "0.8.0"
 num_cpus = "1.16.0"
 nutype = { version = "0.5.1", features = ["serde"] }
-open = "5.3.1"
+open = "5.3.2"
 ordinal-trait = "0.1.0"
 owo-colors = "4.1.0"
 package-family-name = { version = "2.0.1", features = ["serde"] }
