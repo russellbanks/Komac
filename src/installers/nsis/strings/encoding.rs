@@ -3,6 +3,7 @@ use crate::installers::nsis::strings::lang::LangCode;
 use crate::installers::nsis::strings::shell::Shell;
 use crate::installers::nsis::strings::var::NsVar;
 use crate::installers::nsis::version::NsisVersion;
+use crate::installers::traits::unsigned_u32::AbsToU32;
 use byteorder::{ByteOrder, LE};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
@@ -18,9 +19,9 @@ const fn decode_number_from_char(mut char: u16) -> u16 {
 }
 
 #[expect(clippy::cast_possible_truncation)] // Truncating u16 `as u8` is intentional
-pub fn nsis_string<'str_block>(
+pub fn nsis_string<'str_block, T: AbsToU32>(
     strings_block: &'str_block [u8],
-    relative_offset: u32,
+    relative_offset: T,
     variables: &[Cow<str>; 9],
     nsis_version: NsisVersion,
 ) -> Cow<'str_block, str> {
@@ -28,7 +29,7 @@ pub fn nsis_string<'str_block>(
     let unicode = &strings_block[..size_of::<u16>()] == b"\0\0";
 
     // Double the offset if the string is Unicode as each character will be 2 bytes
-    let offset = relative_offset as usize * (usize::from(unicode) + 1);
+    let offset = relative_offset.abs_to_u32() as usize * (usize::from(unicode) + 1);
 
     // Get the index of the null byte at the end of the string
     let string_end_index = if unicode {
