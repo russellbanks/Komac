@@ -16,6 +16,9 @@ use camino::Utf8PathBuf;
 use msi::{Language, Package, Select};
 use versions::Versioning;
 
+const PROPERTY: &str = "Property";
+const CONTROL: &str = "Control";
+
 const PRODUCT_CODE: &str = "ProductCode";
 const PRODUCT_LANGUAGE: &str = "ProductLanguage";
 const PRODUCT_NAME: &str = "ProductName";
@@ -83,14 +86,22 @@ impl Msi {
                 LanguageTag::from_str(Language::from_code(code.parse::<u16>().ok()?).tag()).ok()
             }),
             // https://learn.microsoft.com/windows/win32/msi/allusers
-            all_users: match property_table
-                .remove(ALL_USERS)
-                .unwrap_or_default()
-                .as_str()
-            {
-                "1" => Some(Scope::Machine),
-                "2" => None, // Installs depending on installation context and user privileges
-                _ => Some(Scope::User), // No value or an empty string specifies per-user context
+            all_users: match property_table.remove(ALL_USERS).as_deref() {
+                Some("1") => Some(Scope::Machine),
+                Some("2") => None, // Installs depending on installation context and user privileges
+                Some("") => Some(Scope::User), // An empty string specifies per-user context
+                _ => {
+                    if msi
+                        .select_rows(Select::table(CONTROL).columns(&[PROPERTY]))
+                        .is_ok_and(|mut rows| rows.any(|row| row[0].as_str() == Some(ALL_USERS)))
+                    {
+                        // ALLUSERS could be changed at runtime
+                        None
+                    } else {
+                        // No value or control specifies per-user context
+                        Some(Scope::User)
+                    }
+                }
             },
             is_wix: msi
                 .summary_info()
@@ -109,7 +120,6 @@ impl Msi {
 
     /// <https://learn.microsoft.com/windows/win32/msi/property-table>
     fn get_property_table<R: Read + Seek>(msi: &mut Package<R>) -> Result<HashMap<String, String>> {
-        const PROPERTY: &str = "Property";
         const VALUE: &str = "Value";
 
         Ok(msi
