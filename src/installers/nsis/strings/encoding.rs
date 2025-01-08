@@ -3,7 +3,7 @@ use crate::installers::nsis::strings::lang::LangCode;
 use crate::installers::nsis::strings::shell::Shell;
 use crate::installers::nsis::strings::var::NsVar;
 use crate::installers::nsis::version::NsisVersion;
-use crate::installers::traits::unsigned_u32::AbsToU32;
+use crate::installers::traits::abs_to_u32::AbsToU32;
 use byteorder::{ByteOrder, LE};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;

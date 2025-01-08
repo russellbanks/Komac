@@ -51,6 +51,9 @@ pub enum NsisError {
     Io(#[from] io::Error),
 }
 
+const APP_32: &str = "app-32";
+const APP_64: &str = "app-64";
+
 pub struct Nsis {
     architecture: Option<Architecture>,
     scope: Option<Scope>,
@@ -98,6 +101,8 @@ impl Nsis {
 
         let mut user_vars = [const { Cow::Borrowed("") }; 9];
 
+        let mut architecture = None;
+
         let mut display_name = None;
         let mut display_version = None;
         let mut display_publisher = None;
@@ -113,6 +118,17 @@ impl Nsis {
                     "DisplayVersion" => display_version = Some(value),
                     "Publisher" => display_publisher = Some(value),
                     _ => {}
+                }
+            } else if let Entry::ExtractFile { name, .. } = entry {
+                let name = nsis_string(strings_block, name.get(), &user_vars, nsis_version);
+                let file_stem = Utf8Path::new(&name).file_stem();
+                // If there is an app-64 file, the app is x64.
+                // If there is an app-32 file or both files are present, the app is x86
+                // (x86 apps can still install on x64 systems)
+                if file_stem == Some(APP_64) && architecture.is_none() {
+                    architecture = Some(Architecture::X64);
+                } else if file_stem == Some(APP_32) {
+                    architecture = Some(Architecture::X86);
                 }
             };
         }
@@ -133,80 +149,90 @@ impl Nsis {
             nsis_version,
         );
 
-        let architecture = install_dir
-            .as_deref()
-            .is_some_and(|dir| dir.contains(RELATIVE_PROGRAM_FILES_64))
-            .then_some(Architecture::X64)
-            .or_else(|| {
-                entries
-                    .iter()
-                    .filter_map(|entry| {
-                        if let Entry::ExtractFile { name, position, .. } = entry {
-                            Some((
-                                nsis_string(strings_block, name.get(), &user_vars, nsis_version),
-                                position.get() as usize + size_of::<u32>(),
-                            ))
-                        } else {
-                            None
-                        }
-                    })
-                    .filter(|(name, _)| {
-                        Utf8Path::new(name)
-                            .extension()
-                            .is_some_and(|extension| extension.eq_ignore_ascii_case(EXE))
-                    })
-                    .min_by_key(|(name, _)| levenshtein(name, &app_name))
-                    .map(|(_, mut position)| {
-                        if !is_solid {
-                            position +=
-                                data_offset + non_solid_start_offset as usize + size_of::<u32>();
-                        }
-                        position
-                    })
-                    .and_then(|position| {
-                        let mut decoder: Box<dyn Read> = if is_solid {
-                            solid_decoder
-                        } else {
-                            match compression {
-                                Compression::Lzma(filter_flag) => {
-                                    let mut data = &data[position + usize::from(filter_flag)..];
-                                    let stream = read_lzma_stream_header(&mut data).ok()?;
-                                    Box::new(XzDecoder::new_stream(data, stream))
-                                }
-                                Compression::BZip2 => Box::new(BzDecoder::new(&data[position..])),
-                                Compression::Zlib => {
-                                    Box::new(DeflateDecoder::new(&data[position..]))
-                                }
-                                Compression::None => Box::new(&data[position..]),
+        architecture = architecture.or_else(|| {
+            install_dir
+                .as_deref()
+                .is_some_and(|dir| dir.contains(RELATIVE_PROGRAM_FILES_64))
+                .then_some(Architecture::X64)
+                .or_else(|| {
+                    entries
+                        .iter()
+                        .filter_map(|entry| {
+                            if let Entry::ExtractFile { name, position, .. } = entry {
+                                Some((
+                                    nsis_string(
+                                        strings_block,
+                                        name.get(),
+                                        &user_vars,
+                                        nsis_version,
+                                    ),
+                                    position.get() as usize + size_of::<u32>(),
+                                ))
+                            } else {
+                                None
                             }
-                        };
-                        let mut void = io::sink();
+                        })
+                        .filter(|(name, _)| {
+                            Utf8Path::new(name)
+                                .extension()
+                                .is_some_and(|extension| extension.eq_ignore_ascii_case(EXE))
+                        })
+                        .min_by_key(|(name, _)| levenshtein(name, &app_name))
+                        .map(|(_, mut position)| {
+                            if !is_solid {
+                                position += data_offset
+                                    + non_solid_start_offset as usize
+                                    + size_of::<u32>();
+                            }
+                            position
+                        })
+                        .and_then(|position| {
+                            let mut decoder: Box<dyn Read> = if is_solid {
+                                solid_decoder
+                            } else {
+                                match compression {
+                                    Compression::Lzma(filter_flag) => {
+                                        let mut data = &data[position + usize::from(filter_flag)..];
+                                        let stream = read_lzma_stream_header(&mut data).ok()?;
+                                        Box::new(XzDecoder::new_stream(data, stream))
+                                    }
+                                    Compression::BZip2 => {
+                                        Box::new(BzDecoder::new(&data[position..]))
+                                    }
+                                    Compression::Zlib => {
+                                        Box::new(DeflateDecoder::new(&data[position..]))
+                                    }
+                                    Compression::None => Box::new(&data[position..]),
+                                }
+                            };
+                            let mut void = io::sink();
 
-                        if is_solid {
-                            // Seek to file
-                            io::copy(&mut decoder.by_ref().take(position as u64), &mut void)
-                                .ok()?;
-                        }
+                            if is_solid {
+                                // Seek to file
+                                io::copy(&mut decoder.by_ref().take(position as u64), &mut void)
+                                    .ok()?;
+                            }
 
-                        // Seek to COFF header offset inside exe
-                        io::copy(&mut decoder.by_ref().take(0x3C), &mut void).ok()?;
+                            // Seek to COFF header offset inside exe
+                            io::copy(&mut decoder.by_ref().take(0x3C), &mut void).ok()?;
 
-                        let coff_offset = decoder.read_u32::<LE>().ok()?;
+                            let coff_offset = decoder.read_u32::<LE>().ok()?;
 
-                        // Seek to machine value
-                        io::copy(
-                            &mut decoder
-                                .by_ref()
-                                .take(u64::from(coff_offset.checked_sub(0x3C)?)),
-                            &mut void,
-                        )
-                        .ok()?;
+                            // Seek to machine value
+                            io::copy(
+                                &mut decoder
+                                    .by_ref()
+                                    .take(u64::from(coff_offset.checked_sub(0x3C)?)),
+                                &mut void,
+                            )
+                            .ok()?;
 
-                        let machine_value = decoder.read_u16::<LE>().ok()?;
-                        Machine::from_i32(i32::from(machine_value))
-                    })
-                    .and_then(|machine| Architecture::from_machine(machine).ok())
-            });
+                            let machine_value = decoder.read_u16::<LE>().ok()?;
+                            Machine::from_i32(i32::from(machine_value))
+                        })
+                        .and_then(|machine| Architecture::from_machine(machine).ok())
+                })
+        });
 
         Ok(Self {
             architecture,

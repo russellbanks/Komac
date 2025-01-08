@@ -1,4 +1,4 @@
-pub mod unsigned_u32;
+pub mod abs_to_u32;
 
 use crate::manifests::installer_manifest::{
     ElevationRequirement, Platform, Scope, UnsupportedOSArchitecture,
