@@ -1,4 +1,4 @@
-FROM rust:1.83-slim as build
+FROM rust:1.84-slim as build
 
 # Copy source code into the build container
 WORKDIR /usr/src 
