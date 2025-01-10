@@ -2,6 +2,7 @@ mod entry;
 mod first_header;
 mod header;
 mod language;
+mod state;
 mod strings;
 mod version;
 
@@ -10,8 +11,6 @@ use crate::installers::nsis::entry::Entry;
 use crate::installers::nsis::first_header::FirstHeader;
 use crate::installers::nsis::header::compression::Compression;
 use crate::installers::nsis::header::{Decompressed, Header};
-use crate::installers::nsis::language::table::LanguageTable;
-use crate::installers::nsis::version::NsisVersion;
 use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{read_lzma_stream_header, RELATIVE_PROGRAM_FILES_64};
 use crate::manifests::installer_manifest::Scope;
@@ -26,11 +25,11 @@ use header::block::BlockType;
 use liblzma::read::XzDecoder;
 use msi::Language;
 use protobuf::Enum;
+use state::NsisState;
 use std::borrow::Cow;
 use std::io;
 use std::io::Read;
 use std::str::FromStr;
-use strings::encoding::nsis_string;
 use strsim::levenshtein;
 use thiserror::Error;
 use versions::Versioning;
@@ -86,20 +85,12 @@ impl Nsis {
         let (header, _) = Header::ref_from_prefix(&decompressed_data)
             .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
-        let strings_block = BlockType::Strings.get(&decompressed_data, &header.blocks);
-
-        let language_table = LanguageTable::get_main(&decompressed_data, header)?;
-
-        let nsis_version = NsisVersion::from_manifest(data, pe)
-            .or_else(|| NsisVersion::from_branding_text(strings_block, language_table))
-            .unwrap_or_else(|| NsisVersion::detect(strings_block));
+        let mut state = NsisState::new(pe, &decompressed_data, header)?;
 
         let entries = <[Entry]>::try_ref_from_bytes(
             BlockType::Entries.get(&decompressed_data, &header.blocks),
         )
         .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
-
-        let mut user_vars = [const { Cow::Borrowed("") }; 9];
 
         let mut architecture = None;
 
@@ -107,20 +98,20 @@ impl Nsis {
         let mut display_version = None;
         let mut display_publisher = None;
         for entry in entries {
-            entry.update_vars(strings_block, &mut user_vars, nsis_version);
+            entry.update_vars(&mut state);
             if let Entry::WriteReg {
                 value_name, value, ..
             } = entry
             {
-                let value = nsis_string(strings_block, value.get(), &user_vars, nsis_version);
-                match &*nsis_string(strings_block, value_name.get(), &user_vars, nsis_version) {
+                let value = state.get_string(value.get());
+                match &*state.get_string(value_name.get()) {
                     "DisplayName" => display_name = Some(value),
                     "DisplayVersion" => display_version = Some(value),
                     "Publisher" => display_publisher = Some(value),
                     _ => {}
                 }
             } else if let Entry::ExtractFile { name, .. } = entry {
-                let name = nsis_string(strings_block, name.get(), &user_vars, nsis_version);
+                let name = state.get_string(name.get());
                 let file_stem = Utf8Path::new(&name).file_stem();
                 // If there is an app-64 file, the app is x64.
                 // If there is an app-32 file or both files are present, the app is x86
@@ -133,113 +124,94 @@ impl Nsis {
             };
         }
 
-        let install_dir = (header.install_directory_ptr != U32::ZERO).then(|| {
-            nsis_string(
-                strings_block,
-                header.install_directory_ptr.get(),
-                &user_vars,
-                nsis_version,
-            )
-        });
+        let install_dir = (header.install_directory_ptr != U32::ZERO)
+            .then(|| state.get_string(header.install_directory_ptr.get()));
 
-        let app_name = nsis_string(
-            strings_block,
-            language_table.language_string_offsets[2].get(),
-            &user_vars,
-            nsis_version,
-        );
-
-        architecture = architecture.or_else(|| {
-            install_dir
-                .as_deref()
-                .is_some_and(|dir| dir.contains(RELATIVE_PROGRAM_FILES_64))
-                .then_some(Architecture::X64)
-                .or_else(|| {
-                    entries
-                        .iter()
-                        .filter_map(|entry| {
-                            if let Entry::ExtractFile { name, position, .. } = entry {
-                                Some((
-                                    nsis_string(
-                                        strings_block,
-                                        name.get(),
-                                        &user_vars,
-                                        nsis_version,
-                                    ),
-                                    position.get() as usize + size_of::<u32>(),
-                                ))
-                            } else {
-                                None
-                            }
-                        })
-                        .filter(|(name, _)| {
-                            Utf8Path::new(name)
-                                .extension()
-                                .is_some_and(|extension| extension.eq_ignore_ascii_case(EXE))
-                        })
-                        .min_by_key(|(name, _)| levenshtein(name, &app_name))
-                        .map(|(_, mut position)| {
-                            if !is_solid {
-                                position += data_offset
-                                    + non_solid_start_offset as usize
-                                    + size_of::<u32>();
-                            }
-                            position
-                        })
-                        .and_then(|position| {
-                            let mut decoder: Box<dyn Read> = if is_solid {
-                                solid_decoder
-                            } else {
-                                match compression {
-                                    Compression::Lzma(filter_flag) => {
-                                        let mut data = &data[position + usize::from(filter_flag)..];
-                                        let stream = read_lzma_stream_header(&mut data).ok()?;
-                                        Box::new(XzDecoder::new_stream(data, stream))
-                                    }
-                                    Compression::BZip2 => {
-                                        Box::new(BzDecoder::new(&data[position..]))
-                                    }
-                                    Compression::Zlib => {
-                                        Box::new(DeflateDecoder::new(&data[position..]))
-                                    }
-                                    Compression::None => Box::new(&data[position..]),
+        architecture = architecture
+            .or_else(|| {
+                install_dir
+                    .as_deref()
+                    .is_some_and(|dir| dir.contains(RELATIVE_PROGRAM_FILES_64))
+                    .then_some(Architecture::X64)
+            })
+            .or_else(|| {
+                let app_name = state.get_string(state.language_table.string_offsets[2].get());
+                entries
+                    .iter()
+                    .filter_map(|entry| {
+                        if let Entry::ExtractFile { name, position, .. } = entry {
+                            Some((
+                                state.get_string(name.get()),
+                                position.get().unsigned_abs() as usize + size_of::<u32>(),
+                            ))
+                        } else {
+                            None
+                        }
+                    })
+                    .filter(|(name, _)| {
+                        Utf8Path::new(name)
+                            .extension()
+                            .is_some_and(|extension| extension.eq_ignore_ascii_case(EXE))
+                    })
+                    .min_by_key(|(name, _)| levenshtein(name, &app_name))
+                    .map(|(_, mut position)| {
+                        if !is_solid {
+                            position +=
+                                data_offset + non_solid_start_offset as usize + size_of::<u32>();
+                        }
+                        position
+                    })
+                    .and_then(|position| {
+                        let mut decoder: Box<dyn Read> = if is_solid {
+                            solid_decoder
+                        } else {
+                            match compression {
+                                Compression::Lzma(filter_flag) => {
+                                    let mut data = &data[position + usize::from(filter_flag)..];
+                                    let stream = read_lzma_stream_header(&mut data).ok()?;
+                                    Box::new(XzDecoder::new_stream(data, stream))
                                 }
-                            };
-                            let mut void = io::sink();
-
-                            if is_solid {
-                                // Seek to file
-                                io::copy(&mut decoder.by_ref().take(position as u64), &mut void)
-                                    .ok()?;
+                                Compression::BZip2 => Box::new(BzDecoder::new(&data[position..])),
+                                Compression::Zlib => {
+                                    Box::new(DeflateDecoder::new(&data[position..]))
+                                }
+                                Compression::None => Box::new(&data[position..]),
                             }
+                        };
+                        let mut void = io::sink();
 
-                            // Seek to COFF header offset inside exe
-                            io::copy(&mut decoder.by_ref().take(0x3C), &mut void).ok()?;
+                        if is_solid {
+                            // Seek to file
+                            io::copy(&mut decoder.by_ref().take(position as u64), &mut void)
+                                .ok()?;
+                        }
 
-                            let coff_offset = decoder.read_u32::<LE>().ok()?;
+                        // Seek to COFF header offset inside exe
+                        io::copy(&mut decoder.by_ref().take(0x3C), &mut void).ok()?;
 
-                            // Seek to machine value
-                            io::copy(
-                                &mut decoder
-                                    .by_ref()
-                                    .take(u64::from(coff_offset.checked_sub(0x3C)?)),
-                                &mut void,
-                            )
-                            .ok()?;
+                        let coff_offset = decoder.read_u32::<LE>().ok()?;
 
-                            let machine_value = decoder.read_u16::<LE>().ok()?;
-                            Machine::from_i32(i32::from(machine_value))
-                        })
-                        .and_then(|machine| Architecture::from_machine(machine).ok())
-                })
-        });
+                        // Seek to machine value
+                        io::copy(
+                            &mut decoder
+                                .by_ref()
+                                .take(u64::from(coff_offset.checked_sub(0x3C)?)),
+                            &mut void,
+                        )
+                        .ok()?;
+
+                        let machine_value = decoder.read_u16::<LE>().ok()?;
+                        Machine::from_i32(i32::from(machine_value))
+                    })
+                    .and_then(|machine| Architecture::from_machine(machine).ok())
+            });
 
         Ok(Self {
             architecture,
             scope: install_dir.as_deref().and_then(Scope::from_install_dir),
             install_dir: install_dir.as_deref().map(Utf8PathBuf::from),
             install_locale: LanguageTag::from_str(
-                Language::from_code(language_table.language_id.get()).tag(),
+                Language::from_code(state.language_table.id.get()).tag(),
             )
             .ok(),
             display_name: display_name.map(Cow::into_owned),

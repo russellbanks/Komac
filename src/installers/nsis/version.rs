@@ -1,12 +1,10 @@
-use crate::installers::nsis::language::table::LanguageTable;
+use crate::installers::nsis::state::NsisState;
 use crate::installers::nsis::strings::code::NsCode;
-use crate::installers::nsis::strings::encoding::nsis_string;
 use byteorder::{ByteOrder, LE};
 use derive_more::Display;
 use itertools::{Either, Itertools};
 use quick_xml::de::from_str;
 use serde::Deserialize;
-use std::borrow::Cow;
 use yara_x::mods::pe::ResourceType::RESOURCE_TYPE_MANIFEST;
 use yara_x::mods::PE;
 
@@ -49,16 +47,8 @@ impl NsisVersion {
             .and_then(Self::from_text)
     }
 
-    pub fn from_branding_text(
-        strings_block: &[u8],
-        language_table: &LanguageTable,
-    ) -> Option<Self> {
-        let branding_text = nsis_string(
-            strings_block,
-            language_table.language_string_offsets[0].get(),
-            &<[Cow<str>; 9]>::default(),
-            Self::default(),
-        );
+    pub fn from_branding_text(state: &NsisState) -> Option<Self> {
+        let branding_text = state.get_string(state.language_table.string_offsets[0].get());
         Self::from_text(&branding_text)
     }
 
@@ -165,7 +155,7 @@ mod tests {
             <assembly
                 xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
                 <assemblyIdentity version="1.0.0.0" processorArchitecture="*" name="Nullsoft.NSIS.exehead" type="win32"/>
-                <description>Nullsoft Install System v3.10</description>
+                <description>Nullsoft Install System v3.09</description>
             </assembly>
         "#};
 
@@ -182,7 +172,7 @@ mod tests {
 
         assert_eq!(
             NsisVersion::from_manifest(MANIFEST, &pe).unwrap(),
-            NsisVersion(3, 10, 0)
+            NsisVersion(3, 9, 0)
         );
     }
 

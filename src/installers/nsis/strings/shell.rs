@@ -1,11 +1,9 @@
-use crate::installers::nsis::strings::encoding::nsis_string;
-use crate::installers::nsis::version::NsisVersion;
+use crate::installers::nsis::state::NsisState;
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
     RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_ROOT,
     RELATIVE_WINDOWS_DIR,
 };
-use std::borrow::Cow;
 
 /// NSIS can use one name for two CSIDL_*** and `CSIDL_COMMON`_*** items (`CurrentUser` / `AllUsers`)
 /// Some NSIS shell names are not identical to WIN32 CSIDL_* names.
@@ -81,12 +79,7 @@ pub struct Shell;
 
 impl Shell {
     /// Adapted from <https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L683>
-    pub fn resolve(
-        buf: &mut String,
-        strings_block: &[u8],
-        character: u16,
-        nsis_version: NsisVersion,
-    ) {
+    pub fn resolve(buf: &mut String, strings_block: &NsisState, character: u16) {
         const PROGRAM_FILES_DIR: &str = "ProgramFilesDir";
         const COMMON_FILES_DIR: &str = "CommonFilesDir";
 
@@ -95,12 +88,7 @@ impl Shell {
         if index1 & 1 << 7 != 0 {
             let offset = index1 & 0x3F;
             let is_64_bit = index1 & 1 << 6 != 0;
-            let shell_string = nsis_string(
-                strings_block,
-                u32::from(offset),
-                &<[Cow<str>; 9]>::default(),
-                nsis_version,
-            );
+            let shell_string = strings_block.get_string(u32::from(offset));
             if shell_string == PROGRAM_FILES_DIR {
                 buf.push_str(if is_64_bit {
                     RELATIVE_PROGRAM_FILES_64

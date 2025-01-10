@@ -1,5 +1,4 @@
-use crate::installers::nsis::strings::encoding::nsis_string;
-use crate::installers::nsis::version::NsisVersion;
+use crate::installers::nsis::state::NsisState;
 use crate::installers::utils::registry::RegRoot;
 use std::borrow::Cow;
 use std::ops::Not;
@@ -313,27 +312,22 @@ pub enum Entry {
 
 impl Entry {
     #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    pub fn update_vars<'str_block>(
-        &self,
-        strings_block: &'str_block [u8],
-        user_vars: &mut [Cow<'str_block, str>; 9],
-        nsis_version: NsisVersion,
-    ) {
+    pub fn update_vars(&self, state: &mut NsisState) {
         match self {
             Self::GetFullPathname { output, .. } => {
-                user_vars[1] = nsis_string(strings_block, output.get(), user_vars, nsis_version);
+                state.user_variables[1] = state.get_string(output.get());
             }
             Self::SearchPath { filename, .. } => {
-                user_vars[0] = nsis_string(strings_block, filename.get(), user_vars, nsis_version);
+                state.user_variables[0] = state.get_string(filename.get());
             }
             Self::GetTempFilename { base_dir, .. } => {
-                user_vars[0] = nsis_string(strings_block, base_dir.get(), user_vars, nsis_version);
+                state.user_variables[0] = state.get_string(base_dir.get());
             }
             Self::ExtractFile { name, .. } => {
-                user_vars[0] = nsis_string(strings_block, name.get(), user_vars, nsis_version);
+                state.user_variables[0] = state.get_string(name.get());
             }
             Self::StrLen { input, .. } => {
-                user_vars[0] = nsis_string(strings_block, input.get(), user_vars, nsis_version);
+                state.user_variables[0] = state.get_string(input.get());
             }
             Self::AssignVar {
                 string_offset,
@@ -341,22 +335,20 @@ impl Entry {
                 start_position,
                 ..
             } => {
-                let result =
-                    nsis_string(strings_block, string_offset.get(), user_vars, nsis_version);
+                let result = state.get_string(string_offset.get());
                 let mut start = start_position.get();
-                let mut new_len = 0;
-                let src_len = result.len() as i32;
+                let mut new_length = 0;
                 if max_length.get() & !i32::from(u16::MAX) == 0 {
-                    new_len = src_len;
+                    new_length = result.len();
                 }
-                if new_len != 0 {
+                if new_length != 0 {
                     if start < 0 {
-                        start += src_len;
+                        start += result.len() as i32;
                     }
 
-                    start = start.clamp(0, src_len);
-                    if start < src_len {
-                        user_vars[0] = match result {
+                    let start = u32::try_from(start).unwrap_or_default();
+                    if start < result.len() as u32 {
+                        state.user_variables[0] = match result {
                             Cow::Borrowed(borrowed) => Cow::Borrowed(&borrowed[start as usize..]),
                             Cow::Owned(mut owned) => {
                                 owned.drain(..start as usize);
@@ -370,12 +362,7 @@ impl Entry {
                 string_with_env_variables,
                 ..
             } => {
-                user_vars[0] = nsis_string(
-                    strings_block,
-                    string_with_env_variables.get(),
-                    user_vars,
-                    nsis_version,
-                );
+                state.user_variables[0] = state.get_string(string_with_env_variables.get());
             }
             Self::IntOp {
                 input1,
@@ -400,7 +387,7 @@ impl Entry {
                     13 => ((input1.get() as u32).wrapping_shr(input2.get() as u32)) as i32,
                     _ => input1.get(),
                 };
-                user_vars[0] = Cow::Owned(result.to_string());
+                state.user_variables[0] = Cow::Owned(result.to_string());
             }
             _ => {}
         }
