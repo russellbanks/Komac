@@ -4783,9 +4783,9 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-highlight"
-version = "0.24.6"
+version = "0.24.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1df627d3607f08557788a3c85b85042d8ccd5155eb119afff5f0c7b67a40924"
+checksum = "6411813e4a9ebc87d391b98b0f3ce65d5361cd80c54de8651d8b85b555ea5d95"
 dependencies = [
  "lazy_static",
  "regex",
