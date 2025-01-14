@@ -72,8 +72,12 @@ impl Nsis {
             .ok_or(NsisError::FirstHeaderOffset)?;
 
         let data_offset = first_header_offset + size_of::<FirstHeader>();
-        let first_header = FirstHeader::try_ref_from_bytes(&data[first_header_offset..data_offset])
-            .map_err(|_| NsisError::NotNsisFile)?;
+        let first_header = data
+            .get(first_header_offset..data_offset)
+            .ok_or(NsisError::NotNsisFile)
+            .and_then(|bytes| {
+                FirstHeader::try_ref_from_bytes(bytes).map_err(|_| NsisError::NotNsisFile)
+            })?;
 
         let Decompressed {
             decompressed_data,
