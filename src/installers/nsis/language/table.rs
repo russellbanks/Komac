@@ -1,4 +1,4 @@
-use crate::installers::nsis::header::block::BlockType;
+use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
 use crate::installers::nsis::header::Header;
 use itertools::Itertools;
 use std::io::{Error, ErrorKind, Result};
@@ -17,9 +17,13 @@ pub struct LanguageTable {
 const EN_US_LANG_CODE: U16 = U16::new(1033);
 
 impl LanguageTable {
-    pub fn get_main<'data>(data: &'data [u8], header: &Header) -> Result<&'data Self> {
+    pub fn get_main<'data>(
+        data: &'data [u8],
+        header: &Header,
+        blocks: &BlockHeaders,
+    ) -> Result<&'data Self> {
         BlockType::LangTables
-            .get(data, &header.blocks)
+            .get(data, blocks)
             .chunks_exact(header.langtable_size.get() as usize)
             .flat_map(Self::ref_from_bytes)
             .find_or_first(|lang_table| lang_table.id == EN_US_LANG_CODE)

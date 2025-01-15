@@ -127,7 +127,7 @@ impl<'data> FileAnalyser<'data> {
                 .and_then(InstallSpec::architecture)
                 .or_else(|| {
                     pe.as_deref()
-                        .and_then(|pe| Architecture::from_machine(pe.machine()).ok())
+                        .map(|pe| Architecture::from_machine(pe.machine()))
                 })
                 .unwrap_or(Architecture::X86),
             installer_type: installer_type

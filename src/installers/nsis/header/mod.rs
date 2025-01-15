@@ -1,11 +1,9 @@
 pub mod block;
 pub mod compression;
-mod flags;
+pub mod flags;
 
 use crate::installers::nsis::first_header::FirstHeader;
-use crate::installers::nsis::header::block::BlockHeaders;
 use crate::installers::nsis::header::compression::Compression;
-use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::utils::read_lzma_stream_header;
 use byteorder::{ByteOrder, ReadBytesExt, LE};
 use bzip2::read::BzDecoder;
@@ -20,8 +18,6 @@ const NSIS_MAX_INST_TYPES: u8 = 32;
 #[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct Header {
-    flags: CommonHeaderFlags,
-    pub blocks: BlockHeaders,
     install_reg_rootkey: U32,
     install_rek_key_ptr: U32,
     install_reg_value_ptr: U32,

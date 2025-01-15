@@ -337,10 +337,11 @@ impl Entry {
             } => {
                 let result = state.get_string(string_offset.get());
                 let mut start = start_position.get();
-                let mut new_length = 0;
-                if max_length.get() & !i32::from(u16::MAX) == 0 {
-                    new_length = result.len();
-                }
+                let new_length = if max_length.get() & !i32::from(u16::MAX) == 0 {
+                    result.len()
+                } else {
+                    0
+                };
                 if new_length != 0 {
                     if start < 0 {
                         start += result.len() as i32;

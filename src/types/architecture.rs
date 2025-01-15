@@ -1,4 +1,3 @@
-use color_eyre::eyre::{bail, Result};
 use serde::{Deserialize, Serialize};
 use strum::EnumString;
 use yara_x::mods::pe::Machine;
@@ -26,6 +25,12 @@ pub enum Architecture {
     Arm64,
     #[default]
     Neutral,
+}
+
+impl Architecture {
+    pub const fn is_64_bit(self) -> bool {
+        matches!(self, Self::X64 | Self::Arm64)
+    }
 }
 
 pub const VALID_FILE_EXTENSIONS: [&str; 7] = [
@@ -75,8 +80,8 @@ const ARCHITECTURES: [(&str, Architecture); 31] = [
 ];
 
 impl Architecture {
-    pub fn from_machine(machine: Machine) -> Result<Self> {
-        Ok(match machine {
+    pub fn from_machine(machine: Machine) -> Self {
+        match machine {
             Machine::MACHINE_AMD64
             | Machine::MACHINE_IA64
             | Machine::MACHINE_POWERPC
@@ -92,8 +97,8 @@ impl Architecture {
             Machine::MACHINE_ARM64 => Self::Arm64,
             Machine::MACHINE_ARM | Machine::MACHINE_ARMNT | Machine::MACHINE_THUMB => Self::Arm,
             Machine::MACHINE_UNKNOWN => Self::Neutral,
-            machine => bail!("Unexpected architecture: {:?}", machine),
-        })
+            machine => panic!("Unexpected architecture: {machine:?}"),
+        }
     }
 
     pub fn get_from_url(url: &str) -> Option<Self> {

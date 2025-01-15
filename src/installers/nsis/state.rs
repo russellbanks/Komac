@@ -1,4 +1,4 @@
-use crate::installers::nsis::header::block::BlockType;
+use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
 use crate::installers::nsis::header::Header;
 use crate::installers::nsis::language::table::LanguageTable;
 use crate::installers::nsis::strings::code::NsCode;
@@ -21,10 +21,15 @@ pub struct NsisState<'data> {
 }
 
 impl<'data> NsisState<'data> {
-    pub fn new(pe: &PE, data: &'data [u8], header: &Header) -> Result<Self, NsisError> {
+    pub fn new(
+        pe: &PE,
+        data: &'data [u8],
+        header: &Header,
+        blocks: &BlockHeaders,
+    ) -> Result<Self, NsisError> {
         let mut state = Self {
-            str_block: BlockType::Strings.get(data, &header.blocks),
-            language_table: LanguageTable::get_main(data, header)?,
+            str_block: BlockType::Strings.get(data, blocks),
+            language_table: LanguageTable::get_main(data, header, blocks)?,
             user_variables: [const { Cow::Borrowed("") }; 9],
             version: NsisVersion::default(),
         };

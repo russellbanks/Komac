@@ -1,5 +1,6 @@
 use liblzma::stream::{Filters, Stream};
 use std::io::{Error, ErrorKind, Read, Result};
+use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
 pub mod registry;
 
@@ -22,4 +23,12 @@ pub fn read_lzma_stream_header<R: Read>(reader: &mut R) -> Result<Stream> {
     filters.lzma1_properties(&properties)?;
 
     Stream::new_raw_decoder(&filters).map_err(|error| Error::new(ErrorKind::InvalidData, error))
+}
+
+pub fn transmute_from_reader<T: FromBytes + FromZeros + IntoBytes>(
+    reader: &mut impl Read,
+) -> Result<T> {
+    let mut r#type = T::new_zeroed();
+    reader.read_exact(r#type.as_mut_bytes())?;
+    Ok(r#type)
 }

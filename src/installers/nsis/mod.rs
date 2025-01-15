@@ -9,7 +9,9 @@ mod version;
 use crate::file_analyser::EXE;
 use crate::installers::nsis::entry::Entry;
 use crate::installers::nsis::first_header::FirstHeader;
+use crate::installers::nsis::header::block::BlockHeaders;
 use crate::installers::nsis::header::compression::Compression;
+use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::nsis::header::{Decompressed, Header};
 use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{read_lzma_stream_header, RELATIVE_PROGRAM_FILES_64};
@@ -86,17 +88,25 @@ impl Nsis {
             compression,
             decoder: solid_decoder,
         } = Header::decompress(&data[data_offset..], first_header)?;
-        let (header, _) = Header::ref_from_prefix(&decompressed_data)
+
+        let architecture = Architecture::from_machine(pe.machine());
+
+        let (_flags, rest) = CommonHeaderFlags::ref_from_prefix(&decompressed_data)
             .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
-        let mut state = NsisState::new(pe, &decompressed_data, header)?;
+        let (blocks, rest) = BlockHeaders::read_dynamic_from_prefix(rest, architecture)?;
 
-        let entries = <[Entry]>::try_ref_from_bytes(
-            BlockType::Entries.get(&decompressed_data, &header.blocks),
-        )
-        .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
+        let (header, _) = Header::ref_from_prefix(rest)
+            .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
-        let mut architecture = None;
+        let mut state = NsisState::new(pe, &decompressed_data, header, &blocks)?;
+
+        let entries =
+            <[Entry]>::try_ref_from_bytes(BlockType::Entries.get(&decompressed_data, &blocks))
+                .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
+
+        let mut architecture =
+            Option::from(architecture).filter(|&architecture| architecture != Architecture::X86);
 
         let mut display_name = None;
         let mut display_version = None;
@@ -207,7 +217,7 @@ impl Nsis {
                         let machine_value = decoder.read_u16::<LE>().ok()?;
                         Machine::from_i32(i32::from(machine_value))
                     })
-                    .and_then(|machine| Architecture::from_machine(machine).ok())
+                    .map(Architecture::from_machine)
             });
 
         Ok(Self {
