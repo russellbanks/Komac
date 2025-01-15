@@ -1,6 +1,5 @@
 use std::num::NonZeroU32;
 
-use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
 use crate::prompts::prompt::handle_inquire_error;
@@ -9,7 +8,6 @@ use crate::types::package_version::PackageVersion;
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::{bail, Result};
-use indicatif::ProgressBar;
 use inquire::validator::{MaxLengthValidator, MinLengthValidator};
 use inquire::{Confirm, Text};
 use owo_colors::OwoColorize;
@@ -100,13 +98,6 @@ impl RemoveVersion {
         if !should_remove_manifest {
             return Ok(());
         }
-
-        // Create an indeterminate progress bar to show as a pull request is being created
-        let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request to remove {} version {}",
-            self.package_identifier, self.package_version
-        ));
-        pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
         let current_user = github.get_username().await?;
         let winget_pkgs = github.get_winget_pkgs().send().await?;

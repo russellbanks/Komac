@@ -247,7 +247,7 @@ impl UpdateVersion {
 
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request for {} version {}",
+            "Creating a pull request for {} {}",
             self.package_identifier, self.package_version
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
