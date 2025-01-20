@@ -1,6 +1,6 @@
 use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::enum_value::enum_value::enum_value;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::KnownVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
@@ -32,13 +32,11 @@ impl Type {
             ..Self::default()
         };
 
-        if *version >= InnoVersion(4, 0, 1) {
+        if *version >= (4, 0, 1) {
             r#type.languages = InnoValue::new_string(reader, codepage)?;
         }
 
-        if *version >= InnoVersion(4, 0, 0)
-            || (version.is_isx() && *version >= InnoVersion(1, 3, 24))
-        {
+        if *version >= (4, 0, 0) || (version.is_isx() && *version >= (1, 3, 24)) {
             r#type.check = InnoValue::new_string(reader, codepage)?;
         }
 
@@ -47,11 +45,11 @@ impl Type {
         let flags = TypeFlags::from_bits_retain(reader.read_u8()?);
         r#type.custom_type = flags.contains(TypeFlags::CUSTOM_SETUP_TYPE);
 
-        if *version >= InnoVersion(4, 0, 3) {
+        if *version >= (4, 0, 3) {
             r#type.r#setup_type = enum_value!(reader, SetupType)?;
         }
 
-        r#type.size = if *version >= InnoVersion(4, 0, 0) {
+        r#type.size = if *version >= (4, 0, 0) {
             reader.read_u64::<LE>()?
         } else {
             u64::from(reader.read_u32::<LE>()?)

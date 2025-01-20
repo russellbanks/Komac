@@ -2,7 +2,7 @@ use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::entry::condition::Condition;
 use crate::installers::inno::enum_value::enum_value::enum_value;
 use crate::installers::inno::flag_reader::read_flags::read_flags;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::KnownVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
@@ -33,7 +33,7 @@ impl File {
         codepage: &'static Encoding,
         version: &KnownVersion,
     ) -> Result<Self> {
-        if *version < InnoVersion(1, 3, 0) {
+        if *version < (1, 3, 0) {
             let _uncompressed_size = reader.read_u32::<LE>()?;
         }
 
@@ -45,7 +45,7 @@ impl File {
             ..Self::default()
         };
 
-        if *version >= InnoVersion(5, 2, 5) {
+        if *version >= (5, 2, 5) {
             file.strong_assembly_name = InnoValue::new_string(reader, codepage)?;
         }
 
@@ -55,13 +55,13 @@ impl File {
 
         file.location = reader.read_u32::<LE>()?;
         file.attributes = reader.read_u32::<LE>()?;
-        file.external_size = if *version >= InnoVersion(4, 0, 0) {
+        file.external_size = if *version >= (4, 0, 0) {
             reader.read_u64::<LE>()?
         } else {
             u64::from(reader.read_u32::<LE>()?)
         };
 
-        if *version < InnoVersion(3, 0, 5) {
+        if *version < (3, 0, 5) {
             match enum_value!(reader, FileCopyMode)? {
                 FileCopyMode::Normal => file.flags |= FileFlags::PROMPT_IF_OLDER,
                 FileCopyMode::IfDoesntExist => {
@@ -74,7 +74,7 @@ impl File {
             }
         }
 
-        if *version >= InnoVersion(4, 1, 0) {
+        if *version >= (4, 1, 0) {
             file.permission = reader.read_i16::<LE>()?;
         }
 
@@ -88,37 +88,37 @@ impl File {
                 FileFlags::REGISTER_TYPE_LIB,
                 FileFlags::SHARED_FILE,
             ],
-            if *version < InnoVersion(2, 0, 0) && !version.is_isx() => FileFlags::IS_README_FILE,
+            if *version < (2, 0, 0) && !version.is_isx() => FileFlags::IS_README_FILE,
             [FileFlags::COMPARE_TIME_STAMP, FileFlags::FONT_IS_NOT_TRUE_TYPE],
-            if *version >= InnoVersion(1, 2, 5) => FileFlags::SKIP_IF_SOURCE_DOESNT_EXIST,
-            if *version >= InnoVersion(1, 2, 6) => FileFlags::OVERWRITE_READ_ONLY,
-            if *version >= InnoVersion(1, 3, 21) => [
+            if *version >= (1, 2, 5) => FileFlags::SKIP_IF_SOURCE_DOESNT_EXIST,
+            if *version >= (1, 2, 6) => FileFlags::OVERWRITE_READ_ONLY,
+            if *version >= (1, 3, 21) => [
                 FileFlags::OVERWRITE_SAME_VERSION,
                 FileFlags::CUSTOM_DEST_NAME
             ],
-            if *version >= InnoVersion(1, 3, 25) => FileFlags::ONLY_IF_DEST_FILE_EXISTS,
-            if *version >= InnoVersion(2, 0, 5) => FileFlags::NO_REG_ERROR,
-            if *version >= InnoVersion(3, 0, 1) => FileFlags::UNINS_RESTART_DELETE,
-            if *version >= InnoVersion(3, 0, 5) => [
+            if *version >= (1, 3, 25) => FileFlags::ONLY_IF_DEST_FILE_EXISTS,
+            if *version >= (2, 0, 5) => FileFlags::NO_REG_ERROR,
+            if *version >= (3, 0, 1) => FileFlags::UNINS_RESTART_DELETE,
+            if *version >= (3, 0, 5) => [
                 FileFlags::ONLY_IF_DOESNT_EXIST,
                 FileFlags::IGNORE_VERSION,
                 FileFlags::PROMPT_IF_OLDER,
             ],
-            if *version >= InnoVersion(4, 0, 0)
-                || (version.is_isx() && *version >= InnoVersion(3, 0, 6)) => FileFlags::DONT_COPY,
-            if *version >= InnoVersion(4, 0, 5) => FileFlags::UNINS_REMOVE_READ_ONLY,
-            if *version >= InnoVersion(4, 1, 8) => FileFlags::RECURSE_SUB_DIRS_EXTERNAL,
-            if *version >= InnoVersion(4, 2, 1) => FileFlags::REPLACE_SAME_VERSION_IF_CONTENTS_DIFFER,
-            if *version >= InnoVersion(4, 2, 5) => FileFlags::DONT_VERIFY_CHECKSUM,
-            if *version >= InnoVersion(5, 0, 3) => FileFlags::UNINS_NO_SHARED_FILE_PROMPT,
-            if *version >= InnoVersion(5, 1, 0) => FileFlags::CREATE_ALL_SUB_DIRS,
-            if *version >= InnoVersion(5, 1, 2) => FileFlags::BITS_32, FileFlags::BITS_64,
-            if *version >= InnoVersion(5, 2, 0) => [
+            if *version >= (4, 0, 0)
+                || (version.is_isx() && *version >= (3, 0, 6)) => FileFlags::DONT_COPY,
+            if *version >= (4, 0, 5) => FileFlags::UNINS_REMOVE_READ_ONLY,
+            if *version >= (4, 1, 8) => FileFlags::RECURSE_SUB_DIRS_EXTERNAL,
+            if *version >= (4, 2, 1) => FileFlags::REPLACE_SAME_VERSION_IF_CONTENTS_DIFFER,
+            if *version >= (4, 2, 5) => FileFlags::DONT_VERIFY_CHECKSUM,
+            if *version >= (5, 0, 3) => FileFlags::UNINS_NO_SHARED_FILE_PROMPT,
+            if *version >= (5, 1, 0) => FileFlags::CREATE_ALL_SUB_DIRS,
+            if *version >= (5, 1, 2) => FileFlags::BITS_32, FileFlags::BITS_64,
+            if *version >= (5, 2, 0) => [
                 FileFlags::EXTERNAL_SIZE_PRESET,
                 FileFlags::SET_NTFS_COMPRESSION,
                 FileFlags::UNSET_NTFS_COMPRESSION,
             ],
-            if *version >= InnoVersion(5, 2, 5) => FileFlags::GAC_INSTALL
+            if *version >= (5, 2, 5) => FileFlags::GAC_INSTALL
         )?;
 
         file.r#type = enum_value!(reader, FileType)?;

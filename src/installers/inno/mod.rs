@@ -62,7 +62,7 @@ use zerocopy::TryFromBytes;
 
 const VERSION_LEN: usize = 1 << 6;
 
-const MAX_SUPPORTED_VERSION: InnoVersion = InnoVersion(6, 3, u8::MAX);
+const MAX_SUPPORTED_VERSION: InnoVersion = InnoVersion(6, 4, u8::MAX, 0);
 
 #[derive(Error, Debug)]
 pub enum InnoError {
@@ -139,12 +139,12 @@ impl Inno {
 
         let mut actual_checksum = Crc32Reader::new(&mut cursor);
 
-        let stored_size = if known_version > InnoVersion(4, 0, 9) {
+        let stored_size = if known_version > (4, 0, 9) {
             let size = actual_checksum.read_u32::<LE>()?;
             let compressed = actual_checksum.read_u8()? != 0;
 
             if compressed {
-                if known_version > InnoVersion(4, 1, 6) {
+                if known_version > (4, 1, 6) {
                     Compression::LZMA1(size)
                 } else {
                     Compression::Zlib(size)
@@ -206,7 +206,7 @@ impl Inno {
                 .unwrap_or(WINDOWS_1252);
         }
 
-        if known_version < InnoVersion(4, 0, 0) {
+        if known_version < (4, 0, 0) {
             Wizard::load(&mut reader, &known_version, &header)?;
         }
 

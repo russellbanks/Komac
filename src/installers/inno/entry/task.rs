@@ -1,6 +1,6 @@
 use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::flag_reader::read_flags::read_flags;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::KnownVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
@@ -35,25 +35,19 @@ impl Task {
             ..Self::default()
         };
 
-        if *version >= InnoVersion(4, 0, 1) {
+        if *version >= (4, 0, 1) {
             task.languages = InnoValue::new_string(reader, codepage)?;
         }
 
-        if *version >= InnoVersion(4, 0, 0)
-            || (version.is_isx() && *version >= InnoVersion(1, 3, 24))
-        {
+        if *version >= (4, 0, 0) || (version.is_isx() && *version >= (1, 3, 24)) {
             task.check = InnoValue::new_string(reader, codepage)?;
         }
 
-        if *version >= InnoVersion(4, 0, 0)
-            || (version.is_isx() && *version >= InnoVersion(3, 0, 3))
-        {
+        if *version >= (4, 0, 0) || (version.is_isx() && *version >= (3, 0, 3)) {
             task.level = reader.read_u32::<LE>()?;
         }
 
-        if *version >= InnoVersion(4, 0, 0)
-            || (version.is_isx() && *version >= InnoVersion(3, 0, 4))
-        {
+        if *version >= (4, 0, 0) || (version.is_isx() && *version >= (3, 0, 4)) {
             task.used = reader.read_u8()? != 0;
         } else {
             task.used = true;
@@ -63,9 +57,9 @@ impl Task {
 
         task.flags = read_flags!(reader,
             [TaskFlags::EXCLUSIVE, TaskFlags::UNCHECKED],
-            if *version >= InnoVersion(2, 0, 5) => TaskFlags::RESTART,
-            if *version >= InnoVersion(2, 0, 6) => TaskFlags::CHECKED_ONCE,
-            if *version >= InnoVersion(4, 2, 3) => TaskFlags::DONT_INHERIT_CHECK
+            if *version >= (2, 0, 5) => TaskFlags::RESTART,
+            if *version >= (2, 0, 6) => TaskFlags::CHECKED_ONCE,
+            if *version >= (4, 2, 3) => TaskFlags::DONT_INHERIT_CHECK
         )?;
 
         Ok(task)

@@ -2,7 +2,7 @@ use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::entry::condition::Condition;
 use crate::installers::inno::enum_value::enum_value::enum_value;
 use crate::installers::inno::flag_reader::read_flags::read_flags;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::KnownVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
@@ -34,7 +34,7 @@ impl Icon {
         codepage: &'static Encoding,
         version: &KnownVersion,
     ) -> Result<Self> {
-        if *version < InnoVersion(1, 3, 0) {
+        if *version < (1, 3, 0) {
             let _uncompressed_size = reader.read_u32::<LE>()?;
         }
 
@@ -50,11 +50,11 @@ impl Icon {
 
         Condition::load(reader, codepage, version)?;
 
-        if *version >= InnoVersion(5, 3, 5) {
+        if *version >= (5, 3, 5) {
             icon.app_user_model_id = InnoValue::new_string(reader, codepage)?;
         }
 
-        if *version >= InnoVersion(6, 1, 0) {
+        if *version >= (6, 1, 0) {
             let mut buf = [0; 16];
             reader.read_exact(&mut buf)?;
             icon.app_user_model_toast_activator_clsid = codepage.decode(&buf).0.into_owned();
@@ -64,28 +64,28 @@ impl Icon {
 
         icon.icon_index = reader.read_i32::<LE>()?;
 
-        icon.show_command = if *version >= InnoVersion(1, 3, 24) {
+        icon.show_command = if *version >= (1, 3, 24) {
             reader.read_i32::<LE>()?
         } else {
             1
         };
 
-        if *version >= InnoVersion(1, 3, 15) {
+        if *version >= (1, 3, 15) {
             icon.close_on_exit = enum_value!(reader, CloseSetting)?;
         }
 
-        if *version >= InnoVersion(2, 0, 7) {
+        if *version >= (2, 0, 7) {
             icon.hotkey = reader.read_u16::<LE>()?;
         }
 
         icon.flags = read_flags!(reader,
             IconFlags::NEVER_UNINSTALL,
-            if *version < InnoVersion(1, 3, 26) => IconFlags::RUN_MINIMIZED,
+            if *version < (1, 3, 26) => IconFlags::RUN_MINIMIZED,
             [IconFlags::CREATE_ONLY_IF_FILE_EXISTS, IconFlags::USE_APP_PATHS],
-            if *version >= InnoVersion(5, 0, 3) && *version < InnoVersion(6, 3, 0) => IconFlags::FOLDER_SHORTCUT,
-            if *version >= InnoVersion(5, 4, 2) => IconFlags::EXCLUDE_FROM_SHOW_IN_NEW_INSTALL,
-            if *version >= InnoVersion(5, 5, 0) => IconFlags::PREVENT_PINNING,
-            if *version >= InnoVersion(6, 1, 0) => IconFlags::HAS_APP_USER_MODEL_TOAST_ACTIVATOR_CLSID
+            if *version >= (5, 0, 3) && *version < (6, 3, 0) => IconFlags::FOLDER_SHORTCUT,
+            if *version >= (5, 4, 2) => IconFlags::EXCLUDE_FROM_SHOW_IN_NEW_INSTALL,
+            if *version >= (5, 5, 0) => IconFlags::PREVENT_PINNING,
+            if *version >= (6, 1, 0) => IconFlags::HAS_APP_USER_MODEL_TOAST_ACTIVATOR_CLSID
         )?;
 
         Ok(icon)

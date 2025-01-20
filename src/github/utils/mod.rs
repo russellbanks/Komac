@@ -203,7 +203,6 @@ mod tests {
     use crate::types::package_version::PackageVersion;
     use icu_locid::langid;
     use rstest::rstest;
-    use std::str::FromStr;
 
     #[rstest]
     #[case("Package.Identifier", None, None, "manifests/p/Package/Identifier")]

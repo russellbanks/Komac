@@ -2,7 +2,7 @@ use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::header::enums::Compression;
 use crate::installers::inno::header::flags::HeaderFlags;
 use crate::installers::inno::header::Header;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::KnownVersion;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Result};
 
@@ -22,13 +22,13 @@ impl Wizard {
             ..Self::default()
         };
 
-        if *version >= InnoVersion(2, 0, 0) || version.is_isx() {
+        if *version >= (2, 0, 0) || version.is_isx() {
             wizard.small_images = Self::load_images(reader, version)?;
         }
 
         if header.compression == Compression::BZip2
-            || (header.compression == Compression::LZMA1 && *version == InnoVersion(4, 1, 5))
-            || (header.compression == Compression::Zlib && *version >= InnoVersion(4, 2, 6))
+            || (header.compression == Compression::LZMA1 && *version == (4, 1, 5))
+            || (header.compression == Compression::Zlib && *version >= (4, 2, 6))
         {
             wizard.decompressor_dll = InnoValue::new_raw(reader)?;
         }
@@ -41,7 +41,7 @@ impl Wizard {
     }
 
     fn load_images<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<Vec<Vec<u8>>> {
-        let count = if *version >= InnoVersion(5, 6, 0) {
+        let count = if *version >= (5, 6, 0) {
             reader.read_u32::<LE>()?
         } else {
             1
@@ -51,7 +51,7 @@ impl Wizard {
             .filter_map(|_| InnoValue::new_raw(reader).transpose())
             .collect::<Result<Vec<_>>>()?;
 
-        if *version < InnoVersion(5, 6, 0) && images.first().is_some_and(Vec::is_empty) {
+        if *version < (5, 6, 0) && images.first().is_some_and(Vec::is_empty) {
             images.clear();
         }
 

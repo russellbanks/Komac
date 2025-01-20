@@ -13,7 +13,31 @@ bitflags! {
 
 #[derive(Debug, Default, Display, PartialEq, Eq, PartialOrd)]
 #[display("{_0}.{_1}.{_2}")]
-pub struct InnoVersion(pub u8, pub u8, pub u8);
+pub struct InnoVersion(pub u8, pub u8, pub u8, pub u8);
+
+impl PartialEq<(u8, u8, u8)> for InnoVersion {
+    fn eq(&self, &(n1, n2, n3): &(u8, u8, u8)) -> bool {
+        self.eq(&InnoVersion(n1, n2, n3, 0))
+    }
+}
+
+impl PartialEq<(u8, u8, u8, u8)> for InnoVersion {
+    fn eq(&self, &(n1, n2, n3, n4): &(u8, u8, u8, u8)) -> bool {
+        self.eq(&InnoVersion(n1, n2, n3, n4))
+    }
+}
+
+impl PartialOrd<(u8, u8, u8)> for InnoVersion {
+    fn partial_cmp(&self, &(n1, n2, n3): &(u8, u8, u8)) -> Option<Ordering> {
+        self.partial_cmp(&InnoVersion(n1, n2, n3, 0))
+    }
+}
+
+impl PartialOrd<(u8, u8, u8, u8)> for InnoVersion {
+    fn partial_cmp(&self, &(n1, n2, n3, n4): &(u8, u8, u8, u8)) -> Option<Ordering> {
+        self.partial_cmp(&InnoVersion(n1, n2, n3, n4))
+    }
+}
 
 #[derive(Debug, Default, Deref, Display, PartialEq, Eq)]
 #[display("{version}")]
@@ -23,9 +47,33 @@ pub struct KnownVersion {
     pub variant: VersionFlags,
 }
 
+impl PartialEq<(u8, u8, u8)> for KnownVersion {
+    fn eq(&self, other: &(u8, u8, u8)) -> bool {
+        self.version.eq(other)
+    }
+}
+
+impl PartialEq<(u8, u8, u8, u8)> for KnownVersion {
+    fn eq(&self, other: &(u8, u8, u8, u8)) -> bool {
+        self.version.eq(other)
+    }
+}
+
 impl PartialEq<InnoVersion> for KnownVersion {
     fn eq(&self, other: &InnoVersion) -> bool {
         self.version.eq(other)
+    }
+}
+
+impl PartialOrd<(u8, u8, u8)> for KnownVersion {
+    fn partial_cmp(&self, other: &(u8, u8, u8)) -> Option<Ordering> {
+        self.version.partial_cmp(other)
+    }
+}
+
+impl PartialOrd<(u8, u8, u8, u8)> for KnownVersion {
+    fn partial_cmp(&self, other: &(u8, u8, u8, u8)) -> Option<Ordering> {
+        self.version.partial_cmp(other)
     }
 }
 
@@ -52,10 +100,15 @@ impl KnownVersion {
             .split(|&b| b == b'.')
             .filter_map(|s| std::str::from_utf8(s).ok()?.parse::<u8>().ok());
 
-        let inno_version = InnoVersion(parts.next()?, parts.next()?, parts.next()?);
+        let inno_version = InnoVersion(
+            parts.next()?,
+            parts.next()?,
+            parts.next()?,
+            parts.next().unwrap_or_default(),
+        );
 
         // Inno Setup 6 and above is always only Unicode
-        if inno_version >= InnoVersion(6, 0, 0) {
+        if inno_version >= (6, 0, 0) {
             return Some(Self {
                 version: inno_version,
                 variant: VersionFlags::UNICODE,
@@ -98,9 +151,9 @@ impl KnownVersion {
 
     pub fn is_blackbox(&self) -> bool {
         const BLACKBOX_VERSIONS: [InnoVersion; 3] = [
-            InnoVersion(5, 3, 10),
-            InnoVersion(5, 4, 2),
-            InnoVersion(5, 5, 0),
+            InnoVersion(5, 3, 10, 0),
+            InnoVersion(5, 4, 2, 0),
+            InnoVersion(5, 5, 0, 0),
         ];
 
         self.is_unicode() && BLACKBOX_VERSIONS.contains(&self.version)
@@ -113,70 +166,75 @@ mod tests {
     use rstest::rstest;
 
     #[rstest]
-    #[case(b"", InnoVersion(0, 0, 0), VersionFlags::empty())]
+    #[case(b"", InnoVersion(0, 0, 0, 0), VersionFlags::empty())]
     #[case(
         b"Inno Setup Setup Data (1.3.3)",
-        InnoVersion(1, 3, 3),
+        InnoVersion(1, 3, 3, 0),
         VersionFlags::empty()
     )]
     #[case(
         b"Inno Setup Setup Data (1.3.12) with ISX (1.3.12.1)",
-        InnoVersion(1, 3, 12),
+        InnoVersion(1, 3, 12, 0),
         VersionFlags::ISX
     )]
     #[case(
         b"Inno Setup Setup Data (3.0.3) with ISX (3.0.0)",
-        InnoVersion(3, 0, 3),
+        InnoVersion(3, 0, 3, 0),
         VersionFlags::ISX
     )]
     #[case(
         b"My Inno Setup Extensions Setup Data (3.0.4)",
-        InnoVersion(3, 0, 4),
+        InnoVersion(3, 0, 4, 0),
         VersionFlags::empty()
     )]
     #[case(
         b"My Inno Setup Extensions Setup Data (3.0.6.1)",
-        InnoVersion(3, 0, 6),
+        InnoVersion(3, 0, 6, 1),
         VersionFlags::empty()
     )]
     #[case(
         b"Inno Setup Setup Data (5.3.10)",
-        InnoVersion(5, 3, 10),
+        InnoVersion(5, 3, 10, 0),
         VersionFlags::empty()
     )]
     #[case(
         b"Inno Setup Setup Data (5.3.10) (u)",
-        InnoVersion(5, 3, 10),
+        InnoVersion(5, 3, 10, 0),
         VersionFlags::UNICODE
     )]
     #[case(
         b"Inno Setup Setup Data (5.5.7) (U)",
-        InnoVersion(5, 5, 7),
+        InnoVersion(5, 5, 7, 0),
         VersionFlags::UNICODE
     )]
     #[case(
         b"Inno Setup Setup Data (5.6.0)",
-        InnoVersion(5, 6, 0),
+        InnoVersion(5, 6, 0, 0),
         VersionFlags::empty()
     )]
     #[case(
         b"Inno Setup Setup Data (5.6.0) (u)",
-        InnoVersion(5, 6, 0),
+        InnoVersion(5, 6, 0, 0),
         VersionFlags::UNICODE
     )]
     #[case(
         b"Inno Setup Setup Data (6.1.0) (u)",
-        InnoVersion(6, 1, 0),
+        InnoVersion(6, 1, 0, 0),
         VersionFlags::UNICODE
     )]
     #[case(
         b"Inno Setup Setup Data (6.2.0) (u)",
-        InnoVersion(6, 2, 0),
+        InnoVersion(6, 2, 0, 0),
         VersionFlags::UNICODE
     )]
     #[case(
         b"Inno Setup Setup Data (6.3.0)",
-        InnoVersion(6, 3, 0),
+        InnoVersion(6, 3, 0, 0),
+        VersionFlags::UNICODE
+    )]
+    #[case(
+        b"Inno Setup Setup Data (6.4.0.1)",
+        InnoVersion(6, 4, 0, 1),
         VersionFlags::UNICODE
     )]
     fn test_inno_versions(

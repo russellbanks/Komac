@@ -33,14 +33,14 @@ pub struct SetupLoaderVersion {
     version: InnoVersion,
 }
 
-impl PartialEq<InnoVersion> for SetupLoaderVersion {
-    fn eq(&self, other: &InnoVersion) -> bool {
+impl PartialEq<(u8, u8, u8)> for SetupLoaderVersion {
+    fn eq(&self, other: &(u8, u8, u8)) -> bool {
         self.version.eq(other)
     }
 }
 
-impl PartialOrd<InnoVersion> for SetupLoaderVersion {
-    fn partial_cmp(&self, other: &InnoVersion) -> Option<Ordering> {
+impl PartialOrd<(u8, u8, u8)> for SetupLoaderVersion {
+    fn partial_cmp(&self, other: &(u8, u8, u8)) -> Option<Ordering> {
         self.version.partial_cmp(other)
     }
 }
@@ -48,31 +48,31 @@ impl PartialOrd<InnoVersion> for SetupLoaderVersion {
 const KNOWN_SETUP_LOADER_VERSIONS: [SetupLoaderVersion; 7] = [
     SetupLoaderVersion {
         signature: *b"rDlPtS02\x87eVx",
-        version: InnoVersion(1, 2, 10),
+        version: InnoVersion(1, 2, 10, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS04\x87eVx",
-        version: InnoVersion(4, 0, 0),
+        version: InnoVersion(4, 0, 0, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS05\x87eVx",
-        version: InnoVersion(4, 0, 3),
+        version: InnoVersion(4, 0, 3, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS06\x87eVx",
-        version: InnoVersion(4, 0, 10),
+        version: InnoVersion(4, 0, 10, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS07\x87eVx",
-        version: InnoVersion(4, 1, 6),
+        version: InnoVersion(4, 1, 6, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS\xCD\xE6\xD7{\x0B*",
-        version: InnoVersion(5, 1, 5),
+        version: InnoVersion(5, 1, 5, 0),
     },
     SetupLoaderVersion {
         signature: *b"nS5W7dT\x83\xAA\x1B\x0Fj",
-        version: InnoVersion(5, 1, 5),
+        version: InnoVersion(5, 1, 5, 0),
     },
 ];
 
@@ -106,7 +106,7 @@ impl SetupLoader {
             .find(|setup_loader_version| setup_loader_version.signature == signature)
             .ok_or(InnoError::UnknownLoaderSignature(signature))?;
 
-        let revision = if loader_version >= InnoVersion(5, 1, 5) {
+        let revision = if loader_version >= (5, 1, 5) {
             checksum.read_u32::<LE>()?
         } else {
             0
@@ -115,7 +115,7 @@ impl SetupLoader {
         checksum.read_u32::<LE>()?;
         let exe_offset = checksum.read_u32::<LE>()?;
 
-        let exe_compressed_size = if loader_version >= InnoVersion(4, 1, 6) {
+        let exe_compressed_size = if loader_version >= (4, 1, 6) {
             0
         } else {
             checksum.read_u32::<LE>()?
@@ -123,13 +123,13 @@ impl SetupLoader {
 
         let exe_uncompressed_size = checksum.read_u32::<LE>()?;
 
-        let exe_checksum = if loader_version >= InnoVersion(4, 0, 3) {
+        let exe_checksum = if loader_version >= (4, 0, 3) {
             Checksum::CRC32(checksum.read_u32::<LE>()?)
         } else {
             Checksum::Adler32(checksum.read_u32::<LE>()?)
         };
 
-        let message_offset = if loader_version >= InnoVersion(4, 0, 0) {
+        let message_offset = if loader_version >= (4, 0, 0) {
             0
         } else {
             checksum.get_mut().read_u32::<LE>()?
@@ -138,7 +138,7 @@ impl SetupLoader {
         let header_offset = checksum.read_u32::<LE>()?;
         let data_offset = checksum.read_u32::<LE>()?;
 
-        if loader_version >= InnoVersion(4, 0, 10) {
+        if loader_version >= (4, 0, 10) {
             let expected_checksum = checksum.get_mut().read_u32::<LE>()?;
             let actual_checksum = checksum.finalize();
             if actual_checksum != expected_checksum {

@@ -1,6 +1,6 @@
 use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::entry::condition::Condition;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::KnownVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
@@ -25,7 +25,7 @@ impl Ini {
         codepage: &'static Encoding,
         version: &KnownVersion,
     ) -> Result<Self> {
-        if *version < InnoVersion(1, 3, 0) {
+        if *version < (1, 3, 0) {
             let _uncompressed_size = reader.read_u32::<LE>()?;
         }
 

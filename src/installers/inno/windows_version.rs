@@ -12,7 +12,7 @@ struct Version {
 impl Version {
     fn load<R: Read>(reader: &mut R, inno_version: &InnoVersion) -> Result<Self> {
         let mut version = Self::default();
-        if *inno_version >= InnoVersion(1, 3, 19) {
+        if *inno_version >= (1, 3, 19) {
             version.build = reader.read_u16::<LE>()?;
         }
         version.minor = reader.read_u8()?;
@@ -43,7 +43,7 @@ impl WindowsVersion {
             ..Self::default()
         };
 
-        if *version >= InnoVersion(1, 3, 19) {
+        if *version >= (1, 3, 19) {
             windows_version.nt_service_pack.minor = reader.read_u8()?;
             windows_version.nt_service_pack.major = reader.read_u8()?;
         }

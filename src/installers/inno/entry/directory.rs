@@ -1,6 +1,6 @@
 use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::entry::condition::Condition;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::KnownVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
@@ -24,7 +24,7 @@ impl Directory {
         codepage: &'static Encoding,
         version: &KnownVersion,
     ) -> Result<Self> {
-        if *version < InnoVersion(1, 3, 0) {
+        if *version < (1, 3, 0) {
             let _uncompressed_size = reader.read_u32::<LE>()?;
         }
 
@@ -36,17 +36,17 @@ impl Directory {
 
         Condition::load(reader, codepage, version)?;
 
-        if *version >= InnoVersion(4, 0, 11) && *version < InnoVersion(4, 1, 0) {
+        if *version >= (4, 0, 11) && *version < (4, 1, 0) {
             directory.permissions = InnoValue::new_string(reader, codepage)?;
         }
 
-        if *version >= InnoVersion(2, 0, 11) {
+        if *version >= (2, 0, 11) {
             directory.attributes = reader.read_u32::<LE>()?;
         }
 
         WindowsVersionRange::load(reader, version)?;
 
-        if *version >= InnoVersion(4, 1, 0) {
+        if *version >= (4, 1, 0) {
             directory.permission = reader.read_i16::<LE>()?;
         }
 

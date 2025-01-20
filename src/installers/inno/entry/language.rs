@@ -1,5 +1,5 @@
 use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::KnownVersion;
 use byteorder::{ReadBytesExt, LE};
 use encoding_rs::{Encoding, UTF_16LE, WINDOWS_1252};
 use std::io::{Read, Result};
@@ -34,7 +34,7 @@ impl Language {
     ) -> Result<Self> {
         let mut entry = Self::default();
 
-        if *version >= InnoVersion(4, 0, 0) {
+        if *version >= (4, 0, 0) {
             entry.name = InnoValue::new_string(reader, codepage)?;
         }
 
@@ -44,11 +44,11 @@ impl Language {
         entry.welcome_font = InnoValue::new_string(reader, codepage)?;
         entry.copyright_font = InnoValue::new_string(reader, codepage)?;
 
-        if *version >= InnoVersion(4, 0, 0) {
+        if *version >= (4, 0, 0) {
             entry.data = InnoValue::new_string(reader, codepage)?;
         }
 
-        if *version >= InnoVersion(4, 0, 1) {
+        if *version >= (4, 0, 1) {
             entry.license_text = InnoValue::new_string(reader, codepage)?;
             entry.info_before = InnoValue::new_string(reader, codepage)?;
             entry.info_after = InnoValue::new_string(reader, codepage)?;
@@ -56,7 +56,7 @@ impl Language {
 
         entry.language_id = reader.read_u32::<LE>()?;
 
-        if *version < InnoVersion(4, 2, 2) {
+        if *version < (4, 2, 2) {
             entry.codepage = u16::try_from(entry.language_id)
                 .ok()
                 .and_then(codepage::to_encoding)
@@ -68,7 +68,7 @@ impl Language {
                 .flatten()
                 .unwrap_or(WINDOWS_1252);
         } else {
-            if *version < InnoVersion(5, 3, 0) {
+            if *version < (5, 3, 0) {
                 reader.read_u32::<LE>()?;
             }
             entry.codepage = UTF_16LE;
@@ -76,7 +76,7 @@ impl Language {
 
         entry.dialog_font_size = reader.read_u32::<LE>()?;
 
-        if *version < InnoVersion(4, 1, 0) {
+        if *version < (4, 1, 0) {
             entry.dialog_font_standard_height = reader.read_u32::<LE>()?;
         }
 
@@ -84,7 +84,7 @@ impl Language {
         entry.welcome_font_size = reader.read_u32::<LE>()?;
         entry.copyright_font_size = reader.read_u32::<LE>()?;
 
-        if *version >= InnoVersion(5, 2, 3) {
+        if *version >= (5, 2, 3) {
             entry.right_to_left = reader.read_u8()? != 0;
         }
 
