@@ -49,7 +49,7 @@ futures = "0.3.31"
 futures-util = "0.3.31"
 heapless = { version = "0.8.0", features = ["serde"] }
 icu_locid = { version = "1.5.0", features = ["serde", "std"] }
-indexmap = "2.7.0"
+indexmap = "2.7.1"
 indicatif = "0.17.9"
 inquire = "0.7.5"
 itertools = "0.14.0"
