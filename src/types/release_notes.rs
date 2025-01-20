@@ -1,6 +1,6 @@
 use nutype::nutype;
-use pulldown_cmark::Event::{Code, End, Start, Text};
-use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::Event::{Code, End, HardBreak, InlineHtml, Rule, SoftBreak, Start, Text};
+use pulldown_cmark::{Options, Parser, Tag, TagEnd};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::num::NonZeroU32;
@@ -15,10 +15,7 @@ pub struct ReleaseNotes(String);
 
 impl ReleaseNotes {
     pub fn format(body: &str, owner: &str, repo: &str) -> Option<Self> {
-        let mut options = Options::empty();
-        options.insert(Options::ENABLE_STRIKETHROUGH);
-
-        let parser = Parser::new_ext(body, options);
+        let parser = Parser::new_ext(body, Options::ENABLE_STRIKETHROUGH | Options::ENABLE_GFM);
         let mut buffer = String::new();
 
         let mut ordered_list_map = HashMap::new();
@@ -43,9 +40,7 @@ impl ReleaseNotes {
                         title,
                         id: _,
                     } => {
-                        if !title.is_empty() {
-                            buffer.push_str(&title);
-                        }
+                        buffer.push_str(&title);
                     }
                     Tag::List(first_index) => {
                         if let Some(index) = first_index {
@@ -137,7 +132,8 @@ impl ReleaseNotes {
                     buffer.push_str(&result);
                 }
                 Code(code) => buffer.push_str(&code.replace('\t', " ")),
-                Event::SoftBreak | Event::HardBreak | Event::Rule => buffer.push('\n'),
+                InlineHtml(html) => buffer.push_str(&html),
+                SoftBreak | HardBreak | Rule => buffer.push('\n'),
                 _ => (),
             }
         }
@@ -198,7 +194,7 @@ mod tests {
     use indoc::indoc;
 
     #[test]
-    fn test_issue_formatting() {
+    fn issue_formatting() {
         let value = "- Issue https://github.com/owner/repo/issues/123";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -207,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn test_different_repo_issue_formatting() {
+    fn different_repo_issue_formatting() {
         let value = "- Issue https://github.com/different/repo/issues/123";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -216,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_issues_formatting() {
+    fn multiple_issues_formatting() {
         let value = "- Issue https://github.com/owner/repo/issues/123 and https://github.com/owner/repo/issues/321";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -225,7 +221,7 @@ mod tests {
     }
 
     #[test]
-    fn test_no_urls() {
+    fn no_urls() {
         let value = "- No issue link";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -234,7 +230,7 @@ mod tests {
     }
 
     #[test]
-    fn test_full_changelog_url() {
+    fn full_changelog_url() {
         let value = "Full Changelog: https://github.com/owner/repo/compare/v1.0.0...v1.1.0";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -243,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn test_release_url() {
+    fn release_url() {
         let value = "Previous release: https://github.com/owner/repo/releases/tag/1.2.3";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -252,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn test_header_syntax_removed() {
+    fn header_syntax_removed() {
         let value = indoc! {"
         # Header 1
         ## Header 2
@@ -270,7 +266,7 @@ mod tests {
     }
 
     #[test]
-    fn test_strikethrough_removed() {
+    fn strikethrough_removed() {
         assert_eq!(
             ReleaseNotes::format("~~Strikethrough text~~", "owner", "repo"),
             ReleaseNotes::try_new("Strikethrough text").ok()
@@ -278,10 +274,23 @@ mod tests {
     }
 
     #[test]
-    fn test_bold_removed() {
+    fn bold_removed() {
         assert_eq!(
             ReleaseNotes::format("**Bold text**", "owner", "repo"),
             ReleaseNotes::try_new("Bold text").ok()
+        )
+    }
+
+    #[test]
+    fn inline_html() {
+        let value = indoc! {"
+            ```
+            <html>
+            ```
+        "};
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::try_new("<html>").ok()
         )
     }
 
