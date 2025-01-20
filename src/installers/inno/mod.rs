@@ -254,7 +254,11 @@ impl Inno {
 
         Ok(Self {
             architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
-            scope: install_dir.as_deref().and_then(Scope::from_install_dir),
+            scope: header
+                .privileges_required_overrides_allowed
+                .is_empty()
+                .then(|| install_dir.as_deref().and_then(Scope::from_install_dir))
+                .flatten(),
             install_dir: install_dir.map(Utf8PathBuf::from),
             unsupported_architectures: mem::take(&mut header.architectures_disallowed)
                 .to_unsupported_architectures(),
