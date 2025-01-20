@@ -12,7 +12,7 @@ pub struct MergeUpstreamVariables<'id> {
 #[cynic(graphql_type = "Mutation", variables = "MergeUpstreamVariables")]
 pub struct MergeUpstream {
     #[expect(dead_code)]
-    #[arguments(input: { oid: $upstream_target_oid, refId: $branch_ref_id })]
+    #[arguments(input: { oid: $upstream_target_oid, refId: $branch_ref_id, force: $force })]
     pub update_ref: Option<UpdateRefPayload>,
 }
 
@@ -32,8 +32,8 @@ mod tests {
     #[test]
     fn merge_upstream_output() {
         const MERGE_UPSTREAM_MUTATION: &str = indoc! {"
-            mutation MergeUpstream($branchRefId: ID!, $upstreamTargetOid: GitObjectID!) {
-              updateRef(input: {oid: $upstreamTargetOid, refId: $branchRefId}) {
+            mutation MergeUpstream($branchRefId: ID!, $upstreamTargetOid: GitObjectID!, $force: Boolean!) {
+              updateRef(input: {oid: $upstreamTargetOid, refId: $branchRefId, force: $force}) {
                 clientMutationId
               }
             }
