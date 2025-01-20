@@ -52,7 +52,7 @@ const NON_SOLID_EXTRA_BYTES: u8 = 1 << 2;
 const IS_COMPRESSED_MASK: u32 = 1 << 31;
 
 pub struct Decompressed<'data> {
-    pub decompressed_data: Vec<u8>,
+    pub data: Vec<u8>,
     pub is_solid: bool,
     pub non_solid_start_offset: u32,
     pub compression: Compression,
@@ -141,7 +141,7 @@ impl Header {
         decoder.read_exact(&mut decompressed_data)?;
 
         Ok(Decompressed {
-            decompressed_data,
+            data: decompressed_data,
             is_solid,
             non_solid_start_offset: compressed_header_size,
             compression,

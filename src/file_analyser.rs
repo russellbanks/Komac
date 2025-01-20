@@ -39,7 +39,7 @@ pub struct FileAnalyser<'data> {
     pub package_name: Option<PackageName>,
     pub publisher: Option<Publisher>,
     pub installer: Installer,
-    pub install_spec: Option<Box<dyn InstallSpec>>,
+    pub install_spec: Option<Box<dyn InstallSpec + Send>>,
     pub zip: Option<Zip<Cursor<&'data [u8]>>>,
 }
 
@@ -52,7 +52,7 @@ impl<'data> FileAnalyser<'data> {
         let mut zip = None;
         let mut pe = None;
         let mut installer_type = None;
-        let mut installer: Option<Box<dyn InstallSpec>> = None;
+        let mut installer: Option<Box<dyn InstallSpec + Send>> = None;
         match extension.as_str() {
             MSI => installer = Some(Box::new(Msi::new(Cursor::new(data.as_ref()))?)),
             MSIX | APPX => installer = Some(Box::new(Msix::new(Cursor::new(data.as_ref()))?)),
@@ -119,7 +119,7 @@ impl<'data> FileAnalyser<'data> {
         let display_version = installer.as_deref().and_then(InstallSpec::display_version);
         let product_code = installer.as_deref().and_then(InstallSpec::product_code);
         let manifest_installer = Installer {
-            installer_locale: installer.as_deref().and_then(InstallSpec::locale),
+            locale: installer.as_deref().and_then(InstallSpec::locale),
             platform: installer.as_deref().and_then(InstallSpec::platform),
             minimum_os_version: installer.as_deref().and_then(InstallSpec::min_version),
             architecture: installer
@@ -130,8 +130,7 @@ impl<'data> FileAnalyser<'data> {
                         .map(|pe| Architecture::from_machine(pe.machine()))
                 })
                 .unwrap_or(Architecture::X86),
-            installer_type: installer_type
-                .or_else(|| installer.as_deref().map(InstallSpec::r#type)),
+            r#type: installer_type.or_else(|| installer.as_deref().map(InstallSpec::r#type)),
             nested_installer_type: zip
                 .as_mut()
                 .and_then(|zip| zip.nested_installer_type.take()),

@@ -77,9 +77,12 @@ impl Manifest for DefaultLocaleManifest {
 #[derive(Serialize, Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Agreement {
-    pub agreement_label: Option<String>,
-    pub agreement: Option<String>,
-    pub agreement_url: Option<Url>,
+    #[serde(rename = "AgreementLabel")]
+    pub label: Option<String>,
+    #[serde(rename = "Agreement")]
+    pub text: Option<String>,
+    #[serde(rename = "AgreementUrl")]
+    pub url: Option<Url>,
 }
 
 #[skip_serializing_none]

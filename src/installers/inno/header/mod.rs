@@ -279,7 +279,7 @@ impl Header {
         };
         header.windows_version_range = WindowsVersionRange::load(reader, &version.version)?;
         if *version < (6, 4, 0, 1) {
-            header.back_color = reader.read_u32::<LE>()?
+            header.back_color = reader.read_u32::<LE>()?;
         }
         if *version >= (1, 3, 3) && *version < (6, 4, 0, 1) {
             header.back_color2 = reader.read_u32::<LE>()?;

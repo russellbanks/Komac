@@ -133,7 +133,7 @@ impl RemoveDeadVersions {
                 .await?
                 .installers
                 .into_iter()
-                .map(|installer| installer.installer_url)
+                .map(|installer| installer.url)
                 .collect::<BTreeSet<_>>();
 
             let url_statuses = stream::iter(installer_urls)

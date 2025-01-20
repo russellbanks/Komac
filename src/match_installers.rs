@@ -10,7 +10,7 @@ pub fn match_installers(
     let found_architectures = new_installers
         .iter()
         .filter_map(|installer| {
-            let url = &installer.installer_url;
+            let url = &installer.url;
             Architecture::get_from_url(url.as_str()).map(|architecture| (url, architecture))
         })
         .collect::<HashMap<_, _>>();
@@ -18,7 +18,7 @@ pub fn match_installers(
     let found_scopes = new_installers
         .iter()
         .filter_map(|installer| {
-            let url = &installer.installer_url;
+            let url = &installer.url;
             Scope::from_url(url.as_str()).map(|scope| (url, scope))
         })
         .collect::<HashMap<_, _>>();
@@ -30,7 +30,7 @@ pub fn match_installers(
             let mut best_match = None;
 
             for new_installer in new_installers {
-                let installer_url = &new_installer.installer_url;
+                let installer_url = &new_installer.url;
                 let mut score = 0;
                 if new_installer.architecture == previous_installer.architecture {
                     score += 1;
@@ -39,7 +39,7 @@ pub fn match_installers(
                 {
                     score += 1;
                 }
-                if new_installer.installer_type == previous_installer.installer_type {
+                if new_installer.r#type == previous_installer.r#type {
                     score += 3;
                 }
                 if new_installer.nested_installer_type == previous_installer.nested_installer_type {
@@ -48,11 +48,11 @@ pub fn match_installers(
                 if new_installer.scope == previous_installer.scope {
                     score += 1;
                 }
-                let new_extension = Utf8Path::new(new_installer.installer_url.as_str())
+                let new_extension = Utf8Path::new(new_installer.url.as_str())
                     .extension()
                     .filter(|extension| VALID_FILE_EXTENSIONS.contains(extension))
                     .unwrap_or_default();
-                let previous_extension = Utf8Path::new(previous_installer.installer_url.as_str())
+                let previous_extension = Utf8Path::new(previous_installer.url.as_str())
                     .extension()
                     .filter(|extension| VALID_FILE_EXTENSIONS.contains(extension))
                     .unwrap_or_default();
@@ -91,24 +91,22 @@ mod tests {
     fn test_vscodium() {
         let installer_x86 = Installer {
             architecture: Architecture::X86,
-            installer_url: DecodedUrl::from_str("https://www.example.com/file-x86.exe").unwrap(),
+            url: DecodedUrl::from_str("https://www.example.com/file-x86.exe").unwrap(),
             ..Installer::default()
         };
         let installer_user_x86 = Installer {
             scope: Some(Scope::User),
-            installer_url: DecodedUrl::from_str("https://www.example.com/fileUser-x86.exe")
-                .unwrap(),
+            url: DecodedUrl::from_str("https://www.example.com/fileUser-x86.exe").unwrap(),
             ..installer_x86.clone()
         };
         let installer_x64 = Installer {
             architecture: Architecture::X64,
-            installer_url: DecodedUrl::from_str("https://www.example.com/file-x64.exe").unwrap(),
+            url: DecodedUrl::from_str("https://www.example.com/file-x64.exe").unwrap(),
             ..Installer::default()
         };
         let installer_user_x64 = Installer {
             scope: Some(Scope::User),
-            installer_url: DecodedUrl::from_str("https://www.example.com/fileUser-x64.exe")
-                .unwrap(),
+            url: DecodedUrl::from_str("https://www.example.com/fileUser-x64.exe").unwrap(),
             ..installer_x64.clone()
         };
         let previous_machine_x86 = Installer {

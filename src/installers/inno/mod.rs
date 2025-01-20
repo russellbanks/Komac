@@ -267,8 +267,7 @@ impl Inno {
                 .to_elevation_requirement(&header.privileges_required_overrides_allowed),
             installer_locale: languages.first().and_then(|language_entry| {
                 LanguageTag::from_str(
-                    CodePageLanguage::from_code(u16::try_from(language_entry.language_id).ok()?)
-                        .tag(),
+                    CodePageLanguage::from_code(u16::try_from(language_entry.id).ok()?).tag(),
                 )
                 .ok()
             }),

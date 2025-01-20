@@ -10,7 +10,7 @@ use std::io::{Read, Result};
 #[expect(dead_code)]
 #[derive(Debug, Default)]
 pub struct Ini {
-    ini_file: String,
+    file: String,
     section: Option<String>,
     key: Option<String>,
     value: Option<String>,
@@ -30,7 +30,7 @@ impl Ini {
         }
 
         let mut ini = Self {
-            ini_file: InnoValue::new_string(reader, codepage)?
+            file: InnoValue::new_string(reader, codepage)?
                 .unwrap_or_else(|| Self::DEFAULT_FILE.to_string()),
             section: InnoValue::new_string(reader, codepage)?,
             key: InnoValue::new_string(reader, codepage)?,

@@ -27,7 +27,7 @@ impl Analyse {
             .unwrap_or_else(|| self.file_path.as_str());
         let analyser = FileAnalyser::new(&mmap, file_name)?;
         let mut installer = analyser.installer;
-        installer.installer_sha_256 = Sha256String::from_hasher(&Sha256::digest(&mmap))?;
+        installer.sha_256 = Sha256String::from_hasher(&Sha256::digest(&mmap))?;
         let mut lock = stdout().lock();
         print_manifest(&mut lock, &serde_yaml::to_string(&installer)?);
         Ok(())

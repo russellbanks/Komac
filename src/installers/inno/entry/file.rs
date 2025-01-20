@@ -65,10 +65,10 @@ impl File {
             match enum_value!(reader, FileCopyMode)? {
                 FileCopyMode::Normal => file.flags |= FileFlags::PROMPT_IF_OLDER,
                 FileCopyMode::IfDoesntExist => {
-                    file.flags |= FileFlags::ONLY_IF_DOESNT_EXIST | FileFlags::PROMPT_IF_OLDER
+                    file.flags |= FileFlags::ONLY_IF_DOESNT_EXIST | FileFlags::PROMPT_IF_OLDER;
                 }
                 FileCopyMode::AlwaysOverwrite => {
-                    file.flags |= FileFlags::IGNORE_VERSION | FileFlags::PROMPT_IF_OLDER
+                    file.flags |= FileFlags::IGNORE_VERSION | FileFlags::PROMPT_IF_OLDER;
                 }
                 FileCopyMode::AlwaysSkipIfSameOrOlder => {}
             }

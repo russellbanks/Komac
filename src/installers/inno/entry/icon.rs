@@ -17,11 +17,11 @@ pub struct Icon {
     filename: Option<String>,
     parameters: Option<String>,
     working_directory: Option<String>,
-    icon_file: Option<String>,
+    file: Option<String>,
     comment: Option<String>,
     app_user_model_id: Option<String>,
     app_user_model_toast_activator_clsid: String,
-    icon_index: i32,
+    index: i32,
     show_command: i32,
     close_on_exit: CloseSetting,
     hotkey: u16,
@@ -43,7 +43,7 @@ impl Icon {
             filename: InnoValue::new_string(reader, codepage)?,
             parameters: InnoValue::new_string(reader, codepage)?,
             working_directory: InnoValue::new_string(reader, codepage)?,
-            icon_file: InnoValue::new_string(reader, codepage)?,
+            file: InnoValue::new_string(reader, codepage)?,
             comment: InnoValue::new_string(reader, codepage)?,
             ..Self::default()
         };
@@ -62,7 +62,7 @@ impl Icon {
 
         WindowsVersionRange::load(reader, version)?;
 
-        icon.icon_index = reader.read_i32::<LE>()?;
+        icon.index = reader.read_i32::<LE>()?;
 
         icon.show_command = if *version >= (1, 3, 24) {
             reader.read_i32::<LE>()?

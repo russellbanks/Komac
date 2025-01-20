@@ -139,7 +139,7 @@ impl UpdateVersion {
             .iter()
             .map(|(url, download)| {
                 let mut installer = download.installer.clone();
-                installer.installer_url.clone_from(url);
+                installer.url.clone_from(url);
                 installer
             })
             .collect::<Vec<_>>();
@@ -147,8 +147,8 @@ impl UpdateVersion {
         let previous_installers = mem::take(&mut manifests.installer.installers)
             .into_iter()
             .map(|mut installer| {
-                if manifests.installer.installer_type.is_some() {
-                    installer.installer_type = manifests.installer.installer_type;
+                if manifests.installer.r#type.is_some() {
+                    installer.r#type = manifests.installer.r#type;
                 }
                 if manifests.installer.nested_installer_type.is_some() {
                     installer.nested_installer_type = manifests.installer.nested_installer_type;
@@ -163,19 +163,17 @@ impl UpdateVersion {
         let installers = matched_installers
             .into_iter()
             .map(|(previous_installer, new_installer)| {
-                let analyser = &download_results[&new_installer.installer_url];
-                let installer_type = match previous_installer.installer_type {
-                    Some(InstallerType::Portable) => previous_installer.installer_type,
-                    _ => match new_installer.installer_type {
-                        Some(InstallerType::Portable) => previous_installer.installer_type,
-                        _ => new_installer.installer_type,
+                let analyser = &download_results[&new_installer.url];
+                let installer_type = match previous_installer.r#type {
+                    Some(InstallerType::Portable) => previous_installer.r#type,
+                    _ => match new_installer.r#type {
+                        Some(InstallerType::Portable) => previous_installer.r#type,
+                        _ => new_installer.r#type,
                     },
                 };
                 let mut installer = new_installer.clone().merge_with(previous_installer);
-                installer.installer_type = installer_type;
-                installer
-                    .installer_url
-                    .clone_from(&new_installer.installer_url);
+                installer.r#type = installer_type;
+                installer.url.clone_from(&new_installer.url);
                 installer.nested_installer_files = installer
                     .nested_installer_files
                     .or_else(|| manifests.installer.nested_installer_files.clone())

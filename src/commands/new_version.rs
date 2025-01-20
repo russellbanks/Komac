@@ -239,20 +239,20 @@ impl NewVersion {
         let mut download_results = process_files(&mut files).await?;
         let mut installers = Vec::new();
         for (url, analyser) in &mut download_results {
-            if analyser.installer.installer_type == Some(InstallerType::Exe)
+            if analyser.installer.r#type == Some(InstallerType::Exe)
                 && Confirm::new(&format!("Is {} a portable exe?", analyser.file_name))
                     .prompt()
                     .map_err(handle_inquire_error)?
             {
-                analyser.installer.installer_type = Some(InstallerType::Portable);
+                analyser.installer.r#type = Some(InstallerType::Portable);
             }
             let mut installer_switches = InstallerSwitches::default();
-            if analyser.installer.installer_type == Some(InstallerType::Exe) {
+            if analyser.installer.r#type == Some(InstallerType::Exe) {
                 installer_switches.silent = Some(required_prompt::<SilentSwitch>(None)?);
                 installer_switches.silent_with_progress =
                     Some(required_prompt::<SilentWithProgressSwitch>(None)?);
             }
-            if analyser.installer.installer_type != Some(InstallerType::Portable) {
+            if analyser.installer.r#type != Some(InstallerType::Portable) {
                 installer_switches.custom = optional_prompt::<CustomSwitch>(None)?;
             }
             if let Some(zip) = &mut analyser.zip {
@@ -260,9 +260,9 @@ impl NewVersion {
                 analyser.installer.architecture = zip.architecture.unwrap();
             }
             let mut installer = mem::take(&mut analyser.installer);
-            installer.installer_url = url.clone();
+            installer.url = url.clone();
             if installer_switches.is_any_some() {
-                installer.installer_switches = Some(installer_switches);
+                installer.switches = Some(installer_switches);
             }
             installers.push(installer);
         }
@@ -276,13 +276,13 @@ impl NewVersion {
             package_version: package_version.clone(),
             install_modes: if installers
                 .iter()
-                .any(|installer| installer.installer_type == Some(InstallerType::Inno))
+                .any(|installer| installer.r#type == Some(InstallerType::Inno))
             {
                 Some(InstallModes::iter().collect())
             } else {
                 check_prompt::<InstallModes>()?
             },
-            installer_success_codes: list_prompt::<InstallerSuccessCode>()?,
+            success_codes: list_prompt::<InstallerSuccessCode>()?,
             upgrade_behavior: Some(radio_prompt::<UpgradeBehavior>()?),
             commands: list_prompt::<Command>()?,
             protocols: list_prompt::<Protocol>()?,

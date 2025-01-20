@@ -634,7 +634,7 @@ impl GitHub {
         let release = repository.release;
 
         let topics = repository
-            .repository_topics
+            .topics
             .nodes
             .into_iter()
             .flat_map(|topic_node| Tag::try_new(topic_node.topic.name))
@@ -651,13 +651,13 @@ impl GitHub {
             publisher_support_url,
             license: repository
                 .license_info
-                .and_then(|mut info| {
-                    info.pseudo_license
-                        .not()
-                        .then_some(info.spdx_id.unwrap_or_else(|| {
-                            info.key.make_ascii_uppercase();
-                            info.key
-                        }))
+                .and_then(|mut license| {
+                    license.is_pseudo.not().then(|| {
+                        license.spdx_id.unwrap_or_else(|| {
+                            license.key.make_ascii_uppercase();
+                            license.key
+                        })
+                    })
                 })
                 .and_then(|license| License::try_new(license).ok()),
             license_url,

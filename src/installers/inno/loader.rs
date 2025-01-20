@@ -84,14 +84,22 @@ enum Checksum {
 
 #[expect(dead_code)]
 pub struct SetupLoader {
-    setup_loader_version: SetupLoaderVersion,
+    version: SetupLoaderVersion,
     revision: u32,
+    /// Minimum expected size of setup.exe
+    minimum_setup_exe_size: u32,
+    /// Offset of compressed setup.e32
     exe_offset: u32,
+    /// Size of setup.e32 after compression
     exe_compressed_size: u32,
+    /// Size of setup.e32 before compression
     exe_uncompressed_size: u32,
+    /// Checksum of setup.e32 before compression
     exe_checksum: Checksum,
     message_offset: u32,
+    /// Offset of embedded setup-0.bin data
     pub header_offset: u32,
+    /// Offset of embedded setup-1.bin data
     data_offset: u32,
 }
 
@@ -112,7 +120,8 @@ impl SetupLoader {
             0
         };
 
-        checksum.read_u32::<LE>()?;
+        let minimum_setup_exe_size = checksum.read_u32::<LE>()?;
+
         let exe_offset = checksum.read_u32::<LE>()?;
 
         let exe_compressed_size = if loader_version >= (4, 1, 6) {
@@ -150,8 +159,9 @@ impl SetupLoader {
         }
 
         Ok(Self {
-            setup_loader_version: loader_version,
+            version: loader_version,
             revision,
+            minimum_setup_exe_size,
             exe_offset,
             exe_compressed_size,
             exe_uncompressed_size,

@@ -26,7 +26,7 @@ pub struct Zip<R: Read + Seek> {
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub architecture: Option<Architecture>,
     pub possible_installer_files: Vec<Utf8PathBuf>,
-    pub install_spec: Option<Box<dyn InstallSpec>>,
+    pub install_spec: Option<Box<dyn InstallSpec + Send>>,
 }
 
 impl<R: Read + Seek> Zip<R> {
@@ -88,7 +88,7 @@ impl<R: Read + Seek> Zip<R> {
                 let file_analyser = FileAnalyser::new(&map, chosen_file_name.as_str())?;
                 nested_installer_type = file_analyser
                     .installer
-                    .installer_type
+                    .r#type
                     .and_then(InstallerType::to_nested);
                 architecture = Some(file_analyser.installer.architecture);
                 install_spec = file_analyser.install_spec;
@@ -131,7 +131,7 @@ impl<R: Read + Seek> Zip<R> {
                     .into_iter()
                     .map(|path| {
                         Ok(NestedInstallerFiles {
-                            portable_command_alias: if file_analyser.installer.installer_type
+                            portable_command_alias: if file_analyser.installer.r#type
                                 == Some(InstallerType::Portable)
                             {
                                 Some(
@@ -154,7 +154,7 @@ impl<R: Read + Seek> Zip<R> {
             self.architecture = Some(file_analyser.installer.architecture);
             self.nested_installer_type = file_analyser
                 .installer
-                .installer_type
+                .r#type
                 .and_then(InstallerType::to_nested);
         }
         Ok(())

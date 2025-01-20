@@ -39,8 +39,9 @@ pub struct Repository {
     pub object: Option<GetAllValuesGitObject>,
     #[arguments(tagName: $tag_name)]
     pub release: Option<Release>,
+    #[cynic(rename = "repositoryTopics")]
     #[arguments(first: 16)]
-    pub repository_topics: RepositoryTopicConnection,
+    pub topics: RepositoryTopicConnection,
     pub url: Url,
 }
 
@@ -80,7 +81,8 @@ pub struct RepositoryOwner {
 #[derive(cynic::QueryFragment)]
 pub struct License {
     pub key: String,
-    pub pseudo_license: bool,
+    #[cynic(rename = "pseudoLicense")]
+    pub is_pseudo: bool,
     pub spdx_id: Option<String>,
 }
 

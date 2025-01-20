@@ -82,7 +82,7 @@ impl Nsis {
             })?;
 
         let Decompressed {
-            decompressed_data,
+            data: decompressed_data,
             is_solid,
             non_solid_start_offset,
             compression,

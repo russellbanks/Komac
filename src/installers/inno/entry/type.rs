@@ -15,8 +15,8 @@ pub struct Type {
     description: Option<String>,
     languages: Option<String>,
     check: Option<String>,
-    custom_type: bool,
-    setup_type: SetupType,
+    is_custom: bool,
+    setup: SetupType,
     size: u64,
 }
 
@@ -43,10 +43,10 @@ impl Type {
         WindowsVersionRange::load(reader, version)?;
 
         let flags = TypeFlags::from_bits_retain(reader.read_u8()?);
-        r#type.custom_type = flags.contains(TypeFlags::CUSTOM_SETUP_TYPE);
+        r#type.is_custom = flags.contains(TypeFlags::CUSTOM_SETUP_TYPE);
 
         if *version >= (4, 0, 3) {
-            r#type.r#setup_type = enum_value!(reader, SetupType)?;
+            r#type.setup = enum_value!(reader, SetupType)?;
         }
 
         r#type.size = if *version >= (4, 0, 0) {

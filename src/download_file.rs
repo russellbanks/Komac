@@ -248,7 +248,7 @@ pub async fn process_files(
             if let Some(architecture) = Architecture::get_from_url(url.as_str()) {
                 file_analyser.installer.architecture = architecture;
             }
-            file_analyser.installer.installer_sha_256 = mem::take(sha_256);
+            file_analyser.installer.sha_256 = mem::take(sha_256);
             file_analyser.installer.release_date = last_modified.take();
             file_analyser.file_name = mem::take(file_name);
             Ok((mem::take(url), file_analyser))

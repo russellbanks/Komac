@@ -31,12 +31,12 @@ pub enum BlockType {
 
 impl BlockType {
     pub fn get<'data>(self, data: &'data [u8], blocks: &BlockHeaders) -> &'data [u8] {
-        let start = blocks[self].offset.get() as usize;
+        let start = usize::try_from(blocks[self].offset.get()).unwrap();
         let end = blocks
             .iter()
             .skip(self as usize + 1)
             .find(|b| b.offset > U64::ZERO)
-            .map_or(start, |block| block.offset.get() as usize);
+            .map_or(start, |block| usize::try_from(block.offset.get()).unwrap());
         &data[start..end]
     }
 }

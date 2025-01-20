@@ -17,25 +17,25 @@ pub struct InnoVersion(pub u8, pub u8, pub u8, pub u8);
 
 impl PartialEq<(u8, u8, u8)> for InnoVersion {
     fn eq(&self, &(n1, n2, n3): &(u8, u8, u8)) -> bool {
-        self.eq(&InnoVersion(n1, n2, n3, 0))
+        self.eq(&Self(n1, n2, n3, 0))
     }
 }
 
 impl PartialEq<(u8, u8, u8, u8)> for InnoVersion {
     fn eq(&self, &(n1, n2, n3, n4): &(u8, u8, u8, u8)) -> bool {
-        self.eq(&InnoVersion(n1, n2, n3, n4))
+        self.eq(&Self(n1, n2, n3, n4))
     }
 }
 
 impl PartialOrd<(u8, u8, u8)> for InnoVersion {
     fn partial_cmp(&self, &(n1, n2, n3): &(u8, u8, u8)) -> Option<Ordering> {
-        self.partial_cmp(&InnoVersion(n1, n2, n3, 0))
+        self.partial_cmp(&Self(n1, n2, n3, 0))
     }
 }
 
 impl PartialOrd<(u8, u8, u8, u8)> for InnoVersion {
     fn partial_cmp(&self, &(n1, n2, n3, n4): &(u8, u8, u8, u8)) -> Option<Ordering> {
-        self.partial_cmp(&InnoVersion(n1, n2, n3, n4))
+        self.partial_cmp(&Self(n1, n2, n3, n4))
     }
 }
 

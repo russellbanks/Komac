@@ -43,17 +43,21 @@ pub struct InstallerManifest {
     pub package_identifier: PackageIdentifier,
     pub package_version: PackageVersion,
     pub channel: Option<String>,
-    pub installer_locale: Option<LanguageTag>,
+    #[serde(rename = "InstallerLocale")]
+    pub locale: Option<LanguageTag>,
     pub platform: Option<BTreeSet<Platform>>,
     #[serde(rename = "MinimumOSVersion")]
     pub minimum_os_version: Option<MinimumOSVersion>,
-    pub installer_type: Option<InstallerType>,
+    #[serde(rename = "InstallerType")]
+    pub r#type: Option<InstallerType>,
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub scope: Option<Scope>,
     pub install_modes: Option<BTreeSet<InstallModes>>,
-    pub installer_switches: Option<InstallerSwitches>,
-    pub installer_success_codes: Option<BTreeSet<InstallerSuccessCode>>,
+    #[serde(rename = "InstallerSwitches")]
+    pub switches: Option<InstallerSwitches>,
+    #[serde(rename = "InstallerSuccessCodes")]
+    pub success_codes: Option<BTreeSet<InstallerSuccessCode>>,
     pub expected_return_codes: Option<BTreeSet<ExpectedReturnCodes>>,
     pub upgrade_behavior: Option<UpgradeBehavior>,
     pub commands: Option<BTreeSet<Command>>,
@@ -65,9 +69,10 @@ pub struct InstallerManifest {
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
     pub markets: Option<Markets>,
-    pub installer_aborts_terminal: Option<bool>,
+    #[serde(rename = "InstallerAbortsTerminal")]
+    pub aborts_terminal: Option<bool>,
     pub release_date: Option<NaiveDate>,
-    pub installer_location_required: Option<bool>,
+    pub install_location_required: Option<bool>,
     pub require_explicit_upgrade: Option<bool>,
     pub display_install_warnings: Option<bool>,
     #[serde(rename = "UnsupportedOSArchitectures")]
@@ -172,15 +177,15 @@ impl InstallerManifest {
         self.package_identifier.clone_from(package_identifier);
         self.package_version.clone_from(package_version);
         reorder_root_keys!(
-            installer_locale,
+            locale,
             platform,
             minimum_os_version,
-            installer_type,
+            r#type,
             nested_installer_type,
             nested_installer_files,
             scope,
             install_modes,
-            installer_success_codes,
+            success_codes,
             expected_return_codes,
             upgrade_behavior,
             commands,
@@ -192,9 +197,9 @@ impl InstallerManifest {
             capabilities,
             restricted_capabilities,
             markets,
-            installer_aborts_terminal,
+            aborts_terminal,
             release_date,
-            installer_location_required,
+            install_location_required,
             require_explicit_upgrade,
             display_install_warnings,
             unsupported_os_architectures,
@@ -207,7 +212,7 @@ impl InstallerManifest {
             archive_binaries_depend_on_path
         );
         reorder_struct_key!(
-            installer_switches,
+            switches,
             silent,
             silent_with_progress,
             interactive,
@@ -414,8 +419,10 @@ impl UpgradeBehavior {
 pub struct Dependencies {
     pub windows_features: Option<BTreeSet<String>>,
     pub windows_libraries: Option<BTreeSet<String>>,
-    pub package_dependencies: Option<BTreeSet<PackageDependencies>>,
-    pub external_dependencies: Option<BTreeSet<String>>,
+    #[serde(rename = "PackageDependencies")]
+    pub package: Option<BTreeSet<PackageDependencies>>,
+    #[serde(rename = "ExternalDependencies")]
+    pub external: Option<BTreeSet<String>>,
 }
 
 #[skip_serializing_none]
@@ -540,21 +547,27 @@ pub enum RepairBehavior {
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct Installer {
-    pub installer_locale: Option<LanguageTag>,
+    #[serde(rename = "InstallerLocale")]
+    pub locale: Option<LanguageTag>,
     pub platform: Option<BTreeSet<Platform>>,
     #[serde(rename = "MinimumOSVersion")]
     pub minimum_os_version: Option<MinimumOSVersion>,
     pub architecture: Architecture,
-    pub installer_type: Option<InstallerType>,
+    #[serde(rename = "InstallerType")]
+    pub r#type: Option<InstallerType>,
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub scope: Option<Scope>,
-    pub installer_url: DecodedUrl,
-    pub installer_sha_256: Sha256String,
+    #[serde(rename = "InstallerUrl")]
+    pub url: DecodedUrl,
+    #[serde(rename = "InstallerSha256")]
+    pub sha_256: Sha256String,
     pub signature_sha_256: Option<Sha256String>,
     pub install_modes: Option<BTreeSet<InstallModes>>,
-    pub installer_switches: Option<InstallerSwitches>,
-    pub installer_success_codes: Option<BTreeSet<InstallerSuccessCode>>,
+    #[serde(rename = "InstallerSwitches")]
+    pub switches: Option<InstallerSwitches>,
+    #[serde(rename = "InstallerSuccessCodes")]
+    pub success_codes: Option<BTreeSet<InstallerSuccessCode>>,
     pub expected_return_codes: Option<BTreeSet<ExpectedReturnCodes>>,
     pub upgrade_behavior: Option<UpgradeBehavior>,
     pub commands: Option<BTreeSet<Command>>,
@@ -566,9 +579,10 @@ pub struct Installer {
     pub capabilities: Option<BTreeSet<String>>,
     pub restricted_capabilities: Option<BTreeSet<String>>,
     pub markets: Option<Markets>,
-    pub installer_aborts_terminal: Option<bool>,
+    #[serde(rename = "InstallerAbortsTerminal")]
+    pub aborts_terminal: Option<bool>,
     pub release_date: Option<NaiveDate>,
-    pub installer_location_required: Option<bool>,
+    pub install_location_required: Option<bool>,
     pub require_explicit_upgrade: Option<bool>,
     pub display_install_warnings: Option<bool>,
     #[serde(rename = "UnsupportedOSArchitectures")]
@@ -597,16 +611,16 @@ impl Installer {
         merge_fields!(
             self,
             other,
-            installer_locale,
+            locale,
             platform,
             minimum_os_version,
-            installer_type,
+            r#type,
             nested_installer_type,
             nested_installer_files,
             scope,
             install_modes,
-            installer_switches,
-            installer_success_codes,
+            switches,
+            success_codes,
             expected_return_codes,
             upgrade_behavior,
             commands,
@@ -618,7 +632,7 @@ impl Installer {
             capabilities,
             restricted_capabilities,
             markets,
-            installer_aborts_terminal,
+            aborts_terminal,
             require_explicit_upgrade,
             display_install_warnings,
             unsupported_os_architectures,
