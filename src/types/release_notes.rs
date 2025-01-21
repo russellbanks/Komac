@@ -5,6 +5,9 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 
+const SHA1_LEN: usize = 40;
+const SHORT_SHA1_LEN: usize = 7;
+
 #[nutype(
     sanitize(with = |input| truncate_with_lines::<10000>(&input).into_owned(), trim),
     validate(len_char_min = 1, len_char_max = 10000),
@@ -23,7 +26,12 @@ impl ReleaseNotes {
         for event in parser {
             match event {
                 Start(tag) => match tag {
-                    Tag::BlockQuote(_) | Tag::CodeBlock(_) => {
+                    Tag::Heading { .. }
+                    | Tag::BlockQuote(_)
+                    | Tag::CodeBlock(_)
+                    | Tag::Table(_)
+                    | Tag::TableHead
+                    | Tag::TableRow => {
                         if !buffer.ends_with('\n') {
                             buffer.push('\n');
                         }
@@ -55,7 +63,8 @@ impl ReleaseNotes {
                             buffer.push_str("    ");
                         }
                         if let Some(index) = ordered_list_map.get_mut(&list_item_level) {
-                            buffer.push_str(&format!("{index}. "));
+                            buffer.push_str(itoa::Buffer::new().format(*index));
+                            buffer.push_str(". ");
                             *index += 1;
                         } else {
                             buffer.push_str("- ");
@@ -70,7 +79,11 @@ impl ReleaseNotes {
                     | TagEnd::CodeBlock
                     | TagEnd::Table
                     | TagEnd::TableHead
-                    | TagEnd::TableRow => buffer.push('\n'),
+                    | TagEnd::TableRow => {
+                        if !buffer.ends_with('\n') {
+                            buffer.push('\n');
+                        }
+                    }
                     TagEnd::List(_) => {
                         ordered_list_map.remove(&list_item_level);
                         if list_item_level >= 1 && buffer.ends_with('\n') {
@@ -93,7 +106,7 @@ impl ReleaseNotes {
                 },
                 Text(text) => {
                     let mut result = String::new();
-                    let mut rest = &*remove_sha1(&text);
+                    let mut rest = &*text;
                     let prefix = "https://github.com/";
 
                     while let Some(start) = rest.find(prefix) {
@@ -104,32 +117,41 @@ impl ReleaseNotes {
                         let url = &rest[..end];
                         let mut parts = url.trim_start_matches(prefix).split('/');
 
-                        if let (
-                            Some(repo_owner),
-                            Some(repo_name),
-                            Some(issue_type),
-                            Some(issue_number),
-                        ) = (parts.next(), parts.next(), parts.next(), parts.next())
+                        if let (Some(repo_owner), Some(repo_name), Some(r#type), Some(resource)) =
+                            (parts.next(), parts.next(), parts.next(), parts.next())
                         {
-                            if (issue_type == "pull" || issue_type == "issues")
-                                && issue_number.parse::<NonZeroU32>().is_ok()
-                            {
-                                if repo_owner != owner || repo_name != repo {
-                                    result.push_str(repo_owner);
-                                    result.push('/');
-                                    result.push_str(repo_name);
+                            if r#type == "pull" || r#type == "issues" {
+                                let (issue_number, comment) = resource
+                                    .split_once("#issuecomment")
+                                    .unwrap_or((resource, ""));
+                                if issue_number.parse::<NonZeroU32>().is_ok() {
+                                    if repo_owner != owner || repo_name != repo {
+                                        result.push_str(repo_owner);
+                                        result.push('/');
+                                        result.push_str(repo_name);
+                                    }
+                                    result.push('#');
+                                    result.push_str(issue_number);
+                                    if !comment.is_empty() {
+                                        result.push_str(" (comment)");
+                                    }
                                 }
-                                result.push('#');
-                                result.push_str(issue_number);
-                            } else if issue_type == "compare" || issue_type == "releases" {
+                            } else if r#type == "compare" || r#type == "releases" {
                                 result.push_str(url);
+                            } else if r#type == "commit"
+                                && resource.len() == SHA1_LEN
+                                && resource.bytes().all(|byte| byte.is_ascii_hexdigit())
+                            {
+                                if let Some(short_sha) = resource.get(..SHORT_SHA1_LEN) {
+                                    result.push_str(short_sha);
+                                }
                             }
                         }
 
                         rest = &rest[end..];
                     }
                     result.push_str(rest);
-                    buffer.push_str(&result);
+                    buffer.push_str(&remove_sha1(&result));
                 }
                 Code(code) => buffer.push_str(&code.replace('\t', " ")),
                 InlineHtml(html) => buffer.push_str(&html),
@@ -142,7 +164,6 @@ impl ReleaseNotes {
 }
 
 fn remove_sha1(input: &str) -> String {
-    const SHA1_LEN: usize = 40;
     let mut result = String::new();
     let mut buffer = heapless::String::<SHA1_LEN>::new();
 
@@ -190,11 +211,13 @@ fn truncate_with_lines<const N: usize>(input: &str) -> Cow<str> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::release_notes::{truncate_with_lines, ReleaseNotes};
+    use crate::types::release_notes::{truncate_with_lines, ReleaseNotes, SHORT_SHA1_LEN};
     use indoc::indoc;
+    use rand::random;
+    use sha1::{Digest, Sha1};
 
     #[test]
-    fn issue_formatting() {
+    fn issue() {
         let value = "- Issue https://github.com/owner/repo/issues/123";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -203,7 +226,34 @@ mod tests {
     }
 
     #[test]
-    fn different_repo_issue_formatting() {
+    fn issue_comment() {
+        let value = "- Issue https://github.com/owner/repo/issues/123#issuecomment-1234567890";
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::try_new("- Issue #123 (comment)").ok()
+        )
+    }
+
+    #[test]
+    fn pull_request() {
+        let value = "- Pull request https://github.com/owner/repo/pull/123";
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::try_new("- Pull request #123").ok()
+        )
+    }
+
+    #[test]
+    fn pull_request_comment() {
+        let value = "- Pull request https://github.com/owner/repo/pull/123#issuecomment-1234567890";
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::try_new("- Pull request #123 (comment)").ok()
+        )
+    }
+
+    #[test]
+    fn different_repo_issue() {
         let value = "- Issue https://github.com/different/repo/issues/123";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -212,7 +262,16 @@ mod tests {
     }
 
     #[test]
-    fn multiple_issues_formatting() {
+    fn different_repo_issue_comment() {
+        let value = "- Issue https://github.com/different/repo/issues/123#issuecomment-1234567890";
+        assert_eq!(
+            ReleaseNotes::format(value, "owner", "repo"),
+            ReleaseNotes::try_new("- Issue different/repo#123 (comment)").ok()
+        )
+    }
+
+    #[test]
+    fn multiple_issues() {
         let value = "- Issue https://github.com/owner/repo/issues/123 and https://github.com/owner/repo/issues/321";
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
@@ -244,6 +303,18 @@ mod tests {
         assert_eq!(
             ReleaseNotes::format(value, "owner", "repo"),
             ReleaseNotes::try_new(value).ok()
+        )
+    }
+
+    #[test]
+    fn commit_url() {
+        let mut random_hash =
+            base16ct::lower::encode_string(&Sha1::digest(random::<[u8; 1 << 4]>()));
+        let commit_url = format!("https://github.com/owner/repo/commit/{random_hash}");
+        random_hash.truncate(SHORT_SHA1_LEN);
+        assert_eq!(
+            ReleaseNotes::format(&commit_url, "owner", "repo"),
+            ReleaseNotes::try_new(random_hash).ok()
         )
     }
 
