@@ -26,15 +26,15 @@ use crate::types::sha_256::Sha256String;
 use crate::types::silent_switch::SilentSwitch;
 use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::DecodedUrl;
+use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use chrono::NaiveDate;
 use const_format::formatc;
 use itertools::Itertools;
 use package_family_name::PackageFamilyName;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
+use serde_with::skip_serializing_none;
 use strum::{Display, EnumIter, EnumString};
-use versions::Versioning;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]
@@ -457,15 +457,13 @@ pub enum UnsupportedArguments {
     Location,
 }
 
-#[serde_as]
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct AppsAndFeaturesEntry {
     pub display_name: Option<String>,
     pub publisher: Option<String>,
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    pub display_version: Option<Versioning>,
+    pub display_version: Option<Version>,
     pub product_code: Option<String>,
     pub upgrade_code: Option<String>,
     pub installer_type: Option<InstallerType>,

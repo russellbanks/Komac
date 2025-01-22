@@ -9,10 +9,10 @@ use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::sha_256::Sha256String;
+use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use package_family_name::PackageFamilyName;
 use std::collections::BTreeSet;
-use versions::Versioning;
 
 pub trait InstallSpec {
     fn r#type(&self) -> InstallerType;
@@ -29,7 +29,7 @@ pub trait InstallSpec {
         None
     }
 
-    fn display_version(&self) -> Option<Versioning> {
+    fn display_version(&self) -> Option<Version> {
         None
     }
 

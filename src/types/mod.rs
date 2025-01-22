@@ -28,3 +28,4 @@ pub mod silent_switch;
 pub mod silent_with_progress_switch;
 pub mod tag;
 pub mod urls;
+pub mod version;

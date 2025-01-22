@@ -4,10 +4,10 @@ use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
+use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use std::io::Cursor;
 use std::io::{Error, ErrorKind, Result};
-use versions::Versioning;
 use yara_x::mods::pe::{Resource, ResourceType};
 use yara_x::mods::PE;
 
@@ -71,10 +71,10 @@ impl InstallSpec for Burn {
         self.0.as_ref().and_then(|msi| msi.manufacturer.clone())
     }
 
-    fn display_version(&self) -> Option<Versioning> {
+    fn display_version(&self) -> Option<Version> {
         self.0
             .as_ref()
-            .and_then(|msi| Versioning::new(msi.product_version.clone()?))
+            .and_then(|msi| msi.product_version.as_deref().map(Version::new))
     }
 
     fn product_code(&self) -> Option<String> {

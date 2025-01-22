@@ -12,9 +12,9 @@ use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
+use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use msi::{Language, Package, Select};
-use versions::Versioning;
 
 const PROPERTY: &str = "Property";
 const CONTROL: &str = "Control";
@@ -305,8 +305,8 @@ impl InstallSpec for Msi {
         self.manufacturer.clone()
     }
 
-    fn display_version(&self) -> Option<Versioning> {
-        self.product_version.as_deref().and_then(Versioning::new)
+    fn display_version(&self) -> Option<Version> {
+        self.product_version.as_deref().map(Version::new)
     }
 
     fn product_code(&self) -> Option<String> {

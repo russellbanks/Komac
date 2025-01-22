@@ -19,6 +19,7 @@ use crate::manifests::installer_manifest::Scope;
 use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
+use crate::types::version::Version;
 use byteorder::{ReadBytesExt, LE};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -34,7 +35,6 @@ use std::io::Read;
 use std::str::FromStr;
 use strsim::levenshtein;
 use thiserror::Error;
-use versions::Versioning;
 use yara_x::mods::pe::Machine;
 use yara_x::mods::PE;
 use zerocopy::little_endian::U32;
@@ -252,8 +252,8 @@ impl InstallSpec for Nsis {
         self.display_publisher.clone()
     }
 
-    fn display_version(&self) -> Option<Versioning> {
-        self.display_version.as_deref().and_then(Versioning::new)
+    fn display_version(&self) -> Option<Version> {
+        self.display_version.as_deref().map(Version::new)
     }
 
     fn locale(&self) -> Option<LanguageTag> {

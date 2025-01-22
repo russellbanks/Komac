@@ -41,6 +41,7 @@ use crate::manifests::installer_manifest::{
 use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
+use crate::types::version::Version;
 use byteorder::{ReadBytesExt, LE};
 use camino::Utf8PathBuf;
 use const_format::formatcp;
@@ -55,7 +56,6 @@ use std::io::{Cursor, Read};
 use std::str::FromStr;
 use std::{io, mem};
 use thiserror::Error;
-use versions::Versioning;
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 use zerocopy::TryFromBytes;
@@ -386,8 +386,8 @@ impl InstallSpec for Inno {
         self.app_publisher.clone()
     }
 
-    fn display_version(&self) -> Option<Versioning> {
-        self.app_version.as_deref().and_then(Versioning::new)
+    fn display_version(&self) -> Option<Version> {
+        self.app_version.as_deref().map(Version::new)
     }
 
     fn product_code(&self) -> Option<String> {

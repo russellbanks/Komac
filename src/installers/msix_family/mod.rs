@@ -10,6 +10,7 @@ use crate::types::file_extension::FileExtension;
 use crate::types::installer_type::InstallerType;
 use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::sha_256::Sha256String;
+use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
@@ -19,7 +20,6 @@ use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::io::{Read, Seek};
 use std::str::FromStr;
-use versions::Versioning;
 use zip::ZipArchive;
 
 pub struct Msix {
@@ -283,8 +283,8 @@ impl InstallSpec for Msix {
         Some(self.publisher_display_name.clone())
     }
 
-    fn display_version(&self) -> Option<Versioning> {
-        Versioning::new(&self.version)
+    fn display_version(&self) -> Option<Version> {
+        Some(Version::new(&self.version))
     }
 
     fn platform(&self) -> Option<BTreeSet<Platform>> {

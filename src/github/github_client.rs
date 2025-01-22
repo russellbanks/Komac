@@ -167,7 +167,7 @@ impl GitHub {
 
         let files = tree
             .iter()
-            .filter(|entry| (0..=1).contains(&entry.path.matches(SEPARATOR).count()))
+            .filter(|entry| entry.path.matches(SEPARATOR).count() == 1)
             .chunk_by(|entry| {
                 entry
                     .path
@@ -175,11 +175,10 @@ impl GitHub {
                     .map_or(entry.path.as_str(), |(version, _rest)| version)
             })
             .into_iter()
-            .filter_map(|(version, group)| {
+            .filter_map(|(version, mut group)| {
                 group
-                    .filter(|object| object.path != version)
                     .all(|object| object.r#type != TREE)
-                    .then(|| PackageVersion::new(version).ok())?
+                    .then(|| PackageVersion::new(version))
             })
             .collect::<BTreeSet<_>>();
 

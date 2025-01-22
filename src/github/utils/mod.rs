@@ -40,7 +40,7 @@ pub fn get_package_path(
     }
     if let Some(version) = version {
         result.push('/');
-        result.push_str(&version.to_string());
+        result.push_str(version.as_str());
 
         // The full manifest file path should only be included if a version was passed in too
         if let Some(manifest_type) = manifest_type {
@@ -243,7 +243,7 @@ mod tests {
         #[case] expected: &str,
     ) {
         let identifier = PackageIdentifier::parse(identifier).unwrap();
-        let version = version.and_then(|version| PackageVersion::new(version).ok());
+        let version = version.map(PackageVersion::new);
         assert_eq!(
             get_package_path(&identifier, version.as_ref(), manifest_type.as_ref()),
             expected

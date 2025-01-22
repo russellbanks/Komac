@@ -1,8 +1,8 @@
 use crate::prompts::prompt::Prompt;
+use crate::types::version::Version;
 use derive_more::{Deref, Display};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;
-use versions::Versioning;
 
 #[derive(
     SerializeDisplay,
@@ -16,19 +16,19 @@ use versions::Versioning;
     PartialEq,
     PartialOrd,
 )]
-pub struct PackageVersion(Versioning);
+pub struct PackageVersion(Version);
 
 impl PackageVersion {
-    pub fn new(input: &str) -> Result<Self, versions::Error> {
-        Ok(Self(Versioning::from_str(input)?))
+    pub fn new(input: &str) -> Self {
+        Self(Version::new(input))
     }
 }
 
 impl FromStr for PackageVersion {
-    type Err = versions::Error;
+    type Err = &'static str;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        Self::new(input)
+        Ok(Self::new(input))
     }
 }
 
