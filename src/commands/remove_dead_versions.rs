@@ -3,7 +3,7 @@ use crate::credential::{get_default_headers, handle_token};
 use crate::github::github_client::GitHub;
 use crate::github::graphql::get_branches::PullRequestState;
 use crate::manifests::installer_manifest::InstallerManifest;
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::prompt::confirm_prompt;
 use crate::types::manifest_type::ManifestTypeWithLocale;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -16,7 +16,6 @@ use color_eyre::eyre::Error;
 use color_eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::ProgressBar;
-use inquire::Confirm;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use reqwest::{Client, StatusCode};
@@ -244,19 +243,14 @@ async fn confirm_removal(
             return if auto {
                 Ok(false)
             } else {
-                Confirm::new("Remove anyway?")
-                    .prompt()
-                    .map_err(handle_inquire_error)
-                    .map_err(Error::from)
+                confirm_prompt("Remove anyway?").map_err(Error::from)
             };
         }
     }
 
     Ok(auto
-        || Confirm::new(&format!(
+        || confirm_prompt(&format!(
             "{identifier} {version} returned {} in all its InstallerUrls. Remove?",
             StatusCode::NOT_FOUND.red()
-        ))
-        .prompt()
-        .map_err(handle_inquire_error)?)
+        ))?)
 }

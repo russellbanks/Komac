@@ -1,6 +1,6 @@
 use inquire::error::InquireResult;
 use inquire::validator::Validation;
-use inquire::{CustomUserError, InquireError, Text};
+use inquire::{Confirm, CustomUserError, InquireError, Text};
 use std::fmt::{Debug, Display};
 use std::process;
 use std::str::FromStr;
@@ -83,4 +83,11 @@ pub fn handle_inquire_error(error: InquireError) -> InquireError {
         process::exit(0);
     }
     error
+}
+
+pub fn confirm_prompt(message: &str) -> InquireResult<bool> {
+    Confirm::new(message)
+        .with_placeholder("y/n")
+        .prompt()
+        .map_err(handle_inquire_error)
 }

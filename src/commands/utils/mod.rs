@@ -3,7 +3,7 @@ use camino::Utf8Path;
 use chrono::Local;
 use color_eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
-use inquire::{Confirm, Select};
+use inquire::Select;
 use owo_colors::OwoColorize;
 use std::env;
 use std::str::FromStr;
@@ -16,7 +16,7 @@ use tokio::io::AsyncWriteExt;
 use crate::editor::Editor;
 use crate::github::graphql::get_existing_pull_request::PullRequest;
 use crate::manifests::print_changes;
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::prompt::{confirm_prompt, handle_inquire_error};
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 
@@ -40,9 +40,7 @@ pub fn prompt_existing_pull_request(
     let proceed = if env::var("CI").is_ok_and(|ci| bool::from_str(&ci) == Ok(true)) {
         false
     } else {
-        Confirm::new("Would you like to proceed?")
-            .prompt()
-            .map_err(handle_inquire_error)?
+        confirm_prompt("Would you like to proceed?")?
     };
     Ok(proceed)
 }

@@ -2,14 +2,14 @@ use std::num::NonZeroU32;
 
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::prompt::{confirm_prompt, handle_inquire_error};
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::{bail, Result};
 use inquire::validator::{MaxLengthValidator, MinLengthValidator};
-use inquire::{Confirm, Text};
+use inquire::Text;
 use owo_colors::OwoColorize;
 
 /// Remove a version from winget-pkgs
@@ -88,12 +88,10 @@ impl RemoveVersion {
             .map_err(handle_inquire_error)?,
         };
         let should_remove_manifest = self.submit
-            || Confirm::new(&format!(
+            || confirm_prompt(&format!(
                 "Would you like to make a pull request to remove {} {}?",
                 self.package_identifier, self.package_version
-            ))
-            .prompt()
-            .map_err(handle_inquire_error)?;
+            ))?;
 
         if !should_remove_manifest {
             return Ok(());

@@ -19,7 +19,9 @@ use crate::manifests::version_manifest::VersionManifest;
 use crate::manifests::Manifests;
 use crate::prompts::list_prompt::list_prompt;
 use crate::prompts::multi_prompt::{check_prompt, radio_prompt};
-use crate::prompts::prompt::{handle_inquire_error, optional_prompt, required_prompt};
+use crate::prompts::prompt::{
+    confirm_prompt, handle_inquire_error, optional_prompt, required_prompt,
+};
 use crate::types::author::Author;
 use crate::types::command::Command;
 use crate::types::copyright::Copyright;
@@ -55,7 +57,7 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use indicatif::{MultiProgress, ProgressBar};
-use inquire::{Confirm, CustomType};
+use inquire::CustomType;
 use ordinal_trait::Ordinal;
 use owo_colors::OwoColorize;
 use reqwest::Client;
@@ -240,9 +242,7 @@ impl NewVersion {
         let mut installers = Vec::new();
         for (url, analyser) in &mut download_results {
             if analyser.installer.r#type == Some(InstallerType::Exe)
-                && Confirm::new(&format!("Is {} a portable exe?", analyser.file_name))
-                    .prompt()
-                    .map_err(handle_inquire_error)?
+                && confirm_prompt(&format!("Is {} a portable exe?", analyser.file_name))?
             {
                 analyser.installer.r#type = Some(InstallerType::Portable);
             }

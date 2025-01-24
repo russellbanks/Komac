@@ -1,9 +1,8 @@
 use crate::credential::get_komac_credential;
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::prompt::confirm_prompt;
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::Result;
-use inquire::Confirm;
 use owo_colors::OwoColorize;
 
 /// Remove the stored token
@@ -29,9 +28,7 @@ impl RemoveToken {
         let confirm = if self.skip_prompt {
             true
         } else {
-            Confirm::new("Would you like to remove the currently stored token?")
-                .prompt()
-                .map_err(handle_inquire_error)?
+            confirm_prompt("Would you like to remove the currently stored token?")?
         };
 
         if confirm {

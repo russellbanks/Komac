@@ -16,6 +16,8 @@ impl Version {
     pub fn new(input: &str) -> Self {
         let mut trimmed = input.trim();
 
+        // If there is a digit before the delimiter, or no delimiters, trim off all leading
+        // non-digit characters
         if let Some(digit_pos) = trimmed.find(|char: char| char.is_ascii_digit()) {
             if trimmed
                 .find('.')
