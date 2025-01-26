@@ -1,6 +1,7 @@
 use derive_more::Display;
 use itertools::{EitherOrBoth, Itertools};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
+use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -9,7 +10,7 @@ use std::str::FromStr;
 #[display("{raw}")]
 pub struct Version {
     raw: String,
-    parts: Vec<VersionPart>,
+    parts: SmallVec<[VersionPart; 4]>, // Most versions have 4 parts or fewer
 }
 
 impl Version {
@@ -32,7 +33,7 @@ impl Version {
         let mut parts = trimmed
             .split(Self::SEPARATOR)
             .map(VersionPart::new)
-            .collect::<Vec<_>>();
+            .collect::<SmallVec<[_; 4]>>();
 
         if parts.is_empty() {
             parts.push(VersionPart::new(trimmed));
