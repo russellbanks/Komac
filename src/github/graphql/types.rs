@@ -1,4 +1,5 @@
 use crate::github::graphql::github_schema::github_schema as schema;
+use derive_more::Deref;
 
 /// <https://docs.github.com/graphql/reference/scalars#base64string>
 #[derive(cynic::Scalar)]
@@ -31,3 +32,8 @@ impl GitRefName {
         Self(s.into())
     }
 }
+
+/// <https://docs.github.com/en/graphql/reference/scalars#html>
+#[derive(cynic::Scalar, Deref)]
+#[cynic(graphql_type = "HTML")]
+pub struct Html(String);

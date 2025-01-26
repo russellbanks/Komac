@@ -661,9 +661,9 @@ impl GitHub {
                 .and_then(|license| License::try_new(license).ok()),
             license_url,
             package_url: PackageUrl::from_str(repository.url.as_str())?,
-            release_notes: release.as_ref().and_then(|release| {
-                ReleaseNotes::format(release.description.as_ref()?, &owner, &repo)
-            }),
+            release_notes: release
+                .as_ref()
+                .and_then(|release| ReleaseNotes::format(release.description_html.as_deref()?)),
             release_notes_url: release
                 .and_then(|release| ReleaseNotesUrl::from_str(release.url.as_str()).ok()),
             topics: Option::from(topics).filter(|topics| !topics.is_empty()),

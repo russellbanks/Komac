@@ -42,12 +42,13 @@ const_format = { version = "0.2.34", features = ["derive"] }
 crc32fast = "1.4.2"
 crossterm = "0.28.1"
 cynic = { version = "3.9.1", features = ["http-reqwest"] }
-derive_more = { version = "1.0.0", features = ["as_ref", "debug", "deref", "deref_mut", "display", "from_str"] }
+derive_more = { version = "1.0.0", features = ["as_ref", "constructor", "debug", "deref", "deref_mut", "display", "from_str"] }
 encoding_rs = "0.8.35"
 flate2 = "1.0.35"
 futures = "0.3.31"
 futures-util = "0.3.31"
 heapless = { version = "0.8.0", features = ["serde"] }
+html2text = "0.13.6"
 icu_locid = { version = "1.5.0", features = ["serde", "std"] }
 indexmap = "2.7.1"
 indicatif = "0.17.9"
@@ -67,7 +68,6 @@ owo-colors = "4.1.0"
 package-family-name = { version = "2.0.1", features = ["serde"] }
 percent-encoding = "2.3.1"
 protobuf = "3.7.1"
-pulldown-cmark = "0.12.2"
 quick-xml = { version = "0.37.2", features = ["serialize"] }
 rand = "0.8.5"
 ratatui = "0.29.0"

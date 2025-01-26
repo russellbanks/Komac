@@ -1,4 +1,5 @@
 use crate::github::graphql::github_schema::github_schema as schema;
+use crate::github::graphql::types::Html;
 use url::Url;
 
 #[derive(cynic::QueryVariables)]
@@ -67,7 +68,8 @@ pub struct Topic {
 /// <https://docs.github.com/graphql/reference/objects#release>
 #[derive(cynic::QueryFragment)]
 pub struct Release {
-    pub description: Option<String>,
+    #[cynic(rename = "descriptionHTML")]
+    pub description_html: Option<Html>,
     pub url: Url,
 }
 
@@ -125,7 +127,7 @@ mod tests {
                   }
                 }
                 release(tagName: $tagName) {
-                  description
+                  descriptionHTML
                   url
                 }
                 repositoryTopics(first: 16) {
