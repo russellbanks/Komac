@@ -3,15 +3,14 @@ mod utils;
 
 use crate::file_analyser::MSIX;
 use crate::installers::msix_family::utils::{get_install_location, hash_signature, read_manifest};
-use crate::installers::traits::InstallSpec;
-use crate::manifests::installer_manifest::Platform;
+use crate::manifests::installer_manifest::{
+    AppsAndFeaturesEntry, InstallationMetadata, Installer, Platform, UpgradeBehavior,
+};
 use crate::types::architecture::Architecture;
 use crate::types::file_extension::FileExtension;
 use crate::types::installer_type::InstallerType;
 use crate::types::minimum_os_version::MinimumOSVersion;
-use crate::types::sha_256::Sha256String;
 use crate::types::version::Version;
-use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
 use quick_xml::events::Event;
@@ -23,19 +22,7 @@ use std::str::FromStr;
 use zip::ZipArchive;
 
 pub struct Msix {
-    is_appx: bool,
-    display_name: String,
-    publisher_display_name: String,
-    version: String,
-    signature_sha_256: Sha256String,
-    package_family_name: PackageFamilyName,
-    target_device_family: BTreeSet<Platform>,
-    min_version: MinimumOSVersion,
-    processor_architecture: Architecture,
-    capabilities: Option<BTreeSet<String>>,
-    restricted_capabilities: Option<BTreeSet<String>>,
-    file_extensions: Option<BTreeSet<FileExtension>>,
-    install_location: Utf8PathBuf,
+    pub installer: Installer,
 }
 
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
@@ -155,53 +142,68 @@ impl Msix {
             }
         }
 
+        let is_appx = manifest
+            .dependencies
+            .target_device_family
+            .iter()
+            .all(|target_device_family| target_device_family.min_version < MSIX_MIN_VERSION)
+            && {
+                appx_manifest.make_ascii_lowercase();
+                !appx_manifest.contains(MSIX)
+            };
+
         Ok(Self {
-            is_appx: manifest
-                .dependencies
-                .target_device_family
-                .iter()
-                .all(|target_device_family| target_device_family.min_version < MSIX_MIN_VERSION)
-                && {
-                    appx_manifest.make_ascii_lowercase();
-                    !appx_manifest.contains(MSIX)
+            installer: Installer {
+                platform: Some(
+                    manifest
+                        .dependencies
+                        .target_device_family
+                        .iter()
+                        .map(|target_device_family| target_device_family.name)
+                        .collect(),
+                ),
+                minimum_os_version: manifest
+                    .dependencies
+                    .target_device_family
+                    .into_iter()
+                    .map(|target_device_family| target_device_family.min_version)
+                    .min(),
+                architecture: Architecture::from_str(&manifest.identity.processor_architecture)?,
+                r#type: if is_appx {
+                    Some(InstallerType::Appx)
+                } else {
+                    Some(InstallerType::Msix)
                 },
-            install_location: get_install_location(
-                &manifest.identity.name,
-                &manifest.identity.publisher,
-                &manifest.identity.version,
-                &manifest.identity.processor_architecture,
-                &manifest.identity.resource_id,
-            ),
-            display_name: manifest.properties.display_name,
-            publisher_display_name: manifest.properties.publisher_display_name,
-            version: manifest.identity.version,
-            signature_sha_256,
-            package_family_name: PackageFamilyName::new(
-                &manifest.identity.name,
-                &manifest.identity.publisher,
-            ),
-            target_device_family: manifest
-                .dependencies
-                .target_device_family
-                .iter()
-                .map(|target_device_family| target_device_family.name)
-                .collect(),
-            min_version: manifest
-                .dependencies
-                .target_device_family
-                .into_iter()
-                .map(|target_device_family| target_device_family.min_version)
-                .min()
-                .unwrap(),
-            processor_architecture: Architecture::from_str(
-                &manifest.identity.processor_architecture,
-            )?,
-            capabilities: Option::from(manifest.capabilities.unrestricted)
-                .filter(|capabilities| !capabilities.is_empty()),
-            restricted_capabilities: Option::from(manifest.capabilities.restricted)
-                .filter(|restricted| !restricted.is_empty()),
-            file_extensions: Option::from(manifest.file_type_association.supported_file_types)
-                .filter(|supported_file_types| !supported_file_types.is_empty()),
+                signature_sha_256: Some(signature_sha_256),
+                upgrade_behavior: Some(UpgradeBehavior::Install),
+                file_extensions: Option::from(manifest.file_type_association.supported_file_types)
+                    .filter(|supported_file_types| !supported_file_types.is_empty()),
+                package_family_name: Some(PackageFamilyName::new(
+                    &manifest.identity.name,
+                    &manifest.identity.publisher,
+                )),
+                capabilities: Option::from(manifest.capabilities.unrestricted)
+                    .filter(|capabilities| !capabilities.is_empty()),
+                restricted_capabilities: Option::from(manifest.capabilities.restricted)
+                    .filter(|restricted| !restricted.is_empty()),
+                apps_and_features_entries: Some(vec![AppsAndFeaturesEntry {
+                    display_name: Some(manifest.properties.display_name),
+                    publisher: Some(manifest.properties.publisher_display_name),
+                    display_version: Some(Version::new(&manifest.identity.version)),
+                    ..AppsAndFeaturesEntry::default()
+                }]),
+                installation_metadata: Some(InstallationMetadata {
+                    default_install_location: Some(get_install_location(
+                        &manifest.identity.name,
+                        &manifest.identity.publisher,
+                        &manifest.identity.version,
+                        &manifest.identity.processor_architecture,
+                        &manifest.identity.resource_id,
+                    )),
+                    ..InstallationMetadata::default()
+                }),
+                ..Installer::default()
+            },
         })
     }
 }
@@ -260,62 +262,4 @@ struct Capabilities {
 #[derive(Default)]
 struct FileTypeAssociation {
     supported_file_types: BTreeSet<FileExtension>,
-}
-
-impl InstallSpec for Msix {
-    fn r#type(&self) -> InstallerType {
-        if self.is_appx {
-            InstallerType::Appx
-        } else {
-            InstallerType::Msix
-        }
-    }
-
-    fn architecture(&self) -> Option<Architecture> {
-        Some(self.processor_architecture)
-    }
-
-    fn display_name(&self) -> Option<String> {
-        Some(self.display_name.clone())
-    }
-
-    fn display_publisher(&self) -> Option<String> {
-        Some(self.publisher_display_name.clone())
-    }
-
-    fn display_version(&self) -> Option<Version> {
-        Some(Version::new(&self.version))
-    }
-
-    fn platform(&self) -> Option<BTreeSet<Platform>> {
-        Some(self.target_device_family.clone())
-    }
-
-    fn install_location(&self) -> Option<Utf8PathBuf> {
-        Some(self.install_location.clone())
-    }
-
-    fn min_version(&self) -> Option<MinimumOSVersion> {
-        Some(self.min_version)
-    }
-
-    fn signature_sha_256(&self) -> Option<Sha256String> {
-        Some(self.signature_sha_256.clone())
-    }
-
-    fn file_extensions(&self) -> Option<BTreeSet<FileExtension>> {
-        self.file_extensions.clone()
-    }
-
-    fn package_family_name(&self) -> Option<PackageFamilyName> {
-        Some(self.package_family_name.clone())
-    }
-
-    fn capabilities(&self) -> Option<BTreeSet<String>> {
-        self.capabilities.clone()
-    }
-
-    fn restricted_capabilities(&self) -> Option<BTreeSet<String>> {
-        self.restricted_capabilities.clone()
-    }
 }

@@ -7,8 +7,7 @@ use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::Result;
-use futures_util::{stream, StreamExt, TryStreamExt};
-use indicatif::{MultiProgress, ProgressBar};
+use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use reqwest::Client;
 use strsim::levenshtein;
@@ -116,32 +115,17 @@ impl UpdateVersion {
         }
 
         let manifests = github.get_manifests(&self.package_identifier, latest_version);
-        let multi_progress = MultiProgress::new();
-        let mut files = stream::iter(download_urls(&client, self.urls, &multi_progress))
-            .buffer_unordered(self.concurrent_downloads.get() as usize)
-            .try_collect::<Vec<_>>()
-            .await?;
-        multi_progress.clear()?;
-        let github_values = files
+        let github_values = self
+            .urls
             .iter()
-            .find(|download| download.url.host_str() == Some(GITHUB_HOST))
-            .map(|download| {
-                let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
-                github
-                    .get_all_values()
-                    .owner(parts[0].to_owned())
-                    .repo(parts[1].to_owned())
-                    .tag_name(parts[4..parts.len() - 1].join("/"))
-                    .send()
-            });
-        let download_results = process_files(&mut files).await?;
+            .find(|url| url.host_str() == Some(GITHUB_HOST))
+            .and_then(|url| github.get_all_values_from_url(url));
+
+        let mut files = download_urls(&client, self.urls, self.concurrent_downloads).await?;
+        let mut download_results = process_files(&mut files).await?;
         let installer_results = download_results
-            .iter()
-            .map(|(url, download)| {
-                let mut installer = download.installer.clone();
-                installer.url.clone_from(url);
-                installer
-            })
+            .iter_mut()
+            .flat_map(|(_url, analyser)| mem::take(&mut analyser.installers))
             .collect::<Vec<_>>();
         let mut manifests = manifests.await?;
         let previous_installers = mem::take(&mut manifests.installer.installers)

@@ -1,10 +1,8 @@
 use crate::installers::msix_family::utils::{hash_signature, read_manifest};
 use crate::installers::msix_family::Msix;
-use crate::installers::traits::InstallSpec;
-use crate::types::architecture::Architecture;
-use crate::types::installer_type::InstallerType;
-use crate::types::sha_256::Sha256String;
+use crate::manifests::installer_manifest::Installer;
 use color_eyre::eyre::Result;
+use itertools::Itertools;
 use memmap2::Mmap;
 use package_family_name::PackageFamilyName;
 use quick_xml::de::from_str;
@@ -14,9 +12,7 @@ use std::io::{Cursor, Read, Seek};
 use zip::ZipArchive;
 
 pub struct MsixBundle {
-    pub signature_sha_256: Sha256String,
-    pub package_family_name: PackageFamilyName,
-    pub packages: Vec<Msix>,
+    pub installers: Vec<Installer>,
 }
 
 const APPX_BUNDLE_MANIFEST_PATH: &str = "AppxMetadata/AppxBundleManifest.xml";
@@ -31,13 +27,13 @@ impl MsixBundle {
 
         let bundle_manifest = from_str::<Bundle>(&appx_bundle_manifest)?;
 
+        let package_family_name = PackageFamilyName::new(
+            &bundle_manifest.identity.name,
+            &bundle_manifest.identity.publisher,
+        );
+
         Ok(Self {
-            signature_sha_256,
-            package_family_name: PackageFamilyName::new(
-                &bundle_manifest.identity.name,
-                &bundle_manifest.identity.publisher,
-            ),
-            packages: bundle_manifest
+            installers: bundle_manifest
                 .packages
                 .package
                 .into_iter()
@@ -48,6 +44,11 @@ impl MsixBundle {
                     io::copy(&mut embedded_msix, &mut temp_file)?;
                     let map = unsafe { Mmap::map(&temp_file) }?;
                     Msix::new(Cursor::new(map.as_ref()))
+                })
+                .map_ok(|msix| Installer {
+                    signature_sha_256: Some(signature_sha_256.clone()),
+                    package_family_name: Some(package_family_name.clone()),
+                    ..msix.installer
                 })
                 .collect::<Result<Vec<_>>>()?,
         })
@@ -94,28 +95,4 @@ enum PackageType {
     Application,
     #[default]
     Resource,
-}
-
-impl InstallSpec for MsixBundle {
-    fn r#type(&self) -> InstallerType {
-        if self.packages.first().is_some_and(|msix| msix.is_appx) {
-            InstallerType::Appx
-        } else {
-            InstallerType::Msix
-        }
-    }
-
-    fn architecture(&self) -> Option<Architecture> {
-        self.packages
-            .first()
-            .map(|msix| msix.processor_architecture)
-    }
-
-    fn signature_sha_256(&self) -> Option<Sha256String> {
-        Some(self.signature_sha_256.clone())
-    }
-
-    fn package_family_name(&self) -> Option<PackageFamilyName> {
-        Some(self.package_family_name.clone())
-    }
 }

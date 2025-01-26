@@ -266,7 +266,7 @@ pub enum NestedInstallerType {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct NestedInstallerFiles {
     pub relative_file_path: Utf8PathBuf,
@@ -402,15 +402,6 @@ pub enum UpgradeBehavior {
     Install,
     UninstallPrevious,
     Deny,
-}
-
-impl UpgradeBehavior {
-    pub const fn get(installer_type: InstallerType) -> Option<Self> {
-        match installer_type {
-            InstallerType::Msix | InstallerType::Appx => Some(Self::Install),
-            _ => None,
-        }
-    }
 }
 
 #[skip_serializing_none]

@@ -1,20 +1,20 @@
-use std::collections::HashMap;
-use std::io::{Error, ErrorKind, Read, Result, Seek};
-use std::str::{FromStr, SplitAsciiWhitespace};
-
-use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
     RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_TEMP_FOLDER,
     RELATIVE_WINDOWS_DIR,
 };
-use crate::manifests::installer_manifest::Scope;
+use crate::manifests::installer_manifest::{
+    AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
+};
 use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use msi::{Language, Package, Select};
+use std::collections::HashMap;
+use std::io::{Error, ErrorKind, Read, Result, Seek};
+use std::str::{FromStr, SplitAsciiWhitespace};
 
 const PROPERTY: &str = "Property";
 const CONTROL: &str = "Control";
@@ -26,24 +26,15 @@ const PRODUCT_VERSION: &str = "ProductVersion";
 const MANUFACTURER: &str = "Manufacturer";
 const UPGRADE_CODE: &str = "UpgradeCode";
 const ALL_USERS: &str = "ALLUSERS";
-const WIX: &str = "wix";
-const WINDOWS_INSTALLER_XML: &str = "windows installer xml";
+const WIX: &[u8; 3] = b"Wix";
+const WINDOWS_INSTALLER_XML: &[u8; 21] = b"Windows Installer XML";
 const GOOGLE_CHROME: &str = "Google Chrome";
 
 const INSTALL_DIR: &str = "INSTALLDIR";
 const TARGET_DIR: &str = "TARGETDIR";
 
 pub struct Msi {
-    pub architecture: Architecture,
-    pub product_code: Option<String>,
-    pub upgrade_code: Option<String>,
-    pub product_name: Option<String>,
-    pub product_version: Option<String>,
-    pub manufacturer: Option<String>,
-    pub product_language: Option<LanguageTag>,
-    pub all_users: Option<Scope>,
-    pub install_location: Option<Utf8PathBuf>,
-    pub is_wix: bool,
+    pub installer: Installer,
 }
 
 impl Msi {
@@ -66,56 +57,96 @@ impl Msi {
         let mut property_table = Self::get_property_table(&mut msi)?;
 
         let product_name = property_table.remove(PRODUCT_NAME);
+        let manufacturer = property_table.remove(MANUFACTURER);
+        let product_version = product_name
+            .as_deref()
+            .is_some_and(|product_name| product_name == GOOGLE_CHROME)
+            .then(|| Self::get_actual_chrome_version(&msi).map(str::to_owned))
+            .unwrap_or_else(|| property_table.remove(PRODUCT_VERSION));
+        let product_code = property_table.remove(PRODUCT_CODE);
+        let upgrade_code = property_table.remove(UPGRADE_CODE);
+
+        // https://learn.microsoft.com/windows/win32/msi/allusers
+        let all_users = match property_table.remove(ALL_USERS).as_deref() {
+            Some("1") => Some(Scope::Machine),
+            Some("2") => None, // Installs depending on installation context and user privileges
+            Some("") => Some(Scope::User), // An empty string specifies per-user context
+            _ => {
+                if msi
+                    .select_rows(Select::table(CONTROL).columns(&[PROPERTY]))
+                    .is_ok_and(|mut rows| rows.any(|row| row[0].as_str() == Some(ALL_USERS)))
+                {
+                    // ALLUSERS could be changed at runtime
+                    None
+                } else {
+                    // No value or control specifies per-user context
+                    Some(Scope::User)
+                }
+            }
+        };
 
         Ok(Self {
-            architecture,
-            install_location: Self::find_install_directory(
-                &Self::get_directory_table(&mut msi)?,
-                &property_table,
-            ),
-            product_code: property_table.remove(PRODUCT_CODE),
-            upgrade_code: property_table.remove(UPGRADE_CODE),
-            product_version: product_name
-                .as_deref()
-                .is_some_and(|product_name| product_name == GOOGLE_CHROME)
-                .then(|| Self::get_actual_chrome_version(&msi).map(str::to_owned))
-                .unwrap_or_else(|| property_table.remove(PRODUCT_VERSION)),
-            product_name,
-            manufacturer: property_table.remove(MANUFACTURER),
-            product_language: property_table.get(PRODUCT_LANGUAGE).and_then(|code| {
-                LanguageTag::from_str(Language::from_code(code.parse::<u16>().ok()?).tag()).ok()
-            }),
-            // https://learn.microsoft.com/windows/win32/msi/allusers
-            all_users: match property_table.remove(ALL_USERS).as_deref() {
-                Some("1") => Some(Scope::Machine),
-                Some("2") => None, // Installs depending on installation context and user privileges
-                Some("") => Some(Scope::User), // An empty string specifies per-user context
-                _ => {
-                    if msi
-                        .select_rows(Select::table(CONTROL).columns(&[PROPERTY]))
-                        .is_ok_and(|mut rows| rows.any(|row| row[0].as_str() == Some(ALL_USERS)))
-                    {
-                        // ALLUSERS could be changed at runtime
-                        None
-                    } else {
-                        // No value or control specifies per-user context
-                        Some(Scope::User)
-                    }
-                }
-            },
-            is_wix: msi
-                .summary_info()
-                .creating_application()
-                .map(str::to_ascii_lowercase)
-                .is_some_and(|app| app.contains(WIX) || app.contains(WINDOWS_INSTALLER_XML))
-                || property_table.into_iter().any(|(mut property, mut value)| {
-                    property.make_ascii_lowercase();
-                    property.contains(WIX) || {
-                        value.make_ascii_lowercase();
-                        value.contains(WIX)
-                    }
+            installer: Installer {
+                locale: property_table.remove(PRODUCT_LANGUAGE).and_then(|code| {
+                    LanguageTag::from_str(Language::from_code(code.parse::<u16>().ok()?).tag()).ok()
                 }),
+                architecture,
+                r#type: Self::is_wix(&msi, &property_table)
+                    .then_some(InstallerType::Wix)
+                    .or(Some(InstallerType::Msi)),
+                scope: all_users,
+                product_code: product_code.clone(),
+                apps_and_features_entries: [
+                    &product_name,
+                    &manufacturer,
+                    &product_version,
+                    &upgrade_code,
+                ]
+                .iter()
+                .any(|option| option.is_some())
+                .then(|| {
+                    vec![AppsAndFeaturesEntry {
+                        display_name: product_name,
+                        publisher: manufacturer,
+                        display_version: product_version.as_deref().map(Version::new),
+                        product_code,
+                        upgrade_code,
+                        ..AppsAndFeaturesEntry::default()
+                    }]
+                }),
+                installation_metadata: Some(InstallationMetadata {
+                    default_install_location: Self::find_install_directory(
+                        &Self::get_directory_table(&mut msi)?,
+                        &property_table,
+                    ),
+                    ..InstallationMetadata::default()
+                }),
+                ..Installer::default()
+            },
         })
+    }
+
+    fn is_wix<R: Read + Seek>(msi: &Package<R>, property_table: &HashMap<String, String>) -> bool {
+        msi.summary_info()
+            .creating_application()
+            .map(str::as_bytes)
+            .is_some_and(|app| {
+                app.windows(WIX.len())
+                    .any(|window| window.eq_ignore_ascii_case(WIX))
+                    || app
+                        .windows(WINDOWS_INSTALLER_XML.len())
+                        .any(|window| window.eq_ignore_ascii_case(WINDOWS_INSTALLER_XML))
+            })
+            || property_table.iter().any(|(property, value)| {
+                property
+                    .as_bytes()
+                    .windows(WIX.len())
+                    .any(|window| window.eq_ignore_ascii_case(WIX))
+                    || value
+                        .as_bytes()
+                        .windows(WIX.len())
+                        .any(|window| window.eq_ignore_ascii_case(WIX))
+            })
     }
 
     /// <https://learn.microsoft.com/windows/win32/msi/property-table>
@@ -281,51 +312,5 @@ impl Msi {
             .as_mut()
             .and_then(SplitAsciiWhitespace::next)
             .filter(|version| version.split('.').all(|part| part.parse::<u16>().is_ok()))
-    }
-}
-
-impl InstallSpec for Msi {
-    fn r#type(&self) -> InstallerType {
-        if self.is_wix {
-            InstallerType::Wix
-        } else {
-            InstallerType::Msi
-        }
-    }
-
-    fn architecture(&self) -> Option<Architecture> {
-        Some(self.architecture)
-    }
-
-    fn display_name(&self) -> Option<String> {
-        self.product_name.clone()
-    }
-
-    fn display_publisher(&self) -> Option<String> {
-        self.manufacturer.clone()
-    }
-
-    fn display_version(&self) -> Option<Version> {
-        self.product_version.as_deref().map(Version::new)
-    }
-
-    fn product_code(&self) -> Option<String> {
-        self.product_code.clone()
-    }
-
-    fn locale(&self) -> Option<LanguageTag> {
-        self.product_language.clone()
-    }
-
-    fn scope(&self) -> Option<Scope> {
-        self.all_users
-    }
-
-    fn install_location(&self) -> Option<Utf8PathBuf> {
-        self.install_location.clone()
-    }
-
-    fn upgrade_code(&self) -> Option<String> {
-        self.upgrade_code.clone()
     }
 }

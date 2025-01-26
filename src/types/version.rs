@@ -13,6 +13,8 @@ pub struct Version {
 }
 
 impl Version {
+    pub const SEPARATOR: char = '.';
+
     pub fn new(input: &str) -> Self {
         let mut trimmed = input.trim();
 
@@ -27,7 +29,10 @@ impl Version {
             }
         }
 
-        let mut parts = trimmed.split('.').map(VersionPart::new).collect::<Vec<_>>();
+        let mut parts = trimmed
+            .split(Self::SEPARATOR)
+            .map(VersionPart::new)
+            .collect::<Vec<_>>();
 
         if parts.is_empty() {
             parts.push(VersionPart::new(trimmed));

@@ -1,3 +1,4 @@
+use crate::types::version::Version;
 use color_eyre::eyre::OptionExt;
 use derive_more::Display;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
@@ -24,7 +25,7 @@ impl FromStr for MinimumOSVersion {
     type Err = color_eyre::Report;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut parts = s.splitn(Self::MAX_PARTS as usize, Self::SEPARATOR);
+        let mut parts = s.splitn(Self::MAX_PARTS as usize, Version::SEPARATOR);
         let major = parts
             .next()
             .ok_or_eyre("No major version")?
@@ -38,7 +39,6 @@ impl FromStr for MinimumOSVersion {
 
 impl MinimumOSVersion {
     const MAX_PARTS: u8 = 4;
-    const SEPARATOR: char = '.';
 
     pub const fn removable() -> Self {
         Self(10, 0, 0, 0)

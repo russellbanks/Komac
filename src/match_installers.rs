@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub fn match_installers(
     previous_installers: Vec<Installer>,
     new_installers: &[Installer],
-) -> HashMap<Installer, &Installer> {
+) -> HashMap<Installer, Installer> {
     let found_architectures = new_installers
         .iter()
         .filter_map(|installer| {
@@ -73,7 +73,8 @@ pub fn match_installers(
                     best_match = Some(new_installer);
                 }
             }
-            (previous_installer, best_match.unwrap())
+
+            (previous_installer, best_match.cloned().unwrap())
         })
         .collect::<HashMap<_, _>>()
 }
@@ -130,10 +131,10 @@ mod tests {
             installer_x64.clone(),
         ];
         let expected = HashMap::from([
-            (installer_user_x86.clone(), &installer_user_x86),
-            (previous_machine_x86, &installer_x86),
-            (installer_user_x64.clone(), &installer_user_x64),
-            (previous_machine_x64, &installer_x64),
+            (installer_user_x86.clone(), installer_user_x86),
+            (previous_machine_x86, installer_x86),
+            (installer_user_x64.clone(), installer_user_x64),
+            (previous_machine_x64, installer_x64),
         ]);
         assert_eq!(
             match_installers(previous_installers, &new_installers),

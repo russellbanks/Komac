@@ -70,6 +70,7 @@ use reqwest::Client;
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::env;
+use std::future::Future;
 use std::num::NonZeroU32;
 use std::ops::Not;
 use std::str::FromStr;
@@ -584,6 +585,21 @@ impl GitHub {
                     .into_pull_request()
             }))
             .map_err(GitHubError::CynicRequest)
+    }
+
+    pub fn get_all_values_from_url(
+        &self,
+        url: &DecodedUrl,
+    ) -> Option<impl Future<Output = Result<GitHubValues, GitHubError>> + use<'_>> {
+        let mut parts = url.path_segments()?;
+        let _file_name = parts.next_back()?;
+        let builder = self
+            .get_all_values()
+            .owner(parts.next()?.to_owned())
+            .repo(parts.next()?.to_owned());
+        let _releases = parts.next()?;
+        let _download = parts.next()?;
+        Some(builder.tag_name(parts.join("/")).send())
     }
 
     #[builder(finish_fn = send)]

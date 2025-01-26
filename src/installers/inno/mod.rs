@@ -21,6 +21,7 @@ use crate::installers::inno::entry::permission::Permission;
 use crate::installers::inno::entry::r#type::Type;
 use crate::installers::inno::entry::registry::Registry;
 use crate::installers::inno::entry::task::Task;
+use crate::installers::inno::header::flags::PrivilegesRequiredOverrides;
 use crate::installers::inno::header::Header;
 use crate::installers::inno::loader::{
     SetupLoader, SetupLoaderOffset, SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE,
@@ -29,18 +30,19 @@ use crate::installers::inno::read::block_filter::{InnoBlockFilter, INNO_BLOCK_SI
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::wizard::Wizard;
-use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{
     read_lzma_stream_header, RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64,
     RELATIVE_LOCAL_APP_DATA, RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32,
     RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
 };
 use crate::manifests::installer_manifest::{
-    ElevationRequirement, Scope, UnsupportedOSArchitecture,
+    AppsAndFeaturesEntry, InstallationMetadata, Installer, InstallerSwitches, Scope,
 };
-use crate::types::architecture::Architecture;
+use crate::types::custom_switch::CustomSwitch;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
+use crate::types::sha_256::Sha256String;
+use crate::types::urls::url::DecodedUrl;
 use crate::types::version::Version;
 use byteorder::{ReadBytesExt, LE};
 use camino::Utf8PathBuf;
@@ -51,7 +53,6 @@ use flate2::read::ZlibDecoder;
 use itertools::Itertools;
 use liblzma::read::XzDecoder;
 use msi::Language as CodePageLanguage;
-use std::collections::BTreeSet;
 use std::io::{Cursor, Read};
 use std::str::FromStr;
 use std::{io, mem};
@@ -83,16 +84,7 @@ pub enum InnoError {
 }
 
 pub struct Inno {
-    architecture: Architecture,
-    scope: Option<Scope>,
-    install_dir: Option<Utf8PathBuf>,
-    unsupported_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
-    uninstall_name: Option<String>,
-    app_version: Option<String>,
-    app_publisher: Option<String>,
-    product_code: Option<String>,
-    elevation_requirement: Option<ElevationRequirement>,
-    installer_locale: Option<LanguageTag>,
+    pub installers: Vec<Installer>,
 }
 
 impl Inno {
@@ -252,30 +244,69 @@ impl Inno {
 
         let install_dir = header.default_dir_name.take().map(to_relative_install_dir);
 
-        Ok(Self {
-            architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
-            scope: header
-                .privileges_required_overrides_allowed
-                .is_empty()
-                .then(|| install_dir.as_deref().and_then(Scope::from_install_dir))
-                .flatten(),
-            install_dir: install_dir.map(Utf8PathBuf::from),
-            unsupported_architectures: mem::take(&mut header.architectures_disallowed)
-                .to_unsupported_architectures(),
-            uninstall_name: header.uninstall_name.take(),
-            app_version: header.app_version.take(),
-            app_publisher: header.app_publisher.take(),
-            product_code: header.app_id.take().map(to_product_code),
-            elevation_requirement: header
-                .privileges_required
-                .to_elevation_requirement(&header.privileges_required_overrides_allowed),
-            installer_locale: languages.first().and_then(|language_entry| {
+        let mut installer = Installer {
+            locale: languages.first().and_then(|language_entry| {
                 LanguageTag::from_str(
                     CodePageLanguage::from_code(u16::try_from(language_entry.id).ok()?).tag(),
                 )
                 .ok()
             }),
-        })
+            architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
+            r#type: Some(InstallerType::Inno),
+            scope: install_dir.as_deref().and_then(Scope::from_install_dir),
+            url: DecodedUrl::default(),
+            sha_256: Sha256String::default(),
+            product_code: header.app_id.clone().map(to_product_code),
+            unsupported_os_architectures: mem::take(&mut header.architectures_disallowed)
+                .to_unsupported_architectures(),
+            apps_and_features_entries: (header.uninstall_name.is_some()
+                || header.app_publisher.is_some()
+                || header.app_version.is_some())
+            .then(|| {
+                vec![AppsAndFeaturesEntry {
+                    display_name: header.uninstall_name.take(),
+                    publisher: header.app_publisher.take(),
+                    display_version: header.app_version.as_deref().map(Version::new),
+                    product_code: header.app_id.take().map(to_product_code),
+                    ..AppsAndFeaturesEntry::default()
+                }]
+            }),
+            elevation_requirement: header
+                .privileges_required
+                .to_elevation_requirement(&header.privileges_required_overrides_allowed),
+            installation_metadata: install_dir.is_some().then(|| InstallationMetadata {
+                default_install_location: install_dir.map(Utf8PathBuf::from),
+                ..InstallationMetadata::default()
+            }),
+            ..Default::default()
+        };
+
+        let installers = if header.privileges_required_overrides_allowed.is_empty() {
+            vec![installer]
+        } else {
+            installer.scope = Some(Scope::Machine);
+            let has_scope_switch = header
+                .privileges_required_overrides_allowed
+                .contains(PrivilegesRequiredOverrides::COMMAND_LINE);
+            if has_scope_switch {
+                installer.switches = Some(InstallerSwitches {
+                    custom: Some(CustomSwitch::all_users()),
+                    ..InstallerSwitches::default()
+                });
+            }
+            let user_installer = Installer {
+                scope: Some(Scope::User),
+                switches: has_scope_switch.then(|| InstallerSwitches {
+                    custom: Some(CustomSwitch::current_user()),
+                    ..InstallerSwitches::default()
+                }),
+                installation_metadata: None,
+                ..installer.clone()
+            };
+            vec![installer, user_installer]
+        };
+
+        Ok(Self { installers })
     }
 }
 
@@ -367,50 +398,4 @@ pub fn to_relative_install_dir(mut install_dir: String) -> String {
     }
 
     install_dir
-}
-
-impl InstallSpec for Inno {
-    fn r#type(&self) -> InstallerType {
-        InstallerType::Inno
-    }
-
-    fn architecture(&self) -> Option<Architecture> {
-        Some(self.architecture)
-    }
-
-    fn display_name(&self) -> Option<String> {
-        self.uninstall_name.clone()
-    }
-
-    fn display_publisher(&self) -> Option<String> {
-        self.app_publisher.clone()
-    }
-
-    fn display_version(&self) -> Option<Version> {
-        self.app_version.as_deref().map(Version::new)
-    }
-
-    fn product_code(&self) -> Option<String> {
-        self.product_code.clone()
-    }
-
-    fn locale(&self) -> Option<LanguageTag> {
-        self.installer_locale.clone()
-    }
-
-    fn scope(&self) -> Option<Scope> {
-        self.scope
-    }
-
-    fn unsupported_os_architectures(&self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
-        self.unsupported_architectures.clone()
-    }
-
-    fn elevation_requirement(&self) -> Option<ElevationRequirement> {
-        self.elevation_requirement.clone()
-    }
-
-    fn install_location(&self) -> Option<Utf8PathBuf> {
-        self.install_dir.clone()
-    }
 }

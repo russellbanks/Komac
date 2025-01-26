@@ -13,9 +13,10 @@ use crate::installers::nsis::header::block::BlockHeaders;
 use crate::installers::nsis::header::compression::Compression;
 use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::nsis::header::{Decompressed, Header};
-use crate::installers::traits::InstallSpec;
 use crate::installers::utils::{read_lzma_stream_header, RELATIVE_PROGRAM_FILES_64};
-use crate::manifests::installer_manifest::Scope;
+use crate::manifests::installer_manifest::{
+    AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
+};
 use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
@@ -32,7 +33,6 @@ use state::NsisState;
 use std::borrow::Cow;
 use std::io;
 use std::io::Read;
-use std::str::FromStr;
 use strsim::levenshtein;
 use thiserror::Error;
 use yara_x::mods::pe::Machine;
@@ -56,13 +56,7 @@ const APP_32: &str = "app-32";
 const APP_64: &str = "app-64";
 
 pub struct Nsis {
-    architecture: Option<Architecture>,
-    scope: Option<Scope>,
-    install_dir: Option<Utf8PathBuf>,
-    install_locale: Option<LanguageTag>,
-    display_name: Option<String>,
-    display_version: Option<String>,
-    display_publisher: Option<String>,
+    pub installer: Installer,
 }
 
 impl Nsis {
@@ -221,50 +215,31 @@ impl Nsis {
             });
 
         Ok(Self {
-            architecture,
-            scope: install_dir.as_deref().and_then(Scope::from_install_dir),
-            install_dir: install_dir.as_deref().map(Utf8PathBuf::from),
-            install_locale: LanguageTag::from_str(
-                Language::from_code(state.language_table.id.get()).tag(),
-            )
-            .ok(),
-            display_name: display_name.map(Cow::into_owned),
-            display_version: display_version.map(Cow::into_owned),
-            display_publisher: display_publisher.map(Cow::into_owned),
+            installer: Installer {
+                locale: Language::from_code(state.language_table.id.get())
+                    .tag()
+                    .parse::<LanguageTag>()
+                    .ok(),
+                architecture: architecture.unwrap_or(Architecture::X86),
+                r#type: Some(InstallerType::Nullsoft),
+                scope: install_dir.as_deref().and_then(Scope::from_install_dir),
+                apps_and_features_entries: [&display_name, &display_version, &display_publisher]
+                    .iter()
+                    .any(|option| option.is_some())
+                    .then(|| {
+                        vec![AppsAndFeaturesEntry {
+                            display_name: display_name.map(Cow::into_owned),
+                            publisher: display_publisher.map(Cow::into_owned),
+                            display_version: display_version.as_deref().map(Version::new),
+                            ..AppsAndFeaturesEntry::default()
+                        }]
+                    }),
+                installation_metadata: install_dir.is_some().then(|| InstallationMetadata {
+                    default_install_location: install_dir.as_deref().map(Utf8PathBuf::from),
+                    ..InstallationMetadata::default()
+                }),
+                ..Installer::default()
+            },
         })
-    }
-}
-
-impl InstallSpec for Nsis {
-    fn r#type(&self) -> InstallerType {
-        InstallerType::Nullsoft
-    }
-
-    fn architecture(&self) -> Option<Architecture> {
-        self.architecture
-    }
-
-    fn display_name(&self) -> Option<String> {
-        self.display_name.clone()
-    }
-
-    fn display_publisher(&self) -> Option<String> {
-        self.display_publisher.clone()
-    }
-
-    fn display_version(&self) -> Option<Version> {
-        self.display_version.as_deref().map(Version::new)
-    }
-
-    fn locale(&self) -> Option<LanguageTag> {
-        self.install_locale.clone()
-    }
-
-    fn scope(&self) -> Option<Scope> {
-        self.scope
-    }
-
-    fn install_location(&self) -> Option<Utf8PathBuf> {
-        self.install_dir.clone()
     }
 }

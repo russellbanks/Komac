@@ -19,6 +19,18 @@ use nutype::nutype;
 )]
 pub struct CustomSwitch(String);
 
+impl CustomSwitch {
+    // TODO: Replace with const using nutype const_fn once released
+    pub fn all_users() -> Self {
+        Self::try_new(String::from("/ALLUSERS")).unwrap()
+    }
+
+    // TODO: Replace with const using nutype const_fn once released
+    pub fn current_user() -> Self {
+        Self::try_new(String::from("/CURRENTUSER")).unwrap()
+    }
+}
+
 impl Prompt for CustomSwitch {
     const MESSAGE: &'static str = "Custom installer switch:";
     const HELP_MESSAGE: Option<&'static str> = Some("Example: /norestart, -norestart");

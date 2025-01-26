@@ -55,8 +55,7 @@ use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::Result;
-use futures_util::{stream, StreamExt, TryStreamExt};
-use indicatif::{MultiProgress, ProgressBar};
+use indicatif::ProgressBar;
 use inquire::CustomType;
 use ordinal_trait::Ordinal;
 use owo_colors::OwoColorize;
@@ -220,51 +219,48 @@ impl NewVersion {
             }
         }
 
-        let multi_progress = MultiProgress::new();
-        let mut files = stream::iter(download_urls(&client, urls, &multi_progress))
-            .buffer_unordered(self.concurrent_downloads.get() as usize)
-            .try_collect::<Vec<_>>()
-            .await?;
-        multi_progress.clear()?;
-        let github_values = files
+        let github_values = urls
             .iter()
-            .find(|download| download.url.host_str() == Some(GITHUB_HOST))
-            .map(|download| {
-                let parts = download.url.path_segments().unwrap().collect::<Vec<_>>();
-                github
-                    .get_all_values()
-                    .owner(parts[0].to_owned())
-                    .repo(parts[1].to_owned())
-                    .tag_name(parts[4..parts.len() - 1].join("/"))
-                    .send()
-            });
+            .find(|url| url.host_str() == Some(GITHUB_HOST))
+            .and_then(|url| github.get_all_values_from_url(url));
+
+        let mut files = download_urls(&client, urls, self.concurrent_downloads).await?;
         let mut download_results = process_files(&mut files).await?;
+
         let mut installers = Vec::new();
-        for (url, analyser) in &mut download_results {
-            if analyser.installer.r#type == Some(InstallerType::Exe)
-                && confirm_prompt(&format!("Is {} a portable exe?", analyser.file_name))?
-            {
-                analyser.installer.r#type = Some(InstallerType::Portable);
-            }
+        for analyser in &mut download_results.values_mut() {
             let mut installer_switches = InstallerSwitches::default();
-            if analyser.installer.r#type == Some(InstallerType::Exe) {
+            if analyser
+                .installers
+                .iter()
+                .any(|installer| installer.r#type == Some(InstallerType::Exe))
+            {
+                if confirm_prompt(&format!("Is {} a portable exe?", analyser.file_name))? {
+                    for installer in &mut analyser.installers {
+                        installer.r#type = Some(InstallerType::Portable);
+                    }
+                }
                 installer_switches.silent = Some(required_prompt::<SilentSwitch>(None)?);
                 installer_switches.silent_with_progress =
                     Some(required_prompt::<SilentWithProgressSwitch>(None)?);
             }
-            if analyser.installer.r#type != Some(InstallerType::Portable) {
+            if analyser
+                .installers
+                .iter()
+                .any(|installer| installer.r#type == Some(InstallerType::Portable))
+            {
                 installer_switches.custom = optional_prompt::<CustomSwitch>(None)?;
             }
             if let Some(zip) = &mut analyser.zip {
                 zip.prompt()?;
-                analyser.installer.architecture = zip.architecture.unwrap();
             }
-            let mut installer = mem::take(&mut analyser.installer);
-            installer.url = url.clone();
-            if installer_switches.is_any_some() {
-                installer.switches = Some(installer_switches);
+            let mut analyser_installers = mem::take(&mut analyser.installers);
+            for installer in &mut analyser_installers {
+                if installer_switches.is_any_some() {
+                    installer.switches = Some(installer_switches.clone());
+                }
             }
-            installers.push(installer);
+            installers.extend(analyser_installers);
         }
         let default_locale = required_prompt(self.package_locale)?;
         let manifests = match manifests {
@@ -307,35 +303,53 @@ impl NewVersion {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
             package_locale: default_locale.clone(),
-            publisher: download_results
+            publisher: match download_results
                 .values_mut()
                 .find(|analyser| analyser.publisher.is_some())
                 .and_then(|analyser| analyser.publisher.take())
-                .unwrap_or_else(|| required_prompt(self.publisher).unwrap_or_default()),
+            {
+                Some(publisher) => publisher,
+                None => required_prompt(self.publisher)?,
+            },
             publisher_url: optional_prompt(self.publisher_url)?,
             publisher_support_url: optional_prompt(self.publisher_support_url)?,
             author: optional_prompt(self.author)?,
-            package_name: download_results
+            package_name: match download_results
                 .values_mut()
                 .find(|analyser| analyser.package_name.is_some())
                 .and_then(|analyser| analyser.package_name.take())
-                .unwrap_or_else(|| required_prompt(self.package_name).unwrap_or_default()),
+            {
+                Some(package_name) => package_name,
+                None => required_prompt(self.package_name)?,
+            },
             package_url: optional_prompt(self.package_url)?,
-            license: required_prompt(self.license)?,
+            license: match github_values
+                .as_mut()
+                .and_then(|values| values.license.take())
+            {
+                Some(license) => license,
+                None => required_prompt(self.license)?,
+            },
             license_url: optional_prompt(self.license_url)?,
-            copyright: download_results
+            copyright: match download_results
                 .values_mut()
                 .find(|analyser| analyser.copyright.is_some())
                 .and_then(|analyser| analyser.copyright.take())
-                .or_else(|| optional_prompt(self.copyright).ok()?),
+            {
+                Some(copyright) => Some(copyright),
+                None => optional_prompt(self.copyright)?,
+            },
             copyright_url: optional_prompt(self.copyright_url)?,
             short_description: required_prompt(self.short_description)?,
             description: optional_prompt(self.description)?,
             moniker: optional_prompt(self.moniker)?,
-            tags: github_values
+            tags: match github_values
                 .as_mut()
                 .and_then(|values| values.topics.take())
-                .or_else(|| list_prompt::<Tag>().ok()?),
+            {
+                Some(topics) => Some(topics),
+                None => list_prompt::<Tag>()?,
+            },
             release_notes_url: optional_prompt(self.release_notes_url)?,
             manifest_type: ManifestType::DefaultLocale,
             ..DefaultLocaleManifest::default()

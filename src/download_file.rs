@@ -7,20 +7,18 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use memmap2::Mmap;
 use reqwest::header::{HeaderValue, CONTENT_DISPOSITION, LAST_MODIFIED};
-use reqwest::redirect::Policy;
-use reqwest::{Client, ClientBuilder, Response};
+use reqwest::Client;
 use sha2::{Digest, Sha256};
 use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::File;
-use std::future::Future;
 use std::mem;
+use std::num::NonZeroU8;
 use tokio::io::AsyncWriteExt;
 use url::Url;
 use uuid::Uuid;
 
 use crate::file_analyser::FileAnalyser;
-use crate::github::github_client::GITHUB_HOST;
 use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
 use crate::types::sha_256::Sha256String;
 use crate::types::urls::url::DecodedUrl;
@@ -30,9 +28,9 @@ async fn download_file(
     mut url: DecodedUrl,
     multi_progress: &MultiProgress,
 ) -> Result<DownloadedFile> {
-    convert_github_latest_to_versioned(&mut url).await?;
+    url.convert_github_latest_to_versioned().await?;
 
-    upgrade_to_https_if_reachable(&mut url, client).await?;
+    url.upgrade_to_https(client).await;
 
     let res = client.get(url.as_str()).send().await?;
 
@@ -157,79 +155,35 @@ fn get_file_name(url: &Url, final_url: &Url, content_disposition: Option<&Header
         .map_or_else(|| Uuid::new_v4().to_string(), str::to_owned)
 }
 
-async fn upgrade_to_https_if_reachable(url: &mut Url, client: &Client) -> Result<()> {
-    if url.scheme() == "http" {
-        url.set_scheme("https").unwrap();
-        if client
-            .head(url.as_str())
-            .send()
-            .await
-            .and_then(Response::error_for_status)
-            .is_err()
-        {
-            url.set_scheme("http").unwrap();
-        }
-    }
-    Ok(())
-}
-
-/// Converts a vanity GitHub URL that always points to the latest release to its versioned URL by
-/// following the redirect by one hop.
-///
-/// For example, github.com/owner/repo/releases/latest/download/file.exe to
-/// github.com/owner/repo/releases/download/v1.2.3/file.exe
-async fn convert_github_latest_to_versioned(url: &mut Url) -> Result<()> {
-    const LATEST: &str = "latest";
-    const DOWNLOAD: &str = "download";
-    const MAX_HOPS: u8 = 2;
-
-    if url.host_str() != Some(GITHUB_HOST) {
-        return Ok(());
-    }
-
-    if let Some(mut segments) = url.path_segments() {
-        // If the 4th and 5th segments are 'latest' and 'download', it's a vanity URL
-        if segments.nth(3) == Some(LATEST) && segments.next() == Some(DOWNLOAD) {
-            // Create a client that will redirect only once
-            let limited_redirect_client = ClientBuilder::new()
-                .redirect(Policy::limited(MAX_HOPS as usize))
-                .build()?;
-
-            // If there was a redirect error because max hops were reached, as intended, set the
-            // original vanity URL to the redirected versioned URL
-            if let Err(error) = limited_redirect_client.head(url.as_str()).send().await {
-                if error.is_redirect() {
-                    if let Some(final_url) = error.url() {
-                        *url = final_url.clone();
-                    }
-                }
-            };
-        }
-    }
-    Ok(())
-}
-
-pub fn download_urls<'a>(
-    client: &'a Client,
+pub async fn download_urls(
+    client: &Client,
     urls: Vec<DecodedUrl>,
-    multi_progress: &'a MultiProgress,
-) -> impl Iterator<Item = impl Future<Output = Result<DownloadedFile>> + 'a> {
-    urls.into_iter()
-        .unique()
-        .map(|url| download_file(client, url, multi_progress))
+    concurrent_downloads: NonZeroU8,
+) -> Result<Vec<DownloadedFile>> {
+    let multi_progress = MultiProgress::new();
+    let downloaded_files = stream::iter(
+        urls.into_iter()
+            .unique()
+            .map(|url| download_file(client, url, &multi_progress)),
+    )
+    .buffer_unordered(concurrent_downloads.get() as usize)
+    .try_collect::<Vec<_>>()
+    .await?;
+    multi_progress.clear()?;
+    Ok(downloaded_files)
 }
 
 pub struct DownloadedFile {
-    pub url: DecodedUrl,
-    pub mmap: Mmap,
     // As the downloaded file is a temporary file, it's stored here so that the reference stays
     // alive and the file does not get deleted. This is necessary because the memory map needs the
-    // reference to the file.
+    // file to remain present.
     #[expect(dead_code)]
-    pub file: File,
-    pub sha_256: Sha256String,
-    pub file_name: String,
-    pub last_modified: Option<NaiveDate>,
+    file: File,
+    url: DecodedUrl,
+    mmap: Mmap,
+    sha_256: Sha256String,
+    file_name: String,
+    last_modified: Option<NaiveDate>,
 }
 
 pub async fn process_files(
@@ -238,23 +192,27 @@ pub async fn process_files(
     stream::iter(files.iter_mut().map(
         |DownloadedFile {
              url,
-             file: _,
              mmap,
              sha_256,
              file_name,
              last_modified,
+             ..
          }| async move {
             let mut file_analyser = FileAnalyser::new(mmap, file_name)?;
-            if let Some(architecture) = Architecture::get_from_url(url.as_str()) {
-                file_analyser.installer.architecture = architecture;
+            let architecture_in_url = Architecture::get_from_url(url.as_str());
+            for installer in &mut file_analyser.installers {
+                if let Some(architecture) = architecture_in_url {
+                    installer.architecture = architecture;
+                }
+                installer.url = url.clone();
+                installer.sha_256 = sha_256.clone();
+                installer.release_date = *last_modified;
             }
-            file_analyser.installer.sha_256 = mem::take(sha_256);
-            file_analyser.installer.release_date = last_modified.take();
             file_analyser.file_name = mem::take(file_name);
             Ok((mem::take(url), file_analyser))
         },
     ))
-    .buffered(num_cpus::get())
+    .buffer_unordered(num_cpus::get())
     .try_collect::<HashMap<_, _>>()
     .await
 }

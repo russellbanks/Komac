@@ -26,10 +26,17 @@ impl Analyse {
             .file_name()
             .unwrap_or_else(|| self.file_path.as_str());
         let analyser = FileAnalyser::new(&mmap, file_name)?;
-        let mut installer = analyser.installer;
-        installer.sha_256 = Sha256String::from_hasher(&Sha256::digest(&mmap))?;
+        let mut installers = analyser.installers;
+        let sha_256 = Sha256String::from_hasher(&Sha256::digest(&mmap))?;
+        for installer in &mut installers {
+            installer.sha_256 = sha_256.clone();
+        }
+        let yaml = match installers.as_slice() {
+            [installer] => serde_yaml::to_string(installer)?,
+            installers => serde_yaml::to_string(installers)?,
+        };
         let mut lock = stdout().lock();
-        print_manifest(&mut lock, &serde_yaml::to_string(&installer)?);
+        print_manifest(&mut lock, &yaml);
         Ok(())
     }
 }

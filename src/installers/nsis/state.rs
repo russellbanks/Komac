@@ -6,7 +6,7 @@ use crate::installers::nsis::strings::shell::Shell;
 use crate::installers::nsis::strings::var::NsVar;
 use crate::installers::nsis::version::NsisVersion;
 use crate::installers::nsis::NsisError;
-use crate::installers::traits::abs_to_u32::AbsToU32;
+use crate::installers::utils::abs_to_u32::AbsToU32;
 use byteorder::{ByteOrder, LE};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;

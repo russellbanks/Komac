@@ -9,10 +9,8 @@ use memmap2::Mmap;
 use zip::ZipArchive;
 
 use crate::file_analyser::FileAnalyser;
-use crate::installers::traits::InstallSpec;
-use crate::manifests::installer_manifest::{NestedInstallerFiles, NestedInstallerType};
+use crate::manifests::installer_manifest::{Installer, NestedInstallerFiles};
 use crate::prompts::prompt::handle_inquire_error;
-use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
@@ -22,11 +20,8 @@ const MACOS_X_FOLDER: &str = "__MACOSX";
 
 pub struct Zip<R: Read + Seek> {
     archive: ZipArchive<R>,
-    pub nested_installer_type: Option<NestedInstallerType>,
-    pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
-    pub architecture: Option<Architecture>,
     pub possible_installer_files: Vec<Utf8PathBuf>,
-    pub install_spec: Option<Box<dyn InstallSpec + Send>>,
+    pub installers: Vec<Installer>,
 }
 
 impl<R: Read + Seek> Zip<R> {
@@ -68,10 +63,8 @@ impl<R: Read + Seek> Zip<R> {
             })
             .collect::<HashMap<_, _>>();
 
-        let mut nested_installer_type = None;
-        let mut architecture = None;
         let mut nested_installer_files = None;
-        let mut install_spec = None;
+        let mut installers = None;
 
         // If there's only one valid file in the zip, extract and analyse it
         if installer_type_counts
@@ -81,31 +74,42 @@ impl<R: Read + Seek> Zip<R> {
             == 1
         {
             let chosen_file_name = &possible_installer_files[0];
+            nested_installer_files = Some(BTreeSet::from([NestedInstallerFiles {
+                relative_file_path: chosen_file_name.clone(),
+                portable_command_alias: None,
+            }]));
             if let Ok(mut chosen_file) = zip.by_name(chosen_file_name.as_str()) {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
                 let map = unsafe { Mmap::map(&temp_file) }?;
                 let file_analyser = FileAnalyser::new(&map, chosen_file_name.as_str())?;
-                nested_installer_type = file_analyser
-                    .installer
-                    .r#type
-                    .and_then(InstallerType::to_nested);
-                architecture = Some(file_analyser.installer.architecture);
-                install_spec = file_analyser.install_spec;
+                installers = Some(
+                    file_analyser
+                        .installers
+                        .into_iter()
+                        .map(|installer| Installer {
+                            r#type: Some(InstallerType::Zip),
+                            nested_installer_type: installer
+                                .r#type
+                                .and_then(InstallerType::to_nested),
+                            nested_installer_files: nested_installer_files.clone(),
+                            ..installer
+                        })
+                        .collect::<Vec<_>>(),
+                );
             }
-            nested_installer_files = Some(BTreeSet::from([NestedInstallerFiles {
-                relative_file_path: chosen_file_name.clone(),
-                portable_command_alias: None,
-            }]));
         }
 
         Ok(Self {
             archive: zip,
-            nested_installer_type,
-            nested_installer_files,
-            architecture,
             possible_installer_files,
-            install_spec,
+            installers: installers.unwrap_or_else(|| {
+                vec![Installer {
+                    r#type: Some(InstallerType::Zip),
+                    nested_installer_files,
+                    ..Installer::default()
+                }]
+            }),
         })
     }
 
@@ -126,12 +130,12 @@ impl<R: Read + Seek> Zip<R> {
             )?;
             let map = unsafe { Mmap::map(&temp_file) }?;
             let file_analyser = FileAnalyser::new(&map, first_choice.file_name().unwrap())?;
-            self.nested_installer_files = Some(
+            let nested_installer_files = Some(
                 chosen
                     .into_iter()
                     .map(|path| {
                         Ok(NestedInstallerFiles {
-                            portable_command_alias: if file_analyser.installer.r#type
+                            portable_command_alias: if file_analyser.installers[0].r#type
                                 == Some(InstallerType::Portable)
                             {
                                 Some(
@@ -151,11 +155,15 @@ impl<R: Read + Seek> Zip<R> {
                     })
                     .collect::<Result<BTreeSet<_>>>()?,
             );
-            self.architecture = Some(file_analyser.installer.architecture);
-            self.nested_installer_type = file_analyser
-                .installer
-                .r#type
-                .and_then(InstallerType::to_nested);
+            self.installers = file_analyser
+                .installers
+                .into_iter()
+                .map(|installer| Installer {
+                    nested_installer_type: installer.r#type.and_then(InstallerType::to_nested),
+                    nested_installer_files: nested_installer_files.clone(),
+                    ..installer
+                })
+                .collect();
         }
         Ok(())
     }
