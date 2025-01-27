@@ -7,7 +7,7 @@ use crate::update_state::UpdateState;
 use bon::builder;
 use clap::{crate_name, crate_version};
 use icu_locid::LanguageIdentifier;
-use rand::{thread_rng, Rng};
+use rand::Rng;
 use std::collections::BTreeSet;
 use std::env;
 use std::fmt::Write;
@@ -134,10 +134,10 @@ pub fn pull_request_body(
     if let Some(alternative_text) = alternative_text {
         let _ = writeln!(body, "### {alternative_text}");
     } else {
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
 
-        let emoji = if rng.gen_range(0..50) == 0 {
-            FRUITS[rng.gen_range(0..FRUITS.len())]
+        let emoji = if rng.random_ratio(1, 50) {
+            FRUITS[rng.random_range(0..FRUITS.len())]
         } else {
             "rocket"
         };
