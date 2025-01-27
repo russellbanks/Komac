@@ -2,8 +2,16 @@ use crate::installers::nsis::state::NsisState;
 use crate::installers::utils::registry::RegRoot;
 use std::borrow::Cow;
 use std::ops::Not;
-use zerocopy::little_endian::I32;
-use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+use zerocopy::little_endian::{I32, U16};
+use zerocopy::{transmute_ref, Immutable, KnownLayout, TryFromBytes};
+
+#[expect(dead_code)]
+#[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[repr(i32)]
+pub enum PushPop {
+    Push = 0i32.to_le(),
+    Pop = 1i32.to_le(),
+}
 
 #[expect(dead_code)]
 #[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
@@ -132,7 +140,11 @@ pub enum Entry {
         input: I32,
         _64_bit: I32,
     } = 30u32.to_le(),
-    PushPop = 31u32.to_le(),
+    PushPop {
+        variable_or_string: I32,
+        push_or_pop: PushPop,
+        exchange: I32,
+    } = 31u32.to_le(),
     FindWindow {
         output_var: I32,
         dialog: I32,
@@ -314,62 +326,85 @@ impl Entry {
     #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     pub fn update_vars(&self, state: &mut NsisState) {
         match self {
-            Self::GetFullPathname { output, .. } => {
-                state.user_variables[1] = state.get_string(output.get());
+            Self::GetFullPathname { output, input } => {
+                state.user_variables.insert(
+                    output.get().unsigned_abs() as usize,
+                    state.get_string(input.get()),
+                );
             }
-            Self::SearchPath { filename, .. } => {
-                state.user_variables[0] = state.get_string(filename.get());
+            Self::SearchPath { output, filename } => {
+                state.user_variables.insert(
+                    output.get().unsigned_abs() as usize,
+                    state.get_string(filename.get()),
+                );
             }
-            Self::GetTempFilename { base_dir, .. } => {
-                state.user_variables[0] = state.get_string(base_dir.get());
+            Self::GetTempFilename { output, base_dir } => {
+                state.user_variables.insert(
+                    output.get().unsigned_abs() as usize,
+                    state.get_string(base_dir.get()),
+                );
             }
-            Self::ExtractFile { name, .. } => {
-                state.user_variables[0] = state.get_string(name.get());
-            }
-            Self::StrLen { input, .. } => {
-                state.user_variables[0] = state.get_string(input.get());
+            Self::StrLen { output, input } => {
+                state.user_variables.insert(
+                    output.get().unsigned_abs() as usize,
+                    Cow::Owned(state.get_string(input.get()).len().to_string()),
+                );
             }
             Self::AssignVar {
+                variable,
                 string_offset,
                 max_length,
                 start_position,
-                ..
             } => {
                 let result = state.get_string(string_offset.get());
                 let mut start = start_position.get();
-                let new_length = if max_length.get() & !i32::from(u16::MAX) == 0 {
+                let [low, high]: &[U16; 2] = transmute_ref!(max_length);
+                let new_length = if high == &U16::ZERO {
                     result.len()
                 } else {
-                    0
+                    usize::from(low.get())
                 };
-                if new_length != 0 {
+                if new_length > 0 {
                     if start < 0 {
                         start += result.len() as i32;
                     }
 
                     let start = u32::try_from(start).unwrap_or_default();
                     if start < result.len() as u32 {
-                        state.user_variables[0] = match result {
-                            Cow::Borrowed(borrowed) => Cow::Borrowed(&borrowed[start as usize..]),
-                            Cow::Owned(mut owned) => {
-                                owned.drain(..start as usize);
-                                Cow::Owned(owned)
-                            }
-                        };
+                        state.user_variables.insert(
+                            variable.get().unsigned_abs() as usize,
+                            match result {
+                                Cow::Borrowed(borrowed) => {
+                                    Cow::Borrowed(&borrowed[start as usize..])
+                                }
+                                Cow::Owned(mut owned) => {
+                                    owned.drain(..start as usize);
+                                    Cow::Owned(owned)
+                                }
+                            },
+                        );
                     }
+                } else {
+                    state
+                        .user_variables
+                        .remove(&(variable.get().unsigned_abs() as usize));
                 }
             }
             Self::ReadEnv {
+                output,
                 string_with_env_variables,
                 ..
             } => {
-                state.user_variables[0] = state.get_string(string_with_env_variables.get());
+                state.user_variables.insert(
+                    output.get().unsigned_abs() as usize,
+                    state.get_string(string_with_env_variables.get()),
+                );
             }
             Self::IntOp {
+                output,
                 input1,
                 input2,
                 operation,
-                ..
             } => {
                 let result = match operation.get() {
                     0 => input1.get() + input2.get(),
@@ -388,7 +423,10 @@ impl Entry {
                     13 => ((input1.get() as u32).wrapping_shr(input2.get() as u32)) as i32,
                     _ => input1.get(),
                 };
-                state.user_variables[0] = Cow::Owned(result.to_string());
+                state.user_variables.insert(
+                    output.get().unsigned_abs() as usize,
+                    Cow::Owned(result.to_string()),
+                );
             }
             _ => {}
         }

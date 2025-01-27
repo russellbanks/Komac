@@ -11,12 +11,13 @@ use byteorder::{ByteOrder, LE};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use yara_x::mods::PE;
 
 pub struct NsisState<'data> {
     pub str_block: &'data [u8],
     pub language_table: &'data LanguageTable,
-    pub user_variables: [Cow<'data, str>; 9],
+    pub user_variables: HashMap<usize, Cow<'data, str>>,
     pub version: NsisVersion,
 }
 
@@ -30,7 +31,7 @@ impl<'data> NsisState<'data> {
         let mut state = Self {
             str_block: BlockType::Strings.get(data, blocks),
             language_table: LanguageTable::get_main(data, header, blocks)?,
-            user_variables: [const { Cow::Borrowed("") }; 9],
+            user_variables: HashMap::new(),
             version: NsisVersion::default(),
         };
 
