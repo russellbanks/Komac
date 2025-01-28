@@ -37,7 +37,7 @@ use strsim::levenshtein;
 use thiserror::Error;
 use yara_x::mods::pe::Machine;
 use yara_x::mods::PE;
-use zerocopy::little_endian::U32;
+use zerocopy::little_endian::I32;
 use zerocopy::{FromBytes, TryFromBytes};
 
 #[derive(Error, Debug)]
@@ -132,7 +132,7 @@ impl Nsis {
             };
         }
 
-        let install_dir = (header.install_directory_ptr != U32::ZERO)
+        let install_dir = (header.install_directory_ptr != I32::ZERO)
             .then(|| state.get_string(header.install_directory_ptr.get()));
 
         architecture = architecture

@@ -88,7 +88,7 @@ impl Shell {
         if index1 & 1 << 7 != 0 {
             let offset = index1 & 0x3F;
             let is_64_bit = index1 & 1 << 6 != 0;
-            let shell_string = strings_block.get_string(u32::from(offset));
+            let shell_string = strings_block.get_string(i32::from(offset));
             if shell_string == PROGRAM_FILES_DIR {
                 buf.push_str(if is_64_bit {
                     RELATIVE_PROGRAM_FILES_64

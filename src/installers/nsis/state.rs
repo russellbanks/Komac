@@ -6,7 +6,6 @@ use crate::installers::nsis::strings::shell::Shell;
 use crate::installers::nsis::strings::var::NsVar;
 use crate::installers::nsis::version::NsisVersion;
 use crate::installers::nsis::NsisError;
-use crate::installers::utils::abs_to_u32::AbsToU32;
 use byteorder::{ByteOrder, LE};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
@@ -17,6 +16,7 @@ use yara_x::mods::PE;
 pub struct NsisState<'data> {
     pub str_block: &'data [u8],
     pub language_table: &'data LanguageTable,
+    pub stack: Vec<Cow<'data, str>>,
     pub user_variables: HashMap<usize, Cow<'data, str>>,
     pub version: NsisVersion,
 }
@@ -31,6 +31,7 @@ impl<'data> NsisState<'data> {
         let mut state = Self {
             str_block: BlockType::Strings.get(data, blocks),
             language_table: LanguageTable::get_main(data, header, blocks)?,
+            stack: Vec::new(),
             user_variables: HashMap::new(),
             version: NsisVersion::default(),
         };
@@ -43,12 +44,19 @@ impl<'data> NsisState<'data> {
     }
 
     #[expect(clippy::cast_possible_truncation)] // Truncating u16 `as u8` is intentional
-    pub fn get_string<T: AbsToU32>(&self, relative_offset: T) -> Cow<'data, str> {
+    pub fn get_string(&self, relative_offset: i32) -> Cow<'data, str> {
         // The strings block starts with a UTF-16 null byte if it is Unicode
         let unicode = &self.str_block[..size_of::<u16>()] == b"\0\0";
 
         // Double the offset if the string is Unicode as each character will be 2 bytes
-        let offset = relative_offset.abs_to_u32() as usize * (usize::from(unicode) + 1);
+        let offset = if relative_offset.is_negative() {
+            // A negative offset means it's a language table
+            self.language_table.string_offsets[(relative_offset + 1).unsigned_abs() as usize]
+                .get()
+                .unsigned_abs() as usize
+        } else {
+            relative_offset.unsigned_abs() as usize
+        } * (usize::from(unicode) + 1);
 
         // Get the index of the null byte at the end of the string
         let string_end_index = if unicode {

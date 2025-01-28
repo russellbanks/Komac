@@ -41,10 +41,8 @@ impl NsVar {
                 buf.push('$');
                 buf.push_str(var_string);
             }
-        } else {
-            if let Some(var) = variables.get(&index) {
-                buf.push_str(var);
-            }
+        } else if let Some(var) = variables.get(&index) {
+            buf.push_str(var);
         }
     }
 }

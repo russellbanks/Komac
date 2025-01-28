@@ -2,7 +2,6 @@ use liblzma::stream::{Filters, Stream};
 use std::io::{Error, ErrorKind, Read, Result};
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
-pub mod abs_to_u32;
 pub mod registry;
 
 pub const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";

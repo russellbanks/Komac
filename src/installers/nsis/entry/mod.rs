@@ -5,7 +5,6 @@ use std::ops::Not;
 use zerocopy::little_endian::{I32, U16};
 use zerocopy::{transmute_ref, Immutable, KnownLayout, TryFromBytes};
 
-#[expect(dead_code)]
 #[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(i32)]
 pub enum PushPop {
@@ -142,7 +141,7 @@ pub enum Entry {
     } = 30u32.to_le(),
     PushPop {
         variable_or_string: I32,
-        push_or_pop: PushPop,
+        push_pop: PushPop,
         exchange: I32,
     } = 31u32.to_le(),
     FindWindow {
@@ -427,6 +426,26 @@ impl Entry {
                     output.get().unsigned_abs() as usize,
                     Cow::Owned(result.to_string()),
                 );
+            }
+            Self::PushPop {
+                variable_or_string,
+                push_pop,
+                exchange,
+            } => {
+                if *exchange != I32::ZERO {
+                    let count = exchange.get().unsigned_abs() as usize;
+                    if state.stack.len() > count {
+                        state.stack.swap(0, count);
+                    }
+                } else if *push_pop == PushPop::Pop {
+                    if let Some(variable) = state.stack.pop() {
+                        state
+                            .user_variables
+                            .insert(variable_or_string.get().unsigned_abs() as usize, variable);
+                    }
+                } else if *push_pop == PushPop::Push {
+                    state.stack.push(state.get_string(variable_or_string.get()));
+                }
             }
             _ => {}
         }

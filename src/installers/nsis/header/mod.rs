@@ -10,7 +10,7 @@ use bzip2::read::BzDecoder;
 use flate2::read::DeflateDecoder;
 use liblzma::read::XzDecoder;
 use std::io::{Error, ErrorKind, Read, Result};
-use zerocopy::little_endian::{I32, U32};
+use zerocopy::little_endian::I32;
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
 const NSIS_MAX_INST_TYPES: u8 = 32;
@@ -18,16 +18,16 @@ const NSIS_MAX_INST_TYPES: u8 = 32;
 #[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct Header {
-    install_reg_rootkey: U32,
-    install_rek_key_ptr: U32,
-    install_reg_value_ptr: U32,
-    bg_color1: U32,
-    bg_color2: U32,
-    bg_textcolor: U32,
-    lb_bg: U32,
-    lb_fg: U32,
-    pub langtable_size: U32,
-    license_bg: U32,
+    install_reg_rootkey: I32,
+    install_rek_key_ptr: I32,
+    install_reg_value_ptr: I32,
+    bg_color1: I32,
+    bg_color2: I32,
+    bg_textcolor: I32,
+    lb_bg: I32,
+    lb_fg: I32,
+    pub langtable_size: I32,
+    license_bg: I32,
     code_on_init: I32,
     code_on_inst_success: I32,
     code_on_inst_failed: I32,
@@ -39,8 +39,8 @@ pub struct Header {
     code_on_sel_change: I32,
     code_on_reboot_failed: I32,
     install_types: [I32; NSIS_MAX_INST_TYPES as usize + 1],
-    pub install_directory_ptr: U32,
-    install_directory_auto_append: U32,
+    pub install_directory_ptr: I32,
+    install_directory_auto_append: I32,
     str_uninstall_child: I32,
     str_uninstall_command: I32,
     str_win_init: I32,
