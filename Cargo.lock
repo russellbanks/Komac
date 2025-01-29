@@ -2493,7 +2493,6 @@ dependencies = [
  "serde_json",
  "serde_with",
  "serde_yaml",
- "sha1",
  "sha2",
  "smallvec",
  "strsim 0.11.1",
