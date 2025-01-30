@@ -1,2 +1,2 @@
-pub mod block_filter;
+pub mod block;
 pub mod crc32;

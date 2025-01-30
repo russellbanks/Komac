@@ -107,8 +107,8 @@ impl KnownVersion {
             parts.next().unwrap_or_default(),
         );
 
-        // Inno Setup 6 and above is always only Unicode
-        if inno_version >= (6, 0, 0) {
+        // Inno Setup 6.3.0 and above is always only Unicode
+        if inno_version >= (6, 3, 0) {
             return Some(Self {
                 version: inno_version,
                 variant: VersionFlags::UNICODE,

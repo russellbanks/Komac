@@ -26,7 +26,7 @@ use crate::installers::inno::header::Header;
 use crate::installers::inno::loader::{
     SetupLoader, SetupLoaderOffset, SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE,
 };
-use crate::installers::inno::read::block_filter::{InnoBlockFilter, INNO_BLOCK_SIZE};
+use crate::installers::inno::read::block::{InnoBlockReader, INNO_BLOCK_SIZE};
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::wizard::Wizard;
@@ -168,14 +168,14 @@ impl Inno {
             });
         }
 
-        let mut block_filter = InnoBlockFilter::new(cursor.take(u64::from(*stored_size)));
+        let mut block_reader = InnoBlockReader::new(cursor.take(u64::from(*stored_size)));
         let mut reader: Box<dyn Read> = match stored_size {
             Compression::LZMA1(_) => {
-                let stream = read_lzma_stream_header(&mut block_filter)?;
-                Box::new(XzDecoder::new_stream(block_filter, stream))
+                let stream = read_lzma_stream_header(&mut block_reader)?;
+                Box::new(XzDecoder::new_stream(block_reader, stream))
             }
-            Compression::Zlib(_) => Box::new(ZlibDecoder::new(block_filter)),
-            Compression::Stored(_) => Box::new(block_filter),
+            Compression::Zlib(_) => Box::new(ZlibDecoder::new(block_reader)),
+            Compression::Stored(_) => Box::new(block_reader),
         };
 
         let mut codepage = if known_version.is_unicode() {

@@ -1,18 +1,17 @@
 use byteorder::{ReadBytesExt, LE};
-use crc32fast::Hasher;
 use std::cmp::min;
 use std::io::{Error, ErrorKind, Read, Result};
 
 pub const INNO_BLOCK_SIZE: u16 = 1 << 12;
 
-pub struct InnoBlockFilter<R: Read> {
+pub struct InnoBlockReader<R: Read> {
     inner: R,
     buffer: [u8; INNO_BLOCK_SIZE as usize],
     pos: usize,
     length: usize,
 }
 
-impl<R: Read> InnoBlockFilter<R> {
+impl<R: Read> InnoBlockReader<R> {
     pub const fn new(inner: R) -> Self {
         Self {
             inner,
@@ -39,9 +38,7 @@ impl<R: Read> InnoBlockFilter<R> {
             ));
         }
 
-        let mut hasher = Hasher::new();
-        hasher.update(&self.buffer[..self.length]);
-        let actual_crc32 = hasher.finalize();
+        let actual_crc32 = crc32fast::hash(&self.buffer[..self.length]);
 
         if actual_crc32 != block_crc32 {
             return Err(Error::new(
@@ -56,7 +53,7 @@ impl<R: Read> InnoBlockFilter<R> {
     }
 }
 
-impl<R: Read> Read for InnoBlockFilter<R> {
+impl<R: Read> Read for InnoBlockReader<R> {
     fn read(&mut self, dest: &mut [u8]) -> Result<usize> {
         let mut total_read = 0;
 
