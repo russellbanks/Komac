@@ -2,6 +2,7 @@ mod entry;
 mod first_header;
 mod header;
 mod language;
+mod registry;
 mod state;
 mod strings;
 mod version;
@@ -102,23 +103,9 @@ impl Nsis {
         let mut architecture =
             Option::from(architecture).filter(|&architecture| architecture != Architecture::X86);
 
-        let mut display_name = None;
-        let mut display_version = None;
-        let mut display_publisher = None;
         for entry in entries {
-            entry.update_vars(&mut state);
-            if let Entry::WriteReg {
-                value_name, value, ..
-            } = entry
-            {
-                let value = state.get_string(value.get());
-                match &*state.get_string(value_name.get()) {
-                    "DisplayName" => display_name = Some(value),
-                    "DisplayVersion" => display_version = Some(value),
-                    "Publisher" => display_publisher = Some(value),
-                    _ => {}
-                }
-            } else if let Entry::ExtractFile { name, .. } = entry {
+            entry.execute(&mut state);
+            if let Entry::ExtractFile { name, .. } = entry {
                 let name = state.get_string(name.get());
                 let file_stem = Utf8Path::new(&name).file_stem();
                 // If there is an app-64 file, the app is x64.
@@ -214,6 +201,11 @@ impl Nsis {
                     .map(Architecture::from_machine)
             });
 
+        let display_name = state.registry.remove_value("DisplayName");
+        let display_version = state.registry.remove_value("DisplayVersion");
+        let publisher = state.registry.remove_value("Publisher");
+        let product_code = state.registry.get_product_code();
+
         Ok(Self {
             installer: Installer {
                 locale: Language::from_code(state.language_table.id.get())
@@ -223,14 +215,16 @@ impl Nsis {
                 architecture: architecture.unwrap_or(Architecture::X86),
                 r#type: Some(InstallerType::Nullsoft),
                 scope: install_dir.as_deref().and_then(Scope::from_install_dir),
-                apps_and_features_entries: [&display_name, &display_version, &display_publisher]
+                product_code: product_code.map(str::to_owned),
+                apps_and_features_entries: [&display_name, &display_version, &publisher]
                     .iter()
                     .any(|option| option.is_some())
                     .then(|| {
                         vec![AppsAndFeaturesEntry {
                             display_name: display_name.map(Cow::into_owned),
-                            publisher: display_publisher.map(Cow::into_owned),
+                            publisher: publisher.map(Cow::into_owned),
                             display_version: display_version.as_deref().map(Version::new),
+                            product_code: product_code.map(str::to_owned),
                             ..AppsAndFeaturesEntry::default()
                         }]
                     }),

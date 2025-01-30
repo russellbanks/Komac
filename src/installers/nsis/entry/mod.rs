@@ -242,6 +242,7 @@ pub enum Entry {
         ini_file: I32,
     } = 49u32.to_le(),
     DeleteReg {
+        reserved: I32,
         root: RegRoot,
         key_name: I32,
         value_name: I32,
@@ -323,28 +324,28 @@ pub enum Entry {
 
 impl Entry {
     #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    pub fn update_vars(&self, state: &mut NsisState) {
+    pub fn execute(&self, state: &mut NsisState) {
         match self {
             Self::GetFullPathname { output, input } => {
-                state.user_variables.insert(
+                state.variables.insert(
                     output.get().unsigned_abs() as usize,
                     state.get_string(input.get()),
                 );
             }
             Self::SearchPath { output, filename } => {
-                state.user_variables.insert(
+                state.variables.insert(
                     output.get().unsigned_abs() as usize,
                     state.get_string(filename.get()),
                 );
             }
             Self::GetTempFilename { output, base_dir } => {
-                state.user_variables.insert(
+                state.variables.insert(
                     output.get().unsigned_abs() as usize,
                     state.get_string(base_dir.get()),
                 );
             }
             Self::StrLen { output, input } => {
-                state.user_variables.insert(
+                state.variables.insert(
                     output.get().unsigned_abs() as usize,
                     Cow::Owned(state.get_string(input.get()).len().to_string()),
                 );
@@ -370,7 +371,7 @@ impl Entry {
 
                     let start = u32::try_from(start).unwrap_or_default();
                     if start < result.len() as u32 {
-                        state.user_variables.insert(
+                        state.variables.insert(
                             variable.get().unsigned_abs() as usize,
                             match result {
                                 Cow::Borrowed(borrowed) => {
@@ -385,7 +386,7 @@ impl Entry {
                     }
                 } else {
                     state
-                        .user_variables
+                        .variables
                         .remove(&(variable.get().unsigned_abs() as usize));
                 }
             }
@@ -394,7 +395,7 @@ impl Entry {
                 string_with_env_variables,
                 ..
             } => {
-                state.user_variables.insert(
+                state.variables.insert(
                     output.get().unsigned_abs() as usize,
                     state.get_string(string_with_env_variables.get()),
                 );
@@ -422,7 +423,7 @@ impl Entry {
                     13 => ((input1.get() as u32).wrapping_shr(input2.get() as u32)) as i32,
                     _ => input1.get(),
                 };
-                state.user_variables.insert(
+                state.variables.insert(
                     output.get().unsigned_abs() as usize,
                     Cow::Owned(result.to_string()),
                 );
@@ -440,12 +441,26 @@ impl Entry {
                 } else if *push_pop == PushPop::Pop {
                     if let Some(variable) = state.stack.pop() {
                         state
-                            .user_variables
+                            .variables
                             .insert(variable_or_string.get().unsigned_abs() as usize, variable);
                     }
                 } else if *push_pop == PushPop::Push {
                     state.stack.push(state.get_string(variable_or_string.get()));
                 }
+            }
+            Self::WriteReg {
+                root,
+                key_name,
+                value_name,
+                value,
+                ..
+            } => {
+                state.registry.set_value(
+                    *root,
+                    state.get_string(key_name.get()),
+                    state.get_string(value_name.get()),
+                    state.get_string(value.get()),
+                );
             }
             _ => {}
         }

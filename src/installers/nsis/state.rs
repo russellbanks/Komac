@@ -1,6 +1,7 @@
 use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
 use crate::installers::nsis::header::Header;
 use crate::installers::nsis::language::table::LanguageTable;
+use crate::installers::nsis::registry::Registry;
 use crate::installers::nsis::strings::code::NsCode;
 use crate::installers::nsis::strings::shell::Shell;
 use crate::installers::nsis::strings::var::NsVar;
@@ -17,7 +18,8 @@ pub struct NsisState<'data> {
     pub str_block: &'data [u8],
     pub language_table: &'data LanguageTable,
     pub stack: Vec<Cow<'data, str>>,
-    pub user_variables: HashMap<usize, Cow<'data, str>>,
+    pub variables: HashMap<usize, Cow<'data, str>>,
+    pub registry: Registry<'data>,
     pub version: NsisVersion,
 }
 
@@ -32,7 +34,8 @@ impl<'data> NsisState<'data> {
             str_block: BlockType::Strings.get(data, blocks),
             language_table: LanguageTable::get_main(data, header, blocks)?,
             stack: Vec::new(),
-            user_variables: HashMap::new(),
+            variables: HashMap::new(),
+            registry: Registry::new(),
             version: NsisVersion::default(),
         };
 
@@ -123,7 +126,7 @@ impl<'data> NsisState<'data> {
                     } else {
                         let index = usize::from(decode_number_from_char(special_char));
                         if current == u16::from(NsCode::Var.get(self.version)) {
-                            NsVar::resolve(&mut buf, index, &self.user_variables, self.version);
+                            NsVar::resolve(&mut buf, index, &self.variables, self.version);
                         } else if current == u16::from(NsCode::Lang.get(self.version)) {
                             buf.push_str(
                                 &self.get_string(self.language_table.string_offsets[index].get()),

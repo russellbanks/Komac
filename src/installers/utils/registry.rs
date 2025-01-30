@@ -1,7 +1,9 @@
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
 #[expect(dead_code)]
-#[derive(Debug, Default, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[derive(
+    Copy, Clone, Debug, Default, Hash, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable,
+)]
 #[repr(u32)]
 pub enum RegRoot {
     #[default]
