@@ -179,7 +179,7 @@ impl GitHub {
             .filter_map(|(version, mut group)| {
                 group
                     .all(|object| object.r#type != TREE)
-                    .then(|| PackageVersion::new(version))
+                    .then(|| PackageVersion::from_str(version).ok())?
             })
             .collect::<BTreeSet<_>>();
 

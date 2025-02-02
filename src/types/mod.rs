@@ -29,3 +29,5 @@ pub mod silent_with_progress_switch;
 pub mod tag;
 pub mod urls;
 pub mod version;
+
+const DISALLOWED_CHARACTERS: [char; 9] = ['\\', '/', ':', '*', '?', '\"', '<', '>', '|'];
