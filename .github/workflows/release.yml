@@ -149,17 +149,6 @@ jobs:
             ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/Output/*
 
-  publish-winget:
-    needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: vedantmgoyal9/winget-releaser@main
-        with:
-          identifier: RussellBanks.Komac
-          installers-regex: 'komac-setup.*\.exe$'
-          token: ${{ secrets.WINGET_TOKEN }}
-
   publish-homebrew-tap:
     needs: release
     if: ${{ github.event_name != 'workflow_run' }}
@@ -203,3 +192,14 @@ jobs:
         run: cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  publish-winget:
+    needs: [ release, publish-crates-io ]
+    if: ${{ github.event_name != 'workflow_run' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: RussellBanks.Komac
+          installers-regex: 'komac-setup.*\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}
