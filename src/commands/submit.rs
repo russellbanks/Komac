@@ -11,7 +11,6 @@ use crate::types::manifest_type::ManifestType;
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use color_eyre::eyre::bail;
 use color_eyre::{eyre, Result};
 use indicatif::ProgressBar;
 use inquire::Select;
@@ -108,7 +107,13 @@ impl Submit {
 
         // If there's only one package, use that. Otherwise, prompt for which package to submit
         let manifests = match packages.iter_mut().at_most_one() {
-            Ok(None) => bail!("No valid packages to submit were found in {}", self.path),
+            Ok(None) => {
+                println!(
+                    "No valid packages to submit were found in {}",
+                    self.path.blue()
+                );
+                return Ok(());
+            }
             Ok(Some(manifests)) => manifests,
             Err(_) => &mut Select::new("Please select which package to submit", packages)
                 .with_page_size(10)
