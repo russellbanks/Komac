@@ -1,4 +1,4 @@
-use crate::manifests::Manifest;
+use crate::manifests::ManifestTrait;
 use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
@@ -58,7 +58,7 @@ pub fn get_package_path(
     result
 }
 
-pub fn is_manifest_file<M: Manifest>(
+pub fn is_manifest_file<M: ManifestTrait>(
     file_name: &str,
     package_identifier: &PackageIdentifier,
     default_locale: Option<&LanguageIdentifier>,

@@ -21,6 +21,7 @@ pub enum PackageVersionError {
     SerializeDisplay,
     DeserializeFromStr,
     Clone,
+    Debug,
     Default,
     Deref,
     Display,

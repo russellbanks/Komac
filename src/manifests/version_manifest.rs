@@ -1,4 +1,4 @@
-use crate::manifests::Manifest;
+use crate::manifests::ManifestTrait;
 use crate::types::language_tag::LanguageTag;
 use crate::types::manifest_type::ManifestType;
 use crate::types::manifest_version::ManifestVersion;
@@ -26,7 +26,7 @@ impl VersionManifest {
     }
 }
 
-impl Manifest for VersionManifest {
+impl ManifestTrait for VersionManifest {
     const SCHEMA: &'static str = formatc!(
         "https://aka.ms/winget-manifest.version.{}.schema.json",
         ManifestVersion::DEFAULT

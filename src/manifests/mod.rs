@@ -17,11 +17,13 @@ use std::sync::LazyLock;
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
 
 pub mod default_locale_manifest;
+pub mod generic;
 pub mod installer_manifest;
 pub mod locale_manifest;
+pub mod manifest;
 pub mod version_manifest;
 
-pub trait Manifest {
+pub trait ManifestTrait {
     const SCHEMA: &'static str;
 
     const TYPE: ManifestType;
@@ -108,7 +110,7 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
     }
 }
 
-pub fn build_manifest_string<T: Manifest + Serialize>(
+pub fn build_manifest_string<T: ManifestTrait + Serialize>(
     manifest: &T,
     created_with: Option<&str>,
 ) -> Result<String> {

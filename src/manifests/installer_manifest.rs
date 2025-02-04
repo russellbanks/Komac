@@ -7,7 +7,7 @@ use crate::installers::utils::{
     RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
 };
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
-use crate::manifests::Manifest;
+use crate::manifests::ManifestTrait;
 use crate::types::architecture::Architecture;
 use crate::types::command::Command;
 use crate::types::custom_switch::CustomSwitch;
@@ -90,7 +90,7 @@ pub struct InstallerManifest {
     pub manifest_version: ManifestVersion,
 }
 
-impl Manifest for InstallerManifest {
+impl ManifestTrait for InstallerManifest {
     const SCHEMA: &'static str = formatc!(
         "https://aka.ms/winget-manifest.installer.{}.schema.json",
         ManifestVersion::DEFAULT

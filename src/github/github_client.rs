@@ -42,7 +42,7 @@ use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::manifests::locale_manifest::LocaleManifest;
 use crate::manifests::version_manifest::VersionManifest;
-use crate::manifests::{Manifest, Manifests};
+use crate::manifests::{ManifestTrait, Manifests};
 use crate::types::license::License;
 use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
 use crate::types::package_identifier::PackageIdentifier;
@@ -284,7 +284,7 @@ impl GitHub {
             .ok_or(GitHubError::GraphQL(errors))
     }
 
-    pub async fn get_manifest<T: Manifest + for<'de> Deserialize<'de>>(
+    pub async fn get_manifest<T: ManifestTrait + for<'de> Deserialize<'de>>(
         &self,
         identifier: &PackageIdentifier,
         version: &PackageVersion,

@@ -1,24 +1,24 @@
 use crate::commands::utils::{prompt_submit_option, SubmitOption, SPINNER_TICK_RATE};
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
+use crate::github::utils::get_package_path;
 use crate::github::utils::pull_request::pr_changes;
-use crate::github::utils::{get_package_path, is_manifest_file};
-use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
-use crate::manifests::installer_manifest::InstallerManifest;
-use crate::manifests::locale_manifest::LocaleManifest;
-use crate::manifests::version_manifest::VersionManifest;
+use crate::manifests::generic::GenericManifest;
+use crate::manifests::manifest::Manifest;
 use crate::manifests::Manifests;
 use crate::prompts::prompt::handle_inquire_error;
+use crate::types::manifest_type::ManifestType;
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::bail;
-use color_eyre::Result;
+use color_eyre::{eyre, Result};
 use indicatif::ProgressBar;
 use inquire::Select;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use std::fs::File;
+use std::io;
 use walkdir::WalkDir;
 
 #[derive(Parser)]
@@ -49,79 +49,59 @@ impl Submit {
 
         let yaml_entries = self.get_yaml_file_paths()?;
 
-        // Group package manifests together. This is so that if there are multiple packages in the
-        // same directory, we can prompt the user for which one to submit.
         let mut packages = yaml_entries
             .iter()
-            .filter(|entry| {
-                // Get all installer manifest files
-                entry
-                    .file_name()
-                    .is_some_and(|name| name.ends_with(".installer.yaml"))
+            .flat_map(|path| {
+                // Read file to string so we can read it twice - once for the manifest type and
+                // second for the full manifest
+                let manifest = io::read_to_string(File::open(path)?)?;
+
+                // Deserialize the manifest into just the manifest type so that it can be determined
+                // which manifest to properly deserialize into
+                let manifest = match serde_yaml::from_str::<GenericManifest>(&manifest)?.r#type {
+                    ManifestType::Installer => {
+                        Manifest::Installer(serde_yaml::from_str(&manifest)?)
+                    }
+                    ManifestType::DefaultLocale => {
+                        Manifest::DefaultLocale(serde_yaml::from_str(&manifest)?)
+                    }
+                    ManifestType::Locale => Manifest::Locale(serde_yaml::from_str(&manifest)?),
+                    ManifestType::Version => Manifest::Version(serde_yaml::from_str(&manifest)?),
+                };
+                Ok::<Manifest, eyre::Error>(manifest)
             })
-            .flat_map(File::open)
-            .flat_map(serde_yaml::from_reader)
-            .filter_map(|installer_manifest: InstallerManifest| {
-                // For each installer manifest, get all manifest files for that package
-                let package_manifests = yaml_entries
-                    .iter()
-                    .filter_map(|path| Option::from(path).zip(path.file_name()))
-                    .filter(|(_, file_name)| {
-                        file_name.starts_with(&*installer_manifest.package_identifier)
-                    })
-                    .collect::<Vec<_>>();
-
-                // Find and parse the version manifest
-                let version_manifest: VersionManifest = package_manifests
-                    .iter()
-                    .find(|(_, file_name)| {
-                        is_manifest_file::<VersionManifest>(
-                            file_name,
-                            &installer_manifest.package_identifier,
-                            None,
-                        )
-                    })
-                    .and_then(|(path, _)| {
-                        File::open(path)
-                            .ok()
-                            .and_then(|file| serde_yaml::from_reader(file).ok())
-                    })?;
-
-                // Find and parse the default locale manifest
-                let default_locale_manifest = package_manifests
-                    .iter()
-                    .find(|(_, file_name)| {
-                        is_manifest_file::<DefaultLocaleManifest>(
-                            file_name,
-                            &installer_manifest.package_identifier,
-                            Some(&version_manifest.default_locale),
-                        )
-                    })
-                    .and_then(|(path, _)| {
-                        File::open(path)
-                            .ok()
-                            .and_then(|file| serde_yaml::from_reader(file).ok())
-                    })?;
-
-                // Find and parse any locale manifests
-                let locale_manifests = package_manifests
-                    .iter()
-                    .filter(|(_, file_name)| {
-                        is_manifest_file::<LocaleManifest>(
-                            file_name,
-                            &installer_manifest.package_identifier,
-                            Some(&version_manifest.default_locale),
-                        )
-                    })
-                    .flat_map(|(path, _)| File::open(path))
-                    .flat_map(serde_yaml::from_reader)
-                    .collect::<Vec<_>>();
-
+            .chunk_by(|manifest| {
+                // Group manifests by both the package identifier and the package version
+                (
+                    manifest.package_identifier().clone(),
+                    manifest.package_version().clone(),
+                )
+            })
+            .into_iter()
+            .filter_map(|(_, manifests)| {
+                // Now that we solely have manifests related to a package and its version, we can
+                // rebuild it into a Manifests struct
+                let mut installer = None;
+                let mut default_locale = None;
+                let mut locales = Vec::new();
+                let mut version = None;
+                for manifest in manifests {
+                    match manifest {
+                        Manifest::Installer(installer_manifest) => {
+                            installer = Some(installer_manifest);
+                        }
+                        Manifest::DefaultLocale(default_locale_manifest) => {
+                            default_locale = Some(default_locale_manifest);
+                        }
+                        Manifest::Locale(locale) => locales.push(locale),
+                        Manifest::Version(version_manifest) => version = Some(version_manifest),
+                    }
+                }
                 Some(Manifests {
-                    installer: installer_manifest,
-                    default_locale: default_locale_manifest,
-                    locales: locale_manifests,
-                    version: version_manifest,
+                    installer: installer?,
+                    default_locale: default_locale?,
+                    locales,
+                    version: version?,
                 })
             })
             .collect::<Vec<_>>();

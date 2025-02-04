@@ -36,7 +36,7 @@ pub enum PackageIdentifierError {
     InvalidPartCount,
 }
 
-#[derive(AsRef, Clone, Default, Deref, Display, Deserialize, Serialize, Debug)]
+#[derive(AsRef, Clone, Default, Deref, Display, Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct PackageIdentifier(String);
 
 /// A Package Identifier parser and validator modelled off the regex pattern:

@@ -6,7 +6,7 @@ use std::mem;
 use url::Url;
 
 use crate::github::github_client::GitHubValues;
-use crate::manifests::Manifest;
+use crate::manifests::ManifestTrait;
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
 use crate::types::description::Description;
@@ -65,7 +65,7 @@ pub struct DefaultLocaleManifest {
     pub manifest_version: ManifestVersion,
 }
 
-impl Manifest for DefaultLocaleManifest {
+impl ManifestTrait for DefaultLocaleManifest {
     const SCHEMA: &'static str = formatc!(
         "https://aka.ms/winget-manifest.defaultLocale.{}.schema.json",
         ManifestVersion::DEFAULT
