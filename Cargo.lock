@@ -2492,6 +2492,7 @@ dependencies = [
  "quick-xml",
  "rand 0.9.0",
  "ratatui",
+ "regex",
  "reqwest",
  "rstest",
  "serde",

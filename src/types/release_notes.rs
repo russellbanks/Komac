@@ -1,7 +1,9 @@
 use derive_more::Constructor;
 use html2text::render::{TaggedLine, TextDecorator};
 use nutype::nutype;
+use regex::Regex;
 use std::borrow::Cow;
+use std::sync::LazyLock;
 
 #[derive(Constructor)]
 struct GitHubHtmlDecorator;
@@ -92,9 +94,13 @@ pub struct ReleaseNotes(String);
 
 impl ReleaseNotes {
     pub fn format(body: &str) -> Option<Self> {
+        // Strings that have whitespace before newlines get escaped and treated as literal strings
+        // in yaml so this regex identifies any amount of whitespace and duplicate newlines
+        static NEWLINE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+\n").unwrap());
+
         html2text::from_read_with_decorator(body.as_bytes(), usize::MAX, GitHubHtmlDecorator::new())
             .ok()
-            .and_then(|text| Self::try_new(text.replace("\n\n", "\n")).ok())
+            .and_then(|text| Self::try_new(NEWLINE_REGEX.replace_all(&text, "\n")).ok())
     }
 }
 
