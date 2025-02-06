@@ -23,10 +23,7 @@ impl<R: Read> InnoBlockReader<R> {
 
     fn read_chunk(&mut self) -> Result<bool> {
         let Ok(block_crc32) = self.inner.read_u32::<LE>() else {
-            return Err(Error::new(
-                ErrorKind::UnexpectedEof,
-                "Unexpected Inno block end",
-            ));
+            return Ok(false);
         };
 
         self.length = self.inner.read(&mut self.buffer)?;
@@ -34,7 +31,7 @@ impl<R: Read> InnoBlockReader<R> {
         if self.length == 0 {
             return Err(Error::new(
                 ErrorKind::UnexpectedEof,
-                "Unexpected Inno block length defined as 0",
+                "Unexpected Inno block end",
             ));
         }
 
@@ -43,7 +40,7 @@ impl<R: Read> InnoBlockReader<R> {
         if actual_crc32 != block_crc32 {
             return Err(Error::new(
                 ErrorKind::InvalidData,
-                "Inno Block CRC32 mismatch",
+                format!("Inno block CRC32 mismatch. Expected {block_crc32} but calculated {actual_crc32}"),
             ));
         }
 

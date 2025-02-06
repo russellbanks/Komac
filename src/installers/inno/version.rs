@@ -12,7 +12,7 @@ bitflags! {
 }
 
 #[derive(Debug, Default, Display, PartialEq, Eq, PartialOrd)]
-#[display("{_0}.{_1}.{_2}")]
+#[display("{_0}.{_1}.{_2}.{_3}")]
 pub struct InnoVersion(pub u8, pub u8, pub u8, pub u8);
 
 impl PartialEq<(u8, u8, u8)> for InnoVersion {

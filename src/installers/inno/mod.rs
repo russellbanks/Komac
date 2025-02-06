@@ -77,8 +77,8 @@ pub enum InnoError {
     UnknownVersion(String),
     #[error("Unknown Inno Setup loader signature: {0:?}")]
     UnknownLoaderSignature([u8; 12]),
-    #[error("CRC32 checksum mismatch. Actual: {actual}. Expected: {expected}.")]
-    CrcChecksumMismatch { actual: u32, expected: u32 },
+    #[error("Inno CRC32 checksum mismatch. Expected {expected} but calculated {actual}")]
+    CrcChecksumMismatch { expected: u32, actual: u32 },
     #[error(transparent)]
     Io(#[from] io::Error),
 }
@@ -131,12 +131,12 @@ impl Inno {
 
         let mut actual_checksum = Crc32Reader::new(&mut cursor);
 
-        let stored_size = if known_version > (4, 0, 9) {
+        let stored_size = if known_version >= (4, 0, 9) {
             let size = actual_checksum.read_u32::<LE>()?;
             let compressed = actual_checksum.read_u8()? != 0;
 
             if compressed {
-                if known_version > (4, 1, 6) {
+                if known_version >= (4, 1, 6) {
                     Compression::LZMA1(size)
                 } else {
                     Compression::Zlib(size)
@@ -163,8 +163,8 @@ impl Inno {
         let actual_checksum = actual_checksum.finalize();
         if actual_checksum != expected_checksum {
             return Err(InnoError::CrcChecksumMismatch {
-                actual: actual_checksum,
                 expected: expected_checksum,
+                actual: actual_checksum,
             });
         }
 
