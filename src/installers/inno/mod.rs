@@ -10,7 +10,6 @@ mod version;
 mod windows_version;
 mod wizard;
 
-use crate::installers::inno::compression::{Compression, Decoder};
 use crate::installers::inno::entry::component::Component;
 use crate::installers::inno::entry::directory::Directory;
 use crate::installers::inno::entry::file::File;
@@ -30,9 +29,9 @@ use crate::installers::inno::read::block::InnoBlockReader;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::wizard::Wizard;
 use crate::installers::utils::{
-    read_lzma_stream_header, RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64,
-    RELATIVE_LOCAL_APP_DATA, RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32,
-    RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
+    RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
+    RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
+    RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
 };
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, InstallerSwitches, Scope,
@@ -47,11 +46,9 @@ use camino::Utf8PathBuf;
 use const_format::formatcp;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use entry::language::Language;
-use flate2::read::ZlibDecoder;
 use itertools::Itertools;
-use liblzma::read::XzDecoder;
 use msi::Language as CodePageLanguage;
-use std::io::{Cursor, Read};
+use std::io::Cursor;
 use std::str::FromStr;
 use std::{io, mem};
 use thiserror::Error;
@@ -125,17 +122,7 @@ impl Inno {
         let mut cursor = Cursor::new(data);
         cursor.set_position((header_offset + VERSION_LEN) as u64);
 
-        let compression = InnoBlockReader::read_header(&mut cursor, &known_version)?;
-        let mut block_reader = InnoBlockReader::new(cursor.take(u64::from(*compression)));
-
-        let mut reader = match compression {
-            Compression::LZMA1(_) => {
-                let stream = read_lzma_stream_header(&mut block_reader)?;
-                Decoder::LZMA1(XzDecoder::new_stream(block_reader, stream))
-            }
-            Compression::Zlib(_) => Decoder::Zlib(ZlibDecoder::new(block_reader)),
-            Compression::Stored(_) => Decoder::Stored(block_reader),
-        };
+        let mut reader = InnoBlockReader::get(cursor, &known_version)?;
 
         let mut codepage = if known_version.is_unicode() {
             UTF_16LE

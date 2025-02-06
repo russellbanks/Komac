@@ -1,28 +1,35 @@
 use crate::installers::inno::compression::Compression;
+use crate::installers::inno::read::chunk::{InnoChunkReader, INNO_CHUNK_SIZE};
 use crate::installers::inno::read::crc32::Crc32Reader;
+use crate::installers::inno::read::decoder::Decoder;
 use crate::installers::inno::version::KnownVersion;
 use crate::installers::inno::InnoError;
+use crate::installers::utils::read_lzma_stream_header;
 use byteorder::{ReadBytesExt, LE};
-use std::cmp::min;
-use std::io::{Error, ErrorKind, Read, Result};
-
-pub const INNO_BLOCK_SIZE: u16 = 1 << 12;
+use flate2::read::ZlibDecoder;
+use liblzma::read::XzDecoder;
+use std::io::{Error, ErrorKind, Read, Result, Take};
 
 pub struct InnoBlockReader<R: Read> {
-    inner: R,
-    buffer: [u8; INNO_BLOCK_SIZE as usize],
-    pos: usize,
-    length: usize,
+    inner: Decoder<InnoChunkReader<Take<R>>>,
 }
 
 impl<R: Read> InnoBlockReader<R> {
-    pub const fn new(inner: R) -> Self {
-        Self {
-            inner,
-            buffer: [0; INNO_BLOCK_SIZE as usize],
-            pos: 0,
-            length: 0,
-        }
+    pub fn get(mut inner: R, version: &KnownVersion) -> Result<Self> {
+        let compression = Self::read_header(&mut inner, version)?;
+
+        let mut chunk_reader = InnoChunkReader::new(inner.take(u64::from(*compression)));
+
+        Ok(Self {
+            inner: match compression {
+                Compression::LZMA1(_) => {
+                    let stream = read_lzma_stream_header(&mut chunk_reader)?;
+                    Decoder::LZMA1(XzDecoder::new_stream(chunk_reader, stream))
+                }
+                Compression::Zlib(_) => Decoder::Zlib(ZlibDecoder::new(chunk_reader)),
+                Compression::Stored(_) => Decoder::Stored(chunk_reader),
+            },
+        })
     }
 
     pub fn read_header(reader: &mut R, version: &KnownVersion) -> Result<Compression> {
@@ -54,7 +61,7 @@ impl<R: Read> InnoBlockReader<R> {
             };
 
             // Add the size of a CRC32 checksum for each 4KiB sub-block
-            *stored_size += stored_size.div_ceil(u32::from(INNO_BLOCK_SIZE)) * 4;
+            *stored_size += stored_size.div_ceil(u32::from(INNO_CHUNK_SIZE)) * 4;
 
             stored_size
         };
@@ -72,57 +79,10 @@ impl<R: Read> InnoBlockReader<R> {
 
         Ok(compression)
     }
-
-    fn read_chunk(&mut self) -> Result<bool> {
-        let Ok(block_crc32) = self.inner.read_u32::<LE>() else {
-            return Ok(false);
-        };
-
-        self.length = self.inner.read(&mut self.buffer)?;
-
-        if self.length == 0 {
-            return Err(Error::new(
-                ErrorKind::UnexpectedEof,
-                "Unexpected Inno block end",
-            ));
-        }
-
-        let actual_crc32 = crc32fast::hash(&self.buffer[..self.length]);
-
-        if actual_crc32 != block_crc32 {
-            return Err(Error::new(
-                ErrorKind::InvalidData,
-                InnoError::CrcChecksumMismatch {
-                    actual: actual_crc32,
-                    expected: block_crc32,
-                },
-            ));
-        }
-
-        self.pos = 0;
-
-        Ok(true)
-    }
 }
 
 impl<R: Read> Read for InnoBlockReader<R> {
     fn read(&mut self, dest: &mut [u8]) -> Result<usize> {
-        let mut total_read = 0;
-
-        while total_read < dest.len() {
-            if self.pos == self.length && !self.read_chunk()? {
-                return Ok(total_read);
-            }
-
-            let to_copy = min(dest.len() - total_read, self.length - self.pos);
-
-            dest[total_read..total_read + to_copy]
-                .copy_from_slice(&self.buffer[self.pos..self.pos + to_copy]);
-
-            self.pos += to_copy;
-            total_read += to_copy;
-        }
-
-        Ok(total_read)
+        self.inner.read(dest)
     }
 }
