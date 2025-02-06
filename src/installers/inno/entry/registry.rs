@@ -9,7 +9,7 @@ use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
 use encoding_rs::Encoding;
 use std::io::{Read, Result};
-use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+use zerocopy::{try_transmute, Immutable, KnownLayout, TryFromBytes};
 
 #[expect(dead_code)]
 #[derive(Debug, Default)]
@@ -50,7 +50,8 @@ impl Registry {
 
         WindowsVersionRange::from_reader(reader, version)?;
 
-        registry.reg_root = enum_value!(reader, RegRoot)?;
+        registry.reg_root =
+            try_transmute!(reader.read_u32::<LE>()? | 0x8000_0000).unwrap_or_default();
 
         if *version >= (4, 1, 0) {
             registry.permission = reader.read_i16::<LE>()?;
