@@ -10,7 +10,7 @@ mod version;
 mod windows_version;
 mod wizard;
 
-use crate::installers::inno::compression::Compression;
+use crate::installers::inno::compression::{Compression, Decoder};
 use crate::installers::inno::entry::component::Component;
 use crate::installers::inno::entry::directory::Directory;
 use crate::installers::inno::entry::file::File;
@@ -128,13 +128,13 @@ impl Inno {
         let compression = InnoBlockReader::read_header(&mut cursor, &known_version)?;
         let mut block_reader = InnoBlockReader::new(cursor.take(u64::from(*compression)));
 
-        let mut reader: Box<dyn Read> = match compression {
+        let mut reader = match compression {
             Compression::LZMA1(_) => {
                 let stream = read_lzma_stream_header(&mut block_reader)?;
-                Box::new(XzDecoder::new_stream(block_reader, stream))
+                Decoder::LZMA1(XzDecoder::new_stream(block_reader, stream))
             }
-            Compression::Zlib(_) => Box::new(ZlibDecoder::new(block_reader)),
-            Compression::Stored(_) => Box::new(block_reader),
+            Compression::Zlib(_) => Decoder::Zlib(ZlibDecoder::new(block_reader)),
+            Compression::Stored(_) => Decoder::Stored(block_reader),
         };
 
         let mut codepage = if known_version.is_unicode() {
