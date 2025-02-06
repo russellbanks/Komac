@@ -20,7 +20,7 @@ pub struct Ini {
 impl Ini {
     const DEFAULT_FILE: &'static str = "{windows}/WIN.INI";
 
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,
@@ -38,9 +38,9 @@ impl Ini {
             ..Self::default()
         };
 
-        Condition::load(reader, codepage, version)?;
+        Condition::from_reader(reader, codepage, version)?;
 
-        WindowsVersionRange::load(reader, version)?;
+        WindowsVersionRange::from_reader(reader, version)?;
 
         ini.flags = IniFlags::from_bits_retain(reader.read_u8()?);
 

@@ -10,7 +10,7 @@ struct Version {
 }
 
 impl Version {
-    fn load<R: Read>(reader: &mut R, inno_version: &InnoVersion) -> Result<Self> {
+    fn from_reader<R: Read>(reader: &mut R, inno_version: &InnoVersion) -> Result<Self> {
         let mut version = Self::default();
         if *inno_version >= (1, 3, 19) {
             version.build = reader.read_u16::<LE>()?;
@@ -36,10 +36,10 @@ struct WindowsVersion {
 }
 
 impl WindowsVersion {
-    pub fn load<R: Read>(reader: &mut R, version: &InnoVersion) -> Result<Self> {
+    pub fn from_reader<R: Read>(reader: &mut R, version: &InnoVersion) -> Result<Self> {
         let mut windows_version = Self {
-            win_version: Version::load(reader, version)?,
-            nt_version: Version::load(reader, version)?,
+            win_version: Version::from_reader(reader, version)?,
+            nt_version: Version::from_reader(reader, version)?,
             ..Self::default()
         };
 
@@ -60,10 +60,10 @@ pub struct WindowsVersionRange {
 }
 
 impl WindowsVersionRange {
-    pub fn load<R: Read>(reader: &mut R, version: &InnoVersion) -> Result<Self> {
+    pub fn from_reader<R: Read>(reader: &mut R, version: &InnoVersion) -> Result<Self> {
         Ok(Self {
-            begin: WindowsVersion::load(reader, version)?,
-            end: WindowsVersion::load(reader, version)?,
+            begin: WindowsVersion::from_reader(reader, version)?,
+            end: WindowsVersion::from_reader(reader, version)?,
         })
     }
 }

@@ -29,7 +29,7 @@ pub struct Icon {
 }
 
 impl Icon {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,
@@ -48,7 +48,7 @@ impl Icon {
             ..Self::default()
         };
 
-        Condition::load(reader, codepage, version)?;
+        Condition::from_reader(reader, codepage, version)?;
 
         if *version >= (5, 3, 5) {
             icon.app_user_model_id = InnoValue::new_string(reader, codepage)?;
@@ -60,7 +60,7 @@ impl Icon {
             icon.app_user_model_toast_activator_clsid = codepage.decode(&buf).0.into_owned();
         }
 
-        WindowsVersionRange::load(reader, version)?;
+        WindowsVersionRange::from_reader(reader, version)?;
 
         icon.index = reader.read_i32::<LE>()?;
 

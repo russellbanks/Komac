@@ -22,7 +22,7 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,
@@ -54,7 +54,7 @@ impl Component {
             component.used = true;
         }
 
-        WindowsVersionRange::load(reader, version)?;
+        WindowsVersionRange::from_reader(reader, version)?;
 
         component.flags = ComponentFlags::from_bits_retain(reader.read_u8()?);
 

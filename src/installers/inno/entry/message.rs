@@ -13,7 +13,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         languages: &[Language],
         codepage: &'static Encoding,

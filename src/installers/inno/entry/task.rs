@@ -22,7 +22,7 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,
@@ -53,7 +53,7 @@ impl Task {
             task.used = true;
         }
 
-        WindowsVersionRange::load(reader, version)?;
+        WindowsVersionRange::from_reader(reader, version)?;
 
         task.flags = read_flags!(reader,
             [TaskFlags::EXCLUSIVE, TaskFlags::UNCHECKED],

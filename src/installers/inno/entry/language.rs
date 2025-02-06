@@ -27,7 +27,7 @@ pub struct Language {
 }
 
 impl Language {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,

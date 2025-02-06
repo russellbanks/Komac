@@ -116,7 +116,7 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,
@@ -277,7 +277,7 @@ impl Header {
         } else {
             0
         };
-        header.windows_version_range = WindowsVersionRange::load(reader, &version.version)?;
+        header.windows_version_range = WindowsVersionRange::from_reader(reader, &version.version)?;
         if *version < (6, 4, 0, 1) {
             header.back_color = reader.read_u32::<LE>()?;
         }

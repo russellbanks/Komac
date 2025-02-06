@@ -28,7 +28,7 @@ pub struct File {
 }
 
 impl File {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,
@@ -49,9 +49,9 @@ impl File {
             file.strong_assembly_name = InnoValue::new_string(reader, codepage)?;
         }
 
-        Condition::load(reader, codepage, version)?;
+        Condition::from_reader(reader, codepage, version)?;
 
-        WindowsVersionRange::load(reader, version)?;
+        WindowsVersionRange::from_reader(reader, version)?;
 
         file.location = reader.read_u32::<LE>()?;
         file.attributes = reader.read_u32::<LE>()?;

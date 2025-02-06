@@ -16,14 +16,18 @@ pub struct Wizard {
 }
 
 impl Wizard {
-    pub fn load<R: Read>(reader: &mut R, version: &KnownVersion, header: &Header) -> Result<Self> {
+    pub fn from_reader<R: Read>(
+        reader: &mut R,
+        version: &KnownVersion,
+        header: &Header,
+    ) -> Result<Self> {
         let mut wizard = Self {
-            images: Self::load_images(reader, version)?,
+            images: Self::read_images(reader, version)?,
             ..Self::default()
         };
 
         if *version >= (2, 0, 0) || version.is_isx() {
-            wizard.small_images = Self::load_images(reader, version)?;
+            wizard.small_images = Self::read_images(reader, version)?;
         }
 
         if header.compression == Compression::BZip2
@@ -40,7 +44,7 @@ impl Wizard {
         Ok(wizard)
     }
 
-    fn load_images<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<Vec<Vec<u8>>> {
+    fn read_images<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<Vec<Vec<u8>>> {
         let count = if *version >= (5, 6, 0) {
             reader.read_u32::<LE>()?
         } else {

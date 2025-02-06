@@ -26,8 +26,7 @@ use crate::installers::inno::header::Header;
 use crate::installers::inno::loader::{
     SetupLoader, SetupLoaderOffset, SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE,
 };
-use crate::installers::inno::read::block::{InnoBlockReader, INNO_BLOCK_SIZE};
-use crate::installers::inno::read::crc32::Crc32Reader;
+use crate::installers::inno::read::block::InnoBlockReader;
 use crate::installers::inno::version::{InnoVersion, KnownVersion};
 use crate::installers::inno::wizard::Wizard;
 use crate::installers::utils::{
@@ -44,7 +43,6 @@ use crate::types::language_tag::LanguageTag;
 use crate::types::sha_256::Sha256String;
 use crate::types::urls::url::DecodedUrl;
 use crate::types::version::Version;
-use byteorder::{ReadBytesExt, LE};
 use camino::Utf8PathBuf;
 use const_format::formatcp;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
@@ -78,7 +76,7 @@ pub enum InnoError {
     #[error("Unknown Inno Setup loader signature: {0:?}")]
     UnknownLoaderSignature([u8; 12]),
     #[error("Inno CRC32 checksum mismatch. Expected {expected} but calculated {actual}")]
-    CrcChecksumMismatch { expected: u32, actual: u32 },
+    CrcChecksumMismatch { actual: u32, expected: u32 },
     #[error(transparent)]
     Io(#[from] io::Error),
 }
@@ -127,49 +125,10 @@ impl Inno {
         let mut cursor = Cursor::new(data);
         cursor.set_position((header_offset + VERSION_LEN) as u64);
 
-        let expected_checksum = cursor.read_u32::<LE>()?;
+        let compression = InnoBlockReader::read_header(&mut cursor, &known_version)?;
+        let mut block_reader = InnoBlockReader::new(cursor.take(u64::from(*compression)));
 
-        let mut actual_checksum = Crc32Reader::new(&mut cursor);
-
-        let stored_size = if known_version >= (4, 0, 9) {
-            let size = actual_checksum.read_u32::<LE>()?;
-            let compressed = actual_checksum.read_u8()? != 0;
-
-            if compressed {
-                if known_version >= (4, 1, 6) {
-                    Compression::LZMA1(size)
-                } else {
-                    Compression::Zlib(size)
-                }
-            } else {
-                Compression::Stored(size)
-            }
-        } else {
-            let compressed_size = actual_checksum.read_u32::<LE>()?;
-            let uncompressed_size = actual_checksum.read_u32::<LE>()?;
-
-            let mut stored_size = if compressed_size == u32::MAX {
-                Compression::Stored(uncompressed_size)
-            } else {
-                Compression::Zlib(compressed_size)
-            };
-
-            // Add the size of a CRC32 checksum for each 4KiB sub-block
-            *stored_size += stored_size.div_ceil(u32::from(INNO_BLOCK_SIZE)) * 4;
-
-            stored_size
-        };
-
-        let actual_checksum = actual_checksum.finalize();
-        if actual_checksum != expected_checksum {
-            return Err(InnoError::CrcChecksumMismatch {
-                expected: expected_checksum,
-                actual: actual_checksum,
-            });
-        }
-
-        let mut block_reader = InnoBlockReader::new(cursor.take(u64::from(*stored_size)));
-        let mut reader: Box<dyn Read> = match stored_size {
+        let mut reader: Box<dyn Read> = match compression {
             Compression::LZMA1(_) => {
                 let stream = read_lzma_stream_header(&mut block_reader)?;
                 Box::new(XzDecoder::new_stream(block_reader, stream))
@@ -184,10 +143,10 @@ impl Inno {
             WINDOWS_1252
         };
 
-        let mut header = Header::load(&mut reader, codepage, &known_version)?;
+        let mut header = Header::from_reader(&mut reader, codepage, &known_version)?;
 
         let languages = (0..header.language_count)
-            .map(|_| Language::load(&mut reader, codepage, &known_version))
+            .map(|_| Language::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         if !known_version.is_unicode() {
@@ -199,47 +158,47 @@ impl Inno {
         }
 
         if known_version < (4, 0, 0) {
-            Wizard::load(&mut reader, &known_version, &header)?;
+            Wizard::from_reader(&mut reader, &known_version, &header)?;
         }
 
         let _messages = (0..header.message_count)
-            .map(|_| Message::load(&mut reader, &languages, codepage))
+            .map(|_| Message::from_reader(&mut reader, &languages, codepage))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _permissions = (0..header.permission_count)
-            .map(|_| Permission::load(&mut reader, codepage))
+            .map(|_| Permission::from_reader(&mut reader, codepage))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _type_entries = (0..header.type_count)
-            .map(|_| Type::load(&mut reader, codepage, &known_version))
+            .map(|_| Type::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _components = (0..header.component_count)
-            .map(|_| Component::load(&mut reader, codepage, &known_version))
+            .map(|_| Component::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _tasks = (0..header.task_count)
-            .map(|_| Task::load(&mut reader, codepage, &known_version))
+            .map(|_| Task::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _directories = (0..header.directory_count)
-            .map(|_| Directory::load(&mut reader, codepage, &known_version))
+            .map(|_| Directory::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _files = (0..header.file_count)
-            .map(|_| File::load(&mut reader, codepage, &known_version))
+            .map(|_| File::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _icons = (0..header.icon_count)
-            .map(|_| Icon::load(&mut reader, codepage, &known_version))
+            .map(|_| Icon::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _ini = (0..header.ini_entry_count)
-            .map(|_| Ini::load(&mut reader, codepage, &known_version))
+            .map(|_| Ini::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let _registry = (0..header.registry_entry_count)
-            .map(|_| Registry::load(&mut reader, codepage, &known_version))
+            .map(|_| Registry::from_reader(&mut reader, codepage, &known_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let install_dir = header.default_dir_name.take().map(to_relative_install_dir);

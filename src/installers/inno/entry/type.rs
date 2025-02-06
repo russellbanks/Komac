@@ -21,7 +21,7 @@ pub struct Type {
 }
 
 impl Type {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,
@@ -40,7 +40,7 @@ impl Type {
             r#type.check = InnoValue::new_string(reader, codepage)?;
         }
 
-        WindowsVersionRange::load(reader, version)?;
+        WindowsVersionRange::from_reader(reader, version)?;
 
         let flags = TypeFlags::from_bits_retain(reader.read_u8()?);
         r#type.is_custom = flags.contains(TypeFlags::CUSTOM_SETUP_TYPE);

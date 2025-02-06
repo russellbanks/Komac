@@ -25,7 +25,7 @@ pub struct Registry {
 }
 
 impl Registry {
-    pub fn load<R: Read>(
+    pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
         version: &KnownVersion,
@@ -42,13 +42,13 @@ impl Registry {
             ..Self::default()
         };
 
-        Condition::load(reader, codepage, version)?;
+        Condition::from_reader(reader, codepage, version)?;
 
         if *version >= (4, 0, 11) && *version < (4, 1, 0) {
             registry.permissions = InnoValue::new_string(reader, codepage)?;
         }
 
-        WindowsVersionRange::load(reader, version)?;
+        WindowsVersionRange::from_reader(reader, version)?;
 
         registry.reg_root = enum_value!(reader, RegRoot)?;
 

@@ -7,7 +7,7 @@ use std::io::{Read, Result};
 pub struct Permission(String);
 
 impl Permission {
-    pub fn load<R: Read>(reader: &mut R, codepage: &'static Encoding) -> Result<Self> {
+    pub fn from_reader<R: Read>(reader: &mut R, codepage: &'static Encoding) -> Result<Self> {
         InnoValue::new_string(reader, codepage)
             .map(Option::unwrap_or_default)
             .map(Permission)
