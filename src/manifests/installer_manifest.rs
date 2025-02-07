@@ -597,6 +597,22 @@ impl Installer {
             }
         }
 
+        if let (Some(custom), Some(other_custom)) = (
+            self.switches
+                .as_mut()
+                .and_then(|switches| switches.custom.as_mut()),
+            other
+                .switches
+                .as_ref()
+                .and_then(|switches| switches.custom.as_ref()),
+        ) {
+            for part in other_custom {
+                if !custom.contains(part) {
+                    custom.push(part.clone());
+                }
+            }
+        }
+
         merge_fields!(
             self,
             other,
