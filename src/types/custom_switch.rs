@@ -1,4 +1,5 @@
 use crate::prompts::prompt::Prompt;
+use compact_str::CompactString;
 use derive_more::IntoIterator;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use smallvec::SmallVec;
@@ -31,7 +32,7 @@ pub enum CustomSwitchError {
 )]
 pub struct CustomSwitch(
     // Most custom switches only ever have 1 or (rarely) 2 parts
-    #[into_iterator(owned, ref, ref_mut)] SmallVec<[String; 2]>,
+    #[into_iterator(owned, ref, ref_mut)] SmallVec<[CompactString; 2]>,
 );
 
 impl CustomSwitch {
@@ -47,8 +48,8 @@ impl CustomSwitch {
         "/CURRENTUSER".parse().unwrap()
     }
 
-    pub fn push(&mut self, other: String) {
-        self.0.push(other);
+    pub fn push<S: Into<CompactString>>(&mut self, other: S) {
+        self.0.push(other.into());
     }
 
     pub fn contains(&self, other: &str) -> bool {
@@ -58,7 +59,7 @@ impl CustomSwitch {
 
 impl Display for CustomSwitch {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for part in itertools::intersperse(self.0.iter().map(String::as_str), " ") {
+        for part in itertools::intersperse(self.0.iter().map(CompactString::as_str), " ") {
             f.write_str(part)?;
         }
         Ok(())
@@ -75,13 +76,12 @@ impl FromStr for CustomSwitch {
             return Err(CustomSwitchError::TooLong);
         }
 
-        let switches = s
-            .split(Self::DELIMITERS)
-            .filter(|switch| !switch.is_empty())
-            .map(str::to_owned)
-            .collect::<SmallVec<_>>();
-
-        Ok(Self(switches))
+        Ok(Self(
+            s.split(Self::DELIMITERS)
+                .filter(|switch| !switch.is_empty())
+                .map(CompactString::new)
+                .collect::<SmallVec<_>>(),
+        ))
     }
 }
 
@@ -94,6 +94,7 @@ impl Prompt for CustomSwitch {
 #[cfg(test)]
 mod tests {
     use crate::types::custom_switch::{CustomSwitch, CustomSwitchError};
+    use compact_str::CompactString;
     use const_format::str_repeat;
     use smallvec::{smallvec, SmallVec};
 
@@ -168,7 +169,7 @@ mod tests {
 
         let mut custom_switch = ALL_USERS.parse::<CustomSwitch>().unwrap();
 
-        custom_switch.push(NO_RESTART.to_owned());
+        custom_switch.push(NO_RESTART);
 
         assert!(custom_switch.contains(NO_RESTART));
 

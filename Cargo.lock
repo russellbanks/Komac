@@ -2457,6 +2457,7 @@ dependencies = [
  "clap_complete",
  "codepage",
  "color-eyre",
+ "compact_str",
  "const_format",
  "crc32fast",
  "crossterm 0.28.1",
