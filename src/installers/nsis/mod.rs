@@ -12,6 +12,7 @@ use crate::installers::nsis::entry::Entry;
 use crate::installers::nsis::first_header::FirstHeader;
 use crate::installers::nsis::header::block::BlockHeaders;
 use crate::installers::nsis::header::compression::Compression;
+use crate::installers::nsis::header::decoder::Decoder;
 use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::nsis::header::{Decompressed, Header};
 use crate::installers::utils::{read_lzma_stream_header, RELATIVE_PROGRAM_FILES_64};
@@ -157,20 +158,22 @@ impl Nsis {
                         position
                     })
                     .and_then(|position| {
-                        let mut decoder: Box<dyn Read> = if is_solid {
+                        let mut decoder = if is_solid {
                             solid_decoder
                         } else {
                             match compression {
                                 Compression::Lzma(filter_flag) => {
                                     let mut data = &data[position + usize::from(filter_flag)..];
                                     let stream = read_lzma_stream_header(&mut data).ok()?;
-                                    Box::new(XzDecoder::new_stream(data, stream))
+                                    Decoder::Lzma(XzDecoder::new_stream(data, stream))
                                 }
-                                Compression::BZip2 => Box::new(BzDecoder::new(&data[position..])),
+                                Compression::BZip2 => {
+                                    Decoder::BZip2(BzDecoder::new(&data[position..]))
+                                }
                                 Compression::Zlib => {
-                                    Box::new(DeflateDecoder::new(&data[position..]))
+                                    Decoder::Zlib(DeflateDecoder::new(&data[position..]))
                                 }
-                                Compression::None => Box::new(&data[position..]),
+                                Compression::None => Decoder::None(&data[position..]),
                             }
                         };
                         let mut void = io::sink();

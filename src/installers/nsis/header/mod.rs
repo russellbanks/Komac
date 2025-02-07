@@ -1,9 +1,11 @@
 pub mod block;
 pub mod compression;
+pub mod decoder;
 pub mod flags;
 
 use crate::installers::nsis::first_header::FirstHeader;
 use crate::installers::nsis::header::compression::Compression;
+use crate::installers::nsis::header::decoder::Decoder;
 use crate::installers::utils::read_lzma_stream_header;
 use byteorder::{ByteOrder, ReadBytesExt, LE};
 use bzip2::read::BzDecoder;
@@ -56,7 +58,7 @@ pub struct Decompressed<'data> {
     pub is_solid: bool,
     pub non_solid_start_offset: u32,
     pub compression: Compression,
-    pub decoder: Box<dyn Read + 'data>,
+    pub decoder: Decoder<&'data [u8]>,
 }
 
 fn is_lzma(data: &[u8]) -> Option<Compression> {
@@ -120,14 +122,14 @@ impl Header {
             &data[NON_SOLID_EXTRA_BYTES as usize..]
         };
 
-        let mut decoder: Box<dyn Read> = match compression {
+        let mut decoder = match compression {
             Compression::Lzma(_) => {
                 let stream = read_lzma_stream_header(&mut data)?;
-                Box::new(XzDecoder::new_stream(data, stream))
+                Decoder::Lzma(XzDecoder::new_stream(data, stream))
             }
-            Compression::BZip2 => Box::new(BzDecoder::new(data)),
-            Compression::Zlib => Box::new(DeflateDecoder::new(data)),
-            Compression::None => Box::new(data),
+            Compression::BZip2 => Decoder::BZip2(BzDecoder::new(data)),
+            Compression::Zlib => Decoder::Zlib(DeflateDecoder::new(data)),
+            Compression::None => Decoder::None(data),
         };
 
         if is_solid && decoder.read_u32::<LE>()? != first_header.length_of_header.get() {
