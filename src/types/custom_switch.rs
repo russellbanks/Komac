@@ -79,7 +79,7 @@ impl FromStr for CustomSwitch {
         Ok(Self(
             s.split(Self::DELIMITERS)
                 .filter(|switch| !switch.is_empty())
-                .map(CompactString::new)
+                .map(CompactString::from)
                 .collect::<SmallVec<_>>(),
         ))
     }
@@ -94,7 +94,6 @@ impl Prompt for CustomSwitch {
 #[cfg(test)]
 mod tests {
     use crate::types::custom_switch::{CustomSwitch, CustomSwitchError};
-    use compact_str::CompactString;
     use const_format::str_repeat;
     use smallvec::{smallvec, SmallVec};
 

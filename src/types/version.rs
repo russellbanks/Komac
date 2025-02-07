@@ -1,3 +1,4 @@
+use compact_str::CompactString;
 use derive_more::Display;
 use itertools::{EitherOrBoth, Itertools};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
@@ -9,7 +10,7 @@ use std::str::FromStr;
 #[derive(Clone, Debug, Default, Display, Eq, SerializeDisplay, DeserializeFromStr)]
 #[display("{raw}")]
 pub struct Version {
-    raw: String,
+    raw: CompactString,
     parts: SmallVec<[VersionPart; 4]>, // Most versions have 4 parts or fewer
 }
 
@@ -48,7 +49,7 @@ impl Version {
         parts.truncate(parts.len() - droppable_parts);
 
         Self {
-            raw: input.to_owned(),
+            raw: CompactString::from(input),
             parts,
         }
     }
@@ -102,7 +103,7 @@ impl FromStr for Version {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 struct VersionPart {
     number: u64,
-    supplement: Option<String>,
+    supplement: Option<CompactString>,
 }
 
 impl VersionPart {
@@ -119,7 +120,7 @@ impl VersionPart {
             number: number_str.parse().unwrap_or_default(),
             supplement: Option::from(supplement)
                 .filter(|supplement| !supplement.is_empty())
-                .map(str::to_owned),
+                .map(CompactString::from),
         }
     }
 
