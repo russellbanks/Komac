@@ -15,6 +15,10 @@ use std::fs::File;
 pub struct Analyse {
     #[arg(value_parser = is_valid_file, value_hint = clap::ValueHint::FilePath)]
     file_path: Utf8PathBuf,
+
+    /// Hash the file and include it in the InstallerSha256 field
+    #[arg(long, alias = "sha256")]
+    hash: bool,
 }
 
 impl Analyse {
@@ -25,13 +29,14 @@ impl Analyse {
             .file_path
             .file_name()
             .unwrap_or_else(|| self.file_path.as_str());
-        let analyser = FileAnalyser::new(&mmap, file_name)?;
-        let mut installers = analyser.installers;
-        let sha_256 = Sha256String::from_hasher(&Sha256::digest(&mmap))?;
-        for installer in &mut installers {
-            installer.sha_256 = sha_256.clone();
+        let mut analyser = FileAnalyser::new(&mmap, file_name)?;
+        if self.hash {
+            let sha_256 = Sha256String::from_hasher(&Sha256::digest(&mmap))?;
+            for installer in &mut analyser.installers {
+                installer.sha_256 = sha_256.clone();
+            }
         }
-        let yaml = match installers.as_slice() {
+        let yaml = match analyser.installers.as_slice() {
             [installer] => serde_yaml::to_string(installer)?,
             installers => serde_yaml::to_string(installers)?,
         };
