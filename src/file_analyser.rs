@@ -7,6 +7,7 @@ use crate::installers::nsis::{Nsis, NsisError};
 use crate::installers::possible_installers::PossibleInstaller;
 use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::Installer;
+use crate::types::architecture::Architecture;
 use crate::types::copyright::Copyright;
 use crate::types::installer_type::InstallerType;
 use crate::types::package_name::PackageName;
@@ -74,6 +75,7 @@ impl<'data> FileAnalyser<'data> {
                         Err(NsisError::NotNsisFile) => match Inno::new(data.as_ref(), &pe) {
                             Ok(inno_file) => PossibleInstaller::Inno(inno_file),
                             Err(InnoError::NotInnoFile) => PossibleInstaller::Other(Installer {
+                                architecture: Architecture::from_machine(pe.machine()),
                                 r#type: pe
                                     .version_info_list
                                     .iter()
