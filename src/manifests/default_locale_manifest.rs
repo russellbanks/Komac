@@ -163,8 +163,10 @@ impl DefaultLocaleManifest {
         &mut self,
         package_version: &PackageVersion,
         github_values: &mut Option<GitHubValues>,
+        release_notes_url: &Option<ReleaseNotesUrl>,
     ) {
         self.package_version.clone_from(package_version);
+        self.release_notes_url.clone_from(release_notes_url);
         if self.publisher_url.is_none() {
             self.publisher_url = github_values
                 .as_mut()
@@ -200,9 +202,11 @@ impl DefaultLocaleManifest {
         self.release_notes = github_values
             .as_mut()
             .and_then(|values| values.release_notes.take());
-        self.release_notes_url = github_values
-            .as_mut()
-            .and_then(|values| values.release_notes_url.take());
+        if self.release_notes_url.is_none() {
+            self.release_notes_url = github_values
+                .as_mut()
+                .and_then(|values| values.release_notes_url.take());
+        }
         self.manifest_type = Self::TYPE;
         self.manifest_version = ManifestVersion::default();
     }
