@@ -12,6 +12,7 @@ use crate::types::architecture::Architecture;
 use crate::types::command::Command;
 use crate::types::custom_switch::CustomSwitch;
 use crate::types::file_extension::FileExtension;
+use crate::types::install_modes::InstallModes;
 use crate::types::installer_success_code::InstallerSuccessCode;
 use crate::types::installer_switch::InstallerSwitch;
 use crate::types::installer_type::InstallerType;
@@ -53,7 +54,7 @@ pub struct InstallerManifest {
     pub nested_installer_type: Option<NestedInstallerType>,
     pub nested_installer_files: Option<BTreeSet<NestedInstallerFiles>>,
     pub scope: Option<Scope>,
-    pub install_modes: Option<BTreeSet<InstallModes>>,
+    pub install_modes: Option<InstallModes>,
     #[serde(rename = "InstallerSwitches")]
     pub switches: Option<InstallerSwitches>,
     #[serde(rename = "InstallerSuccessCodes")]
@@ -314,16 +315,6 @@ impl Scope {
     }
 }
 
-#[derive(
-    Serialize, Deserialize, Clone, Debug, Display, EnumIter, Eq, PartialEq, Hash, Ord, PartialOrd,
-)]
-#[serde(rename_all = "camelCase")]
-pub enum InstallModes {
-    Interactive,
-    Silent,
-    SilentWithProgress,
-}
-
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -552,7 +543,7 @@ pub struct Installer {
     #[serde(rename = "InstallerSha256")]
     pub sha_256: Sha256String,
     pub signature_sha_256: Option<Sha256String>,
-    pub install_modes: Option<BTreeSet<InstallModes>>,
+    pub install_modes: Option<InstallModes>,
     #[serde(rename = "InstallerSwitches")]
     pub switches: Option<InstallerSwitches>,
     #[serde(rename = "InstallerSuccessCodes")]

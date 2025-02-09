@@ -10,7 +10,7 @@ use thiserror::Error;
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum CustomSwitchError {
     #[error("Custom switch cannot be empty")]
-    CannotBeEmpty,
+    Empty,
     #[error(
         "Custom switch cannot be more than {} characters long",
         CustomSwitch::MAX_LENGTH
@@ -71,7 +71,7 @@ impl FromStr for CustomSwitch {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() {
-            return Err(CustomSwitchError::CannotBeEmpty);
+            return Err(CustomSwitchError::Empty);
         } else if s.chars().count() > Self::MAX_LENGTH {
             return Err(CustomSwitchError::TooLong);
         }
@@ -101,7 +101,7 @@ mod tests {
     fn empty_custom_switch() {
         assert_eq!(
             "".parse::<CustomSwitch>().err(),
-            Some(CustomSwitchError::CannotBeEmpty)
+            Some(CustomSwitchError::Empty)
         );
     }
 

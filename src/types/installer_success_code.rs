@@ -1,4 +1,4 @@
-use crate::prompts::list_prompt::ListPrompt;
+use crate::prompts::list::ListPrompt;
 use derive_more::{Display, FromStr};
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroI64;

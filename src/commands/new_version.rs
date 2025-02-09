@@ -12,13 +12,12 @@ use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
 use crate::github::utils::get_package_path;
 use crate::github::utils::pull_request::pr_changes;
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
-use crate::manifests::installer_manifest::{
-    InstallModes, InstallerManifest, InstallerSwitches, UpgradeBehavior,
-};
+use crate::manifests::installer_manifest::{InstallerManifest, InstallerSwitches, UpgradeBehavior};
 use crate::manifests::version_manifest::VersionManifest;
 use crate::manifests::Manifests;
-use crate::prompts::list_prompt::list_prompt;
-use crate::prompts::multi_prompt::{check_prompt, radio_prompt};
+use crate::prompts::check::check_prompt;
+use crate::prompts::list::list_prompt;
+use crate::prompts::multi::radio_prompt;
 use crate::prompts::prompt::{
     confirm_prompt, handle_inquire_error, optional_prompt, required_prompt,
 };
@@ -28,6 +27,7 @@ use crate::types::copyright::Copyright;
 use crate::types::custom_switch::CustomSwitch;
 use crate::types::description::Description;
 use crate::types::file_extension::FileExtension;
+use crate::types::install_modes::InstallModes;
 use crate::types::installer_success_code::InstallerSuccessCode;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
@@ -60,7 +60,6 @@ use inquire::CustomType;
 use ordinal_trait::Ordinal;
 use owo_colors::OwoColorize;
 use reqwest::Client;
-use strum::IntoEnumIterator;
 
 /// Create a new package from scratch
 #[derive(Parser)]
@@ -274,7 +273,7 @@ impl NewVersion {
                 .iter()
                 .any(|installer| installer.r#type == Some(InstallerType::Inno))
             {
-                Some(InstallModes::iter().collect())
+                Some(InstallModes::all())
             } else {
                 check_prompt::<InstallModes>()?
             },

@@ -66,7 +66,6 @@ impl Prompt for PackageVersion {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::custom_switch::{CustomSwitch, CustomSwitchError};
     use crate::types::package_version::{PackageVersion, PackageVersionError};
     use crate::types::DISALLOWED_CHARACTERS;
     use const_format::str_repeat;

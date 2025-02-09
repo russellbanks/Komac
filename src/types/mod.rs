@@ -5,6 +5,7 @@ pub mod copyright;
 pub mod custom_switch;
 pub mod description;
 pub mod file_extension;
+pub mod install_modes;
 pub mod installation_notes;
 pub mod installer_success_code;
 pub mod installer_switch;
