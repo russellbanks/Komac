@@ -12,9 +12,12 @@ use crate::commands::submit::Submit;
 use crate::commands::sync_fork::SyncFork;
 use crate::commands::token::commands::{TokenArgs, TokenCommands};
 use crate::commands::update_version::UpdateVersion;
-use clap::{Parser, Subcommand};
+use clap::{crate_name, Parser, Subcommand};
 use color_eyre::eyre::Result;
+use tracing::metadata::LevelFilter;
+use tracing::Level;
 use tracing_indicatif::IndicatifLayer;
+use tracing_subscriber::filter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -48,6 +51,15 @@ async fn main() -> Result<()> {
                 .without_time(),
         )
         .with(indicatif_layer)
+        .with(
+            filter::Targets::new()
+                .with_default(LevelFilter::DEBUG)
+                .with_targets([
+                    (crate_name!(), Level::TRACE),
+                    ("hyper_util", Level::INFO),
+                    ("html5ever", Level::INFO),
+                ]),
+        )
         .init();
 
     match Cli::parse().command {
