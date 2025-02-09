@@ -1,4 +1,4 @@
-use crate::prompts::multi::MultiPrompt;
+use crate::prompts::Prompt;
 use bitflags::bitflags;
 use serde::de::{SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
@@ -90,7 +90,7 @@ impl Display for InstallModes {
     }
 }
 
-impl MultiPrompt for InstallModes {
+impl Prompt for InstallModes {
     const MESSAGE: &'static str = "Install modes:";
 }
 

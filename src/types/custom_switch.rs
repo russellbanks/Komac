@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use compact_str::CompactString;
 use derive_more::IntoIterator;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
@@ -87,6 +88,9 @@ impl FromStr for CustomSwitch {
 
 impl Prompt for CustomSwitch {
     const MESSAGE: &'static str = "Custom installer switch:";
+}
+
+impl TextPrompt for CustomSwitch {
     const HELP_MESSAGE: Option<&'static str> = Some("Example: /norestart, -norestart");
     const PLACEHOLDER: Option<&'static str> = None;
 }

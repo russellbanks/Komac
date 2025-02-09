@@ -6,7 +6,7 @@ use crate::github::utils::pull_request::pr_changes;
 use crate::manifests::generic::GenericManifest;
 use crate::manifests::manifest::Manifest;
 use crate::manifests::Manifests;
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::handle_inquire_error;
 use crate::types::manifest_type::ManifestType;
 use anstream::println;
 use camino::Utf8PathBuf;

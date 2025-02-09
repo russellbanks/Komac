@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -10,6 +11,9 @@ pub struct License(String);
 
 impl Prompt for License {
     const MESSAGE: &'static str = "License:";
+}
+
+impl TextPrompt for License {
     const HELP_MESSAGE: Option<&'static str> = Some("Example: MIT, GPL-3.0, Freeware, Proprietary");
     const PLACEHOLDER: Option<&'static str> = None;
 }

@@ -1,4 +1,5 @@
 use crate::prompts::list::ListPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -19,8 +20,11 @@ use nutype::nutype;
 )]
 pub struct Protocol(String);
 
-impl ListPrompt for Protocol {
+impl Prompt for Protocol {
     const MESSAGE: &'static str = "Protocols:";
+}
+
+impl ListPrompt for Protocol {
     const HELP_MESSAGE: &'static str = "List of protocols the package provides a handler for";
     const MAX_ITEMS: u16 = 16;
 }

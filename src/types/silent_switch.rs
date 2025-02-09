@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -21,6 +22,9 @@ pub struct SilentSwitch(String);
 
 impl Prompt for SilentSwitch {
     const MESSAGE: &'static str = "Silent installer switch:";
+}
+
+impl TextPrompt for SilentSwitch {
     const HELP_MESSAGE: Option<&'static str> =
         Some("Example: /S, -verysilent, /qn, --silent, /exenoui");
     const PLACEHOLDER: Option<&'static str> = None;

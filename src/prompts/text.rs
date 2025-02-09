@@ -1,19 +1,18 @@
+use crate::prompts::{handle_inquire_error, Prompt};
 use inquire::error::InquireResult;
 use inquire::validator::Validation;
 use inquire::{Confirm, CustomUserError, InquireError, Text};
 use std::fmt::{Debug, Display};
-use std::process;
 use std::str::FromStr;
 
-pub trait Prompt {
-    const MESSAGE: &'static str;
+pub trait TextPrompt: Prompt {
     const HELP_MESSAGE: Option<&'static str>;
     const PLACEHOLDER: Option<&'static str>;
 }
 
 pub fn optional_prompt<T>(parameter: Option<T>) -> InquireResult<Option<T>>
 where
-    T: FromStr + Prompt,
+    T: FromStr + TextPrompt,
     <T as FromStr>::Err: Display + Debug + Sync + Send + 'static,
 {
     if let Some(value) = parameter {
@@ -48,7 +47,7 @@ where
 
 pub fn required_prompt<T>(parameter: Option<T>) -> InquireResult<T>
 where
-    T: FromStr + Prompt,
+    T: FromStr + TextPrompt,
     <T as FromStr>::Err: ToString,
 {
     if let Some(value) = parameter {
@@ -71,18 +70,6 @@ where
             .parse::<T>()
             .map_err(|err| InquireError::from(CustomUserError::from(err.to_string())))
     }
-}
-
-/// Inquire captures Ctrl+C and returns an error. This will instead exit normally if the prompt is
-/// interrupted.
-pub fn handle_inquire_error(error: InquireError) -> InquireError {
-    if matches!(
-        error,
-        InquireError::OperationCanceled | InquireError::OperationInterrupted
-    ) {
-        process::exit(0);
-    }
-    error
 }
 
 pub fn confirm_prompt(message: &str) -> InquireResult<bool> {

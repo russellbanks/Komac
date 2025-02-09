@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -21,6 +22,9 @@ pub struct SilentWithProgressSwitch(String);
 
 impl Prompt for SilentWithProgressSwitch {
     const MESSAGE: &'static str = "Silent with progress installer switch:";
+}
+
+impl TextPrompt for SilentWithProgressSwitch {
     const HELP_MESSAGE: Option<&'static str> = Some("Example: /S, -silent, /qb, /exebasicui");
     const PLACEHOLDER: Option<&'static str> = None;
 }

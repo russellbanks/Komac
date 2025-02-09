@@ -1,12 +1,12 @@
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::handle_inquire_error;
+use crate::prompts::Prompt;
 use inquire::validator::Validation;
 use inquire::Text;
 use std::collections::BTreeSet;
 use std::fmt::Display;
 use std::str::FromStr;
 
-pub trait ListPrompt {
-    const MESSAGE: &'static str;
+pub trait ListPrompt: Prompt {
     const HELP_MESSAGE: &'static str;
     const MAX_ITEMS: u16;
 }

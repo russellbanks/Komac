@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use crate::types::DISALLOWED_CHARACTERS;
 use derive_more::{AsRef, Deref, Display};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
@@ -109,6 +110,9 @@ impl FromStr for PackageIdentifier {
 
 impl Prompt for PackageIdentifier {
     const MESSAGE: &'static str = "Package identifier:";
+}
+
+impl TextPrompt for PackageIdentifier {
     const HELP_MESSAGE: Option<&'static str> =
         Some("Package Identifiers are in the format of Package.Identifier");
     const PLACEHOLDER: Option<&'static str> = Some("Package.Identifier");

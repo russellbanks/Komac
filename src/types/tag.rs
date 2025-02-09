@@ -1,4 +1,5 @@
 use crate::prompts::list::ListPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -17,8 +18,11 @@ use nutype::nutype;
 )]
 pub struct Tag(String);
 
-impl ListPrompt for Tag {
+impl Prompt for Tag {
     const MESSAGE: &'static str = "Tags:";
+}
+
+impl ListPrompt for Tag {
     const HELP_MESSAGE: &'static str = "Example: zip, c++, photos, OBS";
     const MAX_ITEMS: u16 = 16;
 }

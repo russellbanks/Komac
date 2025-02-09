@@ -3,7 +3,7 @@ use crate::credential::{get_default_headers, handle_token};
 use crate::github::github_client::GitHub;
 use crate::github::graphql::get_branches::PullRequestState;
 use crate::manifests::installer_manifest::InstallerManifest;
-use crate::prompts::prompt::confirm_prompt;
+use crate::prompts::text::confirm_prompt;
 use crate::types::manifest_type::ManifestTypeWithLocale;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;

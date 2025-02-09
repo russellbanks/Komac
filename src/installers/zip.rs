@@ -10,7 +10,7 @@ use zip::ZipArchive;
 
 use crate::file_analyser::FileAnalyser;
 use crate::manifests::installer_manifest::{Installer, NestedInstallerFiles};
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::handle_inquire_error;
 use crate::types::installer_type::InstallerType;
 
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =

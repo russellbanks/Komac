@@ -2,7 +2,8 @@ use std::num::NonZeroU32;
 
 use crate::credential::handle_token;
 use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::prompts::prompt::{confirm_prompt, handle_inquire_error};
+use crate::prompts::handle_inquire_error;
+use crate::prompts::text::confirm_prompt;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use anstream::println;

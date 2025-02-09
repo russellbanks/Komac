@@ -1,4 +1,4 @@
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::handle_inquire_error;
 use color_eyre::eyre::{bail, Result};
 use inquire::error::InquireResult;
 use inquire::validator::Validation;

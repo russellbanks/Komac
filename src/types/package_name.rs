@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 use std::collections::HashMap;
 
@@ -19,6 +20,9 @@ impl PackageName {
 
 impl Prompt for PackageName {
     const MESSAGE: &'static str = "Package name:";
+}
+
+impl TextPrompt for PackageName {
     const HELP_MESSAGE: Option<&'static str> = Some("Example: Microsoft Teams");
     const PLACEHOLDER: Option<&'static str> = None;
 }

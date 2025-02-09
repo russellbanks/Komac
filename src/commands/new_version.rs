@@ -15,12 +15,9 @@ use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{InstallerManifest, InstallerSwitches, UpgradeBehavior};
 use crate::manifests::version_manifest::VersionManifest;
 use crate::manifests::Manifests;
-use crate::prompts::check::check_prompt;
 use crate::prompts::list::list_prompt;
-use crate::prompts::multi::radio_prompt;
-use crate::prompts::prompt::{
-    confirm_prompt, handle_inquire_error, optional_prompt, required_prompt,
-};
+use crate::prompts::text::{confirm_prompt, optional_prompt, required_prompt};
+use crate::prompts::{check_prompt, handle_inquire_error, radio_prompt};
 use crate::types::author::Author;
 use crate::types::command::Command;
 use crate::types::copyright::Copyright;

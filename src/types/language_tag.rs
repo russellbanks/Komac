@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use derive_more::{AsRef, Deref, Display, FromStr};
 use icu_locid::{langid, LanguageIdentifier};
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,9 @@ impl PartialOrd for LanguageTag {
 
 impl Prompt for LanguageTag {
     const MESSAGE: &'static str = "Package locale:";
+}
+
+impl TextPrompt for LanguageTag {
     const HELP_MESSAGE: Option<&'static str> = Some("Example: en-US");
     const PLACEHOLDER: Option<&'static str> = None;
 }

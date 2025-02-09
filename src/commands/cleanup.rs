@@ -1,7 +1,7 @@
 use crate::commands::utils::SPINNER_TICK_RATE;
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
-use crate::prompts::prompt::handle_inquire_error;
+use crate::prompts::handle_inquire_error;
 use anstream::println;
 use bitflags::bitflags;
 use clap::Parser;

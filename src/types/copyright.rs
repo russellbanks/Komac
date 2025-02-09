@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 use std::collections::HashMap;
 
@@ -18,6 +19,9 @@ impl Copyright {
 
 impl Prompt for Copyright {
     const MESSAGE: &'static str = "Copyright:";
+}
+
+impl TextPrompt for Copyright {
     const HELP_MESSAGE: Option<&'static str> = Some("Example: Copyright (c) Microsoft Corporation");
     const PLACEHOLDER: Option<&'static str> = None;
 }

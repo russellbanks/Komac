@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -9,6 +10,9 @@ pub struct Description(String);
 
 impl Prompt for Description {
     const MESSAGE: &'static str = "Description:";
+}
+
+impl TextPrompt for Description {
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;
 }

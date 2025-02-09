@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use crate::types::version::Version;
 use crate::types::DISALLOWED_CHARACTERS;
 use derive_more::{Deref, Display};
@@ -60,6 +61,9 @@ impl FromStr for PackageVersion {
 
 impl Prompt for PackageVersion {
     const MESSAGE: &'static str = "Package version:";
+}
+
+impl TextPrompt for PackageVersion {
     const HELP_MESSAGE: Option<&'static str> = Some("Example: 1.2.3");
     const PLACEHOLDER: Option<&'static str> = None;
 }

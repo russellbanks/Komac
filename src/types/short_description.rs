@@ -1,4 +1,5 @@
-use crate::prompts::prompt::Prompt;
+use crate::prompts::text::TextPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -10,6 +11,9 @@ pub struct ShortDescription(String);
 
 impl Prompt for ShortDescription {
     const MESSAGE: &'static str = "Short description:";
+}
+
+impl TextPrompt for ShortDescription {
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;
 }

@@ -1,4 +1,5 @@
 use crate::prompts::list::ListPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -19,8 +20,11 @@ use nutype::nutype;
 )]
 pub struct Command(String);
 
-impl ListPrompt for Command {
+impl Prompt for Command {
     const MESSAGE: &'static str = "Commands:";
+}
+
+impl ListPrompt for Command {
     const HELP_MESSAGE: &'static str = "List of commands or aliases to run the package";
     const MAX_ITEMS: u16 = 16;
 }

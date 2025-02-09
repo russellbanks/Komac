@@ -1,5 +1,5 @@
 use crate::credential::get_komac_credential;
-use crate::prompts::prompt::confirm_prompt;
+use crate::prompts::text::confirm_prompt;
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::Result;

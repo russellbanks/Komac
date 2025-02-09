@@ -1,4 +1,5 @@
 use crate::prompts::list::ListPrompt;
+use crate::prompts::Prompt;
 use nutype::nutype;
 
 #[nutype(
@@ -19,8 +20,11 @@ use nutype::nutype;
 )]
 pub struct FileExtension(String);
 
-impl ListPrompt for FileExtension {
+impl Prompt for FileExtension {
     const MESSAGE: &'static str = "File extensions:";
+}
+
+impl ListPrompt for FileExtension {
     const HELP_MESSAGE: &'static str = "List of file extensions the package could support";
     const MAX_ITEMS: u16 = 512;
 }
