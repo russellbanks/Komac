@@ -1,6 +1,6 @@
 use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::flag_reader::read_flags::read_flags;
-use crate::installers::inno::version::KnownVersion;
+use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bitflags::bitflags;
 use byteorder::{ReadBytesExt, LE};
@@ -25,7 +25,7 @@ impl Task {
     pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
-        version: &KnownVersion,
+        version: &InnoVersion,
     ) -> Result<Self> {
         let mut task = Self {
             name: InnoValue::new_string(reader, codepage)?,

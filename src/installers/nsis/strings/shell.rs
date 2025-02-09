@@ -79,7 +79,7 @@ pub struct Shell;
 
 impl Shell {
     /// Adapted from <https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L683>
-    pub fn resolve(buf: &mut String, strings_block: &NsisState, character: u16) {
+    pub fn resolve(buf: &mut String, state: &NsisState, character: u16) {
         const PROGRAM_FILES_DIR: &str = "ProgramFilesDir";
         const COMMON_FILES_DIR: &str = "CommonFilesDir";
 
@@ -88,7 +88,7 @@ impl Shell {
         if index1 & 1 << 7 != 0 {
             let offset = index1 & 0x3F;
             let is_64_bit = index1 & 1 << 6 != 0;
-            let shell_string = strings_block.get_string(i32::from(offset));
+            let shell_string = state.get_string(i32::from(offset));
             if shell_string == PROGRAM_FILES_DIR {
                 buf.push_str(if is_64_bit {
                     RELATIVE_PROGRAM_FILES_64

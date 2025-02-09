@@ -3,6 +3,7 @@ mod signature;
 
 use crate::installers::nsis::first_header::flags::HeaderFlags;
 use crate::installers::nsis::first_header::signature::{Magic, NsisSignature};
+use derive_more::Debug;
 use zerocopy::little_endian::U32;
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
@@ -12,7 +13,9 @@ pub struct FirstHeader {
     flags: HeaderFlags,
     magic: Magic,
     signature: NsisSignature,
+    #[debug("{length_of_header}")]
     pub length_of_header: U32,
+    #[debug("{length_of_following_data}")]
     length_of_following_data: U32,
 }
 

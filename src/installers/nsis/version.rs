@@ -5,6 +5,7 @@ use derive_more::Display;
 use itertools::{Either, Itertools};
 use quick_xml::de::from_str;
 use serde::Deserialize;
+use tracing::{debug, trace};
 use yara_x::mods::pe::ResourceType::RESOURCE_TYPE_MANIFEST;
 use yara_x::mods::PE;
 
@@ -44,11 +45,13 @@ impl NsisVersion {
             .and_then(|manifest_bytes| std::str::from_utf8(manifest_bytes).ok())
             .and_then(|manifest| from_str::<Assembly>(manifest).ok())
             .map(|assembly| assembly.description.inner)
+            .inspect(|description| debug!(manifest.description = description))
             .and_then(Self::from_text)
     }
 
     pub fn from_branding_text(state: &NsisState) -> Option<Self> {
         let branding_text = state.get_string(state.language_table.string_offsets[0].get());
+        trace!(%branding_text);
         Self::from_text(&branding_text)
     }
 
@@ -74,6 +77,8 @@ impl NsisVersion {
     }
 
     pub fn detect(strings_block: &[u8]) -> Self {
+        trace!("Detecting version from strings block");
+
         // The strings block starts with a UTF-16 null byte if it is Unicode
         let unicode = &strings_block[..size_of::<u16>()] == b"\0\0";
 
@@ -125,6 +130,8 @@ impl NsisVersion {
 
             pos = index + char_size;
         }
+
+        debug!(nsis3_count, nsis2_count);
 
         if nsis3_count >= nsis2_count {
             Self::_3

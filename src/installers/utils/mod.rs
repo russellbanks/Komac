@@ -1,7 +1,7 @@
-use liblzma::stream::{Filters, Stream};
-use std::io::{Error, ErrorKind, Read, Result};
+use std::io::{Read, Result};
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
+pub mod lzma_stream_header;
 pub mod registry;
 
 pub const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";
@@ -14,16 +14,6 @@ pub const RELATIVE_PROGRAM_DATA: &str = "%ProgramData%";
 pub const RELATIVE_WINDOWS_DIR: &str = "%WinDir%";
 pub const RELATIVE_SYSTEM_ROOT: &str = "%SystemRoot%";
 pub const RELATIVE_TEMP_FOLDER: &str = "%Temp%";
-
-pub fn read_lzma_stream_header<R: Read>(reader: &mut R) -> Result<Stream> {
-    let mut properties = [0; 5];
-    reader.read_exact(&mut properties)?;
-
-    let mut filters = Filters::new();
-    filters.lzma1_properties(&properties)?;
-
-    Stream::new_raw_decoder(&filters).map_err(|error| Error::new(ErrorKind::InvalidData, error))
-}
 
 pub fn transmute_from_reader<T: FromBytes + FromZeros + IntoBytes>(
     reader: &mut impl Read,

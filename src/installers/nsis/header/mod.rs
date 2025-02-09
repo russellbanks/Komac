@@ -6,12 +6,13 @@ pub mod flags;
 use crate::installers::nsis::first_header::FirstHeader;
 use crate::installers::nsis::header::compression::Compression;
 use crate::installers::nsis::header::decoder::Decoder;
-use crate::installers::utils::read_lzma_stream_header;
+use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
 use byteorder::{ByteOrder, ReadBytesExt, LE};
 use bzip2::read::BzDecoder;
 use flate2::read::DeflateDecoder;
 use liblzma::read::XzDecoder;
 use std::io::{Error, ErrorKind, Read, Result};
+use tracing::debug;
 use zerocopy::little_endian::I32;
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
@@ -115,6 +116,8 @@ impl Header {
             Compression::Zlib
         };
 
+        debug!(%compression);
+
         let mut data = if is_solid {
             data
         } else {
@@ -124,7 +127,7 @@ impl Header {
 
         let mut decoder = match compression {
             Compression::Lzma(_) => {
-                let stream = read_lzma_stream_header(&mut data)?;
+                let stream = LzmaStreamHeader::from_reader(&mut data)?;
                 Decoder::Lzma(XzDecoder::new_stream(data, stream))
             }
             Compression::BZip2 => Decoder::BZip2(BzDecoder::new(data)),

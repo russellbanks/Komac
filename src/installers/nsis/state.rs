@@ -12,6 +12,7 @@ use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
 use std::borrow::Cow;
 use std::collections::HashMap;
+use tracing::debug;
 use yara_x::mods::PE;
 
 pub struct NsisState<'data> {
@@ -42,6 +43,8 @@ impl<'data> NsisState<'data> {
         state.version = NsisVersion::from_manifest(data, pe)
             .or_else(|| NsisVersion::from_branding_text(&state))
             .unwrap_or_else(|| NsisVersion::detect(state.str_block));
+
+        debug!(version = %state.version);
 
         Ok(state)
     }

@@ -150,7 +150,7 @@ pub struct NewVersion {
     #[arg(long, env = "OPEN_PR")]
     open_pr: bool,
 
-    /// Run without submitting
+    /// Run without prompting or submitting
     #[arg(long, env = "DRY_RUN")]
     dry_run: bool,
 

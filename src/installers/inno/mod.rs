@@ -26,7 +26,7 @@ use crate::installers::inno::loader::{
     SetupLoader, SetupLoaderOffset, SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE,
 };
 use crate::installers::inno::read::block::InnoBlockReader;
-use crate::installers::inno::version::{InnoVersion, KnownVersion};
+use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::wizard::Wizard;
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
@@ -52,13 +52,14 @@ use std::io::Cursor;
 use std::str::FromStr;
 use std::{io, mem};
 use thiserror::Error;
+use tracing::{debug, trace};
 use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
 use zerocopy::TryFromBytes;
 
 const VERSION_LEN: usize = 1 << 6;
 
-const MAX_SUPPORTED_VERSION: InnoVersion = InnoVersion(6, 4, u8::MAX, 0);
+const MAX_SUPPORTED_VERSION: InnoVersion = InnoVersion::new(6, 4, u8::MAX, 0);
 
 #[derive(Error, Debug)]
 pub enum InnoError {
@@ -67,7 +68,7 @@ pub enum InnoError {
     #[error("Invalid Inno header version")]
     InvalidSetupHeader,
     #[error("Inno Setup version {0} is newer than the maximum supported version {MAX_SUPPORTED_VERSION}")]
-    UnsupportedVersion(KnownVersion),
+    UnsupportedVersion(InnoVersion),
     #[error("Unknown Inno setup version: {0}")]
     UnknownVersion(String),
     #[error("Unknown Inno Setup loader signature: {0:?}")]
@@ -111,32 +112,38 @@ impl Inno {
             .and_then(|bytes| memchr::memchr(0, bytes).map(|len| &bytes[..len]))
             .ok_or(InnoError::InvalidSetupHeader)?;
 
-        let known_version = KnownVersion::from_version_bytes(version_bytes).ok_or_else(|| {
+        debug!(raw_version = ?std::str::from_utf8(version_bytes));
+
+        let inno_version = InnoVersion::from_version_bytes(version_bytes).ok_or_else(|| {
             InnoError::UnknownVersion(String::from_utf8_lossy(version_bytes).into_owned())
         })?;
 
-        if known_version > MAX_SUPPORTED_VERSION {
-            return Err(InnoError::UnsupportedVersion(known_version));
+        debug!(?inno_version);
+
+        if inno_version > MAX_SUPPORTED_VERSION {
+            return Err(InnoError::UnsupportedVersion(inno_version));
         }
 
         let mut cursor = Cursor::new(data);
         cursor.set_position((header_offset + VERSION_LEN) as u64);
 
-        let mut reader = InnoBlockReader::get(cursor, &known_version)?;
+        let mut reader = InnoBlockReader::get(cursor, &inno_version)?;
 
-        let mut codepage = if known_version.is_unicode() {
+        let mut codepage = if inno_version.is_unicode() {
             UTF_16LE
         } else {
             WINDOWS_1252
         };
 
-        let mut header = Header::from_reader(&mut reader, codepage, &known_version)?;
+        let mut header = Header::from_reader(&mut reader, codepage, &inno_version)?;
+
+        debug!(?header);
 
         let languages = (0..header.language_count)
-            .map(|_| Language::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| Language::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
-        if !known_version.is_unicode() {
+        if !inno_version.is_unicode() {
             codepage = languages
                 .iter()
                 .map(|language| language.codepage)
@@ -144,48 +151,59 @@ impl Inno {
                 .unwrap_or(WINDOWS_1252);
         }
 
-        if known_version < (4, 0, 0) {
-            Wizard::from_reader(&mut reader, &known_version, &header)?;
+        if inno_version < (4, 0, 0) {
+            debug!("Reading images and plugins");
+            Wizard::from_reader(&mut reader, &inno_version, &header)?;
         }
 
+        trace!("Reading messages");
         let _messages = (0..header.message_count)
             .map(|_| Message::from_reader(&mut reader, &languages, codepage))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading permissions");
         let _permissions = (0..header.permission_count)
             .map(|_| Permission::from_reader(&mut reader, codepage))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading type entries");
         let _type_entries = (0..header.type_count)
-            .map(|_| Type::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| Type::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading components");
         let _components = (0..header.component_count)
-            .map(|_| Component::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| Component::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading tasks");
         let _tasks = (0..header.task_count)
-            .map(|_| Task::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| Task::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading directories");
         let _directories = (0..header.directory_count)
-            .map(|_| Directory::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| Directory::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading files");
         let _files = (0..header.file_count)
-            .map(|_| File::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| File::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading icons");
         let _icons = (0..header.icon_count)
-            .map(|_| Icon::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| Icon::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading ini entries");
         let _ini = (0..header.ini_entry_count)
-            .map(|_| Ini::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| Ini::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
+        trace!("Reading registry entries");
         let _registry = (0..header.registry_entry_count)
-            .map(|_| Registry::from_reader(&mut reader, codepage, &known_version))
+            .map(|_| Registry::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
         let install_dir = header.default_dir_name.take().map(to_relative_install_dir);

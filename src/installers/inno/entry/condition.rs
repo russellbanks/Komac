@@ -1,5 +1,5 @@
 use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::version::KnownVersion;
+use crate::installers::inno::version::InnoVersion;
 use encoding_rs::Encoding;
 use std::io::{Read, Result};
 
@@ -17,7 +17,7 @@ impl Condition {
     pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
-        version: &KnownVersion,
+        version: &InnoVersion,
     ) -> Result<Self> {
         let mut condition = Self::default();
 

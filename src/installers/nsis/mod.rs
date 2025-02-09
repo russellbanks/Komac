@@ -15,7 +15,8 @@ use crate::installers::nsis::header::compression::Compression;
 use crate::installers::nsis::header::decoder::Decoder;
 use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::nsis::header::{Decompressed, Header};
-use crate::installers::utils::{read_lzma_stream_header, RELATIVE_PROGRAM_FILES_64};
+use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
+use crate::installers::utils::RELATIVE_PROGRAM_FILES_64;
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
 };
@@ -37,6 +38,7 @@ use std::io;
 use std::io::Read;
 use strsim::levenshtein;
 use thiserror::Error;
+use tracing::debug;
 use yara_x::mods::pe::Machine;
 use yara_x::mods::PE;
 use zerocopy::little_endian::I32;
@@ -76,6 +78,8 @@ impl Nsis {
             .and_then(|bytes| {
                 FirstHeader::try_ref_from_bytes(bytes).map_err(|_| NsisError::NotNsisFile)
             })?;
+
+        debug!(first_header_offset, ?first_header);
 
         let Decompressed {
             data: decompressed_data,
@@ -164,7 +168,7 @@ impl Nsis {
                             match compression {
                                 Compression::Lzma(filter_flag) => {
                                     let mut data = &data[position + usize::from(filter_flag)..];
-                                    let stream = read_lzma_stream_header(&mut data).ok()?;
+                                    let stream = LzmaStreamHeader::from_reader(&mut data).ok()?;
                                     Decoder::Lzma(XzDecoder::new_stream(data, stream))
                                 }
                                 Compression::BZip2 => {
@@ -205,8 +209,8 @@ impl Nsis {
             });
 
         let display_name = state.registry.remove_value("DisplayName");
-        let display_version = state.registry.remove_value("DisplayVersion");
         let publisher = state.registry.remove_value("Publisher");
+        let display_version = state.registry.remove_value("DisplayVersion");
         let product_code = state.registry.get_product_code();
 
         Ok(Self {
@@ -219,7 +223,7 @@ impl Nsis {
                 r#type: Some(InstallerType::Nullsoft),
                 scope: install_dir.as_deref().and_then(Scope::from_install_dir),
                 product_code: product_code.map(str::to_owned),
-                apps_and_features_entries: [&display_name, &display_version, &publisher]
+                apps_and_features_entries: [&display_name, &publisher, &display_version]
                     .iter()
                     .any(|option| option.is_some())
                     .then(|| {

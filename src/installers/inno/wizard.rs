@@ -2,7 +2,7 @@ use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::header::enums::Compression;
 use crate::installers::inno::header::flags::HeaderFlags;
 use crate::installers::inno::header::Header;
-use crate::installers::inno::version::KnownVersion;
+use crate::installers::inno::version::InnoVersion;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Result};
 
@@ -18,7 +18,7 @@ pub struct Wizard {
 impl Wizard {
     pub fn from_reader<R: Read>(
         reader: &mut R,
-        version: &KnownVersion,
+        version: &InnoVersion,
         header: &Header,
     ) -> Result<Self> {
         let mut wizard = Self {
@@ -44,7 +44,7 @@ impl Wizard {
         Ok(wizard)
     }
 
-    fn read_images<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<Vec<Vec<u8>>> {
+    fn read_images<R: Read>(reader: &mut R, version: &InnoVersion) -> Result<Vec<Vec<u8>>> {
         let count = if *version >= (5, 6, 0) {
             reader.read_u32::<LE>()?
         } else {

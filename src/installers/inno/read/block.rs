@@ -2,20 +2,21 @@ use crate::installers::inno::compression::Compression;
 use crate::installers::inno::read::chunk::{InnoChunkReader, INNO_CHUNK_SIZE};
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::read::decoder::Decoder;
-use crate::installers::inno::version::KnownVersion;
+use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::InnoError;
-use crate::installers::utils::read_lzma_stream_header;
+use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
 use byteorder::{ReadBytesExt, LE};
 use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
 use std::io::{Error, ErrorKind, Read, Result, Take};
+use tracing::debug;
 
 pub struct InnoBlockReader<R: Read> {
     inner: Decoder<InnoChunkReader<Take<R>>>,
 }
 
 impl<R: Read> InnoBlockReader<R> {
-    pub fn get(mut inner: R, version: &KnownVersion) -> Result<Self> {
+    pub fn get(mut inner: R, version: &InnoVersion) -> Result<Self> {
         let compression = Self::read_header(&mut inner, version)?;
 
         let mut chunk_reader = InnoChunkReader::new(inner.take(u64::from(*compression)));
@@ -23,7 +24,7 @@ impl<R: Read> InnoBlockReader<R> {
         Ok(Self {
             inner: match compression {
                 Compression::LZMA1(_) => {
-                    let stream = read_lzma_stream_header(&mut chunk_reader)?;
+                    let stream = LzmaStreamHeader::from_reader(&mut chunk_reader)?;
                     Decoder::LZMA1(XzDecoder::new_stream(chunk_reader, stream))
                 }
                 Compression::Zlib(_) => Decoder::Zlib(ZlibDecoder::new(chunk_reader)),
@@ -32,7 +33,7 @@ impl<R: Read> InnoBlockReader<R> {
         })
     }
 
-    pub fn read_header(reader: &mut R, version: &KnownVersion) -> Result<Compression> {
+    pub fn read_header(reader: &mut R, version: &InnoVersion) -> Result<Compression> {
         let expected_crc32 = reader.read_u32::<LE>()?;
 
         let mut actual_crc32 = Crc32Reader::new(reader);
@@ -65,6 +66,8 @@ impl<R: Read> InnoBlockReader<R> {
 
             stored_size
         };
+
+        debug!(?compression);
 
         let actual_crc32 = actual_crc32.finalize();
         if actual_crc32 != expected_crc32 {

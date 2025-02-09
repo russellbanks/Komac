@@ -48,31 +48,31 @@ impl PartialOrd<(u8, u8, u8)> for SetupLoaderVersion {
 const KNOWN_SETUP_LOADER_VERSIONS: [SetupLoaderVersion; 7] = [
     SetupLoaderVersion {
         signature: *b"rDlPtS02\x87eVx",
-        version: InnoVersion(1, 2, 10, 0),
+        version: InnoVersion::new(1, 2, 10, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS04\x87eVx",
-        version: InnoVersion(4, 0, 0, 0),
+        version: InnoVersion::new(4, 0, 0, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS05\x87eVx",
-        version: InnoVersion(4, 0, 3, 0),
+        version: InnoVersion::new(4, 0, 3, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS06\x87eVx",
-        version: InnoVersion(4, 0, 10, 0),
+        version: InnoVersion::new(4, 0, 10, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS07\x87eVx",
-        version: InnoVersion(4, 1, 6, 0),
+        version: InnoVersion::new(4, 1, 6, 0),
     },
     SetupLoaderVersion {
         signature: *b"rDlPtS\xCD\xE6\xD7{\x0B*",
-        version: InnoVersion(5, 1, 5, 0),
+        version: InnoVersion::new(5, 1, 5, 0),
     },
     SetupLoaderVersion {
         signature: *b"nS5W7dT\x83\xAA\x1B\x0Fj",
-        version: InnoVersion(5, 1, 5, 0),
+        version: InnoVersion::new(5, 1, 5, 0),
     },
 ];
 

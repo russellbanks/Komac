@@ -420,8 +420,8 @@ pub struct Dependencies {
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct PackageDependencies {
-    pub package_identifier: String,
-    pub minimum_version: Option<String>,
+    pub package_identifier: PackageIdentifier,
+    pub minimum_version: Option<PackageVersion>,
 }
 
 #[skip_serializing_none]

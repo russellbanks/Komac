@@ -1,5 +1,5 @@
 use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::version::KnownVersion;
+use crate::installers::inno::version::InnoVersion;
 use byteorder::{ReadBytesExt, LE};
 use encoding_rs::{Encoding, UTF_16LE, WINDOWS_1252};
 use std::io::{Read, Result};
@@ -30,7 +30,7 @@ impl Language {
     pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
-        version: &KnownVersion,
+        version: &InnoVersion,
     ) -> Result<Self> {
         let mut language = Self::default();
 

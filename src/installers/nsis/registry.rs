@@ -1,6 +1,7 @@
 use crate::installers::utils::registry::RegRoot;
 use std::borrow::Cow;
 use std::collections::HashMap;
+use tracing::debug;
 
 type Values<'data> = HashMap<Cow<'data, str>, Cow<'data, str>>;
 
@@ -36,6 +37,7 @@ impl<'data> Registry<'data> {
         name: Cow<'data, str>,
         value: Cow<'data, str>,
     ) {
+        debug!(?root, %key, %name, %value);
         self.0
             .entry(root)
             .or_default()

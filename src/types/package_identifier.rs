@@ -1,7 +1,7 @@
 use crate::prompts::prompt::Prompt;
 use crate::types::DISALLOWED_CHARACTERS;
 use derive_more::{AsRef, Deref, Display};
-use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -36,7 +36,21 @@ pub enum PackageIdentifierError {
     InvalidPartCount,
 }
 
-#[derive(AsRef, Clone, Default, Deref, Display, Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[derive(
+    AsRef,
+    Clone,
+    Debug,
+    Default,
+    Deref,
+    Display,
+    Hash,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    DeserializeFromStr,
+    SerializeDisplay,
+)]
 pub struct PackageIdentifier(String);
 
 /// A Package Identifier parser and validator modelled off the regex pattern:

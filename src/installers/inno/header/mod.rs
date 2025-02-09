@@ -13,7 +13,7 @@ use crate::installers::inno::header::enums::{
     LogMode, PrivilegeLevel,
 };
 use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
-use crate::installers::inno::version::KnownVersion;
+use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
 use byteorder::{ReadBytesExt, LE};
@@ -60,6 +60,7 @@ pub struct Header {
     pub architectures_allowed: ArchitectureIdentifiers,
     pub architectures_disallowed: ArchitectureIdentifiers,
     pub architectures_install_in_64_bit_mode: ArchitectureIdentifiers,
+    #[debug(skip)]
     pub license_text: Option<String>,
     pub info_before: Option<String>,
     pub info_after: Option<String>,
@@ -83,6 +84,7 @@ pub struct Header {
     pub uninstall_delete_entry_count: u32,
     pub run_entry_count: u32,
     pub uninstall_run_entry_count: u32,
+    #[debug(skip)]
     pub windows_version_range: WindowsVersionRange,
     #[debug("#{back_color:06X}")]
     pub back_color: u32,
@@ -96,6 +98,7 @@ pub struct Header {
     pub wizard_resize_percent_x: u32,
     pub wizard_resize_percent_y: u32,
     pub image_alpha_format: ImageAlphaFormat,
+    #[debug(skip)]
     pub password_salt: Option<String>,
     pub extra_disk_space_required: u64,
     pub slices_per_disk: u32,
@@ -119,7 +122,7 @@ impl Header {
     pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
-        version: &KnownVersion,
+        version: &InnoVersion,
     ) -> Result<Self> {
         let mut header = Self::default();
 
@@ -277,7 +280,7 @@ impl Header {
         } else {
             0
         };
-        header.windows_version_range = WindowsVersionRange::from_reader(reader, &version.version)?;
+        header.windows_version_range = WindowsVersionRange::from_reader(reader, version)?;
         if *version < (6, 4, 0, 1) {
             header.back_color = reader.read_u32::<LE>()?;
         }
@@ -418,7 +421,7 @@ impl Header {
         Ok(header)
     }
 
-    fn read_flags<R: Read>(reader: &mut R, version: &KnownVersion) -> Result<HeaderFlags> {
+    fn read_flags<R: Read>(reader: &mut R, version: &InnoVersion) -> Result<HeaderFlags> {
         read_flags!(reader,
             HeaderFlags::DISABLE_STARTUP_PROMPT,
             if *version < (5, 3, 10) => HeaderFlags::UNINSTALLABLE,

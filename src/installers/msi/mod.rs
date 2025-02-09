@@ -11,10 +11,12 @@ use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::version::Version;
 use camino::Utf8PathBuf;
+use compact_str::CompactString;
 use msi::{Language, Package, Select};
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Read, Result, Seek};
 use std::str::{FromStr, SplitAsciiWhitespace};
+use tracing::debug;
 
 const PROPERTY: &str = "Property";
 const CONTROL: &str = "Control";
@@ -32,6 +34,10 @@ const GOOGLE_CHROME: &str = "Google Chrome";
 
 const INSTALL_DIR: &str = "INSTALLDIR";
 const TARGET_DIR: &str = "TARGETDIR";
+
+type PropertyTable = HashMap<CompactString, CompactString>;
+
+type DirectoryTable = HashMap<String, (Option<String>, String)>;
 
 pub struct Msi {
     pub installer: Installer,
@@ -61,9 +67,11 @@ impl Msi {
         let product_version = product_name
             .as_deref()
             .is_some_and(|product_name| product_name == GOOGLE_CHROME)
-            .then(|| Self::get_actual_chrome_version(&msi).map(str::to_owned))
+            .then(|| Self::get_actual_chrome_version(&msi).map(CompactString::from))
             .unwrap_or_else(|| property_table.remove(PRODUCT_VERSION));
-        let product_code = property_table.remove(PRODUCT_CODE);
+        let product_code = property_table
+            .remove(PRODUCT_CODE)
+            .map(CompactString::into_string);
         let upgrade_code = property_table.remove(UPGRADE_CODE);
 
         // https://learn.microsoft.com/windows/win32/msi/allusers
@@ -106,11 +114,11 @@ impl Msi {
                 .any(|option| option.is_some())
                 .then(|| {
                     vec![AppsAndFeaturesEntry {
-                        display_name: product_name,
-                        publisher: manufacturer,
+                        display_name: product_name.map(CompactString::into_string),
+                        publisher: manufacturer.map(CompactString::into_string),
                         display_version: product_version.as_deref().map(Version::new),
                         product_code,
-                        upgrade_code,
+                        upgrade_code: upgrade_code.map(CompactString::into_string),
                         ..AppsAndFeaturesEntry::default()
                     }]
                 }),
@@ -126,7 +134,7 @@ impl Msi {
         })
     }
 
-    fn is_wix<R: Read + Seek>(msi: &Package<R>, property_table: &HashMap<String, String>) -> bool {
+    fn is_wix<R: Read + Seek>(msi: &Package<R>, property_table: &PropertyTable) -> bool {
         msi.summary_info()
             .creating_application()
             .map(str::as_bytes)
@@ -150,22 +158,23 @@ impl Msi {
     }
 
     /// <https://learn.microsoft.com/windows/win32/msi/property-table>
-    fn get_property_table<R: Read + Seek>(msi: &mut Package<R>) -> Result<HashMap<String, String>> {
+    fn get_property_table<R: Read + Seek>(msi: &mut Package<R>) -> Result<PropertyTable> {
         const VALUE: &str = "Value";
 
         Ok(msi
             .select_rows(Select::table(PROPERTY))?
-            .filter_map(|row| match (row[PROPERTY].as_str(), row[VALUE].as_str()) {
-                (Some(property), Some(value)) => Some((property.to_owned(), value.to_owned())),
-                _ => None,
+            .filter_map(|row| {
+                row[PROPERTY]
+                    .as_str()
+                    .map(CompactString::from)
+                    .zip(row[VALUE].as_str().map(CompactString::from))
             })
-            .collect::<HashMap<_, _>>())
+            .inspect(|(property, value)| debug!(%property, %value))
+            .collect::<PropertyTable>())
     }
 
     /// <https://learn.microsoft.com/windows/win32/msi/directory-table>
-    fn get_directory_table<R: Read + Seek>(
-        msi: &mut Package<R>,
-    ) -> Result<HashMap<String, (Option<String>, String)>> {
+    fn get_directory_table<R: Read + Seek>(msi: &mut Package<R>) -> Result<DirectoryTable> {
         const DIRECTORY: &str = "Directory";
         const DIRECTORY_PARENT: &str = "Directory_Parent";
         const DEFAULT_DIR: &str = "DefaultDir";
@@ -189,12 +198,12 @@ impl Msi {
                     _ => None,
                 }
             })
-            .collect::<HashMap<_, _>>())
+            .collect::<DirectoryTable>())
     }
 
     fn find_install_directory(
-        directory_table: &HashMap<String, (Option<String>, String)>,
-        property_table: &HashMap<String, String>,
+        directory_table: &DirectoryTable,
+        property_table: &PropertyTable,
     ) -> Option<Utf8PathBuf> {
         Self::build_directory(directory_table, INSTALL_DIR, TARGET_DIR)
             .or_else(|| {
@@ -259,7 +268,7 @@ impl Msi {
     ///
     /// [Using the Directory Table](https://learn.microsoft.com/windows/win32/msi/using-the-directory-table)
     fn build_directory(
-        directory_table: &HashMap<String, (Option<String>, String)>,
+        directory_table: &DirectoryTable,
         current_dir: &str,
         target_dir: &str,
     ) -> Option<Utf8PathBuf> {

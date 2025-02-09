@@ -16,7 +16,7 @@ pub struct Analyse {
     #[arg(value_parser = is_valid_file, value_hint = clap::ValueHint::FilePath)]
     file_path: Utf8PathBuf,
 
-    /// Hash the file and include it in the InstallerSha256 field
+    /// Hash the file and include it in the `InstallerSha256` field
     #[arg(long, alias = "sha256")]
     hash: bool,
 }

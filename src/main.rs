@@ -14,6 +14,9 @@ use crate::commands::token::commands::{TokenArgs, TokenCommands};
 use crate::commands::update_version::UpdateVersion;
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::Result;
+use tracing_indicatif::IndicatifLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 mod commands;
 mod credential;
@@ -34,6 +37,19 @@ async fn main() -> Result<()> {
     color_eyre::config::HookBuilder::default()
         .display_env_section(false)
         .install()?;
+
+    let indicatif_layer = IndicatifLayer::new();
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(indicatif_layer.get_stderr_writer())
+                .with_target(cfg!(debug_assertions))
+                .without_time(),
+        )
+        .with(indicatif_layer)
+        .init();
+
     match Cli::parse().command {
         Commands::New(new_version) => new_version.run().await,
         Commands::Update(update_version) => update_version.run().await,

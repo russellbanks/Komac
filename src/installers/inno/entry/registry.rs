@@ -2,7 +2,7 @@ use crate::installers::inno::encoding::InnoValue;
 use crate::installers::inno::entry::condition::Condition;
 use crate::installers::inno::enum_value::enum_value::enum_value;
 use crate::installers::inno::flag_reader::read_flags::read_flags;
-use crate::installers::inno::version::KnownVersion;
+use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use crate::installers::utils::registry::RegRoot;
 use bitflags::bitflags;
@@ -28,7 +28,7 @@ impl Registry {
     pub fn from_reader<R: Read>(
         reader: &mut R,
         codepage: &'static Encoding,
-        version: &KnownVersion,
+        version: &InnoVersion,
     ) -> Result<Self> {
         if *version < (1, 3, 0) {
             let _uncompressed_size = reader.read_u32::<LE>()?;
