@@ -15,22 +15,32 @@ pub enum PackageVersionError {
         DISALLOWED_CHARACTERS
     )]
     DisallowedCharacters,
+    #[error(
+        "Package version cannot be more than {} characters long",
+        PackageVersion::MAX_LENGTH
+    )]
+    TooLong,
 }
 
 #[derive(
-    SerializeDisplay,
-    DeserializeFromStr,
     Clone,
     Debug,
     Default,
     Deref,
     Display,
+    Hash,
     Eq,
     Ord,
     PartialEq,
     PartialOrd,
+    SerializeDisplay,
+    DeserializeFromStr,
 )]
 pub struct PackageVersion(Version);
+
+impl PackageVersion {
+    const MAX_LENGTH: usize = 1 << 7;
+}
 
 impl FromStr for PackageVersion {
     type Err = PackageVersionError;
@@ -38,10 +48,10 @@ impl FromStr for PackageVersion {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         if input.contains(DISALLOWED_CHARACTERS) {
             return Err(PackageVersionError::DisallowedCharacters);
-        }
-
-        if input.contains(char::is_control) {
+        } else if input.contains(char::is_control) {
             return Err(PackageVersionError::ContainsControlChars);
+        } else if input.chars().count() > Self::MAX_LENGTH {
+            return Err(PackageVersionError::TooLong);
         }
 
         Ok(Self(Version::new(input)))
@@ -56,17 +66,11 @@ impl Prompt for PackageVersion {
 
 #[cfg(test)]
 mod tests {
+    use crate::types::custom_switch::{CustomSwitch, CustomSwitchError};
     use crate::types::package_version::{PackageVersion, PackageVersionError};
     use crate::types::DISALLOWED_CHARACTERS;
+    use const_format::str_repeat;
     use std::str::FromStr;
-
-    #[test]
-    fn package_version_contains_control_chars() {
-        assert_eq!(
-            PackageVersion::from_str("1.2\03").err(),
-            Some(PackageVersionError::ContainsControlChars)
-        );
-    }
 
     #[test]
     fn package_version_disallowed_characters() {
@@ -78,5 +82,34 @@ mod tests {
                 Some(PackageVersionError::DisallowedCharacters)
             )
         }
+    }
+
+    #[test]
+    fn package_version_contains_control_chars() {
+        assert_eq!(
+            PackageVersion::from_str("1.2\03").err(),
+            Some(PackageVersionError::ContainsControlChars)
+        );
+    }
+
+    #[test]
+    fn unicode_package_version_max_length() {
+        const VERSION: &str = str_repeat!("🦀", PackageVersion::MAX_LENGTH);
+
+        // Ensure that it's character length that's being checked and not byte or UTF-16 length
+        assert!(VERSION.len() > PackageVersion::MAX_LENGTH);
+        assert!(VERSION.encode_utf16().count() > PackageVersion::MAX_LENGTH);
+        assert_eq!(VERSION.chars().count(), PackageVersion::MAX_LENGTH);
+        assert!(VERSION.parse::<PackageVersion>().is_ok());
+    }
+
+    #[test]
+    fn package_version_too_long() {
+        const VERSION: &str = str_repeat!("🦀", PackageVersion::MAX_LENGTH + 1);
+
+        assert_eq!(
+            VERSION.parse::<PackageVersion>().err(),
+            Some(PackageVersionError::TooLong)
+        );
     }
 }
