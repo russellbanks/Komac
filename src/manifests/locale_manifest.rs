@@ -69,15 +69,14 @@ impl LocaleManifest {
         &mut self,
         package_version: &PackageVersion,
         github_values: Option<&GitHubValues>,
-        release_notes_url: &Option<ReleaseNotesUrl>,
+        release_notes_url: Option<&ReleaseNotesUrl>,
     ) {
         self.package_version.clone_from(package_version);
-        self.release_notes_url.clone_from(release_notes_url);
-        if self.release_notes_url.is_none() {
-            self.release_notes_url = github_values
+        self.release_notes_url = release_notes_url.cloned().or_else(|| {
+            github_values
                 .as_ref()
-                .and_then(|values| values.release_notes_url.clone());
-        }
+                .and_then(|values| values.release_notes_url.clone())
+        });
         self.manifest_type = Self::TYPE;
         self.manifest_version = ManifestVersion::default();
     }
