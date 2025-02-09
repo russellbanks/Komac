@@ -83,6 +83,10 @@ pub struct UpdateVersion {
     #[arg(long, env = "DRY_RUN")]
     dry_run: bool,
 
+    /// Package version to replace
+    #[arg(short, long, num_args = 0..=1, default_missing_value = "latest")]
+    replace: Option<PackageVersion>,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -106,6 +110,24 @@ impl UpdateVersion {
             "Latest version of {}: {latest_version}",
             self.package_identifier
         );
+
+        let mut replace = match self.replace.clone() {
+            Some(version) if version.to_string() == "latest" => Some(latest_version.clone()),
+            other => other,
+        };
+
+        if let Some(ref replace_version) = replace {
+            if !versions.iter().any(|v| v == replace_version) {
+                return Err(color_eyre::eyre::eyre!(
+                    "Replacement version '{}' not found.",
+                    replace_version
+                ));
+            }
+        }
+
+        if replace.as_ref() == Some(&self.package_version) {
+            replace = None;
+        }
 
         if let Some(pull_request) = existing_pr.await? {
             if !self.dry_run
@@ -250,6 +272,7 @@ impl UpdateVersion {
             .version(&self.package_version)
             .versions(&versions)
             .changes(changes)
+            .maybe_replace(replace)
             .maybe_issue_resolves(self.resolves)
             .maybe_created_with(self.created_with)
             .maybe_created_with_url(self.created_with_url)

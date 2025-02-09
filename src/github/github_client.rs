@@ -788,6 +788,7 @@ impl GitHub {
         issue_resolves: Option<Vec<NonZeroU32>>,
         created_with: Option<String>,
         created_with_url: Option<DecodedUrl>,
+        replace: Option<PackageVersion>,
     ) -> Result<Url, GitHubError> {
         let current_user = self.get_username();
         let winget_pkgs = self.get_winget_pkgs().send().await?;
@@ -799,6 +800,24 @@ impl GitHub {
             .await?;
         let commit_title =
             get_commit_title(identifier, version, &UpdateState::get(version, versions));
+        let directory_content = self
+            .get_directory_content(
+                &current_user,
+                &branch_name,
+                &get_package_path(identifier, replace.as_ref(), None),
+            )
+            .await?
+            .collect::<Vec<String>>();
+        let deletions = if replace.is_some() {
+            Some(
+                directory_content
+                    .iter()
+                    .map(|s| FileDeletion { path: s.as_str() })
+                    .collect::<Vec<_>>(),
+            )
+        } else {
+            None
+        };
         let changes = changes
             .iter()
             .map(|(path, content)| FileAddition {
@@ -812,6 +831,7 @@ impl GitHub {
             .head_sha(pull_request_branch.target.map(|target| target.oid).unwrap())
             .message(&commit_title)
             .additions(changes)
+            .maybe_deletions(deletions)
             .send()
             .await?;
         self.create_pull_request(
