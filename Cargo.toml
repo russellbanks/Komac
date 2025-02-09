@@ -49,7 +49,7 @@ flate2 = "1.0.35"
 futures = "0.3.31"
 futures-util = "0.3.31"
 heapless = { version = "0.8.0", features = ["serde"] }
-html2text = "0.13.6"
+html2text = "0.14.0"
 icu_locid = { version = "1.5.0", features = ["serde", "std"] }
 indexmap = "2.7.1"
 indicatif = "0.17.11"
