@@ -29,6 +29,7 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::path::NormalizePath;
+use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::DecodedUrl;
 
 /// Add a version to a pre-existing package
@@ -57,6 +58,10 @@ pub struct UpdateVersion {
     /// Automatically submit a pull request
     #[arg(short, long)]
     submit: bool,
+
+    /// URL to package's release notes
+    #[arg(long, value_hint = clap::ValueHint::Url)]
+    release_notes_url: Option<ReleaseNotesUrl>,
 
     /// Name of external tool that invoked Komac
     #[arg(long, env = "KOMAC_CREATED_WITH")]
@@ -187,14 +192,19 @@ impl UpdateVersion {
             None => None,
         };
 
-        manifests
-            .default_locale
-            .update(&self.package_version, &mut github_values);
+        manifests.default_locale.update(
+            &self.package_version,
+            &mut github_values,
+            self.release_notes_url.as_ref(),
+        );
 
-        manifests
-            .locales
-            .iter_mut()
-            .for_each(|locale| locale.update(&self.package_version, github_values.as_ref()));
+        manifests.locales.iter_mut().for_each(|locale| {
+            locale.update(
+                &self.package_version,
+                github_values.as_ref(),
+                self.release_notes_url.as_ref(),
+            );
+        });
 
         manifests.version.update(&self.package_version);
 
