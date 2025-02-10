@@ -13,6 +13,7 @@ pub const RELATIVE_APP_DATA: &str = "%AppData%";
 pub const RELATIVE_PROGRAM_DATA: &str = "%ProgramData%";
 pub const RELATIVE_WINDOWS_DIR: &str = "%WinDir%";
 pub const RELATIVE_SYSTEM_ROOT: &str = "%SystemRoot%";
+pub const RELATIVE_SYSTEM_DRIVE: &str = "%SystemDrive%";
 pub const RELATIVE_TEMP_FOLDER: &str = "%Temp%";
 
 pub fn transmute_from_reader<T: FromBytes + FromZeros + IntoBytes>(

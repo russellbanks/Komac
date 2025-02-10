@@ -31,7 +31,7 @@ use crate::installers::inno::wizard::Wizard;
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
     RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
-    RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
+    RELATIVE_SYSTEM_DRIVE, RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
 };
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, InstallerSwitches, Scope,
@@ -289,6 +289,7 @@ pub fn to_relative_install_dir(mut install_dir: String) -> String {
     const WINDOWS: &str = "{win}";
     const SYSTEM: &str = "{sys}";
     const SYSTEM_NATIVE: &str = "{sysnative}";
+    const SYSTEM_DRIVE: &str = "{sd}";
 
     const PROGRAM_FILES: &str = "{commonpf}";
     const PROGRAM_FILES_32: &str = "{commonpf32}";
@@ -321,10 +322,11 @@ pub fn to_relative_install_dir(mut install_dir: String) -> String {
 
     const RELATIVE_USER_PROGRAM_FILES: &str = formatcp!(r"{RELATIVE_LOCAL_APP_DATA}\Programs");
 
-    const DIRECTORIES: [(&str, &str); 27] = [
+    const DIRECTORIES: [(&str, &str); 28] = [
         (WINDOWS, RELATIVE_WINDOWS_DIR),
         (SYSTEM, RELATIVE_SYSTEM_ROOT),
         (SYSTEM_NATIVE, RELATIVE_SYSTEM_ROOT),
+        (SYSTEM_DRIVE, RELATIVE_SYSTEM_DRIVE),
         (PROGRAM_FILES, RELATIVE_PROGRAM_FILES_64),
         (PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_32),
         (PROGRAM_FILES_64, RELATIVE_PROGRAM_FILES_64),
