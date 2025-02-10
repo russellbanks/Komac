@@ -1,5 +1,7 @@
 use crate::github::graphql::github_schema::github_schema as schema;
 use crate::github::graphql::types::{Base64String, GitObjectId};
+use derive_new::new;
+use std::borrow::Cow;
 use url::Url;
 
 #[derive(cynic::QueryVariables)]
@@ -46,16 +48,18 @@ pub struct FileChanges<'a> {
 }
 
 /// <https://docs.github.com/graphql/reference/input-objects#filedeletion>
-#[derive(cynic::InputObject)]
-pub struct FileDeletion<'a> {
-    pub path: &'a str,
+#[derive(cynic::InputObject, new)]
+pub struct FileDeletion<'path> {
+    #[new(into)]
+    pub path: Cow<'path, str>,
 }
 
 /// <https://docs.github.com/graphql/reference/input-objects#fileaddition>
-#[derive(cynic::InputObject)]
-pub struct FileAddition<'a> {
+#[derive(cynic::InputObject, new)]
+pub struct FileAddition<'path> {
     pub contents: Base64String,
-    pub path: &'a str,
+    #[new(into)]
+    pub path: Cow<'path, str>,
 }
 
 /// <https://docs.github.com/graphql/reference/input-objects#committablebranch>

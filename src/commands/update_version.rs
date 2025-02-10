@@ -6,7 +6,7 @@ use std::num::{NonZeroU32, NonZeroU8};
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{bail, Result};
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use reqwest::Client;
@@ -83,6 +83,10 @@ pub struct UpdateVersion {
     #[arg(long, env = "DRY_RUN")]
     dry_run: bool,
 
+    /// Package version to replace
+    #[arg(short, long, num_args = 0..=1, default_missing_value = "latest")]
+    replace: Option<PackageVersion>,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -106,6 +110,23 @@ impl UpdateVersion {
             "Latest version of {}: {latest_version}",
             self.package_identifier
         );
+
+        let replace_version = self
+            .replace
+            .as_ref()
+            .map(|version| {
+                version
+                    .is_latest()
+                    .then_some(latest_version)
+                    .unwrap_or(version)
+            })
+            .filter(|&version| version != &self.package_version);
+
+        if let Some(version) = replace_version {
+            if !versions.contains(version) {
+                bail!("Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}")
+            }
+        }
 
         if let Some(pull_request) = existing_pr.await? {
             if !self.dry_run
@@ -250,6 +271,7 @@ impl UpdateVersion {
             .version(&self.package_version)
             .versions(&versions)
             .changes(changes)
+            .maybe_replace_version(replace_version)
             .maybe_issue_resolves(self.resolves)
             .maybe_created_with(self.created_with)
             .maybe_created_with_url(self.created_with_url)

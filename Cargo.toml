@@ -43,6 +43,7 @@ const_format = { version = "0.2.34", features = ["derive"] }
 crc32fast = "1.4.2"
 crossterm = "0.28.1"
 cynic = { version = "3.9.1", features = ["http-reqwest"] }
+derive-new = "0.7.0"
 derive_more = { version = "2.0.1", features = ["as_ref", "constructor", "debug", "deref", "deref_mut", "display", "from_str", "into_iterator"] }
 encoding_rs = "0.8.35"
 flate2 = "1.0.35"

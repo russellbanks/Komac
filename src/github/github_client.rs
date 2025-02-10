@@ -56,7 +56,7 @@ use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
-use base64ct::Encoding;
+use base64ct::{Base64, Encoding};
 use bon::bon;
 use const_format::{formatcp, str_repeat};
 use cynic::http::{CynicReqwestError, ReqwestExt};
@@ -734,17 +734,14 @@ impl GitHub {
             )
             .await?;
         let commit_title = get_commit_title(identifier, version, &UpdateState::RemoveVersion);
-        let directory_content = self
+        let deletions = self
             .get_directory_content(
                 fork_owner,
                 &branch_name,
                 &get_package_path(identifier, Some(version), None),
             )
             .await?
-            .collect::<Vec<_>>();
-        let deletions = directory_content
-            .iter()
-            .map(|path| FileDeletion { path })
+            .map(|path| FileDeletion::new(path))
             .collect::<Vec<_>>();
         let _commit_url = self
             .create_commit()
@@ -785,6 +782,7 @@ impl GitHub {
         version: &PackageVersion,
         versions: Option<&BTreeSet<PackageVersion>>,
         changes: Vec<(String, String)>,
+        replace_version: Option<&PackageVersion>,
         issue_resolves: Option<Vec<NonZeroU32>>,
         created_with: Option<String>,
         created_with_url: Option<DecodedUrl>,
@@ -799,19 +797,35 @@ impl GitHub {
             .await?;
         let commit_title =
             get_commit_title(identifier, version, &UpdateState::get(version, versions));
-        let changes = changes
+        let additions = changes
             .iter()
-            .map(|(path, content)| FileAddition {
-                contents: Base64String::new(base64ct::Base64::encode_string(content.as_bytes())),
-                path,
+            .map(|(path, content)| {
+                FileAddition::new(
+                    Base64String::new(Base64::encode_string(content.as_bytes())),
+                    path,
+                )
             })
             .collect::<Vec<_>>();
+        let mut deletions = None;
+        if replace_version.is_some() {
+            deletions = Some(
+                self.get_directory_content(
+                    &current_user,
+                    &branch_name,
+                    &get_package_path(identifier, replace_version, None),
+                )
+                .await?
+                .map(|path| FileDeletion::new(path))
+                .collect::<Vec<_>>(),
+            )
+        }
         let _commit_url = self
             .create_commit()
             .branch_id(&pull_request_branch.id)
             .head_sha(pull_request_branch.target.map(|target| target.oid).unwrap())
             .message(&commit_title)
-            .additions(changes)
+            .additions(additions)
+            .maybe_deletions(deletions)
             .send()
             .await?;
         self.create_pull_request(
