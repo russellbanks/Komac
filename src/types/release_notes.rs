@@ -1,11 +1,11 @@
-use derive_more::Constructor;
+use derive_new::new;
 use html2text::render::{TaggedLine, TextDecorator};
 use nutype::nutype;
 use regex::Regex;
 use std::borrow::Cow;
 use std::sync::LazyLock;
 
-#[derive(Constructor)]
+#[derive(new)]
 struct GitHubHtmlDecorator;
 
 impl TextDecorator for GitHubHtmlDecorator {
