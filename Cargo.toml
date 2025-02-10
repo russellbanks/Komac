@@ -56,7 +56,6 @@ indexmap = "2.7.1"
 indicatif = "0.17.11"
 inquire = "0.7.5"
 itertools = "0.14.0"
-itoa = "1.0.14"
 keyring = { version = "3.6.1", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }
 liblzma = { version = "0.3.5", features = ["static"] }
 memchr = "2.7.4"
