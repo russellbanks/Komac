@@ -57,6 +57,12 @@ impl Version {
     pub fn as_str(&self) -> &str {
         &self.raw
     }
+
+    pub fn is_latest(&self) -> bool {
+        const LATEST: &str = "latest";
+
+        self.raw.eq_ignore_ascii_case(LATEST)
+    }
 }
 
 impl PartialEq for Version {
