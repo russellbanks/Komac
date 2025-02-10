@@ -281,7 +281,7 @@ pub enum Entry {
     FileWrite {
         handle: I32,
         string: I32,
-        int_string: I32,
+        int_or_string: I32,
     } = 56u32.to_le(),
     FileRead {
         handle: I32,
@@ -312,14 +312,32 @@ pub enum Entry {
         offset: I32,
         icon_size: I32,
     } = 62u32.to_le(),
-    Log = 63u32.to_le(),
-    SectionSet = 64u32.to_le(),
-    InstallerType {
+    SectionSet {
         index: I32,
-    } = 65u32.to_le(),
-    GetLabelAddr = 66u32.to_le(),
-    GetFunctionAddr = 67u32.to_le(),
-    LockWindow = 68u32.to_le(),
+    } = 63u32.to_le(),
+    InstallerTypeSet {
+        index: I32,
+    } = 64u32.to_le(),
+    GetOSInfo = 65u32.to_le(),
+    ReservedOPCode = 66u32.to_le(),
+    LockWindow {
+        on_off: I32,
+    } = 67u32.to_le(),
+    FileWriteUTF16LE {
+        handle: I32,
+        string: I32,
+        int_or_string: I32,
+    } = 68u32.to_le(),
+    FileReadUTF16LE {
+        handle: I32,
+        output: I32,
+        max_length: I32,
+        get_char_gets: I32,
+    } = 69u32.to_le(),
+    Log = 70u32.to_le(),
+    FindProcess = 71u32.to_le(),
+    GetFontVersion = 72u32.to_le(),
+    GetFontName = 73u32.to_le(),
 }
 
 impl Entry {
