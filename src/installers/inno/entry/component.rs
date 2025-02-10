@@ -48,6 +48,10 @@ impl Component {
             component.extra_disk_space_required = u64::from(reader.read_u32::<LE>()?);
         }
 
+        if *version >= (4, 0, 0) || (version.is_isx() && *version >= (3, 0, 3)) {
+            component.level = reader.read_u32::<LE>()?;
+        }
+
         if *version >= (4, 0, 0) || (version.is_isx() && *version >= (3, 0, 4)) {
             component.used = reader.read_u8()? != 0;
         } else {
