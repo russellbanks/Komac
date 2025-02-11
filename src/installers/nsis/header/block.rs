@@ -1,10 +1,10 @@
 use crate::installers::nsis::NsisError;
 use crate::installers::utils::transmute_from_reader;
 use crate::types::architecture::Architecture;
+use derive_more::IntoIterator;
 use std::borrow::Cow;
 use std::io::Cursor;
 use std::ops::Index;
-use std::slice::{Iter, IterMut};
 use strum::EnumCount;
 use zerocopy::little_endian::{U32, U64};
 use zerocopy::{FromBytes, Immutable, KnownLayout};
@@ -16,7 +16,6 @@ pub struct BlockHeader {
     pub num: U32,
 }
 
-#[expect(dead_code)]
 #[derive(Copy, Clone, EnumCount)]
 pub enum BlockType {
     Pages,
@@ -33,7 +32,7 @@ impl BlockType {
     pub fn get<'data>(self, data: &'data [u8], blocks: &BlockHeaders) -> &'data [u8] {
         let start = usize::try_from(blocks[self].offset.get()).unwrap();
         let end = blocks
-            .iter()
+            .into_iter()
             .skip(self as usize + 1)
             .find(|b| b.offset > U64::ZERO)
             .map_or(start, |block| usize::try_from(block.offset.get()).unwrap());
@@ -41,19 +40,11 @@ impl BlockType {
     }
 }
 
-#[derive(Clone, Debug, Default, FromBytes, KnownLayout, Immutable)]
+#[derive(Clone, Debug, Default, IntoIterator, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
-pub struct BlockHeaders([BlockHeader; BlockType::COUNT]);
+pub struct BlockHeaders(#[into_iterator(ref, ref_mut)] [BlockHeader; BlockType::COUNT]);
 
 impl BlockHeaders {
-    pub fn iter(&self) -> Iter<BlockHeader> {
-        self.0.iter()
-    }
-
-    pub fn iter_mut(&mut self) -> IterMut<BlockHeader> {
-        self.0.iter_mut()
-    }
-
     /// If the NSIS installer is 64-bit, the offset value in the `BlockHeader` is a u64 rather than
     /// a u32. This aims to still use zerocopy as much as possible, although the data will need to
     /// be owned if the offsets are u32's.
@@ -68,7 +59,7 @@ impl BlockHeaders {
         } else {
             let mut reader = Cursor::new(data);
             let mut block_headers = Self::default();
-            for header in block_headers.iter_mut() {
+            for header in &mut block_headers {
                 *header = BlockHeader {
                     offset: U64::from(transmute_from_reader::<U32>(&mut reader)?),
                     num: transmute_from_reader(&mut reader)?,
