@@ -2,7 +2,7 @@ use crate::prompts::text::TextPrompt;
 use crate::prompts::Prompt;
 use crate::types::version::Version;
 use crate::types::DISALLOWED_CHARACTERS;
-use derive_more::{Deref, Display};
+use derive_more::{Deref, Display, Into};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;
 use thiserror::Error;
@@ -29,6 +29,7 @@ pub enum PackageVersionError {
     Default,
     Deref,
     Display,
+    Into,
     Hash,
     Eq,
     Ord,
@@ -37,6 +38,7 @@ pub enum PackageVersionError {
     SerializeDisplay,
     DeserializeFromStr,
 )]
+#[into(ref)]
 pub struct PackageVersion(Version);
 
 impl PackageVersion {

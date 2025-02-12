@@ -1,8 +1,3 @@
-use std::collections::BTreeSet;
-use std::io::{Read, Seek};
-use std::mem;
-use std::num::{NonZeroU32, NonZeroU8};
-
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -10,6 +5,10 @@ use color_eyre::eyre::{bail, Result};
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use reqwest::Client;
+use std::collections::BTreeSet;
+use std::io::{Read, Seek};
+use std::mem;
+use std::num::{NonZeroU32, NonZeroU8};
 use strsim::levenshtein;
 
 use crate::commands::utils::{
@@ -29,6 +28,7 @@ use crate::types::minimum_os_version::MinimumOSVersion;
 use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use crate::types::path::NormalizePath;
+use crate::types::traits::closest::Closest;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::DecodedUrl;
 
@@ -115,16 +115,18 @@ impl UpdateVersion {
             .replace
             .as_ref()
             .map(|version| {
-                version
-                    .is_latest()
-                    .then_some(latest_version)
-                    .unwrap_or(version)
+                if version.is_latest() {
+                    latest_version
+                } else {
+                    version
+                }
             })
             .filter(|&version| version != &self.package_version);
 
         if let Some(version) = replace_version {
             if !versions.contains(version) {
-                bail!("Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}")
+                let closest = version.closest(&versions).unwrap_or_else(|| unreachable!());
+                bail!("Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}")
             }
         }
 

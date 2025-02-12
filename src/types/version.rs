@@ -1,9 +1,11 @@
+use crate::types::traits::closest::Closest;
 use compact_str::CompactString;
 use derive_more::Display;
 use itertools::{EitherOrBoth, Itertools};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use smallvec::SmallVec;
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Reverse};
+use std::convert::Infallible;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
@@ -87,11 +89,11 @@ impl Ord for Version {
     fn cmp(&self, other: &Self) -> Ordering {
         self.parts
             .iter()
-            .zip_longest(other.parts.iter())
+            .zip_longest(&other.parts)
             .map(|pair| match pair {
                 EitherOrBoth::Both(a, b) => a.cmp(b),
-                EitherOrBoth::Left(a) => a.cmp(&VersionPart::default()),
-                EitherOrBoth::Right(b) => VersionPart::default().cmp(b),
+                EitherOrBoth::Left(a) => a.cmp(&VersionPart::DEFAULT),
+                EitherOrBoth::Right(b) => VersionPart::DEFAULT.cmp(b),
             })
             .find(|&ordering| ordering != Ordering::Equal)
             .unwrap_or(Ordering::Equal)
@@ -99,20 +101,57 @@ impl Ord for Version {
 }
 
 impl FromStr for Version {
-    type Err = &'static str;
+    type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::new(s))
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+impl Closest for Version {
+    fn distance_key(&self, other: &Self) -> impl Ord {
+        other
+            .parts
+            .iter()
+            .zip_longest(&self.parts)
+            .enumerate()
+            .find_map(|(index, pair)| {
+                let (candidate_part, target_part) = match pair {
+                    EitherOrBoth::Both(a, b) => (a, b),
+                    EitherOrBoth::Left(a) => (a, &VersionPart::DEFAULT),
+                    EitherOrBoth::Right(b) => (&VersionPart::DEFAULT, b),
+                };
+
+                (candidate_part != target_part).then(|| {
+                    (
+                        Reverse(index), // Prefer versions that diverge later
+                        candidate_part.number.abs_diff(target_part.number), // Prefer smaller numerical differences
+                        Reverse(candidate_part.cmp(target_part)), // Prefer higher versions
+                        Reverse(candidate_part.supplement.as_deref()), // Prefer higher supplements lexicographically
+                    )
+                })
+            })
+            .unwrap_or((
+                Reverse(usize::MAX),
+                0,
+                Reverse(Ordering::Equal),
+                Reverse(None),
+            ))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct VersionPart {
     number: u64,
     supplement: Option<CompactString>,
 }
 
 impl VersionPart {
+    const DEFAULT: Self = Self {
+        number: 0,
+        supplement: None,
+    };
+
     pub fn new(input: &str) -> Self {
         let input = input.trim();
 
@@ -157,6 +196,7 @@ impl Ord for VersionPart {
 
 #[cfg(test)]
 mod tests {
+    use crate::types::traits::closest::Closest;
     use crate::types::version::Version;
     use rstest::rstest;
     use std::cmp::Ordering;
@@ -240,5 +280,29 @@ mod tests {
         assert_eq!(version.parts.len(), 1);
         assert_eq!(version.parts[0].number, 0);
         assert_eq!(version.parts[0].supplement.as_deref(), Some(ALPHA));
+    }
+
+    #[rstest]
+    #[case("1.2.3", &["1.0.0", "0.9.0", "1.5.6.3", "1.3.2"], "1.3.2")]
+    #[case("10.20.30", &["10.20.29", "10.20.31", "10.20.40"], "10.20.31")]
+    #[case("5.5.5", &["5.5.50", "5.5.0", "5.5.10"], "5.5.10")]
+    #[case("3.0.0", &["3.0.0-beta", "3.0.0-alpha.1", "3.0.0-rc.1"], "3.0.0-rc.1")]
+    #[case("2.1.0-beta", &["2.1.0-alpha", "2.1.0-beta.2", "2.1.0"], "2.1.0-beta.2")]
+    #[case("1.5.0", &["1.0.0", "2.0.0"], "1.0.0")]
+    #[case("3.3.3", &["1.1.1", "5.5.5"], "5.5.5")]
+    #[case("3.3.3", &["5.5.5", "1.1.1"], "5.5.5")]
+    #[case("2.2.2", &["2.2.2", "2.2.2", "2.2.3"], "2.2.2")]
+    #[case("0.0.2", &["0.0.1", "0.0.3", "0.2.0"], "0.0.3")]
+    #[case("999.999.999", &["999.999.998", "1000.0.0"], "999.999.998")]
+    fn closest_version(#[case] version: &str, #[case] versions: &[&str], #[case] expected: &str) {
+        let versions = versions
+            .iter()
+            .copied()
+            .map(Version::new)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            Version::new(version).closest(&versions),
+            Some(&Version::new(expected))
+        );
     }
 }

@@ -741,7 +741,7 @@ impl GitHub {
                 &get_package_path(identifier, Some(version), None),
             )
             .await?
-            .map(|path| FileDeletion::new(path))
+            .map(FileDeletion::new)
             .collect::<Vec<_>>();
         let _commit_url = self
             .create_commit()
@@ -806,19 +806,20 @@ impl GitHub {
                 )
             })
             .collect::<Vec<_>>();
-        let mut deletions = None;
-        if replace_version.is_some() {
-            deletions = Some(
+        let deletions = if replace_version.is_some() {
+            Some(
                 self.get_directory_content(
                     &current_user,
                     &branch_name,
                     &get_package_path(identifier, replace_version, None),
                 )
                 .await?
-                .map(|path| FileDeletion::new(path))
+                .map(FileDeletion::new)
                 .collect::<Vec<_>>(),
             )
-        }
+        } else {
+            None
+        };
         let _commit_url = self
             .create_commit()
             .branch_id(&pull_request_branch.id)

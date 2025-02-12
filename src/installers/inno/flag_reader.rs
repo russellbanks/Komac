@@ -28,7 +28,10 @@ where
         }
     }
 
-    pub fn add<I: IntoIterator<Item = E>>(&mut self, flags: I) -> Result<()> {
+    pub fn add<I>(&mut self, flags: I) -> Result<()>
+    where
+        I: IntoIterator<Item = E>,
+    {
         for flag in flags {
             if self.pos == 0 {
                 self.bytes += 1;

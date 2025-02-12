@@ -28,6 +28,7 @@ pub mod short_description;
 pub mod silent_switch;
 pub mod silent_with_progress_switch;
 pub mod tag;
+pub mod traits;
 pub mod urls;
 pub mod version;
 
