@@ -95,8 +95,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    New(Box<NewVersion>), // Boxed to store on the heap instead as New is a large struct
-    Update(UpdateVersion),
+    New(Box<NewVersion>),       // Comparatively large so boxed to store on the heap
+    Update(Box<UpdateVersion>), // Comparatively large so boxed to store on the heap
     Remove(RemoveVersion),
     Cleanup(Cleanup),
     Token(TokenArgs),
