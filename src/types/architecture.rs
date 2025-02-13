@@ -45,12 +45,13 @@ pub const VALID_FILE_EXTENSIONS: [&str; 7] = [
 
 const DELIMITERS: [u8; 8] = [b',', b'/', b'\\', b'.', b'_', b'-', b'(', b')'];
 
-const ARCHITECTURES: [(&str, Architecture); 31] = [
+const ARCHITECTURES: [(&str, Architecture); 32] = [
     ("x86-64", Architecture::X64),
     ("x86_64", Architecture::X64),
     ("x64", Architecture::X64),
     ("64-bit", Architecture::X64),
     ("64bit", Architecture::X64),
+    ("win64a", Architecture::Arm64),
     ("win64", Architecture::X64),
     ("winx64", Architecture::X64),
     ("ia64", Architecture::X64),
@@ -208,7 +209,9 @@ mod tests {
     }
 
     #[rstest]
-    fn arm64_architectures_at_end(#[values("arm64ec", "arm64", "aarch64")] architecture: &str) {
+    fn arm64_architectures_at_end(
+        #[values("arm64ec", "arm64", "aarch64", "win64a")] architecture: &str,
+    ) {
         assert_eq!(
             Architecture::get_from_url(&format!("https://www.example.com/file{architecture}.exe")),
             Some(Architecture::Arm64)
@@ -217,7 +220,7 @@ mod tests {
 
     #[rstest]
     fn arm64_architectures_delimited(
-        #[values("arm64ec", "arm64", "aarch64")] architecture: &str,
+        #[values("arm64ec", "arm64", "aarch64", "win64a")] architecture: &str,
         #[values(',', '/', '\\', '.', '_', '-', '(', ')')] delimiter: char,
     ) {
         assert_eq!(
