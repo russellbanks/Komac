@@ -122,11 +122,12 @@ impl Msi {
                         ..AppsAndFeaturesEntry::default()
                     }]
                 }),
-                installation_metadata: Some(InstallationMetadata {
-                    default_install_location: Self::find_install_directory(
-                        &Self::get_directory_table(&mut msi)?,
-                        &property_table,
-                    ),
+                installation_metadata: Self::find_install_directory(
+                    &Self::get_directory_table(&mut msi)?,
+                    &property_table,
+                )
+                .map(|install_directory| InstallationMetadata {
+                    default_install_location: Some(install_directory),
                     ..InstallationMetadata::default()
                 }),
                 ..Installer::default()
