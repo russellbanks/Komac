@@ -206,7 +206,11 @@ impl Inno {
             .map(|_| Registry::from_reader(&mut reader, codepage, &inno_version))
             .collect::<io::Result<Vec<_>>>()?;
 
-        let install_dir = header.default_dir_name.take().map(to_relative_install_dir);
+        let install_dir = header
+            .default_dir_name
+            .take()
+            .map(to_relative_install_dir)
+            .filter(|dir| !dir.contains(['{', '}']));
 
         let mut installer = Installer {
             locale: languages.first().and_then(|language_entry| {
