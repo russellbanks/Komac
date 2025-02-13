@@ -207,7 +207,7 @@ impl Msi {
     ) -> Option<Utf8PathBuf> {
         Self::build_directory(directory_table, INSTALL_DIR, TARGET_DIR)
             .or_else(|| {
-                // Fallback: check the value of the `WIXUI_INSTALLDIR` property
+                // Check the value of the `WIXUI_INSTALLDIR` property
                 const WIX_UI_INSTALL_DIR: &str = "WIXUI_INSTALLDIR";
 
                 property_table
@@ -217,13 +217,19 @@ impl Msi {
                     })
             })
             .or_else(|| {
-                // Fallback: check for an `APPDIR` directory entry
+                // Check for an `INSTALLLOCATION` directory entry
+                const INSTALL_LOCATION: &str = "INSTALLLOCATION";
+
+                Self::build_directory(directory_table, INSTALL_LOCATION, TARGET_DIR)
+            })
+            .or_else(|| {
+                // Check for an `APPDIR` directory entry
                 const APP_DIR: &str = "APPDIR";
 
                 Self::build_directory(directory_table, APP_DIR, TARGET_DIR)
             })
             .or_else(|| {
-                // Fallback: find a directory entry with `installdir` in its name
+                // Find a directory entry with `installdir` in its name
                 directory_table
                     .keys()
                     .find(|name| name.to_ascii_uppercase().contains(INSTALL_DIR))
@@ -232,7 +238,7 @@ impl Msi {
                     })
             })
             .or_else(|| {
-                // Fallback: get the first directory with zero or multiple subdirectories
+                // Get the first directory with zero or multiple subdirectories
                 const SKIP_DIRECTORIES: [&str; 2] = ["DesktopFolder", "ProgramMenuFolder"];
 
                 let mut path = Utf8PathBuf::new();
