@@ -92,7 +92,7 @@ tree-sitter-highlight = "0.25.1"
 tree-sitter-yaml = "0.7.0"
 tui-textarea = { version = "0.7.0", features = ["search"] }
 url = { version = "2.5.3", features = ["serde"] }
-uuid = { version = "1.13.1", features = ["v4"] }
+uuid = { version = "1.13.2", features = ["v4"] }
 walkdir = "2.5.0"
 yara-x = { version = "0.13.0", default-features = false, features = ["pe-module"] }
 zerocopy = { version = "0.8.18", features = ["derive"] }
