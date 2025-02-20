@@ -88,7 +88,7 @@ pub struct UpdateVersion {
     replace: Option<PackageVersion>,
 
     /// Skip checking for existing pull requests
-    #[arg(long, env = "SKIP_PR_CHECK")]
+    #[arg(long, env = "CI")]
     skip_pr_check: bool,
 
     /// GitHub personal access token with the `public_repo` scope
@@ -135,8 +135,7 @@ impl UpdateVersion {
         }
 
         if let Some(pull_request) = existing_pr.await? {
-            if !self.skip_pr_check
-                && !self.dry_run
+            if !(self.skip_pr_check || self.dry_run)
                 && !prompt_existing_pull_request(
                     &self.package_identifier,
                     &self.package_version,
