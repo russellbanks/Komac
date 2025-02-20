@@ -13,6 +13,7 @@ use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::error::InquireResult;
 use inquire::Select;
 use owo_colors::OwoColorize;
+use std::env;
 use std::time::Duration;
 use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::fs;
@@ -36,7 +37,12 @@ pub fn prompt_existing_pull_request(
         created_at.time()
     );
     println!("{}", pull_request.url.blue());
-    confirm_prompt("Would you like to proceed?")
+    if env::var("CI").is_ok_and(|ci| ci.parse() == Ok(true)) {
+        // Exit instead of proceeding in CI environments
+        Ok(false)
+    } else {
+        confirm_prompt("Would you like to proceed?")
+    }
 }
 
 pub fn prompt_submit_option(

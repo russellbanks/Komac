@@ -88,7 +88,7 @@ pub struct UpdateVersion {
     replace: Option<PackageVersion>,
 
     /// Skip checking for existing pull requests
-    #[arg(long, env = "CI")]
+    #[arg(long, env)]
     skip_pr_check: bool,
 
     /// GitHub personal access token with the `public_repo` scope
