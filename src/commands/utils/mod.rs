@@ -10,10 +10,9 @@ use camino::Utf8Path;
 use chrono::Local;
 use color_eyre::Result;
 use futures_util::{stream, StreamExt, TryStreamExt};
+use inquire::error::InquireResult;
 use inquire::Select;
 use owo_colors::OwoColorize;
-use std::env;
-use std::str::FromStr;
 use std::time::Duration;
 use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::fs;
@@ -28,7 +27,7 @@ pub fn prompt_existing_pull_request(
     identifier: &PackageIdentifier,
     version: &PackageVersion,
     pull_request: &PullRequest,
-) -> Result<bool> {
+) -> InquireResult<bool> {
     let created_at = pull_request.created_at.with_timezone(&Local);
     println!(
         "There is already {} pull request for {identifier} {version} that was created on {} at {}",
@@ -37,12 +36,7 @@ pub fn prompt_existing_pull_request(
         created_at.time()
     );
     println!("{}", pull_request.url.blue());
-    let proceed = if env::var("CI").is_ok_and(|ci| bool::from_str(&ci) == Ok(true)) {
-        false
-    } else {
-        confirm_prompt("Would you like to proceed?")?
-    };
-    Ok(proceed)
+    confirm_prompt("Would you like to proceed?")
 }
 
 pub fn prompt_submit_option(

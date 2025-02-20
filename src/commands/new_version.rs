@@ -150,6 +150,10 @@ pub struct NewVersion {
     #[arg(long, env = "DRY_RUN")]
     dry_run: bool,
 
+    /// Skip checking for existing pull requests
+    #[arg(long, env = "CI")]
+    skip_pr_check: bool,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -182,7 +186,7 @@ impl NewVersion {
             .get_existing_pull_request(&package_identifier, &package_version)
             .await?
         {
-            if !self.dry_run
+            if !(self.skip_pr_check || self.dry_run)
                 && !prompt_existing_pull_request(
                     &package_identifier,
                     &package_version,
