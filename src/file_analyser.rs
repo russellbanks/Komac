@@ -1,4 +1,4 @@
-use crate::installers::burn::Burn;
+use crate::installers::burn::{Burn, BurnError};
 use crate::installers::inno::{Inno, InnoError};
 use crate::installers::msi::Msi;
 use crate::installers::msix_family::bundle::MsixBundle;
@@ -13,10 +13,11 @@ use crate::types::installer_type::InstallerType;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
 use camino::Utf8Path;
-use color_eyre::eyre::{bail, Error, Result};
+use color_eyre::eyre::{bail, Result};
 use memmap2::Mmap;
 use std::io::Cursor;
 use std::mem;
+use tracing::debug;
 use yara_x::mods::PE;
 
 pub const EXE: &str = "exe";
@@ -64,13 +65,13 @@ impl<'data> FileAnalyser<'data> {
             }
             EXE => {
                 let pe = yara_x::mods::invoke::<PE>(data.as_ref()).unwrap();
+                debug!(?pe.version_info);
                 copyright = Copyright::get_from_exe(&pe.version_info);
                 package_name = PackageName::get_from_exe(&pe.version_info);
                 publisher = Publisher::get_from_exe(&pe.version_info);
-                if let Ok(burn) = Burn::new(data.as_ref(), &pe) {
-                    PossibleInstaller::Burn(burn)
-                } else {
-                    match Nsis::new(data.as_ref(), &pe) {
+                match Burn::new(data.as_ref(), &pe) {
+                    Ok(burn) => PossibleInstaller::Burn(burn),
+                    Err(BurnError::NotBurnFile) => match Nsis::new(data.as_ref(), &pe) {
                         Ok(nsis_file) => PossibleInstaller::Nsis(nsis_file),
                         Err(NsisError::NotNsisFile) => match Inno::new(data.as_ref(), &pe) {
                             Ok(inno_file) => PossibleInstaller::Inno(inno_file),
@@ -97,10 +98,11 @@ impl<'data> FileAnalyser<'data> {
                                     .or(Some(InstallerType::Portable)),
                                 ..Installer::default()
                             }),
-                            Err(inno_error) => return Err(Error::new(inno_error)),
+                            Err(inno_error) => return Err(inno_error.into()),
                         },
-                        Err(nsis_error) => return Err(Error::new(nsis_error)),
-                    }
+                        Err(nsis_error) => return Err(nsis_error.into()),
+                    },
+                    Err(burn_error) => return Err(burn_error.into()),
                 }
             }
             _ => bail!(r#"Unsupported file extension: "{extension}""#),

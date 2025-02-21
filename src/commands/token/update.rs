@@ -7,7 +7,7 @@ use reqwest::Client;
 
 /// Update the stored token
 #[derive(Parser)]
-#[clap(visible_alias = "new")]
+#[clap(visible_aliases = ["new", "add"])]
 pub struct UpdateToken {
     /// The new token to store
     #[arg(short, long)]
