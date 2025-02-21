@@ -1,6 +1,7 @@
-use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
-use crate::manifests::installer_manifest::ElevationRequirement;
+use winget_types::installer::ElevationRequirement;
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+
+use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
 
 // This file defines enums corresponding to Inno Setup's header values. Each enum is represented as
 // a u8 as Inno Setup stores these values in a single byte. For example, 0 = Classic, 1 = Modern.

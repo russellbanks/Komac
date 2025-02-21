@@ -1,3 +1,10 @@
+use std::{
+    collections::BTreeSet,
+    io::{Read, Seek},
+    mem,
+    num::{NonZeroU8, NonZeroU32},
+};
+
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -5,32 +12,31 @@ use color_eyre::eyre::{Result, bail};
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use reqwest::Client;
-use std::collections::BTreeSet;
-use std::io::{Read, Seek};
-use std::mem;
-use std::num::{NonZeroU8, NonZeroU32};
 use strsim::levenshtein;
-
-use crate::commands::utils::{
-    SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
-    write_changes_to_dir,
+use winget_types::{
+    installer::{InstallerType, MinimumOSVersion, NestedInstallerFiles},
+    shared::{
+        PackageIdentifier, PackageVersion,
+        url::{DecodedUrl, ReleaseNotesUrl},
+    },
+    traits::Closest,
 };
-use crate::credential::{get_default_headers, handle_token};
-use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::utils::get_package_path;
-use crate::github::utils::pull_request::pr_changes;
-use crate::installers::zip::Zip;
-use crate::manifests::installer_manifest::NestedInstallerFiles;
-use crate::match_installers::match_installers;
-use crate::types::installer_type::InstallerType;
-use crate::types::minimum_os_version::MinimumOSVersion;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
-use crate::types::path::NormalizePath;
-use crate::types::traits::closest::Closest;
-use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use crate::types::urls::url::DecodedUrl;
+
+use crate::{
+    commands::utils::{
+        SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
+        write_changes_to_dir,
+    },
+    credential::{get_default_headers, handle_token},
+    download_file::{download_urls, process_files},
+    github::{
+        github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
+        utils::{get_package_path, pull_request::pr_changes},
+    },
+    installers::zip::Zip,
+    match_installers::match_installers,
+    traits::{LocaleExt, path::NormalizePath},
+};
 
 /// Add a version to a pre-existing package
 #[derive(Parser)]
@@ -230,7 +236,7 @@ impl UpdateVersion {
         manifests.locales.iter_mut().for_each(|locale| {
             locale.update(
                 &self.package_version,
-                github_values.as_ref(),
+                &mut github_values,
                 self.release_notes_url.as_ref(),
             );
         });

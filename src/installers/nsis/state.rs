@@ -1,19 +1,22 @@
-use crate::installers::nsis::NsisError;
-use crate::installers::nsis::header::Header;
-use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
-use crate::installers::nsis::language::table::LanguageTable;
-use crate::installers::nsis::registry::Registry;
-use crate::installers::nsis::strings::code::NsCode;
-use crate::installers::nsis::strings::shell::Shell;
-use crate::installers::nsis::strings::var::NsVar;
-use crate::installers::nsis::version::NsisVersion;
+use std::{borrow::Cow, collections::HashMap};
+
 use byteorder::{ByteOrder, LE};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
-use std::borrow::Cow;
-use std::collections::HashMap;
 use tracing::debug;
 use yara_x::mods::PE;
+
+use crate::installers::nsis::{
+    NsisError,
+    header::{
+        Header,
+        block::{BlockHeaders, BlockType},
+    },
+    language::table::LanguageTable,
+    registry::Registry,
+    strings::{code::NsCode, shell::Shell, var::NsVar},
+    version::NsisVersion,
+};
 
 pub struct NsisState<'data> {
     pub str_block: &'data [u8],

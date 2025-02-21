@@ -1,14 +1,42 @@
-use crate::prompts::Prompt;
-use crate::prompts::handle_inquire_error;
-use inquire::Text;
-use inquire::validator::Validation;
-use std::collections::BTreeSet;
-use std::fmt::Display;
-use std::str::FromStr;
+use std::{collections::BTreeSet, fmt::Display, str::FromStr};
 
-pub trait ListPrompt: Prompt {
+use inquire::{Text, validator::Validation};
+use winget_types::{
+    installer::{Command, FileExtension, InstallerReturnCode, Protocol},
+    locale::Tag,
+    shared::value::ValueName,
+};
+
+use crate::prompts::handle_inquire_error;
+
+pub trait ListPrompt: ValueName {
     const HELP_MESSAGE: &'static str;
     const MAX_ITEMS: u16;
+}
+
+impl ListPrompt for InstallerReturnCode {
+    const HELP_MESSAGE: &'static str = "List of additional non-zero installer success exit codes other than known default values by winget";
+    const MAX_ITEMS: u16 = 16;
+}
+
+impl ListPrompt for Protocol {
+    const HELP_MESSAGE: &'static str = "List of protocols the package provides a handler for";
+    const MAX_ITEMS: u16 = 16;
+}
+
+impl ListPrompt for FileExtension {
+    const HELP_MESSAGE: &'static str = "List of file extensions the package could support";
+    const MAX_ITEMS: u16 = 512;
+}
+
+impl ListPrompt for Tag {
+    const HELP_MESSAGE: &'static str = "Example: zip, c++, photos, OBS";
+    const MAX_ITEMS: u16 = 16;
+}
+
+impl ListPrompt for Command {
+    const HELP_MESSAGE: &'static str = "List of commands or aliases to run the package";
+    const MAX_ITEMS: u16 = 16;
 }
 
 pub fn list_prompt<T>() -> color_eyre::Result<Option<BTreeSet<T>>>
@@ -17,7 +45,7 @@ where
     <T as FromStr>::Err: Display,
 {
     const DELIMITERS: [char; 2] = [' ', ','];
-    let items = Text::new(T::MESSAGE)
+    let items = Text::new(&format!("{}:", <T as ValueName>::NAME))
         .with_help_message(T::HELP_MESSAGE)
         .with_validator(|input: &str| {
             let items = input

@@ -1,25 +1,32 @@
 mod manifest;
 mod wix_burn_stub;
 
-use crate::installers::burn::manifest::{BurnManifest, Package};
-use crate::installers::burn::wix_burn_stub::WixBurnStub;
-use crate::installers::msi::Msi;
-use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
-};
-use crate::types::architecture::Architecture;
-use crate::types::installer_type::InstallerType;
+use std::{io, io::Cursor, ops::Not};
+
 use cab::Cabinet;
 use camino::Utf8PathBuf;
 use quick_xml::de::from_str;
-use std::io;
-use std::io::Cursor;
-use std::ops::Not;
 use thiserror::Error;
 use tracing::debug;
-use yara_x::mods::PE;
-use yara_x::mods::pe::{Resource, ResourceType, Section};
+use winget_types::installer::{
+    AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
+};
+use yara_x::mods::{
+    PE,
+    pe::{Resource, ResourceType, Section},
+};
 use zerocopy::TryFromBytes;
+
+use crate::{
+    installers::{
+        burn::{
+            manifest::{BurnManifest, Package},
+            wix_burn_stub::WixBurnStub,
+        },
+        msi::Msi,
+    },
+    traits::FromMachine,
+};
 
 #[derive(Error, Debug)]
 pub enum BurnError {

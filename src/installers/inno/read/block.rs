@@ -1,15 +1,23 @@
-use crate::installers::inno::InnoError;
-use crate::installers::inno::compression::Compression;
-use crate::installers::inno::read::chunk::{INNO_CHUNK_SIZE, InnoChunkReader};
-use crate::installers::inno::read::crc32::Crc32Reader;
-use crate::installers::inno::read::decoder::Decoder;
-use crate::installers::inno::version::InnoVersion;
-use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
+use std::io::{Error, ErrorKind, Read, Result, Take};
+
 use byteorder::{LE, ReadBytesExt};
 use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
-use std::io::{Error, ErrorKind, Read, Result, Take};
 use tracing::debug;
+
+use crate::installers::{
+    inno::{
+        InnoError,
+        compression::Compression,
+        read::{
+            chunk::{INNO_CHUNK_SIZE, InnoChunkReader},
+            crc32::Crc32Reader,
+            decoder::Decoder,
+        },
+        version::InnoVersion,
+    },
+    utils::lzma_stream_header::LzmaStreamHeader,
+};
 
 pub struct InnoBlockReader<R: Read> {
     inner: Decoder<InnoChunkReader<Take<R>>>,

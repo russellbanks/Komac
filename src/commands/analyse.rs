@@ -1,14 +1,14 @@
-use crate::file_analyser::FileAnalyser;
-use crate::manifests::print_manifest;
-use crate::types::sha_256::Sha256String;
+use std::fs::File;
+
 use anstream::stdout;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
-use color_eyre::Result;
-use color_eyre::eyre::ensure;
+use color_eyre::{Result, eyre::ensure};
 use memmap2::Mmap;
 use sha2::{Digest, Sha256};
-use std::fs::File;
+use winget_types::shared::Sha256String;
+
+use crate::{file_analyser::FileAnalyser, manifests::print_manifest};
 
 /// Analyses a file and outputs information about it
 #[derive(Parser)]

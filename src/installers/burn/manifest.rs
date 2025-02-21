@@ -1,15 +1,18 @@
+use std::{borrow::Cow, fmt::Formatter};
+
+use const_format::concatcp;
+use derive_more::Deref;
+use serde::{
+    Deserialize, Deserializer,
+    de::{Unexpected, Visitor},
+};
+use winget_types::shared::Version;
+
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
     RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
     RELATIVE_TEMP_FOLDER, RELATIVE_WINDOWS_DIR,
 };
-use crate::types::version::Version;
-use const_format::concatcp;
-use derive_more::Deref;
-use serde::de::{Unexpected, Visitor};
-use serde::{Deserialize, Deserializer};
-use std::borrow::Cow;
-use std::fmt::Formatter;
 
 #[expect(dead_code)]
 #[derive(Debug, Deserialize)]

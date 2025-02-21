@@ -1,6 +1,6 @@
-use crate::commands::token::remove::RemoveToken;
-use crate::commands::token::update::UpdateToken;
 use clap::{Args, Subcommand};
+
+use crate::commands::token::{remove::RemoveToken, update::UpdateToken};
 
 #[derive(Args)]
 pub struct TokenArgs {

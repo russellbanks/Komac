@@ -1,12 +1,13 @@
-use crate::commands::utils::SPINNER_TICK_RATE;
-use crate::credential::handle_token;
-use crate::github::github_client::GitHub;
-use crate::hyperlink::Hyperlink;
 use anstream::println;
 use clap::Parser;
 use color_eyre::Result;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
+
+use crate::{
+    commands::utils::SPINNER_TICK_RATE, credential::handle_token, github::github_client::GitHub,
+    hyperlink::Hyperlink,
+};
 
 /// Merges changes from microsoft/winget-pkgs into the fork repository
 #[derive(Parser)]

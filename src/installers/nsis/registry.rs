@@ -1,7 +1,8 @@
-use crate::installers::utils::registry::RegRoot;
-use std::borrow::Cow;
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
+
 use tracing::debug;
+
+use crate::installers::utils::registry::RegRoot;
 
 type Values<'data> = HashMap<Cow<'data, str>, Cow<'data, str>>;
 

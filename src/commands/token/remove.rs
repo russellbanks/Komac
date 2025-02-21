@@ -1,9 +1,9 @@
-use crate::credential::get_komac_credential;
-use crate::prompts::text::confirm_prompt;
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
+
+use crate::{credential::get_komac_credential, prompts::text::confirm_prompt};
 
 /// Remove the stored token
 #[derive(Parser)]

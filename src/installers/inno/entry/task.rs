@@ -1,11 +1,13 @@
-use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::flag_reader::read_flags::read_flags;
-use crate::installers::inno::version::InnoVersion;
-use crate::installers::inno::windows_version::WindowsVersionRange;
+use std::io::{Read, Result};
+
 use bitflags::bitflags;
 use byteorder::{LE, ReadBytesExt};
 use encoding_rs::Encoding;
-use std::io::{Read, Result};
+
+use crate::installers::inno::{
+    encoding::InnoValue, flag_reader::read_flags::read_flags, version::InnoVersion,
+    windows_version::WindowsVersionRange,
+};
 
 #[expect(dead_code)]
 #[derive(Debug, Default)]

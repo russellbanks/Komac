@@ -1,7 +1,5 @@
-use crate::commands::utils::SPINNER_TICK_RATE;
-use crate::credential::handle_token;
-use crate::github::github_client::GitHub;
-use crate::prompts::handle_inquire_error;
+use std::fmt::{Display, Formatter};
+
 use anstream::println;
 use bitflags::bitflags;
 use clap::Parser;
@@ -9,7 +7,11 @@ use color_eyre::Result;
 use indicatif::ProgressBar;
 use inquire::MultiSelect;
 use owo_colors::OwoColorize;
-use std::fmt::{Display, Formatter};
+
+use crate::{
+    commands::utils::SPINNER_TICK_RATE, credential::handle_token, github::github_client::GitHub,
+    prompts::handle_inquire_error,
+};
 
 /// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to
 /// microsoft/winget-pkgs from them, prompting for which ones to delete

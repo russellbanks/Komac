@@ -1,6 +1,6 @@
-use crate::github::graphql::github_schema::github_schema as schema;
-use crate::github::graphql::types::GitObjectId;
 use url::Url;
+
+use crate::github::graphql::{github_schema::github_schema as schema, types::GitObjectId};
 
 #[derive(cynic::QueryVariables)]
 pub struct RepositoryVariables<'a> {
@@ -60,10 +60,13 @@ impl TargetGitObject {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::github_client::{MICROSOFT, WINGET_PKGS};
-    use crate::github::graphql::get_repository_info::{GetRepositoryInfo, RepositoryVariables};
     use cynic::QueryBuilder;
     use indoc::indoc;
+
+    use crate::github::{
+        github_client::{MICROSOFT, WINGET_PKGS},
+        graphql::get_repository_info::{GetRepositoryInfo, RepositoryVariables},
+    };
 
     #[test]
     fn get_repository_info_output() {

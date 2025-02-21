@@ -1,6 +1,8 @@
-use crate::installers::inno::version::InnoVersion;
-use byteorder::{LE, ReadBytesExt};
 use std::io::{Read, Result};
+
+use byteorder::{LE, ReadBytesExt};
+
+use crate::installers::inno::version::InnoVersion;
 
 #[derive(Debug, Default)]
 struct Version {

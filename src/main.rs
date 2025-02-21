@@ -1,25 +1,25 @@
 extern crate core;
 
-use crate::commands::analyse::Analyse;
-use crate::commands::cleanup::Cleanup;
-use crate::commands::complete::Complete;
-use crate::commands::list_versions::ListVersions;
-use crate::commands::new_version::NewVersion;
-use crate::commands::remove_dead_versions::RemoveDeadVersions;
-use crate::commands::remove_version::RemoveVersion;
-use crate::commands::show_version::ShowVersion;
-use crate::commands::submit::Submit;
-use crate::commands::sync_fork::SyncFork;
-use crate::commands::token::commands::{TokenArgs, TokenCommands};
-use crate::commands::update_version::UpdateVersion;
 use clap::{Parser, Subcommand, crate_name};
 use color_eyre::eyre::Result;
-use tracing::Level;
-use tracing::metadata::LevelFilter;
+use tracing::{Level, metadata::LevelFilter};
 use tracing_indicatif::IndicatifLayer;
-use tracing_subscriber::filter;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt};
+
+use crate::commands::{
+    analyse::Analyse,
+    cleanup::Cleanup,
+    complete::Complete,
+    list_versions::ListVersions,
+    new_version::NewVersion,
+    remove_dead_versions::RemoveDeadVersions,
+    remove_version::RemoveVersion,
+    show_version::ShowVersion,
+    submit::Submit,
+    sync_fork::SyncFork,
+    token::commands::{TokenArgs, TokenCommands},
+    update_version::UpdateVersion,
+};
 
 mod commands;
 mod credential;
@@ -32,7 +32,7 @@ mod installers;
 mod manifests;
 mod match_installers;
 mod prompts;
-mod types;
+mod traits;
 mod update_state;
 
 #[tokio::main]

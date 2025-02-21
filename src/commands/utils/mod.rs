@@ -1,24 +1,22 @@
-use crate::editor::Editor;
-use crate::github::graphql::get_existing_pull_request::PullRequest;
-use crate::manifests::print_changes;
-use crate::prompts::handle_inquire_error;
-use crate::prompts::text::confirm_prompt;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
+use std::{env, time::Duration};
+
 use anstream::println;
 use camino::Utf8Path;
 use chrono::Local;
 use color_eyre::Result;
 use futures_util::{StreamExt, TryStreamExt, stream};
-use inquire::Select;
-use inquire::error::InquireResult;
+use inquire::{Select, error::InquireResult};
 use owo_colors::OwoColorize;
-use std::env;
-use std::time::Duration;
 use strum::{Display, EnumIter, IntoEnumIterator};
-use tokio::fs;
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
+use tokio::{fs, fs::File, io::AsyncWriteExt};
+use winget_types::shared::{PackageIdentifier, PackageVersion};
+
+use crate::{
+    editor::Editor,
+    github::graphql::get_existing_pull_request::PullRequest,
+    manifests::print_changes,
+    prompts::{handle_inquire_error, text::confirm_prompt},
+};
 
 pub const SPINNER_TICK_RATE: Duration = Duration::from_millis(50);
 

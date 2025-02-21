@@ -1,46 +1,59 @@
-use crate::manifests::installer_manifest::UpgradeBehavior;
+use std::{fmt::Display, ops::BitOr, process};
+
 use bitflags::Flags;
-use inquire::error::InquireResult;
-use inquire::{InquireError, MultiSelect, Select};
-use std::fmt::Display;
-use std::ops::BitOr;
-use std::process;
-use strum::IntoEnumIterator;
+use inquire::{InquireError, MultiSelect, Select, error::InquireResult};
+use winget_types::{installer::UpgradeBehavior, shared::value::ValueName};
 
 pub mod list;
 pub mod text;
 
-pub trait Prompt {
-    const MESSAGE: &'static str;
+pub trait AllItems {
+    type Item: Display;
+
+    fn all() -> impl IntoIterator<Item = Self::Item>;
 }
 
-impl Prompt for UpgradeBehavior {
-    const MESSAGE: &'static str = "Upgrade behaviour:";
+impl AllItems for UpgradeBehavior {
+    type Item = Self;
+
+    fn all() -> impl IntoIterator<Item = Self::Item> {
+        [
+            Self::Item::Install,
+            Self::Item::UninstallPrevious,
+            Self::Item::Deny,
+        ]
+    }
 }
 
 pub fn radio_prompt<T>() -> InquireResult<T>
 where
-    T: Prompt + IntoEnumIterator + Display,
+    T: ValueName + AllItems<Item = T> + Display,
 {
-    Select::new(T::MESSAGE, T::iter().collect())
-        .prompt()
-        .map_err(handle_inquire_error)
+    Select::new(
+        &format!("{}:", <T as ValueName>::NAME),
+        <T as AllItems>::all().into_iter().collect(),
+    )
+    .prompt()
+    .map_err(handle_inquire_error)
 }
 
 pub fn check_prompt<T>() -> InquireResult<Option<T>>
 where
-    T: Prompt + Flags + Display + BitOr<Output = T> + Copy,
+    T: ValueName + Flags + Display + BitOr<Output = T> + Copy,
 {
-    MultiSelect::new(T::MESSAGE, T::all().iter().collect())
-        .prompt()
-        .map(|items| {
-            if items.is_empty() {
-                None
-            } else {
-                Some(items.iter().fold(T::empty(), |flags, flag| flags | *flag))
-            }
-        })
-        .map_err(handle_inquire_error)
+    MultiSelect::new(
+        &format!("{}:", <T as ValueName>::NAME),
+        T::all().iter().collect(),
+    )
+    .prompt()
+    .map(|items| {
+        if items.is_empty() {
+            None
+        } else {
+            Some(items.iter().fold(T::empty(), |flags, flag| flags | *flag))
+        }
+    })
+    .map_err(handle_inquire_error)
 }
 
 /// Inquire captures Ctrl+C and returns an error. This will instead exit normally if the prompt is

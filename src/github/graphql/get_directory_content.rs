@@ -51,12 +51,13 @@ impl TreeGitObject {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::github_client::{MICROSOFT, WINGET_PKGS};
-    use crate::github::graphql::get_directory_content::{
-        GetDirectoryContent, GetDirectoryContentVariables,
-    };
     use cynic::QueryBuilder;
     use indoc::indoc;
+
+    use crate::github::{
+        github_client::{MICROSOFT, WINGET_PKGS},
+        graphql::get_directory_content::{GetDirectoryContent, GetDirectoryContentVariables},
+    };
 
     #[test]
     fn get_directory_content_output() {

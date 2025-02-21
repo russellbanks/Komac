@@ -1,7 +1,8 @@
 extern crate windows_exe_info;
 
-use cynic_codegen::registration::SchemaRegistration;
 use std::path::Path;
+
+use cynic_codegen::registration::SchemaRegistration;
 
 fn main() {
     cynic_codegen::register_schema("github")

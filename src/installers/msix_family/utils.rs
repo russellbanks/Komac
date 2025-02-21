@@ -1,13 +1,15 @@
-use std::io::{Read, Seek};
+use std::{
+    io,
+    io::{Read, Seek},
+};
 
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
+use winget_types::shared::Sha256String;
 use zip::ZipArchive;
 
-use crate::installers::msix_family::APPX_SIGNATURE_P7X;
-use crate::installers::utils::RELATIVE_PROGRAM_FILES_64;
-use crate::types::sha_256::Sha256String;
+use crate::installers::{msix_family::APPX_SIGNATURE_P7X, utils::RELATIVE_PROGRAM_FILES_64};
 
 pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Result<String> {
     let mut appx_manifest_file = zip.by_name(path)?;
@@ -16,7 +18,7 @@ pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Res
     Ok(appx_manifest)
 }
 
-pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> Result<Sha256String> {
+pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> io::Result<Sha256String> {
     let signature_file = zip.by_name(APPX_SIGNATURE_P7X)?;
     Sha256String::from_reader(signature_file)
 }

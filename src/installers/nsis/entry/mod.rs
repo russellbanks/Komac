@@ -1,9 +1,12 @@
-use crate::installers::nsis::state::NsisState;
-use crate::installers::utils::registry::RegRoot;
-use std::borrow::Cow;
-use std::ops::Not;
-use zerocopy::little_endian::{I32, U16};
-use zerocopy::{Immutable, KnownLayout, TryFromBytes, transmute_ref};
+use std::{borrow::Cow, ops::Not};
+
+use zerocopy::{
+    Immutable, KnownLayout, TryFromBytes,
+    little_endian::{I32, U16},
+    transmute_ref,
+};
+
+use crate::installers::{nsis::state::NsisState, utils::registry::RegRoot};
 
 #[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(i32)]

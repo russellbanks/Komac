@@ -1,7 +1,7 @@
-use crate::manifests::installer_manifest::UnsupportedOSArchitecture;
-use crate::types::architecture::Architecture;
-use bitflags::bitflags;
 use std::collections::BTreeSet;
+
+use bitflags::bitflags;
+use winget_types::installer::{Architecture, UnsupportedOSArchitecture};
 
 bitflags! {
     /// Used before Inno Setup 6.3 where the architecture was stored in a single byte
@@ -246,8 +246,9 @@ fn infix_to_postfix(tokens: Vec<&str>) -> Vec<&str> {
 
 #[cfg(test)]
 mod tests {
-    use crate::installers::inno::header::architecture::ArchitectureIdentifiers;
     use rstest::rstest;
+
+    use crate::installers::inno::header::architecture::ArchitectureIdentifiers;
 
     #[rstest]
     #[case(

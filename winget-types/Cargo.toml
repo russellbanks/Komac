@@ -1,0 +1,32 @@
+[package]
+name = "winget-types"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.85"
+license = "GPL-3.0-or-later"
+publish = false
+
+[dependencies]
+base16ct = { version = "0.2.0", features = ["std"] }
+bitflags = "2.8.0"
+camino = { version = "1.1.9", features = ["serde1"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+compact_str = { version = "0.8.1", features = ["serde"] }
+const_format = { version = "0.2.34", features = ["derive"] }
+derive_more = { version = "2.0.1", features = ["deref", "deref_mut", "display", "from_str", "into", "into_iterator"] }
+heapless = { version = "0.8.0", features = ["serde"] }
+icu_locid = { version = "1.5.0", features = ["serde"] }
+itertools = "0.14.0"
+package-family-name = { version = "2.0.1", features = ["serde"] }
+percent-encoding = "2.3.1"
+serde = { version = "1.0.218", features = ["derive"] }
+serde_with = { version = "3.12.0", default-features = false, features = ["macros"] }
+sha2 = "0.10.8"
+smallvec = { version = "1.14.0", features = ["union"] }
+thiserror = "2.0.11"
+url = { version = "2.5.4", features = ["serde"] }
+
+[dev-dependencies]
+indoc = "2.0.5"
+rstest = "0.24.0"
+serde_yaml = "0.9.34"

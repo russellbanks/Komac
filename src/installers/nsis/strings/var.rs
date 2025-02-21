@@ -1,6 +1,6 @@
+use std::{borrow::Cow, collections::HashMap};
+
 use crate::installers::nsis::version::NsisVersion;
-use std::borrow::Cow;
-use std::collections::HashMap;
 
 const STRINGS: [&str; 12] = [
     "CMDLINE",

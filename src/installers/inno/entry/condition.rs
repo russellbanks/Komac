@@ -1,7 +1,8 @@
-use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::version::InnoVersion;
-use encoding_rs::Encoding;
 use std::io::{Read, Result};
+
+use encoding_rs::Encoding;
+
+use crate::installers::inno::{encoding::InnoValue, version::InnoVersion};
 
 #[derive(Debug, Default)]
 pub struct Condition {

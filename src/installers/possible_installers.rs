@@ -1,10 +1,12 @@
-use crate::installers::burn::Burn;
-use crate::installers::inno::Inno;
-use crate::installers::msi::Msi;
-use crate::installers::msix_family::Msix;
-use crate::installers::msix_family::bundle::MsixBundle;
-use crate::installers::nsis::Nsis;
-use crate::manifests::installer_manifest::Installer;
+use winget_types::installer::Installer;
+
+use crate::installers::{
+    burn::Burn,
+    inno::Inno,
+    msi::Msi,
+    msix_family::{Msix, bundle::MsixBundle},
+    nsis::Nsis,
+};
 
 pub enum PossibleInstaller {
     Burn(Burn),

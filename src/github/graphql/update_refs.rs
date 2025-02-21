@@ -1,5 +1,7 @@
-use crate::github::graphql::github_schema::github_schema as schema;
-use crate::github::graphql::types::{GitObjectId, GitRefName};
+use crate::github::graphql::{
+    github_schema::github_schema as schema,
+    types::{GitObjectId, GitRefName},
+};
 
 /// <https://docs.github.com/graphql/reference/input-objects#updaterefsinput>
 #[derive(cynic::QueryVariables)]
@@ -35,9 +37,10 @@ pub struct RefUpdate {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::graphql::update_refs::{UpdateRefs, UpdateRefsVariables};
     use cynic::{Id, MutationBuilder};
     use indoc::indoc;
+
+    use crate::github::graphql::update_refs::{UpdateRefs, UpdateRefsVariables};
 
     #[test]
     fn create_ref_output() {

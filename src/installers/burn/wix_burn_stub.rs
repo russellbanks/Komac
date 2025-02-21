@@ -1,6 +1,6 @@
 use std::ops::Range;
-use zerocopy::little_endian::U32;
-use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+
+use zerocopy::{Immutable, KnownLayout, TryFromBytes, little_endian::U32};
 
 #[expect(dead_code)]
 #[derive(Debug, TryFromBytes, KnownLayout, Immutable)]

@@ -1,14 +1,97 @@
-use crate::prompts::{Prompt, handle_inquire_error};
-use inquire::error::InquireResult;
-use inquire::validator::Validation;
-use inquire::{Confirm, CustomUserError, InquireError, Text};
-use std::fmt::{Debug, Display};
-use std::str::FromStr;
+use std::{
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
-pub trait TextPrompt: Prompt {
-    const HELP_MESSAGE: Option<&'static str>;
-    const PLACEHOLDER: Option<&'static str>;
+use inquire::{
+    Confirm, CustomUserError, InquireError, Text, error::InquireResult, validator::Validation,
+};
+use winget_types::{
+    installer::switches::{CustomSwitch, SilentSwitch, SilentWithProgressSwitch},
+    locale::{
+        Author, Copyright, Description, License, Moniker, PackageName, Publisher, ShortDescription,
+    },
+    shared::{
+        LanguageTag, PackageIdentifier, PackageVersion,
+        url::{
+            CopyrightUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl,
+            ReleaseNotesUrl,
+        },
+        value::ValueName,
+    },
+};
+
+use crate::prompts::handle_inquire_error;
+
+pub trait TextPrompt: ValueName {
+    const HELP_MESSAGE: Option<&'static str> = None;
+    const PLACEHOLDER: Option<&'static str> = None;
 }
+
+impl TextPrompt for PackageIdentifier {
+    const HELP_MESSAGE: Option<&'static str> =
+        Some("Package Identifiers are in the format of Package.Identifier");
+    const PLACEHOLDER: Option<&'static str> = Some("Package.Identifier");
+}
+
+impl TextPrompt for PackageVersion {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: 1.2.3");
+}
+
+impl TextPrompt for Moniker {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: vscode");
+}
+
+impl TextPrompt for Description {}
+
+impl TextPrompt for ShortDescription {}
+
+impl TextPrompt for LanguageTag {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: en-US");
+}
+
+impl TextPrompt for Publisher {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: Microsoft Corporation");
+}
+
+impl TextPrompt for License {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: MIT, GPL-3.0, Freeware, Proprietary");
+}
+
+impl TextPrompt for SilentSwitch {
+    const HELP_MESSAGE: Option<&'static str> =
+        Some("Example: /S, -verysilent, /qn, --silent, /exenoui");
+}
+
+impl TextPrompt for SilentWithProgressSwitch {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: /S, -silent, /qb, /exebasicui");
+}
+
+impl TextPrompt for CustomSwitch {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: /norestart, -norestart");
+}
+
+impl TextPrompt for Copyright {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: Copyright (c) Microsoft Corporation");
+}
+
+impl TextPrompt for Author {}
+
+impl TextPrompt for PublisherUrl {}
+
+impl TextPrompt for PackageName {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: Microsoft Teams");
+}
+
+impl TextPrompt for PackageUrl {}
+
+impl TextPrompt for LicenseUrl {}
+
+impl TextPrompt for PublisherSupportUrl {}
+
+impl TextPrompt for CopyrightUrl {}
+
+impl TextPrompt for ReleaseNotesUrl {}
 
 pub fn optional_prompt<T>(parameter: Option<T>) -> InquireResult<Option<T>>
 where
@@ -18,7 +101,8 @@ where
     if let Some(value) = parameter {
         Ok(Some(value))
     } else {
-        let mut prompt = Text::new(T::MESSAGE).with_validator(|input: &str| {
+        let message = format!("{}:", <T as ValueName>::NAME);
+        let mut prompt = Text::new(&message).with_validator(|input: &str| {
             if input.is_empty() {
                 Ok(Validation::Valid)
             } else {
@@ -54,7 +138,7 @@ where
         Ok(value)
     } else {
         let mut prompt =
-            Text::new(T::MESSAGE).with_validator(|input: &str| match input.parse::<T>() {
+            Text::new(T::NAME).with_validator(|input: &str| match input.parse::<T>() {
                 Ok(_) => Ok(Validation::Valid),
                 Err(error) => Ok(Validation::Invalid(error.into())),
             });

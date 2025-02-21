@@ -1,7 +1,7 @@
-use crate::manifests::installer_manifest::{Installer, Scope};
-use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
-use camino::Utf8Path;
 use std::collections::HashMap;
+
+use camino::Utf8Path;
+use winget_types::installer::{Architecture, Installer, Scope, VALID_FILE_EXTENSIONS};
 
 pub fn match_installers(
     previous_installers: Vec<Installer>,
@@ -11,7 +11,7 @@ pub fn match_installers(
         .iter()
         .filter_map(|installer| {
             let url = &installer.url;
-            Architecture::get_from_url(url.as_str()).map(|architecture| (url, architecture))
+            Architecture::from_url(url.as_str()).map(|architecture| (url, architecture))
         })
         .collect::<HashMap<_, _>>();
 
@@ -81,12 +81,14 @@ pub fn match_installers(
 
 #[cfg(test)]
 mod tests {
-    use crate::manifests::installer_manifest::{Installer, Scope};
+    use std::{collections::HashMap, str::FromStr};
+
+    use winget_types::{
+        installer::{Architecture, Installer, Scope},
+        shared::url::DecodedUrl,
+    };
+
     use crate::match_installers::match_installers;
-    use crate::types::architecture::Architecture;
-    use crate::types::urls::url::DecodedUrl;
-    use std::collections::HashMap;
-    use std::str::FromStr;
 
     #[test]
     fn test_vscodium() {

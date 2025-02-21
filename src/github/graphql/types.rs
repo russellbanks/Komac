@@ -1,6 +1,7 @@
-use crate::github::graphql::github_schema::github_schema as schema;
 use derive_more::Deref;
 use derive_new::new;
+
+use crate::github::graphql::github_schema::github_schema as schema;
 
 /// <https://docs.github.com/graphql/reference/scalars#base64string>
 #[derive(cynic::Scalar, new)]

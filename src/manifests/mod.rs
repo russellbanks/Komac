@@ -1,33 +1,25 @@
-use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
-use crate::manifests::installer_manifest::InstallerManifest;
-use crate::manifests::locale_manifest::LocaleManifest;
-use crate::manifests::version_manifest::VersionManifest;
-use crate::types::manifest_type::ManifestType;
+use std::{
+    borrow::Cow,
+    env,
+    fmt::{Display, Formatter, Write},
+    io::{StdoutLock, Write as IoWrite},
+    sync::LazyLock,
+};
+
 use anstream::AutoStream;
 use clap::{crate_name, crate_version};
-use color_eyre::eyre::{Error, Result};
-use owo_colors::colors::css::SlateGrey;
-use owo_colors::{OwoColorize, Style};
+use const_format::concatc;
+use owo_colors::{OwoColorize, Style, colors::css::SlateGrey};
 use serde::Serialize;
-use std::env;
-use std::fmt::{Display, Formatter};
-use std::io::StdoutLock;
-use std::io::Write;
-use std::sync::LazyLock;
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
+use winget_types::{
+    installer::InstallerManifest,
+    locale::{DefaultLocaleManifest, LocaleManifest},
+    traits::Manifest,
+    version::VersionManifest,
+};
 
-pub mod default_locale_manifest;
-pub mod generic;
-pub mod installer_manifest;
-pub mod locale_manifest;
 pub mod manifest;
-pub mod version_manifest;
-
-pub trait ManifestTrait {
-    const SCHEMA: &'static str;
-
-    const TYPE: ManifestType;
-}
 
 pub struct Manifests {
     pub installer: InstallerManifest,
@@ -110,60 +102,123 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
     }
 }
 
-pub fn build_manifest_string<T: ManifestTrait + Serialize>(
+pub fn build_manifest_string<T>(
     manifest: &T,
     created_with: Option<&str>,
-) -> Result<String> {
-    let mut result = Vec::from("# Created with ");
+) -> serde_yaml::Result<String>
+where
+    T: Manifest + Serialize,
+{
+    let mut result = String::from("# Created with ");
     if let Some(created_with_tool) = created_with {
-        write!(result, "{created_with_tool} using ")?;
+        let _ = write!(result, "{created_with_tool} using ");
     }
-    writeln!(result, "{} v{}", crate_name!(), crate_version!())?;
-    writeln!(result, "# yaml-language-server: $schema={}", T::SCHEMA)?;
-    writeln!(result)?;
-    serde_yaml::to_writer(&mut result, manifest)?;
-    convert_to_crlf(&mut result);
-    String::from_utf8(result).map_err(Error::from)
+    let _ = writeln!(result, "{} v{}", crate_name!(), crate_version!());
+    let _ = writeln!(result, "# yaml-language-server: $schema={}", T::SCHEMA);
+    let _ = writeln!(result);
+    let _ = writeln!(result, "{}", serde_yaml::to_string(manifest)?);
+    Ok(convert_to_crlf(&result).into_owned())
 }
 
-fn convert_to_crlf(buf: &mut Vec<u8>) {
-    const NEWLINE: u8 = b'\n';
-    const CARRIAGE_RETURN: u8 = b'\r';
+fn convert_to_crlf(input: &str) -> Cow<str> {
+    const CR: char = '\r';
+    const LF: char = '\n';
+    const CRLF: &str = concatc!(CR, LF);
 
-    let mut prev_char: Option<u8> = None;
-    let mut index = 0;
-    while index < buf.len() {
-        // Check whether the character is a newline and is not preceded by a carriage return
-        if buf[index] == NEWLINE && prev_char != Some(CARRIAGE_RETURN) {
-            // Insert a carriage return before the newline
-            buf.insert(index, CARRIAGE_RETURN);
-            index += 1; // Move to the next character to avoid infinite loop
+    let mut buffer = None;
+    let mut position = 0;
+    let mut chars = input.char_indices().peekable();
+
+    while let Some((index, char)) = chars.next() {
+        match char {
+            CR => {
+                let buf = buffer.get_or_insert_with(|| String::with_capacity(input.len()));
+
+                // Copy text before CR
+                buf.push_str(&input[position..index]);
+
+                // Check for CR+LF
+                if let Some(&(_, LF)) = chars.peek() {
+                    // Skip the LF as we'll add CRLF
+                    chars.next();
+                }
+
+                buf.push_str(CRLF);
+
+                position = chars
+                    .peek()
+                    .map_or(input.len(), |&(next_index, _)| next_index);
+            }
+            LF => {
+                // Convert LF
+                let buf = buffer.get_or_insert_with(|| String::with_capacity(input.len()));
+                buf.push_str(&input[position..index]);
+                buf.push_str(CRLF);
+                position = index + LF.len_utf8();
+            }
+            _ => {}
         }
-        prev_char = Some(buf[index]);
-        index += 1;
     }
+
+    buffer.map_or(Cow::Borrowed(input), |mut buf| {
+        buf.push_str(&input[position..]);
+        Cow::Owned(buf)
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::manifests::convert_to_crlf;
-    use std::io::Write;
+    use std::borrow::Cow;
 
-    fn is_line_feed(value: &str) -> bool {
-        value
-            .chars()
-            .zip(value.chars().skip(1))
-            .any(|(prev, current)| prev != '\r' && current == '\n')
+    use crate::manifests::convert_to_crlf;
+
+    #[test]
+    fn preserves_valid_crlf() {
+        assert_eq!(
+            convert_to_crlf("Valid\r\nLine"),
+            Cow::Borrowed("Valid\r\nLine")
+        );
     }
 
     #[test]
-    fn test_convert_to_crlf() {
-        let mut buffer = Vec::new();
-        for index in 0..10 {
-            let _ = writeln!(buffer, "Line {index}");
-        }
-        assert!(is_line_feed(std::str::from_utf8(&buffer).unwrap()));
-        convert_to_crlf(&mut buffer);
-        assert!(!is_line_feed(std::str::from_utf8(&buffer).unwrap()));
+    fn converts_lf_to_crlf() {
+        assert_eq!(
+            convert_to_crlf("Unix\nLine"),
+            Cow::Owned::<str>("Unix\r\nLine".into())
+        );
+    }
+
+    #[test]
+    fn converts_lone_cr_to_crlf() {
+        assert_eq!(
+            convert_to_crlf("Old\rMac"),
+            Cow::Owned::<str>("Old\r\nMac".into())
+        );
+    }
+
+    #[test]
+    fn mixed_conversions() {
+        assert_eq!(
+            convert_to_crlf("Mix\r\n\n\rEnd"),
+            Cow::Owned::<str>("Mix\r\n\r\n\r\nEnd".into())
+        );
+    }
+
+    #[test]
+    fn no_changes_needed() {
+        assert_eq!(convert_to_crlf("No changes"), Cow::Borrowed("No changes"));
+    }
+
+    #[test]
+    fn empty_string() {
+        assert_eq!(convert_to_crlf(""), Cow::Borrowed(""));
+    }
+
+    #[test]
+    fn edge_cases() {
+        assert_eq!(convert_to_crlf("\r"), "\r\n");
+        assert_eq!(convert_to_crlf("\n"), "\r\n");
+        assert_eq!(convert_to_crlf("\r\n"), "\r\n");
+        assert_eq!(convert_to_crlf("a\rb\nc\r\nd"), "a\r\nb\r\nc\r\nd");
     }
 }

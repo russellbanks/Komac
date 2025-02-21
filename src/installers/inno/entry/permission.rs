@@ -1,6 +1,8 @@
-use crate::installers::inno::encoding::InnoValue;
-use encoding_rs::Encoding;
 use std::io::{Read, Result};
+
+use encoding_rs::Encoding;
+
+use crate::installers::inno::encoding::InnoValue;
 
 #[expect(dead_code)]
 #[derive(Debug, Default)]

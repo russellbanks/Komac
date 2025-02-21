@@ -1,8 +1,12 @@
-use crate::github::graphql::github_schema::github_schema as schema;
-use crate::github::graphql::types::{Base64String, GitObjectId};
-use derive_new::new;
 use std::borrow::Cow;
+
+use derive_new::new;
 use url::Url;
+
+use crate::github::graphql::{
+    github_schema::github_schema as schema,
+    types::{Base64String, GitObjectId},
+};
 
 #[derive(cynic::QueryVariables)]
 pub struct CreateCommitVariables<'a> {
@@ -78,13 +82,16 @@ pub struct CommitMessage<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::graphql::create_commit::{
-        CommitMessage, CommittableBranch, CreateCommit, CreateCommitOnBranchInput,
-        CreateCommitVariables,
-    };
-    use crate::github::graphql::types::GitObjectId;
     use cynic::{Id, MutationBuilder};
     use indoc::indoc;
+
+    use crate::github::graphql::{
+        create_commit::{
+            CommitMessage, CommittableBranch, CreateCommit, CreateCommitOnBranchInput,
+            CreateCommitVariables,
+        },
+        types::GitObjectId,
+    };
 
     #[test]
     fn create_commit_output() {

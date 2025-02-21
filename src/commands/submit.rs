@@ -1,13 +1,5 @@
-use crate::commands::utils::{SPINNER_TICK_RATE, SubmitOption, prompt_submit_option};
-use crate::credential::handle_token;
-use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::utils::get_package_path;
-use crate::github::utils::pull_request::pr_changes;
-use crate::manifests::Manifests;
-use crate::manifests::generic::GenericManifest;
-use crate::manifests::manifest::Manifest;
-use crate::prompts::handle_inquire_error;
-use crate::types::manifest_type::ManifestType;
+use std::{fs::File, io};
+
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -16,9 +8,19 @@ use indicatif::ProgressBar;
 use inquire::Select;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
-use std::fs::File;
-use std::io;
 use walkdir::WalkDir;
+use winget_types::shared::{GenericManifest, ManifestType};
+
+use crate::{
+    commands::utils::{SPINNER_TICK_RATE, SubmitOption, prompt_submit_option},
+    credential::handle_token,
+    github::{
+        github_client::{GitHub, WINGET_PKGS_FULL_NAME},
+        utils::{get_package_path, pull_request::pr_changes},
+    },
+    manifests::{Manifests, manifest::Manifest},
+    prompts::handle_inquire_error,
+};
 
 #[derive(Parser)]
 pub struct Submit {

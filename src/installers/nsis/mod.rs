@@ -7,23 +7,8 @@ mod state;
 mod strings;
 mod version;
 
-use crate::file_analyser::EXE;
-use crate::installers::nsis::entry::Entry;
-use crate::installers::nsis::first_header::FirstHeader;
-use crate::installers::nsis::header::block::BlockHeaders;
-use crate::installers::nsis::header::compression::Compression;
-use crate::installers::nsis::header::decoder::Decoder;
-use crate::installers::nsis::header::flags::CommonHeaderFlags;
-use crate::installers::nsis::header::{Decompressed, Header};
-use crate::installers::utils::RELATIVE_PROGRAM_FILES_64;
-use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
-use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
-};
-use crate::types::architecture::Architecture;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::version::Version;
+use std::{borrow::Cow, io, io::Read};
+
 use byteorder::{LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -33,16 +18,33 @@ use liblzma::read::XzDecoder;
 use msi::Language;
 use protobuf::Enum;
 use state::NsisState;
-use std::borrow::Cow;
-use std::io;
-use std::io::Read;
 use strsim::levenshtein;
 use thiserror::Error;
 use tracing::debug;
-use yara_x::mods::PE;
-use yara_x::mods::pe::Machine;
-use zerocopy::little_endian::I32;
-use zerocopy::{FromBytes, TryFromBytes};
+use winget_types::{
+    installer::{
+        AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
+    },
+    shared::{LanguageTag, Version},
+};
+use yara_x::mods::{PE, pe::Machine};
+use zerocopy::{FromBytes, TryFromBytes, little_endian::I32};
+
+use crate::{
+    file_analyser::EXE,
+    installers::{
+        nsis::{
+            entry::Entry,
+            first_header::FirstHeader,
+            header::{
+                Decompressed, Header, block::BlockHeaders, compression::Compression,
+                decoder::Decoder, flags::CommonHeaderFlags,
+            },
+        },
+        utils::{RELATIVE_PROGRAM_FILES_64, lzma_stream_header::LzmaStreamHeader},
+    },
+    traits::FromMachine,
+};
 
 #[derive(Error, Debug)]
 pub enum NsisError {

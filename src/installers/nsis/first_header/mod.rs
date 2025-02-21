@@ -1,11 +1,13 @@
 mod flags;
 mod signature;
 
-use crate::installers::nsis::first_header::flags::HeaderFlags;
-use crate::installers::nsis::first_header::signature::{Magic, NsisSignature};
 use derive_more::Debug;
-use zerocopy::little_endian::U32;
-use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+use zerocopy::{Immutable, KnownLayout, TryFromBytes, little_endian::U32};
+
+use crate::installers::nsis::first_header::{
+    flags::HeaderFlags,
+    signature::{Magic, NsisSignature},
+};
 
 #[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
 #[repr(C)]

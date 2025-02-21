@@ -1,5 +1,6 @@
-use crate::github::graphql::github_schema::github_schema as schema;
 use url::Url;
+
+use crate::github::graphql::github_schema::github_schema as schema;
 
 #[derive(cynic::QueryVariables)]
 pub struct CreatePullRequestVariables<'a> {
@@ -44,11 +45,12 @@ pub struct CreatePullRequestInput<'a> {
 
 #[cfg(test)]
 mod tests {
+    use cynic::{Id, MutationBuilder};
+    use indoc::indoc;
+
     use crate::github::graphql::create_pull_request::{
         CreatePullRequest, CreatePullRequestInput, CreatePullRequestVariables,
     };
-    use cynic::{Id, MutationBuilder};
-    use indoc::indoc;
 
     #[test]
     fn create_commit_output() {

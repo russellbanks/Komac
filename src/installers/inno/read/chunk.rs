@@ -1,7 +1,11 @@
-use crate::installers::inno::InnoError;
+use std::{
+    cmp::min,
+    io::{Error, ErrorKind, Read, Result},
+};
+
 use byteorder::{LE, ReadBytesExt};
-use std::cmp::min;
-use std::io::{Error, ErrorKind, Read, Result};
+
+use crate::installers::inno::InnoError;
 
 pub const INNO_CHUNK_SIZE: u16 = 1 << 12;
 

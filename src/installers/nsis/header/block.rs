@@ -1,13 +1,14 @@
-use crate::installers::nsis::NsisError;
-use crate::installers::utils::transmute_from_reader;
-use crate::types::architecture::Architecture;
+use std::{borrow::Cow, io::Cursor, ops::Index};
+
 use derive_more::IntoIterator;
-use std::borrow::Cow;
-use std::io::Cursor;
-use std::ops::Index;
 use strum::EnumCount;
-use zerocopy::little_endian::{U32, U64};
-use zerocopy::{FromBytes, Immutable, KnownLayout};
+use winget_types::installer::Architecture;
+use zerocopy::{
+    FromBytes, Immutable, KnownLayout,
+    little_endian::{U32, U64},
+};
+
+use crate::installers::nsis::NsisError;
 
 #[derive(Clone, Debug, Default, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
@@ -61,8 +62,8 @@ impl BlockHeaders {
             let mut block_headers = Self::default();
             for header in &mut block_headers {
                 *header = BlockHeader {
-                    offset: U64::from(transmute_from_reader::<U32>(&mut reader)?),
-                    num: transmute_from_reader(&mut reader)?,
+                    offset: U64::from(U32::read_from_io(&mut reader)?),
+                    num: U32::read_from_io(&mut reader)?,
                 }
             }
             Ok((

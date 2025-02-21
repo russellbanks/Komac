@@ -1,6 +1,8 @@
-use crate::github::graphql::github_schema::github_schema as schema;
 use std::fmt::{Display, Formatter};
+
 use url::Url;
+
+use crate::github::graphql::github_schema::github_schema as schema;
 
 #[derive(cynic::QueryVariables)]
 pub struct GetBranchesVariables<'a> {
@@ -109,10 +111,13 @@ impl Display for PullRequestState {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::github_client::{MICROSOFT, WINGET_PKGS};
-    use crate::github::graphql::get_branches::{GetBranches, GetBranchesVariables};
     use cynic::QueryBuilder;
     use indoc::indoc;
+
+    use crate::github::{
+        github_client::{MICROSOFT, WINGET_PKGS},
+        graphql::get_branches::{GetBranches, GetBranchesVariables},
+    };
 
     #[test]
     fn get_branches_query_output() {

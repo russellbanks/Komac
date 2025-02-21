@@ -1,12 +1,12 @@
-use ratatui::DefaultTerminal;
-use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph};
-use std::borrow::Cow;
-use std::fmt::Display;
-use std::io;
-use std::ops::Add;
+use std::{borrow::Cow, fmt::Display, io, ops::Add};
+
+use ratatui::{
+    DefaultTerminal,
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph},
+};
 use tui_textarea::{CursorMove, Input, Key, TextArea};
 
 struct SearchBox<'a> {

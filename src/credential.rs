@@ -1,13 +1,15 @@
-use crate::prompts::handle_inquire_error;
-use color_eyre::eyre::{Result, bail};
-use inquire::Password;
-use inquire::error::InquireResult;
-use inquire::validator::Validation;
-use keyring::Entry;
-use reqwest::header::{AUTHORIZATION, DNT, HeaderMap, HeaderValue, USER_AGENT};
-use reqwest::{Client, StatusCode};
 use std::borrow::Cow;
+
+use color_eyre::eyre::{Result, bail};
+use inquire::{Password, error::InquireResult, validator::Validation};
+use keyring::Entry;
+use reqwest::{
+    Client, StatusCode,
+    header::{AUTHORIZATION, DNT, HeaderMap, HeaderValue, USER_AGENT},
+};
 use tokio::runtime::Handle;
+
+use crate::prompts::handle_inquire_error;
 
 const SERVICE: &str = "komac";
 const USERNAME: &str = "github-access-token";

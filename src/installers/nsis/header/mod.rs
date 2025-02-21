@@ -3,18 +3,22 @@ pub mod compression;
 pub mod decoder;
 pub mod flags;
 
-use crate::installers::nsis::first_header::FirstHeader;
-use crate::installers::nsis::header::compression::Compression;
-use crate::installers::nsis::header::decoder::Decoder;
-use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
+use std::io::{Error, ErrorKind, Read, Result};
+
 use byteorder::{ByteOrder, LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use flate2::read::DeflateDecoder;
 use liblzma::read::XzDecoder;
-use std::io::{Error, ErrorKind, Read, Result};
 use tracing::debug;
-use zerocopy::little_endian::I32;
-use zerocopy::{FromBytes, Immutable, KnownLayout};
+use zerocopy::{FromBytes, Immutable, KnownLayout, little_endian::I32};
+
+use crate::installers::{
+    nsis::{
+        first_header::FirstHeader,
+        header::{compression::Compression, decoder::Decoder},
+    },
+    utils::lzma_stream_header::LzmaStreamHeader,
+};
 
 const NSIS_MAX_INST_TYPES: u8 = 32;
 
@@ -66,7 +70,7 @@ fn is_lzma(data: &[u8]) -> Option<Compression> {
     let is_lzma_header = |d: &[u8]| {
         d.get(0..3) == Some([0x5D, 0, 0].as_slice())
             && d.get(5) == Some(&0)
-            && d.get(6).is_some_and(|byte| byte & 1 << 7 == 0)
+            && d.get(6).is_some_and(|byte| byte & (1 << 7) == 0)
     };
 
     if is_lzma_header(data) {

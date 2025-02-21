@@ -1,9 +1,10 @@
-use crate::credential::{get_default_headers, get_komac_credential, token_prompt, validate_token};
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
 use reqwest::Client;
+
+use crate::credential::{get_default_headers, get_komac_credential, token_prompt, validate_token};
 
 /// Update the stored token
 #[derive(Parser)]

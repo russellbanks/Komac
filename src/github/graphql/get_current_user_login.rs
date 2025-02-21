@@ -15,9 +15,10 @@ pub struct User {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
     use cynic::QueryBuilder;
     use indoc::indoc;
+
+    use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
 
     #[test]
     fn get_current_user_login_output() {

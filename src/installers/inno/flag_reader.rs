@@ -1,6 +1,9 @@
+use std::{
+    io::{Read, Result},
+    ops::BitOrAssign,
+};
+
 use byteorder::ReadBytesExt;
-use std::io::{Read, Result};
-use std::ops::BitOrAssign;
 
 /// Represents a reader for loading a flag set where the possible flags are not known at compile-time.
 /// The flags are stored as packed bitfields, with 1 byte for every 8 flags.

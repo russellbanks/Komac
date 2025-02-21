@@ -1,5 +1,6 @@
-use liblzma::stream::{Filters, Stream};
 use std::io::{Error, ErrorKind, Read, Result};
+
+use liblzma::stream::{Filters, Stream};
 
 pub struct LzmaStreamHeader;
 

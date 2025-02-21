@@ -1,15 +1,21 @@
-use crate::installers::msix_family::Msix;
-use crate::installers::msix_family::utils::{hash_signature, read_manifest};
-use crate::manifests::installer_manifest::Installer;
+use std::{
+    io,
+    io::{Cursor, Read, Seek},
+};
+
 use color_eyre::eyre::Result;
 use itertools::Itertools;
 use memmap2::Mmap;
 use package_family_name::PackageFamilyName;
 use quick_xml::de::from_str;
 use serde::Deserialize;
-use std::io;
-use std::io::{Cursor, Read, Seek};
+use winget_types::installer::Installer;
 use zip::ZipArchive;
+
+use crate::installers::msix_family::{
+    Msix,
+    utils::{hash_signature, read_manifest},
+};
 
 pub struct MsixBundle {
     pub installers: Vec<Installer>,

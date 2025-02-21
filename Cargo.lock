@@ -739,6 +739,7 @@ dependencies = [
  "itoa",
  "rustversion",
  "ryu",
+ "serde",
  "static_assertions",
 ]
 
@@ -790,15 +791,6 @@ dependencies = [
  "quote",
  "syn 1.0.109",
  "unicode-xid",
-]
-
-[[package]]
-name = "convert_case"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
-dependencies = [
- "unicode-segmentation",
 ]
 
 [[package]]
@@ -2445,32 +2437,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "kinded"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce4bdbb2f423660b19f0e9f7115182214732d8dd5f840cd0a3aee3e22562f34c"
-dependencies = [
- "kinded_macros",
-]
-
-[[package]]
-name = "kinded_macros"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a13b4ddc5dcb32f45dac3d6f606da2a52fdb9964a18427e63cd5ef6c0d13288d"
-dependencies = [
- "convert_case",
- "proc-macro2",
- "quote",
- "syn 2.0.98",
-]
-
-[[package]]
 name = "komac"
 version = "2.11.0"
 dependencies = [
  "anstream",
- "base16ct",
  "base64ct",
  "bit-set",
  "bitflags 2.8.0",
@@ -2496,7 +2466,6 @@ dependencies = [
  "flate2",
  "futures",
  "futures-util",
- "heapless",
  "html2text",
  "icu_locid",
  "indexmap 2.7.1",
@@ -2510,12 +2479,10 @@ dependencies = [
  "memmap2",
  "msi",
  "num_cpus",
- "nutype",
  "open",
  "ordinal-trait",
  "owo-colors 4.2.0",
  "package-family-name",
- "percent-encoding",
  "protobuf",
  "quick-xml",
  "rand 0.9.0",
@@ -2525,10 +2492,8 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
- "serde_with",
  "serde_yaml",
  "sha2",
- "smallvec",
  "strsim 0.11.1",
  "strum 0.27.1",
  "tempfile",
@@ -2544,6 +2509,7 @@ dependencies = [
  "uuid",
  "walkdir",
  "windows_exe_info",
+ "winget-types",
  "yara-x",
  "zerocopy 0.8.20",
  "zip",
@@ -3130,30 +3096,6 @@ name = "number_prefix"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
-
-[[package]]
-name = "nutype"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3340cb6773b0794ecb3f62ff66631d580f57151d9415c10ee8a27a357aeb998b"
-dependencies = [
- "nutype_macros",
-]
-
-[[package]]
-name = "nutype_macros"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35c955e27d02868fe90b9c2dc901661fd7ed67ec382782bdc67c6aa8d2e957a9"
-dependencies = [
- "cfg-if",
- "kinded",
- "proc-macro2",
- "quote",
- "rustc_version",
- "syn 2.0.98",
- "urlencoding",
-]
 
 [[package]]
 name = "object"
@@ -5209,12 +5151,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "urlencoding"
-version = "2.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
-
-[[package]]
 name = "utf-8"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5964,6 +5900,33 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "winget-types"
+version = "1.0.0"
+dependencies = [
+ "base16ct",
+ "bitflags 2.8.0",
+ "camino",
+ "chrono",
+ "compact_str",
+ "const_format",
+ "derive_more",
+ "heapless",
+ "icu_locid",
+ "indoc",
+ "itertools 0.14.0",
+ "package-family-name",
+ "percent-encoding",
+ "rstest",
+ "serde",
+ "serde_with",
+ "serde_yaml",
+ "sha2",
+ "smallvec",
+ "thiserror 2.0.11",
+ "url",
+]
 
 [[package]]
 name = "winnow"

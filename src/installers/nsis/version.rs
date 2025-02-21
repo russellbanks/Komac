@@ -1,13 +1,12 @@
-use crate::installers::nsis::state::NsisState;
-use crate::installers::nsis::strings::code::NsCode;
 use byteorder::{ByteOrder, LE};
 use derive_more::Display;
 use itertools::{Either, Itertools};
 use quick_xml::de::from_str;
 use serde::Deserialize;
 use tracing::{debug, trace};
-use yara_x::mods::PE;
-use yara_x::mods::pe::ResourceType::RESOURCE_TYPE_MANIFEST;
+use yara_x::mods::{PE, pe::ResourceType::RESOURCE_TYPE_MANIFEST};
+
+use crate::installers::nsis::{state::NsisState, strings::code::NsCode};
 
 #[derive(Debug, Display, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
 #[display("{_0}.{_1}{_2}")]
@@ -149,11 +148,13 @@ impl Default for NsisVersion {
 
 #[cfg(test)]
 mod tests {
-    use crate::installers::nsis::version::NsisVersion;
     use indoc::indoc;
-    use yara_x::mods::PE;
-    use yara_x::mods::pe::Resource;
-    use yara_x::mods::pe::ResourceType::RESOURCE_TYPE_MANIFEST;
+    use yara_x::mods::{
+        PE,
+        pe::{Resource, ResourceType::RESOURCE_TYPE_MANIFEST},
+    };
+
+    use crate::installers::nsis::version::NsisVersion;
 
     #[test]
     fn version_from_manifest() {

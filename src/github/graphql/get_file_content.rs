@@ -1,6 +1,7 @@
-use crate::github::graphql::get_directory_content::GetDirectoryContentVariablesFields;
-use crate::github::graphql::get_directory_content_with_text::BlobObject;
-use crate::github::graphql::github_schema::github_schema as schema;
+use crate::github::graphql::{
+    get_directory_content::GetDirectoryContentVariablesFields,
+    get_directory_content_with_text::BlobObject, github_schema::github_schema as schema,
+};
 
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Query", variables = "GetDirectoryContentVariables")]
@@ -18,11 +19,15 @@ pub struct Repository {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::github_client::{MICROSOFT, WINGET_PKGS};
-    use crate::github::graphql::get_directory_content::GetDirectoryContentVariables;
-    use crate::github::graphql::get_file_content::GetFileContent;
     use cynic::QueryBuilder;
     use indoc::indoc;
+
+    use crate::github::{
+        github_client::{MICROSOFT, WINGET_PKGS},
+        graphql::{
+            get_directory_content::GetDirectoryContentVariables, get_file_content::GetFileContent,
+        },
+    };
 
     #[test]
     fn get_file_content_output() {

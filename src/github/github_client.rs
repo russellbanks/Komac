@@ -1,81 +1,71 @@
-use crate::commands::cleanup::MergeState;
-use crate::commands::utils::SPINNER_TICK_RATE;
-use crate::credential::get_default_headers;
-use crate::github::graphql::create_commit::{
-    CommitMessage, CommittableBranch, CreateCommit, CreateCommitOnBranchInput,
-    CreateCommitVariables, FileAddition, FileChanges, FileDeletion,
-};
-use crate::github::graphql::create_pull_request::{
-    CreatePullRequest, CreatePullRequestInput, CreatePullRequestVariables,
-};
-use crate::github::graphql::create_ref::{CreateRef, CreateRefVariables, Ref as CreateBranchRef};
-use crate::github::graphql::get_all_values::{
-    GetAllValues, GetAllValuesGitObject, GetAllValuesVariables, Tree,
-};
-use crate::github::graphql::get_branches::{
-    GetBranches, GetBranchesVariables, PullRequest, PullRequestState, RefConnection,
-};
-use crate::github::graphql::get_current_user_login::GetCurrentUserLogin;
-use crate::github::graphql::get_directory_content::{
-    GetDirectoryContent, GetDirectoryContentVariables,
-};
-use crate::github::graphql::get_directory_content_with_text::{
-    GetDirectoryContentWithText, TreeEntry,
-};
-use crate::github::graphql::get_existing_pull_request;
-use crate::github::graphql::get_existing_pull_request::{
-    GetExistingPullRequest, GetExistingPullRequestVariables,
-};
-use crate::github::graphql::get_file_content::GetFileContent;
-use crate::github::graphql::get_repository_info::{
-    GetRepositoryInfo, RepositoryVariables, TargetGitObject,
-};
-use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariables};
-use crate::github::graphql::types::{Base64String, GitObjectId, GitRefName};
-use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
-use crate::github::rest::GITHUB_JSON_MIME;
-use crate::github::rest::get_tree::GitTree;
-use crate::github::utils::{
-    get_branch_name, get_commit_title, get_package_path, is_manifest_file, pull_request_body,
-};
-use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
-use crate::manifests::installer_manifest::InstallerManifest;
-use crate::manifests::locale_manifest::LocaleManifest;
-use crate::manifests::version_manifest::VersionManifest;
-use crate::manifests::{ManifestTrait, Manifests};
-use crate::types::license::License;
-use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
-use crate::types::release_notes::ReleaseNotes;
-use crate::types::tag::Tag;
-use crate::types::urls::license_url::LicenseUrl;
-use crate::types::urls::package_url::PackageUrl;
-use crate::types::urls::publisher_support_url::PublisherSupportUrl;
-use crate::types::urls::publisher_url::PublisherUrl;
-use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use crate::types::urls::url::DecodedUrl;
-use crate::update_state::UpdateState;
+use std::{collections::BTreeSet, env, future::Future, num::NonZeroU32, ops::Not, str::FromStr};
+
 use base64ct::{Base64, Encoding};
 use bon::bon;
 use const_format::{formatcp, str_repeat};
-use cynic::http::{CynicReqwestError, ReqwestExt};
-use cynic::{GraphQlError, GraphQlResponse, Id, MutationBuilder, QueryBuilder};
+use cynic::{
+    GraphQlError, GraphQlResponse, Id, MutationBuilder, QueryBuilder,
+    http::{CynicReqwestError, ReqwestExt},
+};
 use indexmap::IndexMap;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
-use reqwest::Client;
-use reqwest::header::ACCEPT;
+use reqwest::{Client, header::ACCEPT};
 use serde::Deserialize;
-use std::collections::BTreeSet;
-use std::env;
-use std::future::Future;
-use std::num::NonZeroU32;
-use std::ops::Not;
-use std::str::FromStr;
 use thiserror::Error;
 use url::Url;
+use winget_types::{
+    installer::InstallerManifest,
+    locale::{DefaultLocaleManifest, License, LocaleManifest, ReleaseNotes, Tag},
+    shared::{
+        ManifestType, ManifestTypeWithLocale, PackageIdentifier, PackageVersion,
+        url::{
+            DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl, ReleaseNotesUrl,
+        },
+    },
+    traits::Manifest,
+    version::VersionManifest,
+};
+
+use crate::{
+    commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
+    credential::get_default_headers,
+    github::{
+        graphql::{
+            create_commit::{
+                CommitMessage, CommittableBranch, CreateCommit, CreateCommitOnBranchInput,
+                CreateCommitVariables, FileAddition, FileChanges, FileDeletion,
+            },
+            create_pull_request::{
+                CreatePullRequest, CreatePullRequestInput, CreatePullRequestVariables,
+            },
+            create_ref::{CreateRef, CreateRefVariables, Ref as CreateBranchRef},
+            get_all_values::{GetAllValues, GetAllValuesGitObject, GetAllValuesVariables, Tree},
+            get_branches::{
+                GetBranches, GetBranchesVariables, PullRequest, PullRequestState, RefConnection,
+            },
+            get_current_user_login::GetCurrentUserLogin,
+            get_directory_content::{GetDirectoryContent, GetDirectoryContentVariables},
+            get_directory_content_with_text::{GetDirectoryContentWithText, TreeEntry},
+            get_existing_pull_request,
+            get_existing_pull_request::{GetExistingPullRequest, GetExistingPullRequestVariables},
+            get_file_content::GetFileContent,
+            get_repository_info::{GetRepositoryInfo, RepositoryVariables, TargetGitObject},
+            merge_upstream::{MergeUpstream, MergeUpstreamVariables},
+            types::{Base64String, GitObjectId, GitRefName},
+            update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables},
+        },
+        rest::{GITHUB_JSON_MIME, get_tree::GitTree},
+        utils::{
+            get_branch_name, get_commit_title, get_package_path, is_manifest_file,
+            pull_request_body,
+        },
+    },
+    manifests::Manifests,
+    traits::FromHtml,
+    update_state::UpdateState,
+};
 
 pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
@@ -284,7 +274,7 @@ impl GitHub {
             .ok_or(GitHubError::GraphQL(errors))
     }
 
-    pub async fn get_manifest<T: ManifestTrait + for<'de> Deserialize<'de>>(
+    pub async fn get_manifest<T: Manifest + for<'de> Deserialize<'de>>(
         &self,
         identifier: &PackageIdentifier,
         version: &PackageVersion,
@@ -638,10 +628,9 @@ impl GitHub {
                     ) == "license"
                 })
                 .and_then(|name| {
-                    LicenseUrl::from_str(&format!(
-                        "https://github.com/{owner}/{repo}/blob/HEAD/{name}"
-                    ))
-                    .ok()
+                    format!("https://github.com/{owner}/{repo}/blob/HEAD/{name}")
+                        .parse::<LicenseUrl>()
+                        .ok()
                 }),
             GetAllValuesGitObject::Unknown => None,
         };
@@ -652,11 +641,13 @@ impl GitHub {
             .topics
             .nodes
             .into_iter()
-            .flat_map(|topic_node| Tag::try_new(topic_node.topic.name))
+            .flat_map(|topic_node| Tag::new(topic_node.topic.name))
             .collect::<BTreeSet<_>>();
 
         let publisher_support_url = if repository.has_issues_enabled {
-            PublisherSupportUrl::from_str(&format!("https://github.com/{owner}/{repo}/issues")).ok()
+            format!("https://github.com/{owner}/{repo}/issues")
+                .parse::<PublisherSupportUrl>()
+                .ok()
         } else {
             None
         };
@@ -674,14 +665,14 @@ impl GitHub {
                         })
                     })
                 })
-                .and_then(|license| License::try_new(license).ok()),
+                .and_then(|license| License::new(license).ok()),
             license_url,
-            package_url: PackageUrl::from_str(repository.url.as_str())?,
+            package_url: repository.url.as_str().parse::<PackageUrl>()?,
             release_notes: release
                 .as_ref()
-                .and_then(|release| ReleaseNotes::format(release.description_html.as_deref()?)),
+                .and_then(|release| ReleaseNotes::from_html(release.description_html.as_ref()?)),
             release_notes_url: release
-                .and_then(|release| ReleaseNotesUrl::from_str(release.url.as_str()).ok()),
+                .and_then(|release| release.url.as_str().parse::<ReleaseNotesUrl>().ok()),
             topics: Option::from(topics).filter(|topics| !topics.is_empty()),
         })
     }

@@ -1,8 +1,10 @@
-use crate::installers::nsis::state::NsisState;
-use crate::installers::utils::{
-    RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
-    RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_ROOT,
-    RELATIVE_WINDOWS_DIR,
+use crate::installers::{
+    nsis::state::NsisState,
+    utils::{
+        RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64,
+        RELATIVE_LOCAL_APP_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
+        RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
+    },
 };
 
 /// NSIS can use one name for two CSIDL_*** and `CSIDL_COMMON`_*** items (`CurrentUser` / `AllUsers`)
@@ -85,9 +87,9 @@ impl Shell {
 
         let (index1, index2): (u8, u8) = character.to_le_bytes().into();
 
-        if index1 & 1 << 7 != 0 {
+        if index1 & (1 << 7) != 0 {
             let offset = index1 & 0x3F;
-            let is_64_bit = index1 & 1 << 6 != 0;
+            let is_64_bit = index1 & (1 << 6) != 0;
             let shell_string = state.get_string(i32::from(offset));
             if shell_string == PROGRAM_FILES_DIR {
                 buf.push_str(if is_64_bit {

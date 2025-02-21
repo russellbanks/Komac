@@ -1,12 +1,12 @@
-use std::cmp::Ordering;
-use std::io::{Cursor, Read};
+use std::{
+    cmp::Ordering,
+    io::{Cursor, Read},
+};
 
-use crate::installers::inno::InnoError;
-use crate::installers::inno::read::crc32::Crc32Reader;
-use crate::installers::inno::version::InnoVersion;
 use byteorder::{LE, ReadBytesExt};
-use zerocopy::little_endian::U32;
-use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+use zerocopy::{Immutable, KnownLayout, TryFromBytes, little_endian::U32};
+
+use crate::installers::inno::{InnoError, read::crc32::Crc32Reader, version::InnoVersion};
 
 pub const SETUP_LOADER_OFFSET: usize = 0x30;
 pub const SETUP_LOADER_RESOURCE: u32 = 11111;

@@ -1,53 +1,9 @@
-use std::collections::BTreeSet;
-use std::mem;
-use std::num::{NonZeroU8, NonZeroU32};
-
-use crate::commands::utils::{
-    SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
-    write_changes_to_dir,
+use std::{
+    collections::BTreeSet,
+    mem,
+    num::{NonZeroU8, NonZeroU32},
 };
-use crate::credential::{get_default_headers, handle_token};
-use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME};
-use crate::github::utils::get_package_path;
-use crate::github::utils::pull_request::pr_changes;
-use crate::manifests::Manifests;
-use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
-use crate::manifests::installer_manifest::{InstallerManifest, InstallerSwitches, UpgradeBehavior};
-use crate::manifests::version_manifest::VersionManifest;
-use crate::prompts::list::list_prompt;
-use crate::prompts::text::{confirm_prompt, optional_prompt, required_prompt};
-use crate::prompts::{check_prompt, handle_inquire_error, radio_prompt};
-use crate::types::author::Author;
-use crate::types::command::Command;
-use crate::types::copyright::Copyright;
-use crate::types::custom_switch::CustomSwitch;
-use crate::types::description::Description;
-use crate::types::file_extension::FileExtension;
-use crate::types::install_modes::InstallModes;
-use crate::types::installer_success_code::InstallerSuccessCode;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::license::License;
-use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::ManifestVersion;
-use crate::types::moniker::Moniker;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_name::PackageName;
-use crate::types::package_version::PackageVersion;
-use crate::types::protocol::Protocol;
-use crate::types::publisher::Publisher;
-use crate::types::short_description::ShortDescription;
-use crate::types::silent_switch::SilentSwitch;
-use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
-use crate::types::tag::Tag;
-use crate::types::urls::copyright_url::CopyrightUrl;
-use crate::types::urls::license_url::LicenseUrl;
-use crate::types::urls::package_url::PackageUrl;
-use crate::types::urls::publisher_support_url::PublisherSupportUrl;
-use crate::types::urls::publisher_url::PublisherUrl;
-use crate::types::urls::release_notes_url::ReleaseNotesUrl;
-use crate::types::urls::url::DecodedUrl;
+
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -57,6 +13,45 @@ use inquire::CustomType;
 use ordinal_trait::Ordinal;
 use owo_colors::OwoColorize;
 use reqwest::Client;
+use winget_types::{
+    installer::{
+        Command, FileExtension, InstallModes, InstallerManifest, InstallerSuccessCode,
+        InstallerType, Protocol, UpgradeBehavior,
+        switches::{CustomSwitch, InstallerSwitches, SilentSwitch, SilentWithProgressSwitch},
+    },
+    locale::{
+        Author, Copyright, DefaultLocaleManifest, Description, License, Moniker, PackageName,
+        Publisher, ShortDescription, Tag,
+    },
+    shared::{
+        LanguageTag, ManifestType, ManifestVersion, PackageIdentifier, PackageVersion,
+        url::{
+            CopyrightUrl, DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl,
+            ReleaseNotesUrl,
+        },
+    },
+    version::VersionManifest,
+};
+
+use crate::{
+    commands::utils::{
+        SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
+        write_changes_to_dir,
+    },
+    credential::{get_default_headers, handle_token},
+    download_file::{download_urls, process_files},
+    github::{
+        github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
+        utils::{get_package_path, pull_request::pr_changes},
+    },
+    manifests::Manifests,
+    prompts::{
+        check_prompt, handle_inquire_error,
+        list::list_prompt,
+        radio_prompt,
+        text::{confirm_prompt, optional_prompt, required_prompt},
+    },
+};
 
 /// Create a new package from scratch
 #[derive(Parser)]

@@ -1,9 +1,15 @@
-use crate::installers::nsis::header::Header;
-use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
-use itertools::Itertools;
 use std::io::{Error, ErrorKind, Result};
-use zerocopy::little_endian::{I32, U16, U32};
-use zerocopy::{FromBytes, Immutable, KnownLayout};
+
+use itertools::Itertools;
+use zerocopy::{
+    FromBytes, Immutable, KnownLayout,
+    little_endian::{I32, U16, U32},
+};
+
+use crate::installers::nsis::header::{
+    Header,
+    block::{BlockHeaders, BlockType},
+};
 
 #[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]

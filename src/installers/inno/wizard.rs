@@ -1,10 +1,12 @@
-use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::header::Header;
-use crate::installers::inno::header::enums::Compression;
-use crate::installers::inno::header::flags::HeaderFlags;
-use crate::installers::inno::version::InnoVersion;
-use byteorder::{LE, ReadBytesExt};
 use std::io::{Read, Result};
+
+use byteorder::{LE, ReadBytesExt};
+
+use crate::installers::inno::{
+    encoding::InnoValue,
+    header::{Header, enums::Compression, flags::HeaderFlags},
+    version::InnoVersion,
+};
 
 #[expect(dead_code)]
 #[derive(Debug, Default)]

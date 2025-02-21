@@ -1,8 +1,9 @@
-use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::entry::language::Language;
+use std::io::{Read, Result};
+
 use byteorder::{LE, ReadBytesExt};
 use encoding_rs::Encoding;
-use std::io::{Read, Result};
+
+use crate::installers::inno::{encoding::InnoValue, entry::language::Language};
 
 #[expect(dead_code)]
 #[derive(Debug, Default)]

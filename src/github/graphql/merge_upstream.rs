@@ -1,5 +1,4 @@
-use crate::github::graphql::github_schema::github_schema as schema;
-use crate::github::graphql::types::GitObjectId;
+use crate::github::graphql::{github_schema::github_schema as schema, types::GitObjectId};
 
 #[derive(cynic::QueryVariables)]
 pub struct MergeUpstreamVariables<'id> {
@@ -24,10 +23,13 @@ pub struct UpdateRefPayload {
 
 #[cfg(test)]
 mod tests {
-    use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariables};
-    use crate::github::graphql::types::GitObjectId;
     use cynic::{Id, MutationBuilder};
     use indoc::indoc;
+
+    use crate::github::graphql::{
+        merge_upstream::{MergeUpstream, MergeUpstreamVariables},
+        types::GitObjectId,
+    };
 
     #[test]
     fn merge_upstream_output() {

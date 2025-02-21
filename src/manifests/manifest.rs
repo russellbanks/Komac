@@ -1,9 +1,9 @@
-use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
-use crate::manifests::installer_manifest::InstallerManifest;
-use crate::manifests::locale_manifest::LocaleManifest;
-use crate::manifests::version_manifest::VersionManifest;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
+use winget_types::{
+    installer::InstallerManifest,
+    locale::{DefaultLocaleManifest, LocaleManifest},
+    shared::{PackageIdentifier, PackageVersion},
+    version::VersionManifest,
+};
 
 pub enum Manifest {
     Installer(InstallerManifest),

@@ -1,24 +1,27 @@
-use crate::installers::burn::{Burn, BurnError};
-use crate::installers::inno::{Inno, InnoError};
-use crate::installers::msi::Msi;
-use crate::installers::msix_family::Msix;
-use crate::installers::msix_family::bundle::MsixBundle;
-use crate::installers::nsis::{Nsis, NsisError};
-use crate::installers::possible_installers::PossibleInstaller;
-use crate::installers::zip::Zip;
-use crate::manifests::installer_manifest::Installer;
-use crate::types::architecture::Architecture;
-use crate::types::copyright::Copyright;
-use crate::types::installer_type::InstallerType;
-use crate::types::package_name::PackageName;
-use crate::types::publisher::Publisher;
+use std::{io::Cursor, mem};
+
 use camino::Utf8Path;
 use color_eyre::eyre::{Result, bail};
 use memmap2::Mmap;
-use std::io::Cursor;
-use std::mem;
 use tracing::debug;
+use winget_types::{
+    installer::{Architecture, Installer, InstallerType},
+    locale::{Copyright, PackageName, Publisher},
+};
 use yara_x::mods::PE;
+
+use crate::{
+    installers::{
+        burn::{Burn, BurnError},
+        inno::{Inno, InnoError},
+        msi::Msi,
+        msix_family::{Msix, bundle::MsixBundle},
+        nsis::{Nsis, NsisError},
+        possible_installers::PossibleInstaller,
+        zip::Zip,
+    },
+    traits::{FromMachine, FromVSVersionInfo},
+};
 
 pub const EXE: &str = "exe";
 pub const MSI: &str = "msi";
@@ -66,9 +69,9 @@ impl<'data> FileAnalyser<'data> {
             EXE => {
                 let pe = yara_x::mods::invoke::<PE>(data.as_ref()).unwrap();
                 debug!(?pe.version_info);
-                copyright = Copyright::get_from_exe(&pe.version_info);
-                package_name = PackageName::get_from_exe(&pe.version_info);
-                publisher = Publisher::get_from_exe(&pe.version_info);
+                copyright = Copyright::from_version_info(&pe.version_info);
+                package_name = PackageName::from_version_info(&pe.version_info);
+                publisher = Publisher::from_version_info(&pe.version_info);
                 match Burn::new(data.as_ref(), &pe) {
                     Ok(burn) => PossibleInstaller::Burn(burn),
                     Err(BurnError::NotBurnFile) => match Nsis::new(data.as_ref(), &pe) {

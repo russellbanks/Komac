@@ -1,15 +1,18 @@
-use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::entry::condition::Condition;
-use crate::installers::inno::enum_value::enum_value::enum_value;
-use crate::installers::inno::flag_reader::read_flags::read_flags;
-use crate::installers::inno::version::InnoVersion;
-use crate::installers::inno::windows_version::WindowsVersionRange;
-use crate::installers::utils::registry::RegRoot;
+use std::io::{Read, Result};
+
 use bitflags::bitflags;
 use byteorder::{LE, ReadBytesExt};
 use encoding_rs::Encoding;
-use std::io::{Read, Result};
 use zerocopy::{Immutable, KnownLayout, TryFromBytes, try_transmute};
+
+use crate::installers::{
+    inno::{
+        encoding::InnoValue, entry::condition::Condition, enum_value::enum_value::enum_value,
+        flag_reader::read_flags::read_flags, version::InnoVersion,
+        windows_version::WindowsVersionRange,
+    },
+    utils::registry::RegRoot,
+};
 
 #[expect(dead_code)]
 #[derive(Debug, Default)]

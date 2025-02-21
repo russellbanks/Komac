@@ -1,6 +1,7 @@
+use std::io::{Read, Result};
+
 use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
-use std::io::{Read, Result};
 
 pub enum Decoder<R: Read> {
     Stored(R),

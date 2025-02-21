@@ -1,6 +1,7 @@
+use std::io::{Read, Result};
+
 use byteorder::{LE, ReadBytesExt};
 use encoding_rs::Encoding;
-use std::io::{Read, Result};
 
 #[derive(Debug, Default)]
 pub struct InnoValue(Vec<u8>);

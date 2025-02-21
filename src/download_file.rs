@@ -1,3 +1,5 @@
+use std::{cmp::min, collections::HashMap, fs::File, mem, num::NonZeroU8};
+
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
 use color_eyre::eyre::{Result, bail, eyre};
@@ -6,22 +8,23 @@ use futures_util::{StreamExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use memmap2::Mmap;
-use reqwest::Client;
-use reqwest::header::{CONTENT_DISPOSITION, HeaderValue, LAST_MODIFIED};
+use reqwest::{
+    Client,
+    header::{CONTENT_DISPOSITION, HeaderValue, LAST_MODIFIED},
+};
 use sha2::{Digest, Sha256};
-use std::cmp::min;
-use std::collections::HashMap;
-use std::fs::File;
-use std::mem;
-use std::num::NonZeroU8;
 use tokio::io::AsyncWriteExt;
 use url::Url;
 use uuid::Uuid;
+use winget_types::{
+    installer::{Architecture, VALID_FILE_EXTENSIONS},
+    shared::{Sha256String, url::DecodedUrl},
+};
 
-use crate::file_analyser::FileAnalyser;
-use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
-use crate::types::sha_256::Sha256String;
-use crate::types::urls::url::DecodedUrl;
+use crate::{
+    file_analyser::FileAnalyser,
+    traits::url::{ConvertGitHubLatestToVersioned, UpgradeToHttps},
+};
 
 async fn download_file(
     client: &Client,
@@ -199,7 +202,7 @@ pub async fn process_files(
              ..
          }| async move {
             let mut file_analyser = FileAnalyser::new(mmap, file_name)?;
-            let architecture_in_url = Architecture::get_from_url(url.as_str());
+            let architecture_in_url = Architecture::from_url(url.as_str());
             for installer in &mut file_analyser.installers {
                 if let Some(architecture) = architecture_in_url {
                     installer.architecture = architecture;

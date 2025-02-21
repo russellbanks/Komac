@@ -1,11 +1,8 @@
 use clap::Parser;
 use color_eyre::Result;
+use winget_types::shared::{PackageIdentifier, PackageVersion};
 
-use crate::credential::handle_token;
-use crate::github::github_client::GitHub;
-use crate::manifests::print_changes;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
+use crate::{credential::handle_token, github::github_client::GitHub, manifests::print_changes};
 
 /// Output the manifests for a given package and version
 #[expect(clippy::struct_excessive_bools)]

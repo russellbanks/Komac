@@ -1,5 +1,6 @@
-use crate::installers::nsis::version::NsisVersion;
 use std::num::NonZeroU8;
+
+use crate::installers::nsis::version::NsisVersion;
 
 #[repr(u8)]
 pub enum NsCode {
@@ -29,8 +30,7 @@ impl NsCode {
 
 #[cfg(test)]
 mod tests {
-    use crate::installers::nsis::strings::code::NsCode;
-    use crate::installers::nsis::version::NsisVersion;
+    use crate::installers::nsis::{strings::code::NsCode, version::NsisVersion};
 
     #[test]
     fn lang() {

@@ -1,6 +1,6 @@
+use std::{io, io::Read};
+
 use crc32fast::Hasher;
-use std::io;
-use std::io::Read;
 
 pub struct Crc32Reader<R: Read> {
     inner: R,

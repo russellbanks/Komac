@@ -1,7 +1,8 @@
+use std::cmp::Ordering;
+
 use bitflags::bitflags;
 use derive_more::Display;
 use memchr::{memchr, memmem};
-use std::cmp::Ordering;
 
 bitflags! {
     #[derive(Debug, Default, PartialEq, Eq)]
@@ -176,9 +177,11 @@ impl PartialOrd<(u8, u8, u8, u8)> for InnoVersion {
 
 #[cfg(test)]
 mod tests {
-    use crate::installers::inno::version::{InnoVersion, VersionFlags};
-    use rstest::rstest;
     use std::cmp::Ordering;
+
+    use rstest::rstest;
+
+    use crate::installers::inno::version::{InnoVersion, VersionFlags};
 
     #[rstest]
     #[case(b"", InnoVersion::new(0, 0, 0, 0))]

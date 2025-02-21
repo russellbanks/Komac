@@ -1,22 +1,25 @@
+use std::{
+    collections::HashMap,
+    io::{Error, ErrorKind, Read, Result, Seek},
+    str::SplitAsciiWhitespace,
+};
+
+use camino::Utf8PathBuf;
+use compact_str::CompactString;
+use msi::{Language, Package, Select};
+use tracing::debug;
+use winget_types::{
+    installer::{
+        AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
+    },
+    shared::{LanguageTag, Version},
+};
+
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
     RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_TEMP_FOLDER,
     RELATIVE_WINDOWS_DIR,
 };
-use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
-};
-use crate::types::architecture::Architecture;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::version::Version;
-use camino::Utf8PathBuf;
-use compact_str::CompactString;
-use msi::{Language, Package, Select};
-use std::collections::HashMap;
-use std::io::{Error, ErrorKind, Read, Result, Seek};
-use std::str::{FromStr, SplitAsciiWhitespace};
-use tracing::debug;
 
 const PROPERTY: &str = "Property";
 const CONTROL: &str = "Control";
@@ -96,7 +99,10 @@ impl Msi {
         Ok(Self {
             installer: Installer {
                 locale: property_table.remove(PRODUCT_LANGUAGE).and_then(|code| {
-                    LanguageTag::from_str(Language::from_code(code.parse::<u16>().ok()?).tag()).ok()
+                    Language::from_code(code.parse::<u16>().ok()?)
+                        .tag()
+                        .parse::<LanguageTag>()
+                        .ok()
                 }),
                 architecture,
                 r#type: Self::is_wix(&msi, &property_table)

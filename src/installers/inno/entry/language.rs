@@ -1,8 +1,9 @@
-use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::version::InnoVersion;
+use std::io::{Read, Result};
+
 use byteorder::{LE, ReadBytesExt};
 use encoding_rs::{Encoding, UTF_16LE, WINDOWS_1252};
-use std::io::{Read, Result};
+
+use crate::installers::inno::{encoding::InnoValue, version::InnoVersion};
 
 #[derive(Debug)]
 pub struct Language {

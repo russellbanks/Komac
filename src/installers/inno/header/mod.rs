@@ -4,22 +4,27 @@ pub mod flags;
 
 use std::io::{Read, Result};
 
-use crate::installers::inno::encoding::InnoValue;
-use crate::installers::inno::enum_value::enum_value::enum_value;
-use crate::installers::inno::flag_reader::read_flags::read_flags;
-use crate::installers::inno::header::architecture::{ArchitectureIdentifiers, StoredArchitecture};
-use crate::installers::inno::header::enums::{
-    AutoBool, Compression, ImageAlphaFormat, InnoStyle, InstallVerbosity, LanguageDetection,
-    LogMode, PrivilegeLevel,
-};
-use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOverrides};
-use crate::installers::inno::version::InnoVersion;
-use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
 use byteorder::{LE, ReadBytesExt};
 use derive_more::Debug;
 use encoding_rs::{Encoding, WINDOWS_1252};
 use zerocopy::TryFromBytes;
+
+use crate::installers::inno::{
+    encoding::InnoValue,
+    enum_value::enum_value::enum_value,
+    flag_reader::read_flags::read_flags,
+    header::{
+        architecture::{ArchitectureIdentifiers, StoredArchitecture},
+        enums::{
+            AutoBool, Compression, ImageAlphaFormat, InnoStyle, InstallVerbosity,
+            LanguageDetection, LogMode, PrivilegeLevel,
+        },
+        flags::{HeaderFlags, PrivilegesRequiredOverrides},
+    },
+    version::InnoVersion,
+    windows_version::WindowsVersionRange,
+};
 
 // https://github.com/jrsoftware/issrc/blob/main/Projects/Src/Shared.Struct.pas
 #[derive(Debug, Default)]

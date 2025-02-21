@@ -10,52 +10,45 @@ mod version;
 mod windows_version;
 mod wizard;
 
-use crate::installers::inno::entry::component::Component;
-use crate::installers::inno::entry::directory::Directory;
-use crate::installers::inno::entry::file::File;
-use crate::installers::inno::entry::icon::Icon;
-use crate::installers::inno::entry::ini::Ini;
-use crate::installers::inno::entry::message::Message;
-use crate::installers::inno::entry::permission::Permission;
-use crate::installers::inno::entry::registry::Registry;
-use crate::installers::inno::entry::task::Task;
-use crate::installers::inno::entry::r#type::Type;
-use crate::installers::inno::header::Header;
-use crate::installers::inno::header::flags::PrivilegesRequiredOverrides;
-use crate::installers::inno::loader::{
-    SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE, SetupLoader, SetupLoaderOffset,
-};
-use crate::installers::inno::read::block::InnoBlockReader;
-use crate::installers::inno::version::InnoVersion;
-use crate::installers::inno::wizard::Wizard;
-use crate::installers::utils::{
-    RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
-    RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
-    RELATIVE_SYSTEM_DRIVE, RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
-};
-use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallationMetadata, Installer, InstallerSwitches, Scope,
-};
-use crate::types::custom_switch::CustomSwitch;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::sha_256::Sha256String;
-use crate::types::urls::url::DecodedUrl;
-use crate::types::version::Version;
+use std::{io, io::Cursor, mem};
+
 use camino::Utf8PathBuf;
 use const_format::formatcp;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use entry::language::Language;
 use itertools::Itertools;
 use msi::Language as CodePageLanguage;
-use std::io::Cursor;
-use std::str::FromStr;
-use std::{io, mem};
 use thiserror::Error;
 use tracing::{debug, trace};
-use yara_x::mods::PE;
-use yara_x::mods::pe::ResourceType;
+use winget_types::{
+    installer::{
+        AppsAndFeaturesEntry, InstallationMetadata, Installer, InstallerType, Scope,
+        switches::{CustomSwitch, InstallerSwitches},
+    },
+    shared::{LanguageTag, Sha256String, Version, url::DecodedUrl},
+};
+use yara_x::mods::{PE, pe::ResourceType};
 use zerocopy::TryFromBytes;
+
+use crate::installers::{
+    inno::{
+        entry::{
+            component::Component, directory::Directory, file::File, icon::Icon, ini::Ini,
+            message::Message, permission::Permission, registry::Registry, task::Task, r#type::Type,
+        },
+        header::{Header, flags::PrivilegesRequiredOverrides},
+        loader::{SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE, SetupLoader, SetupLoaderOffset},
+        read::block::InnoBlockReader,
+        version::InnoVersion,
+        wizard::Wizard,
+    },
+    utils::{
+        RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64,
+        RELATIVE_LOCAL_APP_DATA, RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32,
+        RELATIVE_PROGRAM_FILES_64, RELATIVE_SYSTEM_DRIVE, RELATIVE_SYSTEM_ROOT,
+        RELATIVE_WINDOWS_DIR,
+    },
+};
 
 const VERSION_LEN: usize = 1 << 6;
 
@@ -216,10 +209,10 @@ impl Inno {
 
         let mut installer = Installer {
             locale: languages.first().and_then(|language_entry| {
-                LanguageTag::from_str(
-                    CodePageLanguage::from_code(u16::try_from(language_entry.id).ok()?).tag(),
-                )
-                .ok()
+                CodePageLanguage::from_code(u16::try_from(language_entry.id).ok()?)
+                    .tag()
+                    .parse::<LanguageTag>()
+                    .ok()
             }),
             architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
             r#type: Some(InstallerType::Inno),

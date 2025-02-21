@@ -1,17 +1,20 @@
 use std::num::NonZeroU32;
 
-use crate::credential::handle_token;
-use crate::github::github_client::{GitHub, WINGET_PKGS_FULL_NAME};
-use crate::prompts::handle_inquire_error;
-use crate::prompts::text::confirm_prompt;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::{Result, bail};
-use inquire::Text;
-use inquire::validator::{MaxLengthValidator, MinLengthValidator};
+use inquire::{
+    Text,
+    validator::{MaxLengthValidator, MinLengthValidator},
+};
 use owo_colors::OwoColorize;
+use winget_types::shared::{PackageIdentifier, PackageVersion};
+
+use crate::{
+    credential::handle_token,
+    github::github_client::{GitHub, WINGET_PKGS_FULL_NAME},
+    prompts::{handle_inquire_error, text::confirm_prompt},
+};
 
 /// Remove a version from winget-pkgs
 ///

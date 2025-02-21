@@ -1,7 +1,8 @@
-use crate::manifests::{Manifests, build_manifest_string};
-use crate::types::package_identifier::PackageIdentifier;
 use bon::builder;
 use color_eyre::Result;
+use winget_types::shared::PackageIdentifier;
+
+use crate::manifests::{Manifests, build_manifest_string};
 
 #[builder(finish_fn = create)]
 pub fn pr_changes(
