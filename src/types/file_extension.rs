@@ -1,5 +1,5 @@
-use crate::prompts::list::ListPrompt;
 use crate::prompts::Prompt;
+use crate::prompts::list::ListPrompt;
 use nutype::nutype;
 
 #[nutype(

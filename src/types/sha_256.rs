@@ -1,8 +1,8 @@
 use std::io::Read;
 use std::str::FromStr;
 
-use color_eyre::eyre::eyre;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use heapless::String;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

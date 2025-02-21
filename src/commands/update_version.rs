@@ -1,23 +1,23 @@
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::{Result, bail};
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use reqwest::Client;
 use std::collections::BTreeSet;
 use std::io::{Read, Seek};
 use std::mem;
-use std::num::{NonZeroU32, NonZeroU8};
+use std::num::{NonZeroU8, NonZeroU32};
 use strsim::levenshtein;
 
 use crate::commands::utils::{
-    prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
-    SPINNER_TICK_RATE,
+    SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
+    write_changes_to_dir,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
+use crate::github::github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME};
 use crate::github::utils::get_package_path;
 use crate::github::utils::pull_request::pr_changes;
 use crate::installers::zip::Zip;
@@ -130,7 +130,9 @@ impl UpdateVersion {
         if let Some(version) = replace_version {
             if !versions.contains(version) {
                 let closest = version.closest(&versions).unwrap_or_else(|| unreachable!());
-                bail!("Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}")
+                bail!(
+                    "Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}"
+                )
             }
         }
 

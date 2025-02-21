@@ -1,5 +1,5 @@
 use color_eyre::eyre::OptionExt;
-use const_format::{writec, ConstDebug, Error, Formatter};
+use const_format::{ConstDebug, Error, Formatter, writec};
 use derive_more::Display;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;

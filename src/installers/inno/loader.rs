@@ -1,10 +1,10 @@
 use std::cmp::Ordering;
 use std::io::{Cursor, Read};
 
+use crate::installers::inno::InnoError;
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::version::InnoVersion;
-use crate::installers::inno::InnoError;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use zerocopy::little_endian::U32;
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 

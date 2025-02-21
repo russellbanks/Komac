@@ -1,5 +1,5 @@
-use crate::prompts::text::TextPrompt;
 use crate::prompts::Prompt;
+use crate::prompts::text::TextPrompt;
 use compact_str::CompactString;
 use derive_more::IntoIterator;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
@@ -99,7 +99,7 @@ impl TextPrompt for CustomSwitch {
 mod tests {
     use crate::types::custom_switch::{CustomSwitch, CustomSwitchError};
     use const_format::str_repeat;
-    use smallvec::{smallvec, SmallVec};
+    use smallvec::{SmallVec, smallvec};
 
     #[test]
     fn empty_custom_switch() {

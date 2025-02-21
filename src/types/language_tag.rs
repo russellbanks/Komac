@@ -1,7 +1,7 @@
-use crate::prompts::text::TextPrompt;
 use crate::prompts::Prompt;
+use crate::prompts::text::TextPrompt;
 use derive_more::{AsRef, Deref, Display, FromStr};
-use icu_locid::{langid, LanguageIdentifier};
+use icu_locid::{LanguageIdentifier, langid};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 

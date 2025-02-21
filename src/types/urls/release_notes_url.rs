@@ -1,5 +1,5 @@
-use crate::prompts::text::TextPrompt;
 use crate::prompts::Prompt;
+use crate::prompts::text::TextPrompt;
 use crate::types::urls::url::DecodedUrl;
 use derive_more::{Display, FromStr};
 use serde::{Deserialize, Serialize};

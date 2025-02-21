@@ -56,7 +56,7 @@ impl Msi {
                 return Err(Error::new(
                     ErrorKind::InvalidData,
                     format!(r#"Unknown MSI architecture: "{arch}""#),
-                ))
+                ));
             }
         };
 

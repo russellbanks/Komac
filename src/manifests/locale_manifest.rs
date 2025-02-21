@@ -1,6 +1,6 @@
 use crate::github::github_client::GitHubValues;
-use crate::manifests::default_locale_manifest::{Agreement, Documentation, Icon};
 use crate::manifests::ManifestTrait;
+use crate::manifests::default_locale_manifest::{Agreement, Documentation, Icon};
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
 use crate::types::description::Description;

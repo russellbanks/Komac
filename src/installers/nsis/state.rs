@@ -1,12 +1,12 @@
-use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
+use crate::installers::nsis::NsisError;
 use crate::installers::nsis::header::Header;
+use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
 use crate::installers::nsis::language::table::LanguageTable;
 use crate::installers::nsis::registry::Registry;
 use crate::installers::nsis::strings::code::NsCode;
 use crate::installers::nsis::strings::shell::Shell;
 use crate::installers::nsis::strings::var::NsVar;
 use crate::installers::nsis::version::NsisVersion;
-use crate::installers::nsis::NsisError;
 use byteorder::{ByteOrder, LE};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;

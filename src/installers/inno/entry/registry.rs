@@ -6,10 +6,10 @@ use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use crate::installers::utils::registry::RegRoot;
 use bitflags::bitflags;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use encoding_rs::Encoding;
 use std::io::{Read, Result};
-use zerocopy::{try_transmute, Immutable, KnownLayout, TryFromBytes};
+use zerocopy::{Immutable, KnownLayout, TryFromBytes, try_transmute};
 
 #[expect(dead_code)]
 #[derive(Debug, Default)]

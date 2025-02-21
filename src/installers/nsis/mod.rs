@@ -15,8 +15,8 @@ use crate::installers::nsis::header::compression::Compression;
 use crate::installers::nsis::header::decoder::Decoder;
 use crate::installers::nsis::header::flags::CommonHeaderFlags;
 use crate::installers::nsis::header::{Decompressed, Header};
-use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
 use crate::installers::utils::RELATIVE_PROGRAM_FILES_64;
+use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
 };
@@ -24,7 +24,7 @@ use crate::types::architecture::Architecture;
 use crate::types::installer_type::InstallerType;
 use crate::types::language_tag::LanguageTag;
 use crate::types::version::Version;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
 use flate2::read::DeflateDecoder;
@@ -39,8 +39,8 @@ use std::io::Read;
 use strsim::levenshtein;
 use thiserror::Error;
 use tracing::debug;
-use yara_x::mods::pe::Machine;
 use yara_x::mods::PE;
+use yara_x::mods::pe::Machine;
 use zerocopy::little_endian::I32;
 use zerocopy::{FromBytes, TryFromBytes};
 

@@ -8,9 +8,9 @@ use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_version::PackageVersion;
 use anstream::println;
 use clap::Parser;
-use color_eyre::eyre::{bail, Result};
-use inquire::validator::{MaxLengthValidator, MinLengthValidator};
+use color_eyre::eyre::{Result, bail};
 use inquire::Text;
+use inquire::validator::{MaxLengthValidator, MinLengthValidator};
 use owo_colors::OwoColorize;
 
 /// Remove a version from winget-pkgs

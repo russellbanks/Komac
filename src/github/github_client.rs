@@ -33,8 +33,8 @@ use crate::github::graphql::get_repository_info::{
 use crate::github::graphql::merge_upstream::{MergeUpstream, MergeUpstreamVariables};
 use crate::github::graphql::types::{Base64String, GitObjectId, GitRefName};
 use crate::github::graphql::update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables};
-use crate::github::rest::get_tree::GitTree;
 use crate::github::rest::GITHUB_JSON_MIME;
+use crate::github::rest::get_tree::GitTree;
 use crate::github::utils::{
     get_branch_name, get_commit_title, get_package_path, is_manifest_file, pull_request_body,
 };
@@ -65,8 +65,8 @@ use indexmap::IndexMap;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
-use reqwest::header::ACCEPT;
 use reqwest::Client;
+use reqwest::header::ACCEPT;
 use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::env;
@@ -418,7 +418,7 @@ impl GitHub {
         owner: &str,
         branch_name: &str,
         path: &str,
-    ) -> Result<impl Iterator<Item = String> + Sized, GitHubError> {
+    ) -> Result<impl Iterator<Item = String>, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)

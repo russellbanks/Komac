@@ -1,11 +1,11 @@
+use crate::installers::inno::InnoError;
 use crate::installers::inno::compression::Compression;
-use crate::installers::inno::read::chunk::{InnoChunkReader, INNO_CHUNK_SIZE};
+use crate::installers::inno::read::chunk::{INNO_CHUNK_SIZE, InnoChunkReader};
 use crate::installers::inno::read::crc32::Crc32Reader;
 use crate::installers::inno::read::decoder::Decoder;
 use crate::installers::inno::version::InnoVersion;
-use crate::installers::inno::InnoError;
 use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
 use std::io::{Error, ErrorKind, Read, Result, Take};

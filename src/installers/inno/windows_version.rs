@@ -1,5 +1,5 @@
 use crate::installers::inno::version::InnoVersion;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use std::io::{Read, Result};
 
 #[derive(Debug, Default)]

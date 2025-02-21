@@ -2,7 +2,7 @@ use crate::prompts::Prompt;
 use bitflags::bitflags;
 use serde::de::{SeqAccess, Visitor};
 use serde::ser::SerializeSeq;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -66,7 +66,7 @@ impl<'de> Deserialize<'de> for InstallModes {
                             return Err(de::Error::unknown_variant(
                                 value,
                                 &[INTERACTIVE, SILENT, SILENT_WITH_PROGRESS],
-                            ))
+                            ));
                         }
                     }
                 }

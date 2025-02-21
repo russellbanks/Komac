@@ -16,7 +16,7 @@ use crate::installers::inno::header::flags::{HeaderFlags, PrivilegesRequiredOver
 use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bit_set::BitSet;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use derive_more::Debug;
 use encoding_rs::{Encoding, WINDOWS_1252};
 use zerocopy::TryFromBytes;

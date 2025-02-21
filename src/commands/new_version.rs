@@ -1,20 +1,20 @@
 use std::collections::BTreeSet;
 use std::mem;
-use std::num::{NonZeroU32, NonZeroU8};
+use std::num::{NonZeroU8, NonZeroU32};
 
 use crate::commands::utils::{
-    prompt_existing_pull_request, prompt_submit_option, write_changes_to_dir, SubmitOption,
-    SPINNER_TICK_RATE,
+    SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
+    write_changes_to_dir,
 };
 use crate::credential::{get_default_headers, handle_token};
 use crate::download_file::{download_urls, process_files};
-use crate::github::github_client::{GitHub, GITHUB_HOST, WINGET_PKGS_FULL_NAME};
+use crate::github::github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME};
 use crate::github::utils::get_package_path;
 use crate::github::utils::pull_request::pr_changes;
+use crate::manifests::Manifests;
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{InstallerManifest, InstallerSwitches, UpgradeBehavior};
 use crate::manifests::version_manifest::VersionManifest;
-use crate::manifests::Manifests;
 use crate::prompts::list::list_prompt;
 use crate::prompts::text::{confirm_prompt, optional_prompt, required_prompt};
 use crate::prompts::{check_prompt, handle_inquire_error, radio_prompt};

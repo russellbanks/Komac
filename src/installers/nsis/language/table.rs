@@ -1,5 +1,5 @@
-use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
 use crate::installers::nsis::header::Header;
+use crate::installers::nsis::header::block::{BlockHeaders, BlockType};
 use itertools::Itertools;
 use std::io::{Error, ErrorKind, Result};
 use zerocopy::little_endian::{I32, U16, U32};

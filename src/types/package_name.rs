@@ -1,5 +1,5 @@
-use crate::prompts::text::TextPrompt;
 use crate::prompts::Prompt;
+use crate::prompts::text::TextPrompt;
 use nutype::nutype;
 use std::collections::HashMap;
 

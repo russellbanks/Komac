@@ -3,7 +3,7 @@ use crate::installers::inno::enum_value::enum_value::enum_value;
 use crate::installers::inno::version::InnoVersion;
 use crate::installers::inno::windows_version::WindowsVersionRange;
 use bitflags::bitflags;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use encoding_rs::Encoding;
 use std::io::{Read, Result};
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};

@@ -1,10 +1,10 @@
 use crate::prompts::handle_inquire_error;
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::{Result, bail};
+use inquire::Password;
 use inquire::error::InquireResult;
 use inquire::validator::Validation;
-use inquire::Password;
 use keyring::Entry;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, DNT, USER_AGENT};
+use reqwest::header::{AUTHORIZATION, DNT, HeaderMap, HeaderValue, USER_AGENT};
 use reqwest::{Client, StatusCode};
 use std::borrow::Cow;
 use tokio::runtime::Handle;

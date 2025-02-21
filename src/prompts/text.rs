@@ -1,4 +1,4 @@
-use crate::prompts::{handle_inquire_error, Prompt};
+use crate::prompts::{Prompt, handle_inquire_error};
 use inquire::error::InquireResult;
 use inquire::validator::Validation;
 use inquire::{Confirm, CustomUserError, InquireError, Text};

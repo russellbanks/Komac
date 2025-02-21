@@ -1,5 +1,5 @@
 use crate::installers::inno::InnoError;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use std::cmp::min;
 use std::io::{Error, ErrorKind, Read, Result};
 

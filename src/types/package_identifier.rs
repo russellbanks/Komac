@@ -1,5 +1,5 @@
-use crate::prompts::text::TextPrompt;
 use crate::prompts::Prompt;
+use crate::prompts::text::TextPrompt;
 use crate::types::DISALLOWED_CHARACTERS;
 use derive_more::{AsRef, Deref, Display};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
@@ -120,8 +120,8 @@ impl TextPrompt for PackageIdentifier {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::package_identifier::{PackageIdentifier, PackageIdentifierError};
     use crate::types::DISALLOWED_CHARACTERS;
+    use crate::types::package_identifier::{PackageIdentifier, PackageIdentifierError};
     use const_format::str_repeat;
     use std::iter::repeat_n;
     use std::str::FromStr;

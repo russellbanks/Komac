@@ -7,7 +7,7 @@ use crate::installers::nsis::first_header::FirstHeader;
 use crate::installers::nsis::header::compression::Compression;
 use crate::installers::nsis::header::decoder::Decoder;
 use crate::installers::utils::lzma_stream_header::LzmaStreamHeader;
-use byteorder::{ByteOrder, ReadBytesExt, LE};
+use byteorder::{ByteOrder, LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use flate2::read::DeflateDecoder;
 use liblzma::read::XzDecoder;

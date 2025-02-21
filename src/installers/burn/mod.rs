@@ -17,8 +17,8 @@ use std::io::Cursor;
 use std::ops::Not;
 use thiserror::Error;
 use tracing::debug;
-use yara_x::mods::pe::{Resource, ResourceType, Section};
 use yara_x::mods::PE;
+use yara_x::mods::pe::{Resource, ResourceType, Section};
 use zerocopy::TryFromBytes;
 
 #[derive(Error, Debug)]

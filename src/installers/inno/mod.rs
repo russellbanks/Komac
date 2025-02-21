@@ -17,13 +17,13 @@ use crate::installers::inno::entry::icon::Icon;
 use crate::installers::inno::entry::ini::Ini;
 use crate::installers::inno::entry::message::Message;
 use crate::installers::inno::entry::permission::Permission;
-use crate::installers::inno::entry::r#type::Type;
 use crate::installers::inno::entry::registry::Registry;
 use crate::installers::inno::entry::task::Task;
-use crate::installers::inno::header::flags::PrivilegesRequiredOverrides;
+use crate::installers::inno::entry::r#type::Type;
 use crate::installers::inno::header::Header;
+use crate::installers::inno::header::flags::PrivilegesRequiredOverrides;
 use crate::installers::inno::loader::{
-    SetupLoader, SetupLoaderOffset, SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE,
+    SETUP_LOADER_OFFSET, SETUP_LOADER_RESOURCE, SetupLoader, SetupLoaderOffset,
 };
 use crate::installers::inno::read::block::InnoBlockReader;
 use crate::installers::inno::version::InnoVersion;
@@ -53,8 +53,8 @@ use std::str::FromStr;
 use std::{io, mem};
 use thiserror::Error;
 use tracing::{debug, trace};
-use yara_x::mods::pe::ResourceType;
 use yara_x::mods::PE;
+use yara_x::mods::pe::ResourceType;
 use zerocopy::TryFromBytes;
 
 const VERSION_LEN: usize = 1 << 6;
@@ -67,7 +67,9 @@ pub enum InnoError {
     NotInnoFile,
     #[error("Invalid Inno header version")]
     InvalidSetupHeader,
-    #[error("Inno Setup version {0} is newer than the maximum supported version {MAX_SUPPORTED_VERSION}")]
+    #[error(
+        "Inno Setup version {0} is newer than the maximum supported version {MAX_SUPPORTED_VERSION}"
+    )]
     UnsupportedVersion(InnoVersion),
     #[error("Unknown Inno setup version: {0}")]
     UnknownVersion(String),

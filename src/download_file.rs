@@ -1,13 +1,13 @@
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
-use color_eyre::eyre::{bail, eyre, Result};
+use color_eyre::eyre::{Result, bail, eyre};
 use const_format::formatcp;
-use futures_util::{stream, StreamExt, TryStreamExt};
+use futures_util::{StreamExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::Itertools;
 use memmap2::Mmap;
-use reqwest::header::{HeaderValue, CONTENT_DISPOSITION, LAST_MODIFIED};
 use reqwest::Client;
+use reqwest::header::{CONTENT_DISPOSITION, HeaderValue, LAST_MODIFIED};
 use sha2::{Digest, Sha256};
 use std::cmp::min;
 use std::collections::HashMap;

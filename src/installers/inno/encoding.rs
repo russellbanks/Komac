@@ -1,4 +1,4 @@
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use encoding_rs::Encoding;
 use std::io::{Read, Result};
 

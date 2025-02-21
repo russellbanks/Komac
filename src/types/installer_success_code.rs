@@ -1,5 +1,5 @@
-use crate::prompts::list::ListPrompt;
 use crate::prompts::Prompt;
+use crate::prompts::list::ListPrompt;
 use derive_more::{Display, FromStr};
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroI64;

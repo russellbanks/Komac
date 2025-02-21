@@ -1,8 +1,8 @@
 use crate::installers::burn::{Burn, BurnError};
 use crate::installers::inno::{Inno, InnoError};
 use crate::installers::msi::Msi;
-use crate::installers::msix_family::bundle::MsixBundle;
 use crate::installers::msix_family::Msix;
+use crate::installers::msix_family::bundle::MsixBundle;
 use crate::installers::nsis::{Nsis, NsisError};
 use crate::installers::possible_installers::PossibleInstaller;
 use crate::installers::zip::Zip;
@@ -13,7 +13,7 @@ use crate::types::installer_type::InstallerType;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
 use camino::Utf8Path;
-use color_eyre::eyre::{bail, Result};
+use color_eyre::eyre::{Result, bail};
 use memmap2::Mmap;
 use std::io::Cursor;
 use std::mem;

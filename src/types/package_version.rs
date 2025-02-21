@@ -1,7 +1,7 @@
-use crate::prompts::text::TextPrompt;
 use crate::prompts::Prompt;
-use crate::types::version::Version;
+use crate::prompts::text::TextPrompt;
 use crate::types::DISALLOWED_CHARACTERS;
+use crate::types::version::Version;
 use derive_more::{Deref, Display, Into};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::str::FromStr;
@@ -72,8 +72,8 @@ impl TextPrompt for PackageVersion {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::package_version::{PackageVersion, PackageVersionError};
     use crate::types::DISALLOWED_CHARACTERS;
+    use crate::types::package_version::{PackageVersion, PackageVersionError};
     use const_format::str_repeat;
     use std::str::FromStr;
 

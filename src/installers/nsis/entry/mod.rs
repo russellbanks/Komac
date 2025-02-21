@@ -3,7 +3,7 @@ use crate::installers::utils::registry::RegRoot;
 use std::borrow::Cow;
 use std::ops::Not;
 use zerocopy::little_endian::{I32, U16};
-use zerocopy::{transmute_ref, Immutable, KnownLayout, TryFromBytes};
+use zerocopy::{Immutable, KnownLayout, TryFromBytes, transmute_ref};
 
 #[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(i32)]

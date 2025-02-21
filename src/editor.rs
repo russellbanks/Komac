@@ -1,8 +1,8 @@
+use ratatui::DefaultTerminal;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph};
-use ratatui::DefaultTerminal;
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::io;
@@ -37,11 +37,7 @@ impl SearchBox<'_> {
     }
 
     const fn height(&self) -> u16 {
-        if self.open {
-            3
-        } else {
-            0
-        }
+        if self.open { 3 } else { 0 }
     }
 
     fn input(&mut self, input: Input) -> Option<&'_ str> {

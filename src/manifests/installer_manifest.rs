@@ -6,8 +6,8 @@ use crate::installers::utils::{
     RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
     RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
 };
-use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::ManifestTrait;
+use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::types::architecture::Architecture;
 use crate::types::command::Command;
 use crate::types::custom_switch::CustomSwitch;

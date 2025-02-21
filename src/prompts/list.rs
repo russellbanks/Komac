@@ -1,7 +1,7 @@
-use crate::prompts::handle_inquire_error;
 use crate::prompts::Prompt;
-use inquire::validator::Validation;
+use crate::prompts::handle_inquire_error;
 use inquire::Text;
+use inquire::validator::Validation;
 use std::collections::BTreeSet;
 use std::fmt::Display;
 use std::str::FromStr;

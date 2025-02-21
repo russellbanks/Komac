@@ -1,9 +1,9 @@
 use crate::installers::inno::encoding::InnoValue;
+use crate::installers::inno::header::Header;
 use crate::installers::inno::header::enums::Compression;
 use crate::installers::inno::header::flags::HeaderFlags;
-use crate::installers::inno::header::Header;
 use crate::installers::inno::version::InnoVersion;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{LE, ReadBytesExt};
 use std::io::{Read, Result};
 
 #[expect(dead_code)]

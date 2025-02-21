@@ -1,5 +1,5 @@
-use crate::installers::msix_family::utils::{hash_signature, read_manifest};
 use crate::installers::msix_family::Msix;
+use crate::installers::msix_family::utils::{hash_signature, read_manifest};
 use crate::manifests::installer_manifest::Installer;
 use color_eyre::eyre::Result;
 use itertools::Itertools;

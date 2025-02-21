@@ -4,7 +4,7 @@ use std::{io, mem};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::Result;
-use inquire::{min_length, MultiSelect, Text};
+use inquire::{MultiSelect, Text, min_length};
 use memmap2::Mmap;
 use zip::ZipArchive;
 

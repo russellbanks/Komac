@@ -2,8 +2,8 @@
 name = "komac"
 version = "2.11.0"
 authors = ["Russell Banks"]
-edition = "2021"
-rust-version = "1.83"
+edition = "2024"
+rust-version = "1.85"
 description = "A manifest creator for winget-pkgs"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/russellbanks/Komac"
