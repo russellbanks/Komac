@@ -41,14 +41,9 @@ use crate::github::utils::{
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::manifests::locale_manifest::LocaleManifest;
-use crate::manifests::version_manifest::VersionManifest;
 use crate::manifests::{ManifestTrait, Manifests};
-use crate::types::license::License;
-use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
+use crate::types::manifest_type::ManifestTypeWithLocale;
 use crate::types::release_notes::ReleaseNotes;
-use crate::types::tag::Tag;
 use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_support_url::PublisherSupportUrl;
@@ -76,6 +71,12 @@ use std::ops::Not;
 use std::str::FromStr;
 use thiserror::Error;
 use url::Url;
+use winget::locale::license::License;
+use winget::locale::tag::Tag;
+use winget::shared::manifest_type::ManifestType;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
+use winget::version::VersionManifest;
 
 pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
@@ -652,7 +653,7 @@ impl GitHub {
             .topics
             .nodes
             .into_iter()
-            .flat_map(|topic_node| Tag::try_new(topic_node.topic.name))
+            .flat_map(|topic_node| Tag::new(topic_node.topic.name))
             .collect::<BTreeSet<_>>();
 
         let publisher_support_url = if repository.has_issues_enabled {
@@ -674,7 +675,7 @@ impl GitHub {
                         })
                     })
                 })
-                .and_then(|license| License::try_new(license).ok()),
+                .and_then(|license| License::new(license).ok()),
             license_url,
             package_url: PackageUrl::from_str(repository.url.as_str())?,
             release_notes: release

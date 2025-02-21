@@ -1,6 +1,3 @@
-use std::collections::BTreeSet;
-use std::num::NonZeroI64;
-
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
     RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
@@ -9,25 +6,7 @@ use crate::installers::utils::{
 use crate::manifests::ManifestTrait;
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::types::architecture::Architecture;
-use crate::types::command::Command;
-use crate::types::custom_switch::CustomSwitch;
-use crate::types::file_extension::FileExtension;
-use crate::types::install_modes::InstallModes;
-use crate::types::installer_success_code::InstallerSuccessCode;
-use crate::types::installer_switch::InstallerSwitch;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::ManifestVersion;
-use crate::types::minimum_os_version::MinimumOSVersion;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
-use crate::types::protocol::Protocol;
-use crate::types::sha_256::Sha256String;
-use crate::types::silent_switch::SilentSwitch;
-use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
 use crate::types::urls::url::DecodedUrl;
-use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use chrono::NaiveDate;
 use const_format::formatc;
@@ -35,7 +14,33 @@ use itertools::Itertools;
 use package_family_name::PackageFamilyName;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use strum::{Display, EnumIter, EnumString};
+use std::collections::BTreeSet;
+use strum::{Display, EnumIter};
+use winget::installer::command::Command;
+use winget::installer::file_extension::FileExtension;
+use winget::installer::install_modes::InstallModes;
+use winget::installer::installer_return_code::{InstallerReturnCode, InstallerSuccessCode};
+use winget::installer::installer_type::InstallerType;
+use winget::installer::minimum_os_version::MinimumOSVersion;
+use winget::installer::nested_installer_type::NestedInstallerType;
+use winget::installer::platform::Platform;
+use winget::installer::protocol::Protocol;
+use winget::installer::return_response::ReturnResponse;
+use winget::installer::sha_256::Sha256String;
+use winget::installer::switches::custom::CustomSwitch;
+use winget::installer::switches::install_location::InstallLocationSwitch;
+use winget::installer::switches::interactive::InteractiveSwitch;
+use winget::installer::switches::log::LogSwitch;
+use winget::installer::switches::repair::RepairSwitch;
+use winget::installer::switches::silent::SilentSwitch;
+use winget::installer::switches::silent_with_progress::SilentWithProgressSwitch;
+use winget::installer::switches::upgrade::UpgradeSwitch;
+use winget::shared::language_tag::LanguageTag;
+use winget::shared::manifest_type::ManifestType;
+use winget::shared::manifest_version::ManifestVersion;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
+use winget::shared::version::Version;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]
@@ -240,32 +245,6 @@ impl InstallerManifest {
     }
 }
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, EnumString, Eq, PartialEq, Hash, Ord, PartialOrd,
-)]
-pub enum Platform {
-    #[serde(rename = "Windows.Desktop")]
-    #[strum(serialize = "Windows.Desktop")]
-    WindowsDesktop,
-    #[serde(rename = "Windows.Universal")]
-    #[strum(serialize = "Windows.Universal")]
-    WindowsUniversal,
-}
-
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-#[serde(rename_all = "lowercase")]
-pub enum NestedInstallerType {
-    Msix,
-    Msi,
-    Appx,
-    Exe,
-    Inno,
-    Nullsoft,
-    Wix,
-    Burn,
-    Portable,
-}
-
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -321,12 +300,12 @@ impl Scope {
 pub struct InstallerSwitches {
     pub silent: Option<SilentSwitch>,
     pub silent_with_progress: Option<SilentWithProgressSwitch>,
-    pub interactive: Option<InstallerSwitch>,
-    pub install_location: Option<InstallerSwitch>,
-    pub log: Option<InstallerSwitch>,
-    pub upgrade: Option<InstallerSwitch>,
+    pub interactive: Option<InteractiveSwitch>,
+    pub install_location: Option<InstallLocationSwitch>,
+    pub log: Option<LogSwitch>,
+    pub upgrade: Option<UpgradeSwitch>,
     pub custom: Option<CustomSwitch>,
-    pub repair: Option<InstallerSwitch>,
+    pub repair: Option<RepairSwitch>,
 }
 
 impl InstallerSwitches {
@@ -345,33 +324,9 @@ impl InstallerSwitches {
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct ExpectedReturnCodes {
-    pub installer_return_code: Option<NonZeroI64>,
+    pub installer_return_code: InstallerReturnCode,
     pub return_response: ReturnResponse,
     pub return_response_url: Option<DecodedUrl>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-#[serde(rename_all = "camelCase")]
-pub enum ReturnResponse {
-    PackageInUse,
-    PackageInUseByApplication,
-    InstallInProgress,
-    FileInUse,
-    MissingDependency,
-    DiskFull,
-    InsufficientMemory,
-    InvalidParameter,
-    NoNetwork,
-    ContactSupport,
-    RebootRequiredToFinish,
-    RebootRequiredForInstall,
-    RebootInitiated,
-    CancelledByUser,
-    AlreadyInstalled,
-    Downgrade,
-    BlockedByPolicy,
-    SystemNotSupported,
-    Custom,
 }
 
 #[derive(

@@ -1,3 +1,6 @@
+use crate::file_analyser::FileAnalyser;
+use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
+use crate::types::urls::url::DecodedUrl;
 use camino::Utf8Path;
 use chrono::{DateTime, NaiveDate};
 use color_eyre::eyre::{Result, bail, eyre};
@@ -17,11 +20,7 @@ use std::num::NonZeroU8;
 use tokio::io::AsyncWriteExt;
 use url::Url;
 use uuid::Uuid;
-
-use crate::file_analyser::FileAnalyser;
-use crate::types::architecture::{Architecture, VALID_FILE_EXTENSIONS};
-use crate::types::sha_256::Sha256String;
-use crate::types::urls::url::DecodedUrl;
+use winget::installer::sha_256::Sha256String;
 
 async fn download_file(
     client: &Client,

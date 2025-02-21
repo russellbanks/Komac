@@ -2,16 +2,15 @@ use std::collections::{BTreeSet, HashMap};
 use std::io::{Read, Seek};
 use std::{io, mem};
 
+use crate::file_analyser::FileAnalyser;
+use crate::manifests::installer_manifest::{Installer, NestedInstallerFiles};
+use crate::prompts::handle_inquire_error;
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::Result;
 use inquire::{MultiSelect, Text, min_length};
 use memmap2::Mmap;
+use winget::installer::installer_type::InstallerType;
 use zip::ZipArchive;
-
-use crate::file_analyser::FileAnalyser;
-use crate::manifests::installer_manifest::{Installer, NestedInstallerFiles};
-use crate::prompts::handle_inquire_error;
-use crate::types::installer_type::InstallerType;
 
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
     ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];

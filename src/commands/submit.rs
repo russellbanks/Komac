@@ -7,7 +7,6 @@ use crate::manifests::Manifests;
 use crate::manifests::generic::GenericManifest;
 use crate::manifests::manifest::Manifest;
 use crate::prompts::handle_inquire_error;
-use crate::types::manifest_type::ManifestType;
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
@@ -19,6 +18,7 @@ use owo_colors::OwoColorize;
 use std::fs::File;
 use std::io;
 use walkdir::WalkDir;
+use winget::shared::manifest_type::ManifestType;
 
 #[derive(Parser)]
 pub struct Submit {

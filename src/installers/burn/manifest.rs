@@ -3,13 +3,13 @@ use crate::installers::utils::{
     RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
     RELATIVE_TEMP_FOLDER, RELATIVE_WINDOWS_DIR,
 };
-use crate::types::version::Version;
 use const_format::concatcp;
 use derive_more::Deref;
 use serde::de::{Unexpected, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::borrow::Cow;
 use std::fmt::Formatter;
+use winget::shared::version::Version;
 
 #[expect(dead_code)]
 #[derive(Debug, Deserialize)]

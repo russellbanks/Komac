@@ -21,9 +21,6 @@ use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
 };
 use crate::types::architecture::Architecture;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::version::Version;
 use byteorder::{LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
@@ -39,6 +36,9 @@ use std::io::Read;
 use strsim::levenshtein;
 use thiserror::Error;
 use tracing::debug;
+use winget::installer::installer_type::InstallerType;
+use winget::shared::language_tag::LanguageTag;
+use winget::shared::version::Version;
 use yara_x::mods::PE;
 use yara_x::mods::pe::Machine;
 use zerocopy::little_endian::I32;

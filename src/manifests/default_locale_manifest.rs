@@ -1,35 +1,34 @@
-use const_format::formatc;
-use serde::{Deserialize, Serialize};
-use serde_with::skip_serializing_none;
-use std::collections::BTreeSet;
-use std::mem;
-use url::Url;
-
 use crate::github::github_client::GitHubValues;
 use crate::manifests::ManifestTrait;
 use crate::types::author::Author;
 use crate::types::copyright::Copyright;
-use crate::types::description::Description;
-use crate::types::installation_notes::InstallationNotes;
-use crate::types::language_tag::LanguageTag;
-use crate::types::license::License;
-use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::ManifestVersion;
-use crate::types::moniker::Moniker;
-use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_name::PackageName;
-use crate::types::package_version::PackageVersion;
 use crate::types::publisher::Publisher;
 use crate::types::release_notes::ReleaseNotes;
-use crate::types::sha_256::Sha256String;
-use crate::types::short_description::ShortDescription;
-use crate::types::tag::Tag;
 use crate::types::urls::copyright_url::CopyrightUrl;
 use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
 use crate::types::urls::publisher_support_url::PublisherSupportUrl;
 use crate::types::urls::publisher_url::PublisherUrl;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
+use const_format::formatc;
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
+use std::collections::BTreeSet;
+use std::mem;
+use url::Url;
+use winget::installer::sha_256::Sha256String;
+use winget::locale::description::Description;
+use winget::locale::installation_notes::InstallationNotes;
+use winget::locale::license::License;
+use winget::locale::moniker::Moniker;
+use winget::locale::short_description::ShortDescription;
+use winget::locale::tag::Tag;
+use winget::shared::language_tag::LanguageTag;
+use winget::shared::manifest_type::ManifestType;
+use winget::shared::manifest_version::ManifestVersion;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Default)]

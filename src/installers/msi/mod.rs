@@ -7,16 +7,16 @@ use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
 };
 use crate::types::architecture::Architecture;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use compact_str::CompactString;
 use msi::{Language, Package, Select};
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind, Read, Result, Seek};
-use std::str::{FromStr, SplitAsciiWhitespace};
+use std::str::SplitAsciiWhitespace;
 use tracing::debug;
+use winget::installer::installer_type::InstallerType;
+use winget::shared::language_tag::LanguageTag;
+use winget::shared::version::Version;
 
 const PROPERTY: &str = "Property";
 const CONTROL: &str = "Control";
@@ -96,7 +96,10 @@ impl Msi {
         Ok(Self {
             installer: Installer {
                 locale: property_table.remove(PRODUCT_LANGUAGE).and_then(|code| {
-                    LanguageTag::from_str(Language::from_code(code.parse::<u16>().ok()?).tag()).ok()
+                    Language::from_code(code.parse::<u16>().ok()?)
+                        .tag()
+                        .parse::<LanguageTag>()
+                        .ok()
                 }),
                 architecture,
                 r#type: Self::is_wix(&msi, &property_table)

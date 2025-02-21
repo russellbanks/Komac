@@ -12,7 +12,4 @@ impl Prompt for Author {
     const MESSAGE: &'static str = "Author:";
 }
 
-impl TextPrompt for Author {
-    const HELP_MESSAGE: Option<&'static str> = None;
-    const PLACEHOLDER: Option<&'static str> = None;
-}
+impl TextPrompt for Author {}

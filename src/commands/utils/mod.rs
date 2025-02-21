@@ -3,8 +3,6 @@ use crate::github::graphql::get_existing_pull_request::PullRequest;
 use crate::manifests::print_changes;
 use crate::prompts::handle_inquire_error;
 use crate::prompts::text::confirm_prompt;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
 use anstream::println;
 use camino::Utf8Path;
 use chrono::Local;
@@ -19,6 +17,8 @@ use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::fs;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
 
 pub const SPINNER_TICK_RATE: Duration = Duration::from_millis(50);
 

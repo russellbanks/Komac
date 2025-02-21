@@ -1,16 +1,3 @@
-use anstream::println;
-use camino::Utf8PathBuf;
-use clap::Parser;
-use color_eyre::eyre::{Result, bail};
-use indicatif::ProgressBar;
-use owo_colors::OwoColorize;
-use reqwest::Client;
-use std::collections::BTreeSet;
-use std::io::{Read, Seek};
-use std::mem;
-use std::num::{NonZeroU8, NonZeroU32};
-use strsim::levenshtein;
-
 use crate::commands::utils::{
     SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
     write_changes_to_dir,
@@ -23,14 +10,26 @@ use crate::github::utils::pull_request::pr_changes;
 use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::NestedInstallerFiles;
 use crate::match_installers::match_installers;
-use crate::types::installer_type::InstallerType;
-use crate::types::minimum_os_version::MinimumOSVersion;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
 use crate::types::path::NormalizePath;
-use crate::types::traits::closest::Closest;
 use crate::types::urls::release_notes_url::ReleaseNotesUrl;
 use crate::types::urls::url::DecodedUrl;
+use anstream::println;
+use camino::Utf8PathBuf;
+use clap::Parser;
+use color_eyre::eyre::{Result, bail};
+use indicatif::ProgressBar;
+use owo_colors::OwoColorize;
+use reqwest::Client;
+use std::collections::BTreeSet;
+use std::io::{Read, Seek};
+use std::mem;
+use std::num::{NonZeroU8, NonZeroU32};
+use strsim::levenshtein;
+use winget::installer::installer_type::InstallerType;
+use winget::installer::minimum_os_version::MinimumOSVersion;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
+use winget::traits::closest::Closest;
 
 /// Add a version to a pre-existing package
 #[derive(Parser)]

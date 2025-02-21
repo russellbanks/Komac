@@ -1,8 +1,6 @@
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::manifests::locale_manifest::LocaleManifest;
-use crate::manifests::version_manifest::VersionManifest;
-use crate::types::manifest_type::ManifestType;
 use anstream::AutoStream;
 use clap::{crate_name, crate_version};
 use color_eyre::eyre::{Error, Result};
@@ -15,6 +13,8 @@ use std::io::StdoutLock;
 use std::io::Write;
 use std::sync::LazyLock;
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
+use winget::shared::manifest_type::ManifestType;
+use winget::version::VersionManifest;
 
 pub mod default_locale_manifest;
 pub mod generic;

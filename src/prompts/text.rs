@@ -4,10 +4,61 @@ use inquire::validator::Validation;
 use inquire::{Confirm, CustomUserError, InquireError, Text};
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
+use winget::installer::switches::custom::CustomSwitch;
+use winget::installer::switches::silent::SilentSwitch;
+use winget::installer::switches::silent_with_progress::SilentWithProgressSwitch;
+use winget::locale::description::Description;
+use winget::locale::license::License;
+use winget::locale::moniker::Moniker;
+use winget::locale::short_description::ShortDescription;
+use winget::shared::language_tag::LanguageTag;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
 
 pub trait TextPrompt: Prompt {
-    const HELP_MESSAGE: Option<&'static str>;
-    const PLACEHOLDER: Option<&'static str>;
+    const HELP_MESSAGE: Option<&'static str> = None;
+    const PLACEHOLDER: Option<&'static str> = None;
+}
+
+impl TextPrompt for PackageIdentifier {
+    const HELP_MESSAGE: Option<&'static str> =
+        Some("Package Identifiers are in the format of Package.Identifier");
+    const PLACEHOLDER: Option<&'static str> = Some("Package.Identifier");
+}
+
+impl TextPrompt for PackageVersion {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: 1.2.3");
+}
+
+impl TextPrompt for Moniker {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: vscode");
+}
+
+impl TextPrompt for Description {}
+
+impl TextPrompt for ShortDescription {}
+
+impl TextPrompt for LanguageTag {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: en-US");
+}
+
+impl TextPrompt for License {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: MIT, GPL-3.0, Freeware, Proprietary");
+}
+
+impl TextPrompt for SilentSwitch {
+    const HELP_MESSAGE: Option<&'static str> =
+        Some("Example: /S, -verysilent, /qn, --silent, /exenoui");
+    const PLACEHOLDER: Option<&'static str> = None;
+}
+
+impl TextPrompt for SilentWithProgressSwitch {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: /S, -silent, /qb, /exebasicui");
+}
+
+impl TextPrompt for CustomSwitch {
+    const HELP_MESSAGE: Option<&'static str> = Some("Example: /norestart, -norestart");
+    const PLACEHOLDER: Option<&'static str> = None;
 }
 
 pub fn optional_prompt<T>(parameter: Option<T>) -> InquireResult<Option<T>>

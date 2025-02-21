@@ -4,13 +4,9 @@ mod utils;
 use crate::file_analyser::MSIX;
 use crate::installers::msix_family::utils::{get_install_location, hash_signature, read_manifest};
 use crate::manifests::installer_manifest::{
-    AppsAndFeaturesEntry, InstallationMetadata, Installer, Platform, UpgradeBehavior,
+    AppsAndFeaturesEntry, InstallationMetadata, Installer, UpgradeBehavior,
 };
 use crate::types::architecture::Architecture;
-use crate::types::file_extension::FileExtension;
-use crate::types::installer_type::InstallerType;
-use crate::types::minimum_os_version::MinimumOSVersion;
-use crate::types::version::Version;
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
 use quick_xml::Reader;
@@ -19,6 +15,11 @@ use serde::Deserialize;
 use std::collections::BTreeSet;
 use std::io::{Read, Seek};
 use std::str::FromStr;
+use winget::installer::file_extension::FileExtension;
+use winget::installer::installer_type::InstallerType;
+use winget::installer::minimum_os_version::MinimumOSVersion;
+use winget::installer::platform::Platform;
+use winget::shared::version::Version;
 use zip::ZipArchive;
 
 pub struct Msix {
@@ -28,7 +29,7 @@ pub struct Msix {
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
 pub const APPX_SIGNATURE_P7X: &str = "AppxSignature.p7x";
 
-const MSIX_MIN_VERSION: MinimumOSVersion = MinimumOSVersion(10, 0, 17763, 0);
+const MSIX_MIN_VERSION: MinimumOSVersion = MinimumOSVersion::new(10, 0, 17763, 0);
 
 impl Msix {
     pub fn new<R: Read + Seek>(reader: R) -> Result<Self> {
@@ -89,7 +90,7 @@ impl Msix {
                             .iter()
                             .find(|attribute| attribute.key.as_ref() == b"Name")
                             .map(|platform| String::from_utf8_lossy(&platform.value))
-                            .and_then(|platform| Platform::from_str(&platform).ok());
+                            .and_then(|platform| platform.parse::<Platform>().ok());
                         let min_version = attributes
                             .iter()
                             .find(|attribute| attribute.key.as_ref() == b"MinVersion")
@@ -106,7 +107,7 @@ impl Msix {
                         }
                     }
                     b"FileType" => {
-                        if let Ok(extension) = FileExtension::from_str(
+                        if let Ok(extension) = FileExtension::new(
                             reader
                                 .read_text(event.to_end().name())?
                                 .trim_start_matches('.'),

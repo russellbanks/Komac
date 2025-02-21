@@ -5,8 +5,6 @@ use crate::github::graphql::get_branches::PullRequestState;
 use crate::manifests::installer_manifest::InstallerManifest;
 use crate::prompts::text::confirm_prompt;
 use crate::types::manifest_type::ManifestTypeWithLocale;
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
 use crate::types::urls::url::DecodedUrl;
 use anstream::println;
 use bon::builder;
@@ -25,6 +23,8 @@ use std::num::NonZeroUsize;
 use std::ops::Sub;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
 
 /// GitHub has an undocumented limit of 150 pull requests per hour
 ///

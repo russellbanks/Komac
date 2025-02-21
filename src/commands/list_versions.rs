@@ -1,12 +1,11 @@
 use std::io;
 use std::io::Write;
 
-use clap::{Args, Parser};
-use color_eyre::Result;
-
 use crate::credential::handle_token;
 use crate::github::github_client::GitHub;
-use crate::types::package_identifier::PackageIdentifier;
+use clap::{Args, Parser};
+use color_eyre::Result;
+use winget::shared::package_identifier::PackageIdentifier;
 
 /// Lists all versions for a given package
 #[derive(Parser)]

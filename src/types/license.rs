@@ -15,5 +15,4 @@ impl Prompt for License {
 
 impl TextPrompt for License {
     const HELP_MESSAGE: Option<&'static str> = Some("Example: MIT, GPL-3.0, Freeware, Proprietary");
-    const PLACEHOLDER: Option<&'static str> = None;
 }

@@ -9,7 +9,6 @@ use crate::installers::zip::Zip;
 use crate::manifests::installer_manifest::Installer;
 use crate::types::architecture::Architecture;
 use crate::types::copyright::Copyright;
-use crate::types::installer_type::InstallerType;
 use crate::types::package_name::PackageName;
 use crate::types::publisher::Publisher;
 use camino::Utf8Path;
@@ -18,6 +17,7 @@ use memmap2::Mmap;
 use std::io::Cursor;
 use std::mem;
 use tracing::debug;
+use winget::installer::installer_type::InstallerType;
 use yara_x::mods::PE;
 
 pub const EXE: &str = "exe";

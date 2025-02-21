@@ -36,12 +36,7 @@ use crate::installers::utils::{
 use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, InstallerSwitches, Scope,
 };
-use crate::types::custom_switch::CustomSwitch;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::sha_256::Sha256String;
 use crate::types::urls::url::DecodedUrl;
-use crate::types::version::Version;
 use camino::Utf8PathBuf;
 use const_format::formatcp;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
@@ -49,10 +44,14 @@ use entry::language::Language;
 use itertools::Itertools;
 use msi::Language as CodePageLanguage;
 use std::io::Cursor;
-use std::str::FromStr;
 use std::{io, mem};
 use thiserror::Error;
 use tracing::{debug, trace};
+use winget::installer::installer_type::InstallerType;
+use winget::installer::sha_256::Sha256String;
+use winget::installer::switches::custom::CustomSwitch;
+use winget::shared::language_tag::LanguageTag;
+use winget::shared::version::Version;
 use yara_x::mods::PE;
 use yara_x::mods::pe::ResourceType;
 use zerocopy::TryFromBytes;
@@ -216,10 +215,10 @@ impl Inno {
 
         let mut installer = Installer {
             locale: languages.first().and_then(|language_entry| {
-                LanguageTag::from_str(
-                    CodePageLanguage::from_code(u16::try_from(language_entry.id).ok()?).tag(),
-                )
-                .ok()
+                CodePageLanguage::from_code(u16::try_from(language_entry.id).ok()?)
+                    .tag()
+                    .parse::<LanguageTag>()
+                    .ok()
             }),
             architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
             r#type: Some(InstallerType::Inno),

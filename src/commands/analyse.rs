@@ -1,6 +1,5 @@
 use crate::file_analyser::FileAnalyser;
 use crate::manifests::print_manifest;
-use crate::types::sha_256::Sha256String;
 use anstream::stdout;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
@@ -9,6 +8,7 @@ use color_eyre::eyre::ensure;
 use memmap2::Mmap;
 use sha2::{Digest, Sha256};
 use std::fs::File;
+use winget::installer::sha_256::Sha256String;
 
 /// Analyses a file and outputs information about it
 #[derive(Parser)]

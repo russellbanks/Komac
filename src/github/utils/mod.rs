@@ -1,7 +1,5 @@
 use crate::manifests::ManifestTrait;
-use crate::types::manifest_type::{ManifestType, ManifestTypeWithLocale};
-use crate::types::package_identifier::PackageIdentifier;
-use crate::types::package_version::PackageVersion;
+use crate::types::manifest_type::ManifestTypeWithLocale;
 use crate::types::urls::url::DecodedUrl;
 use crate::update_state::UpdateState;
 use bon::builder;
@@ -13,6 +11,9 @@ use std::env;
 use std::fmt::Write;
 use std::num::NonZeroU32;
 use uuid::Uuid;
+use winget::shared::manifest_type::ManifestType;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
 
 pub mod pull_request;
 
@@ -197,13 +198,12 @@ mod tests {
     use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
     use crate::manifests::installer_manifest::InstallerManifest;
     use crate::manifests::locale_manifest::LocaleManifest;
-    use crate::manifests::version_manifest::VersionManifest;
     use crate::types::manifest_type::ManifestTypeWithLocale;
-    use crate::types::package_identifier::PackageIdentifier;
-    use crate::types::package_version::PackageVersion;
     use icu_locid::langid;
     use rstest::rstest;
     use std::str::FromStr;
+    use winget::shared::package_identifier::PackageIdentifier;
+    use winget::version::VersionManifest;
 
     #[rstest]
     #[case("Package.Identifier", None, None, "manifests/p/Package/Identifier")]
@@ -244,7 +244,7 @@ mod tests {
         #[case] expected: &str,
     ) {
         let identifier = PackageIdentifier::from_str(identifier).unwrap();
-        let version = version.and_then(|version| PackageVersion::from_str(version).ok());
+        let version = version.and_then(|version| version.parse().ok());
         assert_eq!(
             get_package_path(&identifier, version.as_ref(), manifest_type.as_ref()),
             expected

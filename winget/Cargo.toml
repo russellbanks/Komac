@@ -1,0 +1,26 @@
+[package]
+name = "winget"
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.85"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+base16ct = { version = "0.2.0", features = ["std"] }
+bitflags = "2.8.0"
+compact_str = { version = "0.8.1", features = ["serde"] }
+const_format = { version = "0.2.34", features = ["derive"] }
+derive_more = { version = "2.0.1", features = ["deref", "deref_mut", "display", "from_str", "into", "into_iterator"] }
+heapless = { version = "0.8.0", features = ["serde"] }
+icu_locid = { version = "1.5.0", features = ["serde"] }
+itertools = "0.14.0"
+serde = { version = "1.0.218", features = ["derive"] }
+serde_with = { version = "3.12.0", default-features = false, features = ["macros"] }
+sha2 = "0.10.8"
+smallvec = "1.14.0"
+thiserror = "2.0.11"
+
+[dev-dependencies]
+indoc = "2.0.5"
+rstest = "0.24.0"
+serde_yaml = "0.9.34"

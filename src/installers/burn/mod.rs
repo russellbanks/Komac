@@ -8,7 +8,6 @@ use crate::manifests::installer_manifest::{
     AppsAndFeaturesEntry, InstallationMetadata, Installer, Scope,
 };
 use crate::types::architecture::Architecture;
-use crate::types::installer_type::InstallerType;
 use cab::Cabinet;
 use camino::Utf8PathBuf;
 use quick_xml::de::from_str;
@@ -17,6 +16,7 @@ use std::io::Cursor;
 use std::ops::Not;
 use thiserror::Error;
 use tracing::debug;
+use winget::installer::installer_type::InstallerType;
 use yara_x::mods::PE;
 use yara_x::mods::pe::{Resource, ResourceType, Section};
 use zerocopy::TryFromBytes;

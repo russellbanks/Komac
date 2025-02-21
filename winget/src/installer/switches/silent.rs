@@ -1,0 +1,21 @@
+use crate::installer::switches::InstallerSwitch;
+use derive_more::{Deref, DerefMut, Display, FromStr, IntoIterator};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
+
+#[derive(
+    Clone,
+    Debug,
+    Deref,
+    DerefMut,
+    Display,
+    Eq,
+    PartialEq,
+    FromStr,
+    Ord,
+    PartialOrd,
+    Hash,
+    IntoIterator,
+    SerializeDisplay,
+    DeserializeFromStr,
+)]
+pub struct SilentSwitch(#[into_iterator(owned, ref, ref_mut)] InstallerSwitch<512>);

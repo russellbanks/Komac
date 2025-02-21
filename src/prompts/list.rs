@@ -5,10 +5,40 @@ use inquire::validator::Validation;
 use std::collections::BTreeSet;
 use std::fmt::Display;
 use std::str::FromStr;
+use winget::installer::command::Command;
+use winget::installer::file_extension::FileExtension;
+use winget::installer::installer_return_code::InstallerReturnCode;
+use winget::installer::protocol::Protocol;
+use winget::locale::tag::Tag;
 
 pub trait ListPrompt: Prompt {
     const HELP_MESSAGE: &'static str;
     const MAX_ITEMS: u16;
+}
+
+impl ListPrompt for InstallerReturnCode {
+    const HELP_MESSAGE: &'static str = "List of additional non-zero installer success exit codes other than known default values by winget";
+    const MAX_ITEMS: u16 = 16;
+}
+
+impl ListPrompt for Protocol {
+    const HELP_MESSAGE: &'static str = "List of protocols the package provides a handler for";
+    const MAX_ITEMS: u16 = 16;
+}
+
+impl ListPrompt for FileExtension {
+    const HELP_MESSAGE: &'static str = "List of file extensions the package could support";
+    const MAX_ITEMS: u16 = 512;
+}
+
+impl ListPrompt for Tag {
+    const HELP_MESSAGE: &'static str = "Example: zip, c++, photos, OBS";
+    const MAX_ITEMS: u16 = 16;
+}
+
+impl ListPrompt for Command {
+    const HELP_MESSAGE: &'static str = "List of commands or aliases to run the package";
+    const MAX_ITEMS: u16 = 16;
 }
 
 pub fn list_prompt<T>() -> color_eyre::Result<Option<BTreeSet<T>>>

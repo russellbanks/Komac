@@ -739,6 +739,7 @@ dependencies = [
  "itoa",
  "rustversion",
  "ryu",
+ "serde",
  "static_assertions",
 ]
 
@@ -2544,6 +2545,7 @@ dependencies = [
  "uuid",
  "walkdir",
  "windows_exe_info",
+ "winget",
  "yara-x",
  "zerocopy 0.8.20",
  "zip",
@@ -5964,6 +5966,28 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "winget"
+version = "1.0.0"
+dependencies = [
+ "base16ct",
+ "bitflags 2.8.0",
+ "compact_str",
+ "const_format",
+ "derive_more",
+ "heapless",
+ "icu_locid",
+ "indoc",
+ "itertools 0.14.0",
+ "rstest",
+ "serde",
+ "serde_with",
+ "serde_yaml",
+ "sha2",
+ "smallvec",
+ "thiserror 2.0.11",
+]
 
 [[package]]
 name = "winnow"

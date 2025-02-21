@@ -14,33 +14,13 @@ use crate::github::utils::pull_request::pr_changes;
 use crate::manifests::Manifests;
 use crate::manifests::default_locale_manifest::DefaultLocaleManifest;
 use crate::manifests::installer_manifest::{InstallerManifest, InstallerSwitches, UpgradeBehavior};
-use crate::manifests::version_manifest::VersionManifest;
 use crate::prompts::list::list_prompt;
 use crate::prompts::text::{confirm_prompt, optional_prompt, required_prompt};
 use crate::prompts::{check_prompt, handle_inquire_error, radio_prompt};
 use crate::types::author::Author;
-use crate::types::command::Command;
 use crate::types::copyright::Copyright;
-use crate::types::custom_switch::CustomSwitch;
-use crate::types::description::Description;
-use crate::types::file_extension::FileExtension;
-use crate::types::install_modes::InstallModes;
-use crate::types::installer_success_code::InstallerSuccessCode;
-use crate::types::installer_type::InstallerType;
-use crate::types::language_tag::LanguageTag;
-use crate::types::license::License;
-use crate::types::manifest_type::ManifestType;
-use crate::types::manifest_version::ManifestVersion;
-use crate::types::moniker::Moniker;
-use crate::types::package_identifier::PackageIdentifier;
 use crate::types::package_name::PackageName;
-use crate::types::package_version::PackageVersion;
-use crate::types::protocol::Protocol;
 use crate::types::publisher::Publisher;
-use crate::types::short_description::ShortDescription;
-use crate::types::silent_switch::SilentSwitch;
-use crate::types::silent_with_progress_switch::SilentWithProgressSwitch;
-use crate::types::tag::Tag;
 use crate::types::urls::copyright_url::CopyrightUrl;
 use crate::types::urls::license_url::LicenseUrl;
 use crate::types::urls::package_url::PackageUrl;
@@ -57,6 +37,26 @@ use inquire::CustomType;
 use ordinal_trait::Ordinal;
 use owo_colors::OwoColorize;
 use reqwest::Client;
+use winget::installer::command::Command;
+use winget::installer::file_extension::FileExtension;
+use winget::installer::install_modes::InstallModes;
+use winget::installer::installer_return_code::InstallerReturnCode;
+use winget::installer::installer_type::InstallerType;
+use winget::installer::protocol::Protocol;
+use winget::installer::switches::custom::CustomSwitch;
+use winget::installer::switches::silent::SilentSwitch;
+use winget::installer::switches::silent_with_progress::SilentWithProgressSwitch;
+use winget::locale::description::Description;
+use winget::locale::license::License;
+use winget::locale::moniker::Moniker;
+use winget::locale::short_description::ShortDescription;
+use winget::locale::tag::Tag;
+use winget::shared::language_tag::LanguageTag;
+use winget::shared::manifest_type::ManifestType;
+use winget::shared::manifest_version::ManifestVersion;
+use winget::shared::package_identifier::PackageIdentifier;
+use winget::shared::package_version::PackageVersion;
+use winget::version::VersionManifest;
 
 /// Create a new package from scratch
 #[derive(Parser)]
@@ -278,7 +278,7 @@ impl NewVersion {
             } else {
                 check_prompt::<InstallModes>()?
             },
-            success_codes: list_prompt::<InstallerSuccessCode>()?,
+            success_codes: list_prompt::<InstallerReturnCode>()?,
             upgrade_behavior: Some(radio_prompt::<UpgradeBehavior>()?),
             commands: list_prompt::<Command>()?,
             protocols: list_prompt::<Protocol>()?,
