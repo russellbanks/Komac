@@ -90,7 +90,7 @@ tree-sitter-highlight = "0.25.2"
 tree-sitter-yaml = "0.7.0"
 tui-textarea = { version = "0.7.0", features = ["search"] }
 url = { version = "2.5.3", features = ["serde"] }
-uuid = { version = "1.14.0", features = ["v4"] }
+uuid = { version = "1.15.0", features = ["v4"] }
 walkdir = "2.5.0"
 winget-types = { path = "winget-types" }
 yara-x = { version = "0.13.0", default-features = false, features = ["pe-module"] }
