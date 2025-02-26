@@ -2,7 +2,6 @@ use std::{
     collections::BTreeSet,
     fmt::Write,
     num::NonZeroUsize,
-    ops::Sub,
     time::{Duration, Instant},
 };
 
@@ -111,7 +110,7 @@ impl RemoveDeadVersions {
         };
 
         // Set a default last PR time to before the rate limit delay to do the first PR immediately
-        let mut last_pr_time = Instant::now().sub(rate_limit_delay);
+        let mut last_pr_time = Instant::now() - rate_limit_delay;
 
         let progress_bar = ProgressBar::new_spinner();
         progress_bar.enable_steady_tick(SPINNER_TICK_RATE);

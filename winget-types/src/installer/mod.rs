@@ -73,7 +73,7 @@ pub struct InstallerManifest {
     pub channel: Option<String>,
     #[serde(rename = "InstallerLocale")]
     pub locale: Option<LanguageTag>,
-    pub platform: Option<BTreeSet<Platform>>,
+    pub platform: Option<Platform>,
     #[serde(rename = "MinimumOSVersion")]
     pub minimum_os_version: Option<MinimumOSVersion>,
     #[serde(rename = "InstallerType")]
@@ -273,7 +273,7 @@ impl InstallerManifest {
 pub struct Installer {
     #[serde(rename = "InstallerLocale")]
     pub locale: Option<LanguageTag>,
-    pub platform: Option<BTreeSet<Platform>>,
+    pub platform: Option<Platform>,
     #[serde(rename = "MinimumOSVersion")]
     pub minimum_os_version: Option<MinimumOSVersion>,
     pub architecture: Architecture,

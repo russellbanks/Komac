@@ -10,7 +10,6 @@ use std::{
 use color_eyre::eyre::Result;
 use package_family_name::PackageFamilyName;
 use quick_xml::{Reader, events::Event};
-use serde::Deserialize;
 use winget_types::{
     installer::{
         AppsAndFeaturesEntry, Architecture, FileExtension, InstallationMetadata, Installer,
@@ -92,13 +91,13 @@ impl Msix {
                         let platform = attributes
                             .iter()
                             .find(|attribute| attribute.key.as_ref() == b"Name")
-                            .map(|platform| String::from_utf8_lossy(&platform.value))
+                            .and_then(|attribute| std::str::from_utf8(&attribute.value).ok())
                             .and_then(|platform| platform.parse::<Platform>().ok());
                         let min_version = attributes
                             .iter()
                             .find(|attribute| attribute.key.as_ref() == b"MinVersion")
-                            .map(|min_version| String::from_utf8_lossy(&min_version.value))
-                            .and_then(|min_version| MinimumOSVersion::from_str(&min_version).ok());
+                            .and_then(|attribute| std::str::from_utf8(&attribute.value).ok())
+                            .and_then(|min_version| min_version.parse::<MinimumOSVersion>().ok());
                         if let (Some(platform), Some(min_version)) = (platform, min_version) {
                             manifest
                                 .dependencies
@@ -240,18 +239,15 @@ struct Properties {
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-dependencies>
-#[derive(Deserialize, Default)]
-#[serde(rename_all = "PascalCase")]
-pub(super) struct Dependencies {
+#[derive(Default)]
+pub struct Dependencies {
     pub target_device_family: BTreeSet<TargetDeviceFamily>,
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-targetdevicefamily>
-#[derive(Deserialize, Eq, Ord, PartialEq, PartialOrd)]
-pub(super) struct TargetDeviceFamily {
-    #[serde(rename = "@Name")]
+#[derive(Eq, Ord, PartialEq, PartialOrd)]
+pub struct TargetDeviceFamily {
     pub name: Platform,
-    #[serde(rename = "@MinVersion")]
     pub min_version: MinimumOSVersion,
 }
 
