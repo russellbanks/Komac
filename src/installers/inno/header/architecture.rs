@@ -71,6 +71,16 @@ impl From<Architecture> for UnsupportedOSArchitecture {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Token<'token> {
+    Identifier(&'token str),
+    And,
+    Or,
+    Not,
+    LeftParen,
+    RightParen,
+}
+
 impl Architecture {
     pub fn from_expression(input: &str) -> (Self, Self) {
         const ARM32_COMPATIBLE: &str = "arm32compatible";
@@ -87,46 +97,40 @@ impl Architecture {
         /// for x86os.
         const X86: &str = "x86";
 
-        let tokens = input.replace('(', " ( ").replace(')', " ) ");
-        let tokens = tokens.split_whitespace().collect::<Vec<&str>>();
+        let mut tokens = input
+            .split(|char: char| char.is_whitespace() || ['(', ')'].contains(&char))
+            .filter(|part| !part.is_empty())
+            .map(|part| match part {
+                "(" => Token::LeftParen,
+                ")" => Token::RightParen,
+                "and" => Token::And,
+                "or" => Token::Or,
+                "not" => Token::Not,
+                _ => Token::Identifier(part),
+            })
+            .collect::<Vec<_>>();
 
-        let mut expanded_tokens = Vec::new();
-        let mut prev_token = None;
-
-        for token in &tokens {
-            if let Some(prev) = prev_token {
-                if !["and", "or", "not", "(", ")"].contains(&prev)
-                    && !["and", "or", "not", "(", ")"].contains(token)
-                {
-                    expanded_tokens.push("and");
+        // If two consecutive tokens are not an operator, they have an implicit `and` between them.
+        // E.g. `x64 x86` is equivalent to `x64 and x86`.
+        let mut index = 1;
+        while let Some(token) = tokens.get(index) {
+            if let Some(prev) = tokens.get(index - 1) {
+                if matches!(prev, Token::Identifier(_)) && matches!(token, Token::Identifier(_)) {
+                    tokens.insert(index, Token::And);
+                    index += 1;
                 }
             }
-            expanded_tokens.push(token);
-            prev_token = Some(token);
+            index += 1;
         }
 
-        let postfix_tokens = infix_to_postfix(expanded_tokens);
+        let postfix = infix_to_postfix(tokens);
 
-        let mut stack: Vec<Expr> = Vec::new();
+        let mut stack = Vec::new();
 
-        for token in postfix_tokens {
+        for token in postfix {
             match token {
-                "and" | "or" => {
-                    if let (Some(right), Some(left)) = (stack.pop(), stack.pop()) {
-                        if token == "and" {
-                            stack.push(Expr::And(Box::new(left), Box::new(right)));
-                        } else if token == "or" {
-                            stack.push(Expr::Or(Box::new(left), Box::new(right)));
-                        }
-                    }
-                }
-                "not" => {
-                    if let Some(expr) = stack.pop() {
-                        stack.push(Expr::Not(Box::new(expr)));
-                    }
-                }
-                _ => {
-                    let flag = match token {
+                Token::Identifier(identifier) => {
+                    let arch = match identifier {
                         ARM32_COMPATIBLE => Self::ARM32_COMPATIBLE,
                         ARM64 => Self::ARM64,
                         WIN64 => Self::WIN64,
@@ -136,8 +140,24 @@ impl Architecture {
                         X86_OS | X86 => Self::X86_OS,
                         _ => Self::empty(),
                     };
-                    stack.push(Expr::Flag(flag));
+                    stack.push(Expr::Flag(arch));
                 }
+                Token::And => {
+                    if let (Some(right), Some(left)) = (stack.pop(), stack.pop()) {
+                        stack.push(Expr::And(Box::new(left), Box::new(right)));
+                    }
+                }
+                Token::Or => {
+                    if let (Some(right), Some(left)) = (stack.pop(), stack.pop()) {
+                        stack.push(Expr::Or(Box::new(left), Box::new(right)));
+                    }
+                }
+                Token::Not => {
+                    if let Some(expr) = stack.pop() {
+                        stack.push(Expr::Not(Box::new(expr)));
+                    }
+                }
+                _ => {}
             }
         }
 
@@ -148,6 +168,7 @@ impl Architecture {
         if positive.is_empty() {
             positive |= Self::X86_COMPATIBLE;
         }
+
         (positive, negated)
     }
 }
@@ -168,6 +189,7 @@ impl From<Architecture> for WingetArchitecture {
     }
 }
 
+#[derive(Debug)]
 enum Expr {
     Flag(Architecture),
     Not(Box<Expr>),
@@ -180,8 +202,8 @@ impl Expr {
         match self {
             Self::Flag(flag) => (flag, Architecture::empty()),
             Self::Not(expr) => {
-                let (pos, _neg) = expr.evaluate();
-                (Architecture::empty(), pos)
+                let (pos, neg) = expr.evaluate();
+                (neg, pos)
             }
             Self::And(left, right) => {
                 let (left_pos, left_neg) = left.evaluate();
@@ -197,46 +219,47 @@ impl Expr {
     }
 }
 
-fn precedence(op: &str) -> u8 {
-    match op {
-        "and" => 2,
-        "or" => 1,
-        _ => 0,
-    }
-}
-
-fn infix_to_postfix(tokens: Vec<&str>) -> Vec<&str> {
-    let mut output: Vec<&str> = Vec::new();
-    let mut operators: Vec<&str> = Vec::new();
-
-    for token in tokens {
-        match token {
-            "and" | "or" => {
-                while !operators.is_empty()
-                    && precedence(token) <= precedence(operators.last().unwrap())
-                {
-                    output.push(operators.pop().unwrap());
-                }
-                operators.push(token);
-            }
-            "not" | "(" => operators.push(token),
-            ")" => {
-                while let Some(top) = operators.pop() {
-                    if top == "(" {
-                        break;
-                    }
-                    output.push(top);
-                }
-            }
-            _ => output.push(token),
+fn infix_to_postfix(tokens: Vec<Token>) -> Vec<Token> {
+    const fn precedence(operator: &Token) -> u8 {
+        match operator {
+            Token::And => 2,
+            Token::Or => 1,
+            _ => 0,
         }
     }
 
-    while let Some(op) = operators.pop() {
-        output.push(op);
+    let mut postfix = Vec::new();
+    let mut stack = Vec::new();
+
+    for token in tokens {
+        match token {
+            Token::Identifier(_) => postfix.push(token),
+            Token::LeftParen | Token::Not => stack.push(token),
+            Token::RightParen => {
+                while let Some(top) = stack.pop() {
+                    if top == Token::LeftParen {
+                        break;
+                    }
+                    postfix.push(top);
+                }
+            }
+            Token::And | Token::Or => {
+                while stack
+                    .last()
+                    .is_some_and(|operator| precedence(&token) <= precedence(operator))
+                {
+                    postfix.push(stack.pop().unwrap());
+                }
+                stack.push(token);
+            }
+        }
     }
 
-    output
+    while let Some(operator) = stack.pop() {
+        postfix.push(operator);
+    }
+
+    postfix
 }
 
 #[cfg(test)]
