@@ -143,7 +143,7 @@ mod tests {
             - Windows.Universal
         "}
     )]
-    fn serialize_install_modes(#[case] platform: Platform, #[case] expected: &str) {
+    fn serialize_platform(#[case] platform: Platform, #[case] expected: &str) {
         assert_eq!(serde_yaml::to_string(&platform).unwrap(), expected);
     }
 
@@ -173,12 +173,12 @@ mod tests {
         "},
         Platform::WINDOWS_UNIVERSAL
     )]
-    fn deserialize_install_modes(#[case] input: &str, #[case] expected: Platform) {
+    fn deserialize_platform(#[case] input: &str, #[case] expected: Platform) {
         assert_eq!(serde_yaml::from_str::<Platform>(input).unwrap(), expected);
     }
 
     #[test]
-    fn install_modes_serialize_ordered() {
+    fn platform_serialize_ordered() {
         let input = indoc! {"
             - Windows.Universal
             - Windows.Desktop

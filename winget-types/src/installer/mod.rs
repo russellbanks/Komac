@@ -105,7 +105,7 @@ pub struct InstallerManifest {
     pub display_install_warnings: Option<bool>,
     #[serde(rename = "UnsupportedOSArchitectures")]
     pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
-    pub unsupported_arguments: Option<BTreeSet<UnsupportedArguments>>,
+    pub unsupported_arguments: Option<UnsupportedArguments>,
     pub apps_and_features_entries: Option<Vec<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
@@ -311,7 +311,7 @@ pub struct Installer {
     pub display_install_warnings: Option<bool>,
     #[serde(rename = "UnsupportedOSArchitectures")]
     pub unsupported_os_architectures: Option<BTreeSet<UnsupportedOSArchitecture>>,
-    pub unsupported_arguments: Option<BTreeSet<UnsupportedArguments>>,
+    pub unsupported_arguments: Option<UnsupportedArguments>,
     pub apps_and_features_entries: Option<Vec<AppsAndFeaturesEntry>>,
     pub elevation_requirement: Option<ElevationRequirement>,
     pub installation_metadata: Option<InstallationMetadata>,
