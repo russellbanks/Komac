@@ -23,6 +23,7 @@ use tracing::{debug, trace};
 use winget_types::{
     installer::{
         AppsAndFeaturesEntry, InstallationMetadata, Installer, InstallerType, Scope,
+        UnsupportedOSArchitecture,
         switches::{CustomSwitch, InstallerSwitches},
     },
     shared::{LanguageTag, Sha256String, Version, url::DecodedUrl},
@@ -214,14 +215,14 @@ impl Inno {
                     .parse::<LanguageTag>()
                     .ok()
             }),
-            architecture: mem::take(&mut header.architectures_allowed).to_winget_architecture(),
+            architecture: mem::take(&mut header.architectures_allowed).into(),
             r#type: Some(InstallerType::Inno),
             scope: install_dir.as_deref().and_then(Scope::from_install_dir),
             url: DecodedUrl::default(),
             sha_256: Sha256String::default(),
             product_code: header.app_id.clone().map(to_product_code),
-            unsupported_os_architectures: mem::take(&mut header.architectures_disallowed)
-                .to_unsupported_architectures(),
+            unsupported_os_architectures: Some(header.architectures_disallowed.into())
+                .filter(|architectures: &UnsupportedOSArchitecture| !architectures.is_empty()),
             apps_and_features_entries: (header.uninstall_name.is_some()
                 || header.app_publisher.is_some()
                 || header.app_version.is_some())

@@ -1,13 +1,11 @@
-use std::collections::BTreeSet;
-
 use bitflags::bitflags;
-use winget_types::installer::{Architecture, UnsupportedOSArchitecture};
+use winget_types::installer::{Architecture as WingetArchitecture, UnsupportedOSArchitecture};
 
 bitflags! {
     /// Used before Inno Setup 6.3 where the architecture was stored in a single byte
-    #[derive(Debug, Default)]
+    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
     pub struct StoredArchitecture: u8 {
-        const ARCHITECTURE_UNKNOWN = 1 << 0;
+        const UNKNOWN = 1;
         const X86 = 1 << 1;
         const AMD64 = 1 << 2;
         const IA64 = 1 << 3;
@@ -15,28 +13,27 @@ bitflags! {
     }
 }
 
-impl StoredArchitecture {
-    pub fn to_identifiers(&self) -> ArchitectureIdentifiers {
-        let mut identifiers = ArchitectureIdentifiers::empty();
-        match self {
-            flags if flags.contains(Self::AMD64) || flags.contains(Self::IA64) => {
-                identifiers |= ArchitectureIdentifiers::X64_OS;
-            }
-            flags if flags.contains(Self::ARM64) => identifiers |= ArchitectureIdentifiers::ARM64,
-            flags if flags.contains(Self::X86) => identifiers |= ArchitectureIdentifiers::X86_OS,
-            _ => {}
-        }
-        identifiers
+impl From<StoredArchitecture> for Architecture {
+    fn from(value: StoredArchitecture) -> Self {
+        value.iter().fold(
+            Self::empty(),
+            |architecture, stored_arch| match stored_arch {
+                StoredArchitecture::AMD64 | StoredArchitecture::IA64 => architecture | Self::X64_OS,
+                StoredArchitecture::ARM64 => architecture | Self::ARM64,
+                StoredArchitecture::X86 => architecture | Self::X86_OS,
+                _ => architecture,
+            },
+        )
     }
 }
 
 bitflags! {
     /// <https://jrsoftware.org/ishelp/index.php?topic=archidentifiers>
-    #[derive(Debug, Default, PartialEq, Eq)]
-    pub struct ArchitectureIdentifiers: u8 {
+    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+    pub struct Architecture: u8 {
         /// Matches systems capable of running 32-bit Arm binaries. Only Arm64 Windows includes such
         /// support.
-        const ARM32_COMPATIBLE = 1 << 0;
+        const ARM32_COMPATIBLE = 1;
         /// Matches systems running Arm64 Windows.
         const ARM64 = 1 << 1;
         /// Matches systems running 64-bit Windows, regardless of OS architecture.
@@ -57,7 +54,24 @@ bitflags! {
     }
 }
 
-impl ArchitectureIdentifiers {
+impl From<Architecture> for UnsupportedOSArchitecture {
+    fn from(value: Architecture) -> Self {
+        value.iter().fold(
+            Self::empty(),
+            |unsupported_arch, architecture| match architecture {
+                Architecture::X64_OS | Architecture::WIN64 | Architecture::X64_COMPATIBLE => {
+                    unsupported_arch | Self::X64
+                }
+                Architecture::ARM64 => unsupported_arch | Self::ARM64,
+                Architecture::ARM32_COMPATIBLE => unsupported_arch | Self::ARM,
+                Architecture::X86_OS | Architecture::X86_COMPATIBLE => unsupported_arch | Self::X86,
+                _ => unsupported_arch,
+            },
+        )
+    }
+}
+
+impl Architecture {
     pub fn from_expression(input: &str) -> (Self, Self) {
         const ARM32_COMPATIBLE: &str = "arm32compatible";
         const ARM64: &str = "arm64";
@@ -136,57 +150,38 @@ impl ArchitectureIdentifiers {
         }
         (positive, negated)
     }
+}
 
-    pub const fn to_winget_architecture(&self) -> Architecture {
-        if self.contains(Self::X64_OS)
-            || self.contains(Self::WIN64)
-            || self.contains(Self::X64_COMPATIBLE)
+impl From<Architecture> for WingetArchitecture {
+    fn from(value: Architecture) -> Self {
+        if value
+            .intersects(Architecture::X64_OS | Architecture::WIN64 | Architecture::X64_COMPATIBLE)
         {
-            Architecture::X64
-        } else if self.contains(Self::ARM64) || self.contains(Self::ARM32_COMPATIBLE) {
-            Architecture::Arm64
+            Self::X64
+        } else if value.intersects(Architecture::ARM64 | Architecture::ARM32_COMPATIBLE) {
+            Self::Arm64
         } else {
             // If the architectures contain X86_COMPATIBLE, X86_OS, or are empty, it is X86
             // https://jrsoftware.org/ishelp/index.php?topic=setup_architecturesallowed
-            Architecture::X86
+            Self::X86
         }
-    }
-
-    pub fn to_unsupported_architectures(&self) -> Option<BTreeSet<UnsupportedOSArchitecture>> {
-        let mut architectures = BTreeSet::new();
-        if self.contains(Self::X64_OS)
-            || self.contains(Self::WIN64)
-            || self.contains(Self::X64_COMPATIBLE)
-        {
-            architectures.insert(UnsupportedOSArchitecture::X64);
-        }
-        if self.contains(Self::ARM64) {
-            architectures.insert(UnsupportedOSArchitecture::Arm64);
-        }
-        if self.contains(Self::ARM32_COMPATIBLE) {
-            architectures.insert(UnsupportedOSArchitecture::Arm);
-        }
-        if self.contains(Self::X86_OS) || self.contains(Self::X86_COMPATIBLE) {
-            architectures.insert(UnsupportedOSArchitecture::X86);
-        }
-        Option::from(architectures).filter(|set| !set.is_empty())
     }
 }
 
 enum Expr {
-    Flag(ArchitectureIdentifiers),
+    Flag(Architecture),
     Not(Box<Expr>),
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
 }
 
 impl Expr {
-    fn evaluate(self) -> (ArchitectureIdentifiers, ArchitectureIdentifiers) {
+    fn evaluate(self) -> (Architecture, Architecture) {
         match self {
-            Self::Flag(flag) => (flag, ArchitectureIdentifiers::empty()),
+            Self::Flag(flag) => (flag, Architecture::empty()),
             Self::Not(expr) => {
                 let (pos, _neg) = expr.evaluate();
-                (ArchitectureIdentifiers::empty(), pos)
+                (Architecture::empty(), pos)
             }
             Self::And(left, right) => {
                 let (left_pos, left_neg) = left.evaluate();
@@ -247,77 +242,92 @@ fn infix_to_postfix(tokens: Vec<&str>) -> Vec<&str> {
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
+    use winget_types::installer::UnsupportedOSArchitecture;
 
-    use crate::installers::inno::header::architecture::ArchitectureIdentifiers;
+    use crate::installers::inno::header::architecture::{Architecture, StoredArchitecture};
 
     #[rstest]
-    #[case(
-        "x64compatible",
-        ArchitectureIdentifiers::X64_COMPATIBLE,
-        ArchitectureIdentifiers::empty()
-    )]
+    #[case("x64compatible", Architecture::X64_COMPATIBLE, Architecture::empty())]
     #[case(
         "x64compatible and arm64",
-        ArchitectureIdentifiers::X64_COMPATIBLE | ArchitectureIdentifiers::ARM64,
-        ArchitectureIdentifiers::empty()
+        Architecture::X64_COMPATIBLE | Architecture::ARM64,
+        Architecture::empty()
     )]
     #[case(
         "x64compatible and not arm64",
-        ArchitectureIdentifiers::X64_COMPATIBLE,
-        ArchitectureIdentifiers::ARM64
+        Architecture::X64_COMPATIBLE,
+        Architecture::ARM64
     )]
-    #[case(
-        "not x64os",
-        ArchitectureIdentifiers::X86_COMPATIBLE,
-        ArchitectureIdentifiers::X64_OS
-    )]
+    #[case("not x64os", Architecture::X86_COMPATIBLE, Architecture::X64_OS)]
     #[case(
         "not (arm64 or x86compatible)",
-        ArchitectureIdentifiers::X86_COMPATIBLE,
-        ArchitectureIdentifiers::ARM64 | ArchitectureIdentifiers::X86_COMPATIBLE
+        Architecture::X86_COMPATIBLE,
+        Architecture::ARM64 | Architecture::X86_COMPATIBLE
     )]
     #[case(
         "x64compatible and not (arm64 or x86compatible)",
-        ArchitectureIdentifiers::X64_COMPATIBLE,
-        ArchitectureIdentifiers::ARM64 | ArchitectureIdentifiers::X86_COMPATIBLE
+        Architecture::X64_COMPATIBLE,
+        Architecture::ARM64 | Architecture::X86_COMPATIBLE
     )]
     #[case(
         "x64compatible x86compatible",
-        ArchitectureIdentifiers::X64_COMPATIBLE | ArchitectureIdentifiers::X86_COMPATIBLE,
-        ArchitectureIdentifiers::empty()
+        Architecture::X64_COMPATIBLE | Architecture::X86_COMPATIBLE,
+        Architecture::empty()
     )]
     #[case(
         "x64os or arm32compatible",
-        ArchitectureIdentifiers::X64_OS | ArchitectureIdentifiers::ARM32_COMPATIBLE,
-        ArchitectureIdentifiers::empty()
+        Architecture::X64_OS | Architecture::ARM32_COMPATIBLE,
+        Architecture::empty()
     )]
     #[case(
         "x64 x86",
-        ArchitectureIdentifiers::X64_OS | ArchitectureIdentifiers::X86_OS,
-        ArchitectureIdentifiers::empty()
+        Architecture::X64_OS | Architecture::X86_OS,
+        Architecture::empty()
     )]
-    #[case(
-        "",
-        ArchitectureIdentifiers::X86_COMPATIBLE,
-        ArchitectureIdentifiers::empty()
-    )]
-    #[case(
-        "not not not",
-        ArchitectureIdentifiers::X86_COMPATIBLE,
-        ArchitectureIdentifiers::empty()
-    )]
+    #[case("", Architecture::X86_COMPATIBLE, Architecture::empty())]
+    #[case("not not not", Architecture::X86_COMPATIBLE, Architecture::empty())]
     #[case(
         "and or not x64os",
-        ArchitectureIdentifiers::X86_COMPATIBLE,
-        ArchitectureIdentifiers::empty()
+        Architecture::X86_COMPATIBLE,
+        Architecture::empty()
     )]
-    fn test_architecture_expression(
+    fn architecture_expression(
         #[case] expression: &str,
-        #[case] expected_allowed: ArchitectureIdentifiers,
-        #[case] expected_disallowed: ArchitectureIdentifiers,
+        #[case] expected_allowed: Architecture,
+        #[case] expected_disallowed: Architecture,
     ) {
-        let (allowed, disallowed) = ArchitectureIdentifiers::from_expression(expression);
+        let (allowed, disallowed) = Architecture::from_expression(expression);
         assert_eq!(allowed, expected_allowed);
         assert_eq!(disallowed, expected_disallowed);
+    }
+
+    #[rstest]
+    #[case(StoredArchitecture::empty(), Architecture::empty())]
+    #[case(StoredArchitecture::UNKNOWN, Architecture::empty())]
+    #[case(
+        StoredArchitecture::all(),
+        Architecture::X64_OS | Architecture::ARM64 | Architecture::X86_OS
+    )]
+    fn stored_architecture_to_architecture(
+        #[case] stored_architecture: StoredArchitecture,
+        #[case] expected: Architecture,
+    ) {
+        assert_eq!(Architecture::from(stored_architecture), expected);
+    }
+
+    #[rstest]
+    #[case(Architecture::empty(), UnsupportedOSArchitecture::empty())]
+    #[case(
+        Architecture::all(),
+        UnsupportedOSArchitecture::X86
+        | UnsupportedOSArchitecture::X64
+        | UnsupportedOSArchitecture::ARM
+        | UnsupportedOSArchitecture::ARM64
+    )]
+    fn architecture_to_unsupported_os_architecture(
+        #[case] architecture: Architecture,
+        #[case] expected: UnsupportedOSArchitecture,
+    ) {
+        assert_eq!(UnsupportedOSArchitecture::from(architecture), expected);
     }
 }

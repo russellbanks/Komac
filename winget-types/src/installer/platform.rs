@@ -35,10 +35,8 @@ impl Display for Platform {
 }
 
 #[derive(Error, Debug, Eq, PartialEq)]
-pub enum PlatformParseError {
-    #[error("Platform did not match either `{WINDOWS_DESKTOP}` or `{WINDOWS_UNIVERSAL}`")]
-    Invalid,
-}
+#[error("Platform did not match either `{WINDOWS_DESKTOP}` or `{WINDOWS_UNIVERSAL}`")]
+pub struct PlatformParseError;
 
 impl FromStr for Platform {
     type Err = PlatformParseError;
@@ -47,7 +45,7 @@ impl FromStr for Platform {
         match s {
             WINDOWS_DESKTOP => Ok(Self::WINDOWS_DESKTOP),
             WINDOWS_UNIVERSAL => Ok(Self::WINDOWS_UNIVERSAL),
-            _ => Err(Self::Err::Invalid),
+            _ => Err(PlatformParseError),
         }
     }
 }
@@ -201,7 +199,7 @@ mod tests {
         assert!("Windows.Universal".parse::<Platform>().is_ok());
         assert_eq!(
             "WindowsDesktop".parse::<Platform>().err().unwrap(),
-            PlatformParseError::Invalid
+            PlatformParseError
         );
     }
 }

@@ -15,7 +15,7 @@ use crate::installers::inno::{
     enum_value::enum_value::enum_value,
     flag_reader::read_flags::read_flags,
     header::{
-        architecture::{ArchitectureIdentifiers, StoredArchitecture},
+        architecture::{Architecture, StoredArchitecture},
         enums::{
             AutoBool, Compression, ImageAlphaFormat, InnoStyle, InstallVerbosity,
             LanguageDetection, LogMode, PrivilegeLevel,
@@ -62,9 +62,9 @@ pub struct Header {
     pub setup_mutex: Option<String>,
     pub changes_environment: Option<String>,
     pub changes_associations: Option<String>,
-    pub architectures_allowed: ArchitectureIdentifiers,
-    pub architectures_disallowed: ArchitectureIdentifiers,
-    pub architectures_install_in_64_bit_mode: ArchitectureIdentifiers,
+    pub architectures_allowed: Architecture,
+    pub architectures_disallowed: Architecture,
+    pub architectures_install_in_64_bit_mode: Architecture,
     #[debug(skip)]
     pub license_text: Option<String>,
     pub info_before: Option<String>,
@@ -211,19 +211,14 @@ impl Header {
         }
         if *version >= (6, 3, 0) {
             let (allowed, disallowed) = InnoValue::new_string(reader, codepage)?.map_or_else(
-                || {
-                    (
-                        ArchitectureIdentifiers::X86_COMPATIBLE,
-                        ArchitectureIdentifiers::empty(),
-                    )
-                },
-                |architecture| ArchitectureIdentifiers::from_expression(&architecture),
+                || (Architecture::X86_COMPATIBLE, Architecture::empty()),
+                |architecture| Architecture::from_expression(&architecture),
             );
             header.architectures_allowed = allowed;
             header.architectures_disallowed = disallowed;
             header.architectures_install_in_64_bit_mode = InnoValue::new_string(reader, codepage)?
-                .map_or(ArchitectureIdentifiers::X86_COMPATIBLE, |architecture| {
-                    ArchitectureIdentifiers::from_expression(&architecture).0
+                .map_or(Architecture::X86_COMPATIBLE, |architecture| {
+                    Architecture::from_expression(&architecture).0
                 });
         }
         if *version >= (5, 2, 5) {
@@ -373,13 +368,12 @@ impl Header {
         }
         if *version >= (5, 1, 0) && *version < (6, 3, 0) {
             header.architectures_allowed =
-                StoredArchitecture::from_bits_retain(reader.read_u8()?).to_identifiers();
+                StoredArchitecture::from_bits_retain(reader.read_u8()?).into();
             header.architectures_install_in_64_bit_mode =
-                StoredArchitecture::from_bits_retain(reader.read_u8()?).to_identifiers();
+                StoredArchitecture::from_bits_retain(reader.read_u8()?).into();
         } else if *version < (5, 1, 0) {
-            header.architectures_allowed = StoredArchitecture::all().to_identifiers();
-            header.architectures_install_in_64_bit_mode =
-                StoredArchitecture::all().to_identifiers();
+            header.architectures_allowed = StoredArchitecture::all().into();
+            header.architectures_install_in_64_bit_mode = StoredArchitecture::all().into();
         }
         if *version >= (5, 2, 1) && *version < (5, 3, 10) {
             header.signed_uninstaller_original_size = reader.read_u32::<LE>()?;
