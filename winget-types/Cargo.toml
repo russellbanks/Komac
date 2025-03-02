@@ -28,5 +28,5 @@ url = { version = "2.5.4", features = ["serde"] }
 
 [dev-dependencies]
 indoc = "2.0.5"
-rstest = "0.24.0"
+rstest = "0.25.0"
 serde_yaml = "0.9.34"
