@@ -52,7 +52,7 @@ encoding_rs = "0.8.35"
 flate2 = "1.1.0"
 futures = "0.3.31"
 futures-util = "0.3.31"
-html2text = "0.14.0"
+html2text = "0.14.1"
 icu_locid = { version = "1.5.0", features = ["serde", "std"] }
 indexmap = "2.7.1"
 indicatif = "0.17.11"
