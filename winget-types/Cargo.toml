@@ -27,6 +27,6 @@ thiserror = "2.0.12"
 url = { version = "2.5.4", features = ["serde"] }
 
 [dev-dependencies]
-indoc = "2.0.5"
+indoc = "2.0.6"
 rstest = "0.25.0"
 serde_yaml = "0.9.34"
