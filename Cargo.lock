@@ -5941,7 +5941,9 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winget-types"
-version = "1.0.0"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a95a1fa0215cc63b30b4cc7f4258d789b0dade797d0a27f37972d099b5df89e9"
 dependencies = [
  "base16ct",
  "bitflags 2.9.0",
@@ -5952,14 +5954,11 @@ dependencies = [
  "derive_more",
  "heapless",
  "icu_locid",
- "indoc",
  "itertools 0.14.0",
  "package-family-name",
  "percent-encoding",
- "rstest",
  "serde",
  "serde_with",
- "serde_yaml",
  "sha2",
  "smallvec",
  "thiserror 2.0.12",
