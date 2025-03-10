@@ -1,3 +1,5 @@
+cargo-features = ["edition2024"]
+
 [package]
 name = "komac"
 version = "2.11.0"
