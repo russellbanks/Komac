@@ -25,7 +25,7 @@ strip = true
 
 [dependencies]
 anstream = "0.6.18"
-base64ct = { version = "1.6.0", features = ["std"] }
+base64ct = { version = "1.7.1", features = ["std"] }
 bit-set = "0.8.0"
 bitflags = "2.9.0"
 bon = "3.4.0"
