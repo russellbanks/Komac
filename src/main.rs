@@ -53,12 +53,8 @@ async fn main() -> Result<()> {
         .with(indicatif_layer)
         .with(
             filter::Targets::new()
-                .with_default(LevelFilter::DEBUG)
-                .with_targets([
-                    (crate_name!(), Level::TRACE),
-                    ("hyper_util", Level::INFO),
-                    ("html5ever", Level::INFO),
-                ]),
+                .with_default(LevelFilter::INFO)
+                .with_target(crate_name!(), Level::TRACE),
         )
         .init();
 
