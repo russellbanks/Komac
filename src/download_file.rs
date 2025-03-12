@@ -60,8 +60,8 @@ async fn download_file(
 
     let pb = multi_progress.add(ProgressBar::new(total_size)
         .with_style(ProgressStyle::default_bar()
-            .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
-            .progress_chars("#>-")
+            .template("{msg}\n{wide_bar:.magenta/black} {decimal_bytes:.green}/{decimal_total_bytes:.green} {decimal_bytes_per_sec:.red} eta {eta:.blue}")?
+            .progress_chars("───")
         )
         .with_message(format!("Downloading {url}"))
     );
