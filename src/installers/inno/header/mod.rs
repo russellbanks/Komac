@@ -65,6 +65,7 @@ pub struct Header {
     pub architectures_allowed: Architecture,
     pub architectures_disallowed: Architecture,
     pub architectures_install_in_64_bit_mode: Architecture,
+    pub close_applications_filter_excludes: Option<String>,
     #[debug(skip)]
     pub license_text: Option<String>,
     pub info_before: Option<String>,
@@ -220,6 +221,9 @@ impl Header {
                 .map_or(Architecture::X86_COMPATIBLE, |architecture| {
                     Architecture::from_expression(&architecture).0
                 });
+        }
+        if *version >= (6, 4, 2) {
+            header.close_applications_filter_excludes = InnoValue::new_string(reader, codepage)?;
         }
         if *version >= (5, 2, 5) {
             header.license_text = InnoValue::new_string(reader, WINDOWS_1252)?;
