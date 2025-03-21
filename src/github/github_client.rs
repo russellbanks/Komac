@@ -75,8 +75,8 @@ const GITHUB_GRAPHQL_URL: &str = "https://api.github.com/graphql";
 
 #[derive(Debug, Error)]
 pub enum GitHubError {
-    #[error("{}", .0.clone().unwrap_or_default().into_iter().next().map_or_else(|| String::from("Unknown GraphQL error"), |err| err.message))]
-    GraphQL(Option<Vec<GraphQlError>>),
+    #[error("{}", .0.into_iter().next().map_or_else(|| "Unknown GraphQL error", |err| &*err.message))]
+    GraphQL(Vec<GraphQlError>),
     #[error("{0} does not exist in {WINGET_PKGS_FULL_NAME}")]
     PackageNonExistent(PackageIdentifier),
     #[error("No {type} manifest was found in {path}")]
@@ -117,7 +117,7 @@ impl GitHub {
                 .run_graphql(GetCurrentUserLogin::build(()))
                 .await?;
             data.map(|data| data.viewer.login)
-                .ok_or(GitHubError::GraphQL(errors))
+                .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
         }
     }
 
@@ -271,7 +271,7 @@ impl GitHub {
                             .map(|text| GitHubFile { name, text })
                     })
             })
-            .ok_or(GitHubError::GraphQL(errors))
+            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
     }
 
     pub async fn get_manifest<T: Manifest + for<'de> Deserialize<'de>>(
@@ -302,7 +302,7 @@ impl GitHub {
             }))
             .await?;
         data.and_then(|data| data.repository?.object?.into_blob_text())
-            .ok_or(GitHubError::GraphQL(errors))
+            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
     }
 
     #[builder(finish_fn = send)]
@@ -330,16 +330,16 @@ impl GitHub {
 
         let repository = data
             .and_then(|data| data.repository)
-            .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
+            .ok_or_else(|| GitHubError::GraphQL(errors.clone().unwrap_or_default()))?;
 
         let default_branch = repository
             .default_branch_ref
-            .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
+            .ok_or_else(|| GitHubError::GraphQL(errors.clone().unwrap_or_default()))?;
 
         let commits = default_branch
             .target
             .and_then(TargetGitObject::into_commit)
-            .ok_or(GitHubError::GraphQL(errors))?;
+            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))?;
 
         Ok(RepositoryData {
             id: repository.id,
@@ -368,7 +368,7 @@ impl GitHub {
             }))
             .await?;
         data.and_then(|data| data.create_ref?.ref_)
-            .ok_or(GitHubError::GraphQL(errors))
+            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
     }
 
     #[builder(finish_fn = send)]
@@ -400,7 +400,7 @@ impl GitHub {
             .await?;
         data.and_then(|data| data.create_commit_on_branch?.commit)
             .map(|commit| commit.url)
-            .ok_or(GitHubError::GraphQL(errors))
+            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
     }
 
     pub async fn get_directory_content(
@@ -420,7 +420,7 @@ impl GitHub {
             .await?;
         let entries = data
             .and_then(|data| data.repository?.object?.into_entries())
-            .ok_or(GitHubError::GraphQL(errors))?;
+            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))?;
 
         Ok(entries.into_iter().filter_map(|entry| entry.path))
     }
@@ -446,16 +446,18 @@ impl GitHub {
 
             let repository = data
                 .and_then(|data| data.repository)
-                .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
+                .ok_or_else(|| GitHubError::GraphQL(errors.clone().unwrap_or_default()))?;
 
             let default_branch = repository
                 .default_branch_ref
-                .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
+                .ok_or_else(|| GitHubError::GraphQL(errors.clone().unwrap_or_default()))?;
 
             let RefConnection {
                 branches,
                 page_info,
-            } = repository.refs.ok_or(GitHubError::GraphQL(errors))?;
+            } = repository
+                .refs
+                .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))?;
 
             for branch in branches
                 .into_iter()
@@ -521,7 +523,7 @@ impl GitHub {
             .await?;
         data.and_then(|data| data.create_pull_request?.pull_request)
             .map(|pull_request| pull_request.url)
-            .ok_or(GitHubError::GraphQL(errors))
+            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
     }
 
     pub async fn delete_branches(
@@ -531,7 +533,7 @@ impl GitHub {
     ) -> Result<(), GitHubError> {
         const DELETE_ID: &str = str_repeat!("0", 40);
 
-        let GraphQlResponse { data, errors } = self
+        let GraphQlResponse { data: _, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(UpdateRefs::build(UpdateRefsVariables {
@@ -547,10 +549,10 @@ impl GitHub {
                 repository_id,
             }))
             .await?;
-        if data.is_some() {
-            Ok(())
-        } else {
+        if let Some(errors) = errors {
             Err(GitHubError::GraphQL(errors))
+        } else {
+            Ok(())
         }
     }
 
@@ -609,13 +611,16 @@ impl GitHub {
             }))
             .await?;
 
-        let values = data.ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
+        let values =
+            data.ok_or_else(|| GitHubError::GraphQL(errors.clone().unwrap_or_default()))?;
 
         let repository = values
             .repository
-            .ok_or_else(|| GitHubError::GraphQL(errors.clone()))?;
+            .ok_or_else(|| GitHubError::GraphQL(errors.clone().unwrap_or_default()))?;
 
-        let object = repository.object.ok_or(GitHubError::GraphQL(errors))?;
+        let object = repository
+            .object
+            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))?;
 
         let license_url = match object {
             GetAllValuesGitObject::Tree(Tree { entries }) => entries
@@ -683,7 +688,7 @@ impl GitHub {
         upstream_target_oid: GitObjectId,
         force: bool,
     ) -> Result<(), GitHubError> {
-        let GraphQlResponse { data, errors } = self
+        let GraphQlResponse { data: _, errors } = self
             .0
             .post(GITHUB_GRAPHQL_URL)
             .run_graphql(MergeUpstream::build(MergeUpstreamVariables {
@@ -692,10 +697,10 @@ impl GitHub {
                 force,
             }))
             .await?;
-        if data.is_some() {
-            Ok(())
-        } else {
+        if let Some(errors) = errors {
             Err(GitHubError::GraphQL(errors))
+        } else {
+            Ok(())
         }
     }
 
