@@ -116,7 +116,7 @@ where
     let _ = writeln!(result, "{} v{}", crate_name!(), crate_version!());
     let _ = writeln!(result, "# yaml-language-server: $schema={}", T::SCHEMA);
     let _ = writeln!(result);
-    let _ = writeln!(result, "{}", serde_yaml::to_string(manifest)?);
+    let _ = write!(result, "{}", serde_yaml::to_string(manifest)?);
     Ok(convert_to_crlf(&result).into_owned())
 }
 
