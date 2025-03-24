@@ -69,6 +69,9 @@ pub fn prompt_submit_option(
 
         if submit_option == SubmitOption::Edit {
             Editor::new(changes).run()?;
+        } else if submit_option == SubmitOption::SaveToFile {
+            let slice = &identifier[..1];
+            println!("Not implemented yet");
         } else {
             break;
         }
@@ -78,6 +81,7 @@ pub fn prompt_submit_option(
 
 #[derive(Display, EnumIter, Eq, PartialEq)]
 pub enum SubmitOption {
+    SaveToFile,
     Submit,
     Edit,
     Exit,
@@ -96,4 +100,9 @@ pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Utf8Pat
         .buffer_unordered(2)
         .try_collect()
         .await
+}
+
+pub async fn save_to_file(firstchar: &str, author: &str, name: &str, version: &str, manifest: &str, outpath: &str) -> std::io::Result<()> {
+    let mut file = fs::File::create(format!("{}/manifests/{}/{}/{}/{}.yaml", outpath, firstchar, author, name, version)).await?;
+    file.write_all(manifest.as_bytes()).await
 }
