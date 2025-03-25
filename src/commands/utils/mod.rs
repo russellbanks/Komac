@@ -1,7 +1,7 @@
 use anstream::println;
 use camino::Utf8Path;
 use chrono::Local;
-use color_eyre::Result;
+use color_eyre::{install, Result};
 use futures_util::{stream, StreamExt, TryStreamExt};
 use inquire::{Confirm, Select};
 use owo_colors::OwoColorize;
@@ -106,7 +106,10 @@ pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Utf8Pat
         .await
 }
 
-pub async fn save_to_file(firstchar: &str, author: &str, name: &str, version: &str, manifest: &str, outpath: &str) -> std::io::Result<()> {
-    let mut file = fs::File::create(format!("{}/manifests/{}/{}/{}/{}.yaml", outpath, firstchar, author, name, version)).await?;
-    file.write_all(manifest.as_bytes()).await
+pub async fn save_to_file(firstchar: &str, author: &str, name: &str, version: &str, manifest: &str, outpath: &str, installer_content: &str) -> std::io::Result<()> {
+    let mut file = std::fs::File::create(format!("{}/manifests/{}/{}/{}/{}.yaml", outpath, firstchar, author, name, version)).await?;
+    file.write_all(manifest.as_bytes()).await?;
+    let mut file2 = std::fs::File::create(format!("{}/manifests/{}/{}/{}/{}.yaml", outpath, firstchar, author, name, version));
+    file2.write_all(installer_content.as_bytes()).await?;
+    Ok(())
 }
