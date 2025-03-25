@@ -66,7 +66,7 @@ ordinal-trait = "0.1.0"
 owo-colors = "4.2.0"
 package-family-name = { version = "2.0.1", features = ["serde"] }
 protobuf = "3.7.2"
-quick-xml = { version = "0.37.2", features = ["serialize"] }
+quick-xml = { version = "0.37.3", features = ["serialize"] }
 rand = "0.9.0"
 ratatui = "0.29.0"
 regex = "1.11.1"
