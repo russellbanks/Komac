@@ -32,10 +32,10 @@ jobs:
             inno_arch: arm64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            bins: cargo-deb, cargo-generate-rpm
+            bins: cargo-zigbuild, cargo-deb, cargo-generate-rpm
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            bins: cross, cargo-deb, cargo-generate-rpm
+            bins: cargo-zigbuild, cargo-deb, cargo-generate-rpm
           - os: macos-latest
             target: x86_64-apple-darwin
           - os: macos-latest
@@ -46,6 +46,9 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v4
 
+      - uses: mlugg/setup-zig@v1
+        if: contains(matrix.platform.bins, 'cargo-zigbuild')
+
       - uses: moonrepo/setup-rust@v1
         with:
           targets: ${{ matrix.platform.target }}
@@ -53,10 +56,16 @@ jobs:
           cache: false
 
       - name: Build binary
-        shell: pwsh
+        shell: bash
+        env:
+          GLIBC_VERSION: 2.31
         run: |
-          $tool = if ("${{ matrix.platform.bins }}".Contains("cross")) { "cross" } else { "cargo" }
-          & $tool build --target ${{ matrix.platform.target }} --release --locked
+          if [[ "${{ matrix.platform.bins }}" == *"zigbuild"* ]]; then
+            build="cargo zigbuild --target ${{ matrix.platform.target }}.${GLIBC_VERSION}"
+          else
+            build="cargo build --target ${{ matrix.platform.target }}"
+          fi
+          eval "$build --release --locked"
 
       - name: Create Deb package
         if: contains(matrix.platform.bins, 'cargo-deb')
