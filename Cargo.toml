@@ -46,7 +46,7 @@ cynic = { version = "3.10.0", features = ["http-reqwest"] }
 derive-new = "0.7.0"
 derive_more = { version = "2.0.1", features = ["as_ref", "debug", "deref", "deref_mut", "display", "from_str", "into", "into_iterator"] }
 encoding_rs = "0.8.35"
-flate2 = "1.1.0"
+flate2 = "1.1.1"
 futures = "0.3.31"
 futures-util = "0.3.31"
 html2text = "0.14.2"
