@@ -121,17 +121,13 @@ impl UpdateVersion {
             self.package_identifier
         );
 
-        let replace_version = self
-            .replace
-            .as_ref()
-            .map(|version| {
-                if version.is_latest() {
-                    latest_version
-                } else {
-                    version
-                }
-            })
-            .filter(|&version| version != &self.package_version);
+        let replace_version = self.replace.as_ref().map(|version| {
+            if version.is_latest() {
+                latest_version
+            } else {
+                version
+            }
+        });
 
         if let Some(version) = replace_version {
             if !versions.contains(version) {
