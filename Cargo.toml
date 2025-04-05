@@ -41,7 +41,7 @@ color-eyre = { version = "0.6.3", default-features = false }
 compact_str = "0.9.0"
 const_format = { version = "0.2.34", features = ["derive"] }
 crc32fast = "1.4.2"
-crossterm = "0.28.1"
+crossterm = "0.29.0"
 cynic = { version = "3.10.0", features = ["http-reqwest"] }
 derive-new = "0.7.0"
 derive_more = { version = "2.0.1", features = ["as_ref", "debug", "deref", "deref_mut", "display", "from_str", "into", "into_iterator"] }
