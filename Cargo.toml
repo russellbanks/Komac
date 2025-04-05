@@ -79,7 +79,7 @@ strsim = "0.11.1"
 strum = { version = "0.27.1", features = ["derive"] }
 tempfile = "3.19.1"
 thiserror = "2.0.12"
-tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros", "fs"] }
+tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros", "fs"] }
 tracing = { version = "0.1.41", features = ["release_max_level_warn"] }
 tracing-indicatif = "0.3.9"
 tracing-subscriber = "0.3.19"
