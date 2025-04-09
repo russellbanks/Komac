@@ -28,7 +28,7 @@ anstream = "0.6.18"
 base64ct = { version = "1.7.3", features = ["std"] }
 bit-set = "0.8.0"
 bitflags = "2.9.0"
-bon = "3.5.1"
+bon = "3.5.2"
 byteorder = "1.5.0"
 bzip2 = "0.5.2"
 cab = "0.6.0"
