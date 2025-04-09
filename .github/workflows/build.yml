@@ -62,4 +62,9 @@ jobs:
           bins: cargo-msrv
 
       - name: Verify MSRV
+        id: verify
         run: cargo msrv verify
+
+      - name: Find actual MSRV
+        if: steps.verify.outcome == 'failure'
+        run: cargo msrv find
