@@ -32,11 +32,34 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
           cache: false
-      - run: cargo check --verbose
-      - run: cargo test --verbose
-      - run: cargo publish --dry-run
+
+      - name: Check
+        run: cargo check
+
+      - name: Test
+        run: cargo test
+
+      - name: Publish dry run
+        run: cargo publish --dry-run
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: cargo-msrv
+
+      - name: Verify MSRV
+        run: cargo msrv verify
