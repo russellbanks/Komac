@@ -9,10 +9,10 @@ use compact_str::CompactString;
 use msi::{Language, Package, Select};
 use tracing::debug;
 use winget_types::{
+    LanguageTag, Version,
     installer::{
         AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
     },
-    shared::{LanguageTag, Version},
 };
 
 use crate::installers::utils::{
@@ -110,32 +110,29 @@ impl Msi {
                     .or(Some(InstallerType::Msi)),
                 scope: all_users,
                 product_code: product_code.clone(),
-                apps_and_features_entries: [
-                    &product_name,
-                    &manufacturer,
-                    &product_version,
-                    &upgrade_code,
-                ]
-                .iter()
-                .any(|option| option.is_some())
-                .then(|| {
+                apps_and_features_entries: if product_name.is_some()
+                    || manufacturer.is_some()
+                    || product_version.is_some()
+                    || upgrade_code.is_some()
+                {
                     vec![AppsAndFeaturesEntry {
-                        display_name: product_name.map(CompactString::into_string),
-                        publisher: manufacturer.map(CompactString::into_string),
+                        display_name: product_name,
+                        publisher: manufacturer,
                         display_version: product_version.as_deref().map(Version::new),
                         product_code,
                         upgrade_code: upgrade_code.map(CompactString::into_string),
                         ..AppsAndFeaturesEntry::default()
                     }]
-                }),
-                installation_metadata: Self::find_install_directory(
-                    &Self::get_directory_table(&mut msi)?,
-                    &property_table,
-                )
-                .map(|install_directory| InstallationMetadata {
-                    default_install_location: Some(install_directory),
+                } else {
+                    vec![]
+                },
+                installation_metadata: InstallationMetadata {
+                    default_install_location: Self::find_install_directory(
+                        &Self::get_directory_table(&mut msi)?,
+                        &property_table,
+                    ),
                     ..InstallationMetadata::default()
-                }),
+                },
                 ..Installer::default()
             },
         })

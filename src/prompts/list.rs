@@ -4,12 +4,11 @@ use inquire::{Text, validator::Validation};
 use winget_types::{
     installer::{Command, FileExtension, InstallerReturnCode, Protocol},
     locale::Tag,
-    shared::value::ValueName,
 };
 
-use crate::prompts::handle_inquire_error;
+use crate::{prompts::handle_inquire_error, traits::Name};
 
-pub trait ListPrompt: ValueName {
+pub trait ListPrompt: Name {
     const HELP_MESSAGE: &'static str;
     const MAX_ITEMS: u16;
 }
@@ -39,13 +38,13 @@ impl ListPrompt for Command {
     const MAX_ITEMS: u16 = 16;
 }
 
-pub fn list_prompt<T>() -> color_eyre::Result<Option<BTreeSet<T>>>
+pub fn list_prompt<T>() -> color_eyre::Result<BTreeSet<T>>
 where
     T: FromStr + ListPrompt + Ord,
     <T as FromStr>::Err: Display,
 {
     const DELIMITERS: [char; 2] = [' ', ','];
-    let items = Text::new(&format!("{}:", <T as ValueName>::NAME))
+    let items = Text::new(&format!("{}:", <T as Name>::NAME))
         .with_help_message(T::HELP_MESSAGE)
         .with_validator(|input: &str| {
             let items = input
@@ -74,9 +73,5 @@ where
         .split(|char| DELIMITERS.contains(&char))
         .flat_map(T::from_str)
         .collect::<BTreeSet<_>>();
-    if items.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(items))
-    }
+    Ok(items)
 }

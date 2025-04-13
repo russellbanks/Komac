@@ -9,7 +9,7 @@ use inquire::Select;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use walkdir::WalkDir;
-use winget_types::shared::{GenericManifest, ManifestType};
+use winget_types::{GenericManifest, ManifestType};
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, SubmitOption, prompt_submit_option},
@@ -127,7 +127,7 @@ impl Submit {
         let version = &manifests.version.package_version;
 
         // Reorder the keys in case the manifests weren't created by komac
-        manifests.installer.reorder_keys(identifier, version);
+        manifests.installer.optimize();
 
         let package_path = get_package_path(identifier, Some(version), None);
         let mut changes = pr_changes()

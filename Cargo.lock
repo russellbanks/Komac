@@ -2511,7 +2511,6 @@ dependencies = [
  "futures",
  "futures-util",
  "html2text",
- "icu_locid",
  "indexmap 2.9.0",
  "indicatif",
  "indoc",
@@ -2526,7 +2525,6 @@ dependencies = [
  "open",
  "ordinal-trait",
  "owo-colors 4.2.0",
- "package-family-name",
  "protobuf",
  "quick-xml",
  "rand 0.9.0",
@@ -4328,29 +4326,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_with"
-version = "3.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6b6f7f2fcb69f747921f79f3926bd1e203fce4fef62c268dd3abfb6d86029aa"
-dependencies = [
- "serde",
- "serde_derive",
- "serde_with_macros",
-]
-
-[[package]]
-name = "serde_with_macros"
-version = "3.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d00caa5193a3c8362ac2b73be6b9e768aa5a4b2f721d8f4b339600c3cb51f8e"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
 name = "serde_yaml"
 version = "0.9.34+deprecated"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5993,24 +5968,21 @@ checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
 
 [[package]]
 name = "winget-types"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a95a1fa0215cc63b30b4cc7f4258d789b0dade797d0a27f37972d099b5df89e9"
+checksum = "c325fb4519193cec64da8fa03cd8f461718535c3312f389d1042c1f9cf3bcd0a"
 dependencies = [
  "base16ct",
  "bitflags 2.9.0",
  "camino",
  "chrono",
  "compact_str 0.9.0",
- "const_format",
- "derive_more",
  "heapless",
  "icu_locid",
  "itertools 0.14.0",
  "package-family-name",
  "percent-encoding",
  "serde",
- "serde_with",
  "sha2",
  "smallvec",
  "thiserror 2.0.12",

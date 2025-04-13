@@ -14,6 +14,7 @@ use ordinal_trait::Ordinal;
 use owo_colors::OwoColorize;
 use reqwest::Client;
 use winget_types::{
+    LanguageTag, ManifestType, ManifestVersion, PackageIdentifier, PackageVersion,
     installer::{
         Command, FileExtension, InstallModes, InstallerManifest, InstallerSuccessCode,
         InstallerType, Protocol, UpgradeBehavior,
@@ -23,12 +24,9 @@ use winget_types::{
         Author, Copyright, DefaultLocaleManifest, Description, License, Moniker, PackageName,
         Publisher, ShortDescription, Tag,
     },
-    shared::{
-        LanguageTag, ManifestType, ManifestVersion, PackageIdentifier, PackageVersion,
-        url::{
-            CopyrightUrl, DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl,
-            ReleaseNotesUrl,
-        },
+    url::{
+        CopyrightUrl, DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl,
+        ReleaseNotesUrl,
     },
     version::VersionManifest,
 };
@@ -251,8 +249,8 @@ impl NewVersion {
             }
             let mut analyser_installers = mem::take(&mut analyser.installers);
             for installer in &mut analyser_installers {
-                if installer_switches.is_any_some() {
-                    installer.switches = Some(installer_switches.clone());
+                if !installer_switches.is_empty() {
+                    installer.switches = installer_switches.clone();
                 }
             }
             installers.extend(analyser_installers);
@@ -269,7 +267,7 @@ impl NewVersion {
                 .iter()
                 .any(|installer| installer.r#type == Some(InstallerType::Inno))
             {
-                Some(InstallModes::all())
+                InstallModes::all()
             } else {
                 check_prompt::<InstallModes>()?
             },
@@ -279,11 +277,11 @@ impl NewVersion {
             protocols: list_prompt::<Protocol>()?,
             file_extensions: if installers
                 .iter()
-                .all(|installer| installer.file_extensions.is_none())
+                .all(|installer| installer.file_extensions.is_empty())
             {
                 list_prompt::<FileExtension>()?
             } else {
-                None
+                BTreeSet::new()
             },
             installers,
             manifest_type: ManifestType::Installer,
@@ -340,9 +338,9 @@ impl NewVersion {
             moniker: optional_prompt(self.moniker)?,
             tags: match github_values
                 .as_mut()
-                .and_then(|values| values.topics.take())
+                .map(|values| mem::take(&mut values.topics))
             {
-                Some(topics) => Some(topics),
+                Some(topics) => topics,
                 None => list_prompt::<Tag>()?,
             },
             release_notes_url: optional_prompt(self.release_notes_url)?,
@@ -353,11 +351,10 @@ impl NewVersion {
         installer_manifest
             .installers
             .iter_mut()
-            .filter_map(|installer| installer.apps_and_features_entries.as_mut())
-            .flatten()
-            .for_each(|entry| entry.deduplicate(&package_version, &default_locale_manifest));
+            .flat_map(|installer| &mut installer.apps_and_features_entries)
+            .for_each(|entry| entry.deduplicate(&default_locale_manifest));
 
-        installer_manifest.reorder_keys(&package_identifier, &package_version);
+        installer_manifest.optimize();
 
         let version_manifest = VersionManifest {
             package_identifier: package_identifier.clone(),

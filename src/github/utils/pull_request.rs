@@ -1,6 +1,6 @@
 use bon::builder;
 use color_eyre::Result;
-use winget_types::shared::PackageIdentifier;
+use winget_types::PackageIdentifier;
 
 use crate::manifests::{Manifests, build_manifest_string};
 

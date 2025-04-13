@@ -2,14 +2,11 @@ use std::{collections::BTreeSet, env, fmt::Write, num::NonZeroU32};
 
 use bon::builder;
 use clap::{crate_name, crate_version};
-use icu_locid::LanguageIdentifier;
 use rand::Rng;
 use uuid::Uuid;
 use winget_types::{
-    shared::{
-        ManifestType, ManifestTypeWithLocale, PackageIdentifier, PackageVersion, url::DecodedUrl,
-    },
-    traits::Manifest,
+    LanguageTag, Manifest, ManifestType, ManifestTypeWithLocale, PackageIdentifier, PackageVersion,
+    url::DecodedUrl,
 };
 
 use crate::update_state::UpdateState;
@@ -25,6 +22,7 @@ pub fn get_package_path(
     version: Option<&PackageVersion>,
     manifest_type: Option<&ManifestTypeWithLocale>,
 ) -> String {
+    let identifier = identifier.as_str();
     let first_character = identifier
         .chars()
         .next()
@@ -61,13 +59,14 @@ pub fn get_package_path(
 pub fn is_manifest_file<M: Manifest>(
     file_name: &str,
     package_identifier: &PackageIdentifier,
-    default_locale: Option<&LanguageIdentifier>,
+    default_locale: Option<&LanguageTag>,
 ) -> bool {
+    let package_identifier = package_identifier.as_str();
     let identifier_len = package_identifier.len();
     let file_name_len = file_name.len();
 
     // All manifest file names start with the package identifier
-    if !file_name.starts_with(package_identifier.as_str()) {
+    if !file_name.starts_with(package_identifier) {
         return false;
     }
 
@@ -154,7 +153,7 @@ pub fn pull_request_body(
                 env!("CARGO_PKG_REPOSITORY"),
                 crate_version!()
             );
-        };
+        }
 
         let _ = writeln!(body, " :{emoji}:");
     }
@@ -193,12 +192,12 @@ pub fn get_commit_title(
 
 #[cfg(test)]
 mod tests {
-    use icu_locid::langid;
     use rstest::rstest;
     use winget_types::{
+        LanguageTag, ManifestTypeWithLocale, PackageIdentifier,
+        icu_locid::langid,
         installer::InstallerManifest,
         locale::{DefaultLocaleManifest, LocaleManifest},
-        shared::{ManifestTypeWithLocale, PackageIdentifier},
         version::VersionManifest,
     };
 
@@ -273,7 +272,7 @@ mod tests {
         assert!(is_manifest_file::<DefaultLocaleManifest>(
             "Package.Identifier.locale.en-US.yaml",
             &"Package.Identifier".parse::<PackageIdentifier>().unwrap(),
-            Some(&langid!("en-US")),
+            Some(&LanguageTag::new(langid!("en-US"))),
         ))
     }
 
@@ -282,7 +281,7 @@ mod tests {
         assert!(!is_manifest_file::<DefaultLocaleManifest>(
             "Package.Identifier.locale.en-US.yaml",
             &"Package.Identifier".parse::<PackageIdentifier>().unwrap(),
-            Some(&langid!("zh-CN")),
+            Some(&LanguageTag::new(langid!("zh-CN"))),
         ))
     }
 
@@ -291,7 +290,7 @@ mod tests {
         assert!(is_manifest_file::<LocaleManifest>(
             "Package.Identifier.locale.zh-CN.yaml",
             &"Package.Identifier".parse::<PackageIdentifier>().unwrap(),
-            Some(&langid!("en-US")),
+            Some(&LanguageTag::new(langid!("en-US"))),
         ))
     }
 
@@ -300,7 +299,7 @@ mod tests {
         assert!(!is_manifest_file::<LocaleManifest>(
             "Package.Identifier.locale.en-US.yaml",
             &"Package.Identifier".parse::<PackageIdentifier>().unwrap(),
-            Some(&langid!("en-US")),
+            Some(&LanguageTag::new(langid!("en-US"))),
         ))
     }
 

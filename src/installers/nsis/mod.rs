@@ -7,11 +7,12 @@ mod state;
 mod strings;
 mod version;
 
-use std::{borrow::Cow, io, io::Read};
+use std::{io, io::Read};
 
 use byteorder::{LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
+use compact_str::CompactString;
 use flate2::read::DeflateDecoder;
 use header::block::BlockType;
 use liblzma::read::XzDecoder;
@@ -22,10 +23,10 @@ use strsim::levenshtein;
 use thiserror::Error;
 use tracing::debug;
 use winget_types::{
+    LanguageTag, Version,
     installer::{
         AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
     },
-    shared::{LanguageTag, Version},
 };
 use yara_x::mods::{PE, pe::Machine};
 use zerocopy::{FromBytes, TryFromBytes, little_endian::I32};
@@ -123,7 +124,7 @@ impl Nsis {
                 } else if file_stem == Some(APP_32) {
                     architecture = Some(Architecture::X86);
                 }
-            };
+            }
         }
 
         let install_dir = (header.install_directory_ptr != I32::ZERO)
@@ -223,24 +224,28 @@ impl Nsis {
                     .ok(),
                 architecture: architecture.unwrap_or(Architecture::X86),
                 r#type: Some(InstallerType::Nullsoft),
-                scope: install_dir.as_deref().and_then(Scope::from_install_dir),
+                scope: install_dir
+                    .as_deref()
+                    .and_then(Scope::from_install_directory),
                 product_code: product_code.map(str::to_owned),
-                apps_and_features_entries: [&display_name, &publisher, &display_version]
-                    .iter()
-                    .any(|option| option.is_some())
-                    .then(|| {
-                        vec![AppsAndFeaturesEntry {
-                            display_name: display_name.map(Cow::into_owned),
-                            publisher: publisher.map(Cow::into_owned),
-                            display_version: display_version.as_deref().map(Version::new),
-                            product_code: product_code.map(str::to_owned),
-                            ..AppsAndFeaturesEntry::default()
-                        }]
-                    }),
-                installation_metadata: install_dir.is_some().then(|| InstallationMetadata {
+                apps_and_features_entries: if display_name.is_some()
+                    || publisher.is_some()
+                    || display_version.is_some()
+                {
+                    vec![AppsAndFeaturesEntry {
+                        display_name: display_name.map(CompactString::from),
+                        publisher: publisher.map(CompactString::from),
+                        display_version: display_version.as_deref().map(Version::new),
+                        product_code: product_code.map(str::to_owned),
+                        ..AppsAndFeaturesEntry::default()
+                    }]
+                } else {
+                    vec![]
+                },
+                installation_metadata: InstallationMetadata {
                     default_install_location: install_dir.as_deref().map(Utf8PathBuf::from),
                     ..InstallationMetadata::default()
-                }),
+                },
                 ..Installer::default()
             },
         })

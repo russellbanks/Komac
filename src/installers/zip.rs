@@ -7,12 +7,15 @@ use std::{
 
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::Result;
-use inquire::{MultiSelect, Text, min_length};
+use inquire::{MultiSelect, min_length};
 use memmap2::Mmap;
 use winget_types::installer::{Installer, InstallerType, NestedInstallerFiles};
 use zip::ZipArchive;
 
-use crate::{file_analyser::FileAnalyser, prompts::handle_inquire_error};
+use crate::{
+    file_analyser::FileAnalyser,
+    prompts::{handle_inquire_error, text::required_prompt},
+};
 
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
     ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];
@@ -64,7 +67,7 @@ impl<R: Read + Seek> Zip<R> {
             })
             .collect::<HashMap<_, _>>();
 
-        let mut nested_installer_files = None;
+        let mut nested_installer_files = BTreeSet::new();
         let mut installers = None;
 
         // If there's only one valid file in the zip, extract and analyse it
@@ -75,10 +78,10 @@ impl<R: Read + Seek> Zip<R> {
             == 1
         {
             let chosen_file_name = &possible_installer_files[0];
-            nested_installer_files = Some(BTreeSet::from([NestedInstallerFiles {
+            nested_installer_files = BTreeSet::from([NestedInstallerFiles {
                 relative_file_path: chosen_file_name.clone(),
                 portable_command_alias: None,
-            }]));
+            }]);
             if let Ok(mut chosen_file) = zip.by_name(chosen_file_name.as_str()) {
                 let mut temp_file = tempfile::tempfile()?;
                 io::copy(&mut chosen_file, &mut temp_file)?;
@@ -92,7 +95,7 @@ impl<R: Read + Seek> Zip<R> {
                             r#type: Some(InstallerType::Zip),
                             nested_installer_type: installer
                                 .r#type
-                                .and_then(InstallerType::to_nested),
+                                .and_then(|installer_type| installer_type.try_into().ok()),
                             nested_installer_files: nested_installer_files.clone(),
                             ..installer
                         })
@@ -131,36 +134,28 @@ impl<R: Read + Seek> Zip<R> {
             )?;
             let map = unsafe { Mmap::map(&temp_file) }?;
             let file_analyser = FileAnalyser::new(&map, first_choice.file_name().unwrap())?;
-            let nested_installer_files = Some(
-                chosen
-                    .into_iter()
-                    .map(|path| {
-                        Ok(NestedInstallerFiles {
-                            portable_command_alias: if file_analyser.installers[0].r#type
-                                == Some(InstallerType::Portable)
-                            {
-                                Some(
-                                    Text::new(&format!(
-                                        "Portable command alias for {}:",
-                                        path.as_str()
-                                    ))
-                                    .prompt()
-                                    .map_err(handle_inquire_error)?,
-                                )
-                                .filter(|alias| !alias.trim().is_empty())
-                            } else {
-                                None
-                            },
-                            relative_file_path: path,
-                        })
+            let nested_installer_files = chosen
+                .into_iter()
+                .map(|path| {
+                    Ok(NestedInstallerFiles {
+                        portable_command_alias: if file_analyser.installers[0].r#type
+                            == Some(InstallerType::Portable)
+                        {
+                            Some(required_prompt(None)?)
+                        } else {
+                            None
+                        },
+                        relative_file_path: path,
                     })
-                    .collect::<Result<BTreeSet<_>>>()?,
-            );
+                })
+                .collect::<Result<BTreeSet<_>>>()?;
             self.installers = file_analyser
                 .installers
                 .into_iter()
                 .map(|installer| Installer {
-                    nested_installer_type: installer.r#type.and_then(InstallerType::to_nested),
+                    nested_installer_type: installer
+                        .r#type
+                        .and_then(|installer_type| installer_type.try_into().ok()),
                     nested_installer_files: nested_installer_files.clone(),
                     ..installer
                 })

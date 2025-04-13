@@ -7,23 +7,22 @@ use inquire::{
     Confirm, CustomUserError, InquireError, Text, error::InquireResult, validator::Validation,
 };
 use winget_types::{
-    installer::switches::{CustomSwitch, SilentSwitch, SilentWithProgressSwitch},
+    LanguageTag, PackageIdentifier, PackageVersion,
+    installer::{
+        PortableCommandAlias,
+        switches::{CustomSwitch, SilentSwitch, SilentWithProgressSwitch},
+    },
     locale::{
         Author, Copyright, Description, License, Moniker, PackageName, Publisher, ShortDescription,
     },
-    shared::{
-        LanguageTag, PackageIdentifier, PackageVersion,
-        url::{
-            CopyrightUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl,
-            ReleaseNotesUrl,
-        },
-        value::ValueName,
+    url::{
+        CopyrightUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl, ReleaseNotesUrl,
     },
 };
 
-use crate::prompts::handle_inquire_error;
+use crate::{prompts::handle_inquire_error, traits::Name};
 
-pub trait TextPrompt: ValueName {
+pub trait TextPrompt: Name {
     const HELP_MESSAGE: Option<&'static str> = None;
     const PLACEHOLDER: Option<&'static str> = None;
 }
@@ -93,6 +92,8 @@ impl TextPrompt for CopyrightUrl {}
 
 impl TextPrompt for ReleaseNotesUrl {}
 
+impl TextPrompt for PortableCommandAlias {}
+
 pub fn optional_prompt<T>(parameter: Option<T>) -> InquireResult<Option<T>>
 where
     T: FromStr + TextPrompt,
@@ -101,7 +102,7 @@ where
     if let Some(value) = parameter {
         Ok(Some(value))
     } else {
-        let message = format!("{}:", <T as ValueName>::NAME);
+        let message = format!("{}:", <T as Name>::NAME);
         let mut prompt = Text::new(&message).with_validator(|input: &str| {
             if input.is_empty() {
                 Ok(Validation::Valid)

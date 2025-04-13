@@ -8,7 +8,7 @@ use inquire::{
     validator::{MaxLengthValidator, MinLengthValidator},
 };
 use owo_colors::OwoColorize;
-use winget_types::shared::{PackageIdentifier, PackageVersion};
+use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
     credential::handle_token,

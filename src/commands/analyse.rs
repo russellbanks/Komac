@@ -6,7 +6,7 @@ use clap::Parser;
 use color_eyre::{Result, eyre::ensure};
 use memmap2::Mmap;
 use sha2::{Digest, Sha256};
-use winget_types::shared::Sha256String;
+use winget_types::Sha256String;
 
 use crate::{file_analyser::FileAnalyser, manifests::print_manifest};
 
@@ -47,7 +47,7 @@ impl Analyse {
             .unwrap_or_else(|| self.file_path.as_str());
         let mut analyser = FileAnalyser::new(&mmap, file_name)?;
         if self.hash {
-            let sha_256 = Sha256String::from_hasher(&Sha256::digest(&mmap))?;
+            let sha_256 = Sha256String::from_digest(&Sha256::digest(&mmap));
             for installer in &mut analyser.installers {
                 installer.sha_256 = sha_256.clone();
             }

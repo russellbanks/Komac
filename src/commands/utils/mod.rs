@@ -9,7 +9,7 @@ use inquire::{Select, error::InquireResult};
 use owo_colors::OwoColorize;
 use strum::{Display, EnumIter, IntoEnumIterator};
 use tokio::{fs, fs::File, io::AsyncWriteExt};
-use winget_types::shared::{PackageIdentifier, PackageVersion};
+use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
     editor::Editor,

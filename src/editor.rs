@@ -26,7 +26,7 @@ impl Default for SearchBox<'_> {
 }
 
 impl SearchBox<'_> {
-    fn open(&mut self) {
+    const fn open(&mut self) {
         self.open = true;
     }
 

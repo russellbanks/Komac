@@ -1,10 +1,11 @@
 mod manifest;
 mod wix_burn_stub;
 
-use std::{io, io::Cursor, ops::Not};
+use std::{io, io::Cursor};
 
 use cab::Cabinet;
 use camino::Utf8PathBuf;
+use compact_str::CompactString;
 use quick_xml::de::from_str;
 use thiserror::Error;
 use tracing::debug;
@@ -58,14 +59,15 @@ impl Burn {
             let manifest = io::read_to_string(ux_cabinet.read_file("0")?)?;
             let manifest = from_str::<BurnManifest>(&manifest)?;
 
-            let mut apps_and_features_entries = vec![AppsAndFeaturesEntry {
-                display_name: Some(manifest.registration.arp.display_name.to_owned()),
-                publisher: manifest.registration.arp.publisher.map(str::to_owned),
-                display_version: Some(manifest.registration.arp.display_version),
-                product_code: Some(manifest.registration.id.to_owned()),
-                upgrade_code: Some(manifest.related_bundle.code.to_owned()),
-                installer_type: Some(InstallerType::Burn),
-            }];
+            let mut apps_and_features_entries = vec![
+                AppsAndFeaturesEntry::new()
+                    .with_display_name(manifest.registration.arp.display_name)
+                    .with_publisher::<_, &str>(manifest.registration.arp.publisher)
+                    .with_display_version(manifest.registration.arp.display_version)
+                    .with_product_code(manifest.registration.id)
+                    .with_upgrade_code(manifest.related_bundle.code)
+                    .with_installer_type(InstallerType::Burn),
+            ];
 
             for msi_package in manifest
                 .chain
@@ -88,10 +90,10 @@ impl Burn {
                 })
             {
                 apps_and_features_entries.push(AppsAndFeaturesEntry {
-                    display_name: msi_package.provides.display_name.map(str::to_owned),
-                    publisher: manifest.registration.arp.publisher.map(str::to_owned),
+                    display_name: msi_package.provides.display_name.map(CompactString::from),
+                    publisher: manifest.registration.arp.publisher.map(CompactString::from),
                     display_version: Some(msi_package.version),
-                    product_code: Some(msi_package.product_code.to_owned()),
+                    product_code: Some(manifest.registration.id.to_owned()),
                     upgrade_code: msi_package.upgrade_code.map(str::to_owned),
                     installer_type: manifest
                         .payloads
@@ -119,10 +121,7 @@ impl Burn {
                         .per_machine
                         .then_some(Scope::Machine)
                         .or(Some(Scope::User)),
-                    apps_and_features_entries: apps_and_features_entries
-                        .is_empty()
-                        .not()
-                        .then_some(apps_and_features_entries),
+                    apps_and_features_entries,
                     installation_metadata: manifest
                         .variables
                         .iter()
@@ -133,7 +132,8 @@ impl Burn {
                         .map(|install_folder| InstallationMetadata {
                             default_install_location: Some(Utf8PathBuf::from(&install_folder)),
                             ..InstallationMetadata::default()
-                        }),
+                        })
+                        .unwrap_or_default(),
                     ..Installer::default()
                 },
             })

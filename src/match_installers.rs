@@ -19,7 +19,7 @@ pub fn match_installers(
         .iter()
         .filter_map(|installer| {
             let url = &installer.url;
-            Scope::from_url(url.as_str()).map(|scope| (url, scope))
+            Scope::find_in(url.as_str()).map(|scope| (url, scope))
         })
         .collect::<HashMap<_, _>>();
 
@@ -85,7 +85,7 @@ mod tests {
 
     use winget_types::{
         installer::{Architecture, Installer, Scope},
-        shared::url::DecodedUrl,
+        url::DecodedUrl,
     };
 
     use crate::match_installers::match_installers;

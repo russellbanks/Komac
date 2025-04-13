@@ -2,19 +2,21 @@ use std::{collections::HashMap, mem, sync::LazyLock};
 
 use derive_new::new;
 use html2text::render::{TaggedLine, TextDecorator};
+pub use name::Name;
 use regex::Regex;
 use winget_types::{
+    Manifest, ManifestVersion, PackageVersion,
     installer::Architecture,
     locale::{
         Copyright, DefaultLocaleManifest, LocaleManifest, PackageName, Publisher, ReleaseNotes,
     },
-    shared::{ManifestVersion, PackageVersion, url::ReleaseNotesUrl},
-    traits::Manifest,
+    url::ReleaseNotesUrl,
 };
 use yara_x::mods::pe::Machine;
 
 use crate::github::{github_client::GitHubValues, graphql::types::Html};
 
+pub mod name;
 pub mod path;
 pub mod url;
 
@@ -238,10 +240,11 @@ impl LocaleExt for DefaultLocaleManifest {
         {
             self.license_url = Some(github_license_url);
         }
-        if self.tags.is_none() {
+        if self.tags.is_empty() {
             self.tags = github_values
                 .as_mut()
-                .and_then(|values| values.topics.take());
+                .map(|values| mem::take(&mut values.topics))
+                .unwrap_or_default();
         }
         self.release_notes = github_values
             .as_mut()

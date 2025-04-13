@@ -58,7 +58,7 @@ impl Registry {
 
         if *version >= (4, 1, 0) {
             registry.permission = reader.read_i16::<LE>()?;
-        };
+        }
 
         registry.r#type = enum_value!(reader, RegistryType)?;
 

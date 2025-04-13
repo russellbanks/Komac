@@ -13,6 +13,7 @@ mod wizard;
 use std::{io, io::Cursor, mem};
 
 use camino::Utf8PathBuf;
+use compact_str::CompactString;
 use const_format::formatcp;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use entry::language::Language;
@@ -21,12 +22,12 @@ use msi::Language as CodePageLanguage;
 use thiserror::Error;
 use tracing::{debug, trace};
 use winget_types::{
+    LanguageTag, Sha256String, Version,
     installer::{
         AppsAndFeaturesEntry, InstallationMetadata, Installer, InstallerType, Scope,
-        UnsupportedOSArchitecture,
         switches::{CustomSwitch, InstallerSwitches},
     },
-    shared::{LanguageTag, Sha256String, Version, url::DecodedUrl},
+    url::DecodedUrl,
 };
 use yara_x::mods::{PE, pe::ResourceType};
 use zerocopy::TryFromBytes;
@@ -217,31 +218,34 @@ impl Inno {
             }),
             architecture: mem::take(&mut header.architectures_allowed).into(),
             r#type: Some(InstallerType::Inno),
-            scope: install_dir.as_deref().and_then(Scope::from_install_dir),
+            scope: install_dir
+                .as_deref()
+                .and_then(Scope::from_install_directory),
             url: DecodedUrl::default(),
             sha_256: Sha256String::default(),
             product_code: header.app_id.clone().map(to_product_code),
-            unsupported_os_architectures: Some(header.architectures_disallowed.into())
-                .filter(|architectures: &UnsupportedOSArchitecture| !architectures.is_empty()),
-            apps_and_features_entries: (header.uninstall_name.is_some()
+            unsupported_os_architectures: header.architectures_disallowed.into(),
+            apps_and_features_entries: if header.uninstall_name.is_some()
                 || header.app_publisher.is_some()
-                || header.app_version.is_some())
-            .then(|| {
+                || header.app_version.is_some()
+            {
                 vec![AppsAndFeaturesEntry {
-                    display_name: header.uninstall_name.take(),
-                    publisher: header.app_publisher.take(),
+                    display_name: header.uninstall_name.take().map(CompactString::from),
+                    publisher: header.app_publisher.take().map(CompactString::from),
                     display_version: header.app_version.as_deref().map(Version::new),
                     product_code: header.app_id.take().map(to_product_code),
                     ..AppsAndFeaturesEntry::default()
                 }]
-            }),
+            } else {
+                vec![]
+            },
             elevation_requirement: header
                 .privileges_required
                 .to_elevation_requirement(&header.privileges_required_overrides_allowed),
-            installation_metadata: install_dir.is_some().then(|| InstallationMetadata {
+            installation_metadata: InstallationMetadata {
                 default_install_location: install_dir.map(Utf8PathBuf::from),
                 ..InstallationMetadata::default()
-            }),
+            },
             ..Default::default()
         };
 
@@ -253,18 +257,18 @@ impl Inno {
                 .privileges_required_overrides_allowed
                 .contains(PrivilegesRequiredOverrides::COMMAND_LINE);
             if has_scope_switch {
-                installer.switches = Some(InstallerSwitches {
+                installer.switches = InstallerSwitches {
                     custom: Some(CustomSwitch::all_users()),
                     ..InstallerSwitches::default()
-                });
+                };
             }
             let user_installer = Installer {
                 scope: Some(Scope::User),
-                switches: has_scope_switch.then(|| InstallerSwitches {
-                    custom: Some(CustomSwitch::current_user()),
+                switches: InstallerSwitches {
+                    custom: has_scope_switch.then(CustomSwitch::current_user),
                     ..InstallerSwitches::default()
-                }),
-                installation_metadata: None,
+                },
+                installation_metadata: InstallationMetadata::default(),
                 ..installer.clone()
             };
             vec![installer, user_installer]

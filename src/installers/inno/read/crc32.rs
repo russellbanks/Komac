@@ -16,7 +16,7 @@ impl<R: Read> Crc32Reader<R> {
     }
 
     /// Provides mutable access to the inner reader without affecting the hasher
-    pub fn get_mut(&mut self) -> &mut R {
+    pub const fn get_mut(&mut self) -> &mut R {
         &mut self.inner
     }
 

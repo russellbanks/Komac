@@ -50,7 +50,6 @@ flate2 = "1.1.1"
 futures = "0.3.31"
 futures-util = "0.3.31"
 html2text = "0.14.3"
-icu_locid = { version = "1.5.0", features = ["serde", "std"] }
 indexmap = "2.9.0"
 indicatif = "0.17.11"
 inquire = "0.7.5"
@@ -64,7 +63,6 @@ num_cpus = "1.16.0"
 open = "5.3.2"
 ordinal-trait = "0.1.0"
 owo-colors = "4.2.0"
-package-family-name = { version = "2.0.1", features = ["serde"] }
 protobuf = "3.7.2"
 quick-xml = { version = "0.37.4", features = ["serialize"] }
 rand = "0.9.0"
@@ -89,7 +87,7 @@ tui-textarea = { version = "0.7.0", features = ["search"] }
 url = { version = "2.5.3", features = ["serde"] }
 uuid = { version = "1.16.0", features = ["v4"] }
 walkdir = "2.5.0"
-winget-types = "0.1.0"
+winget-types = { version = "0.2.0", features = ["serde", "std"] }
 yara-x = { version = "0.14.0", default-features = false, features = ["pe-module"] }
 zerocopy = { version = "0.8.24", features = ["derive", "std"] }
 zip = { version = "2.6.1", default-features = false, features = ["deflate"] }

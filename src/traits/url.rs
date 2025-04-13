@@ -1,5 +1,5 @@
 use reqwest::{Client, ClientBuilder, Response, redirect::Policy};
-use winget_types::shared::url::DecodedUrl;
+use winget_types::url::DecodedUrl;
 
 use crate::github::github_client::GITHUB_HOST;
 
@@ -62,7 +62,7 @@ impl ConvertGitHubLatestToVersioned for DecodedUrl {
                             **self = final_url.clone();
                         }
                     }
-                };
+                }
             }
         }
         Ok(())

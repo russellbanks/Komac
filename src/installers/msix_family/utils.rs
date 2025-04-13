@@ -5,8 +5,7 @@ use std::{
 
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
-use package_family_name::PackageFamilyName;
-use winget_types::shared::Sha256String;
+use winget_types::{Sha256String, installer::PackageFamilyName};
 use zip::ZipArchive;
 
 use crate::installers::{msix_family::APPX_SIGNATURE_P7X, utils::RELATIVE_PROGRAM_FILES_64};
@@ -20,7 +19,7 @@ pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Res
 
 pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> io::Result<Sha256String> {
     let signature_file = zip.by_name(APPX_SIGNATURE_P7X)?;
-    Sha256String::from_reader(signature_file)
+    Sha256String::hash_from_reader(signature_file)
 }
 
 pub fn get_install_location(

@@ -14,12 +14,9 @@ use owo_colors::OwoColorize;
 use reqwest::Client;
 use strsim::levenshtein;
 use winget_types::{
+    PackageIdentifier, PackageVersion,
     installer::{InstallerType, MinimumOSVersion, NestedInstallerFiles},
-    shared::{
-        PackageIdentifier, PackageVersion,
-        url::{DecodedUrl, ReleaseNotesUrl},
-    },
-    traits::Closest,
+    url::{DecodedUrl, ReleaseNotesUrl},
 };
 
 use crate::{
@@ -179,6 +176,7 @@ impl UpdateVersion {
                 installer
             })
             .collect::<Vec<_>>();
+        manifests.default_locale.package_version = self.package_version.clone();
         let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
@@ -194,16 +192,16 @@ impl UpdateVersion {
                 let mut installer = new_installer.clone().merge_with(previous_installer);
                 installer.r#type = installer_type;
                 installer.url.clone_from(&new_installer.url);
-                installer.nested_installer_files = installer
-                    .nested_installer_files
-                    .or_else(|| manifests.installer.nested_installer_files.clone())
-                    .and_then(|nested_installer_files| {
-                        validate_relative_paths(nested_installer_files, analyser.zip.as_ref())
-                    });
-                if let Some(entries) = installer.apps_and_features_entries.as_mut() {
-                    for entry in entries {
-                        entry.deduplicate(&self.package_version, &manifests.default_locale);
-                    }
+                installer.nested_installer_files = fix_relative_paths(
+                    if installer.nested_installer_files.is_empty() {
+                        manifests.installer.nested_installer_files.clone()
+                    } else {
+                        installer.nested_installer_files
+                    },
+                    analyser.zip.as_ref(),
+                );
+                for entry in &mut installer.apps_and_features_entries {
+                    entry.deduplicate(&manifests.default_locale);
                 }
                 installer
             })
@@ -212,11 +210,9 @@ impl UpdateVersion {
         manifests.installer.minimum_os_version = manifests
             .installer
             .minimum_os_version
-            .filter(|minimum_os_version| *minimum_os_version != MinimumOSVersion::removable());
+            .filter(|minimum_os_version| *minimum_os_version != MinimumOSVersion::new(10, 0, 0, 0));
         manifests.installer.installers = installers;
-        manifests
-            .installer
-            .reorder_keys(&self.package_identifier, &self.package_version);
+        manifests.installer.optimize();
 
         let mut github_values = match github_values {
             Some(future) => Some(future.await?),
@@ -304,11 +300,11 @@ impl UpdateVersion {
     }
 }
 
-fn validate_relative_paths<R: Read + Seek>(
+fn fix_relative_paths<R: Read + Seek>(
     nested_installer_files: BTreeSet<NestedInstallerFiles>,
     zip: Option<&Zip<R>>,
-) -> Option<BTreeSet<NestedInstallerFiles>> {
-    let relative_paths = nested_installer_files
+) -> BTreeSet<NestedInstallerFiles> {
+    nested_installer_files
         .into_iter()
         .filter_map(|nested_installer_files| {
             if let Some(zip) = zip {
@@ -334,11 +330,5 @@ fn validate_relative_paths<R: Read + Seek>(
             }
             None
         })
-        .collect::<BTreeSet<_>>();
-
-    if relative_paths.is_empty() {
-        None
-    } else {
-        Some(relative_paths)
-    }
+        .collect::<BTreeSet<_>>()
 }

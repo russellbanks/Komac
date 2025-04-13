@@ -6,10 +6,9 @@ use std::{
 use color_eyre::eyre::Result;
 use itertools::Itertools;
 use memmap2::Mmap;
-use package_family_name::PackageFamilyName;
 use quick_xml::de::from_str;
 use serde::Deserialize;
-use winget_types::installer::Installer;
+use winget_types::installer::{Installer, PackageFamilyName};
 use zip::ZipArchive;
 
 use crate::installers::msix_family::{

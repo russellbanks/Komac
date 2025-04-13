@@ -6,7 +6,7 @@ use serde::{
     Deserialize, Deserializer,
     de::{Unexpected, Visitor},
 };
-use winget_types::shared::Version;
+use winget_types::Version;
 
 use crate::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,

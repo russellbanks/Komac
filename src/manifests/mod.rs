@@ -13,9 +13,9 @@ use owo_colors::{OwoColorize, Style, colors::css::SlateGrey};
 use serde::Serialize;
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
 use winget_types::{
+    Manifest,
     installer::InstallerManifest,
     locale::{DefaultLocaleManifest, LocaleManifest},
-    traits::Manifest,
     version::VersionManifest,
 };
 

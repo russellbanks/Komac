@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, env, future::Future, num::NonZeroU32, ops::Not, str::FromStr};
+use std::{collections::BTreeSet, env, future::Future, num::NonZeroU32, str::FromStr};
 
 use base64ct::{Base64, Encoding};
 use bon::bon;
@@ -16,15 +16,10 @@ use serde::Deserialize;
 use thiserror::Error;
 use url::Url;
 use winget_types::{
+    Manifest, ManifestType, ManifestTypeWithLocale, PackageIdentifier, PackageVersion,
     installer::InstallerManifest,
     locale::{DefaultLocaleManifest, License, LocaleManifest, ReleaseNotes, Tag},
-    shared::{
-        ManifestType, ManifestTypeWithLocale, PackageIdentifier, PackageVersion,
-        url::{
-            DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl, ReleaseNotesUrl,
-        },
-    },
-    traits::Manifest,
+    url::{DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl, ReleaseNotesUrl},
     version::VersionManifest,
 };
 
@@ -75,7 +70,7 @@ const GITHUB_GRAPHQL_URL: &str = "https://api.github.com/graphql";
 
 #[derive(Debug, Error)]
 pub enum GitHubError {
-    #[error("{}", .0.into_iter().next().map_or_else(|| "Unknown GraphQL error", |err| &*err.message))]
+    #[error("{}", .0.iter().next().map_or_else(|| "Unknown GraphQL error", |err| &*err.message))]
     GraphQL(Vec<GraphQlError>),
     #[error("{0} does not exist in {WINGET_PKGS_FULL_NAME}")]
     PackageNonExistent(PackageIdentifier),
@@ -549,11 +544,7 @@ impl GitHub {
                 repository_id,
             }))
             .await?;
-        if let Some(errors) = errors {
-            Err(GitHubError::GraphQL(errors))
-        } else {
-            Ok(())
-        }
+        errors.map_or(Ok(()), |errors| Err(GitHubError::GraphQL(errors)))
     }
 
     pub async fn get_existing_pull_request(
@@ -662,13 +653,8 @@ impl GitHub {
             publisher_support_url,
             license: repository
                 .license_info
-                .and_then(|mut license| {
-                    license.is_pseudo.not().then(|| {
-                        license.spdx_id.unwrap_or_else(|| {
-                            license.key.make_ascii_uppercase();
-                            license.key
-                        })
-                    })
+                .and_then(|license| {
+                    (!license.is_pseudo).then(|| license.spdx_id.unwrap_or(license.key))
                 })
                 .and_then(|license| License::new(license).ok()),
             license_url,
@@ -678,7 +664,7 @@ impl GitHub {
                 .and_then(|release| ReleaseNotes::from_html(release.description_html.as_ref()?)),
             release_notes_url: release
                 .and_then(|release| release.url.as_str().parse::<ReleaseNotesUrl>().ok()),
-            topics: Option::from(topics).filter(|topics| !topics.is_empty()),
+            topics,
         })
     }
 
@@ -697,11 +683,7 @@ impl GitHub {
                 force,
             }))
             .await?;
-        if let Some(errors) = errors {
-            Err(GitHubError::GraphQL(errors))
-        } else {
-            Ok(())
-        }
+        errors.map_or(Ok(()), |errors| Err(GitHubError::GraphQL(errors)))
     }
 
     #[builder(finish_fn = send)]
@@ -849,7 +831,7 @@ pub struct GitHubValues {
     pub package_url: PackageUrl,
     pub release_notes: Option<ReleaseNotes>,
     pub release_notes_url: Option<ReleaseNotesUrl>,
-    pub topics: Option<BTreeSet<Tag>>,
+    pub topics: BTreeSet<Tag>,
 }
 
 pub struct GitHubFile {

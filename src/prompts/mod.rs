@@ -2,7 +2,9 @@ use std::{fmt::Display, ops::BitOr, process};
 
 use bitflags::Flags;
 use inquire::{InquireError, MultiSelect, Select, error::InquireResult};
-use winget_types::{installer::UpgradeBehavior, shared::value::ValueName};
+use winget_types::installer::UpgradeBehavior;
+
+use crate::traits::Name;
 
 pub mod list;
 pub mod text;
@@ -27,32 +29,26 @@ impl AllItems for UpgradeBehavior {
 
 pub fn radio_prompt<T>() -> InquireResult<T>
 where
-    T: ValueName + AllItems<Item = T> + Display,
+    T: Name + AllItems<Item = T> + Display,
 {
     Select::new(
-        &format!("{}:", <T as ValueName>::NAME),
+        &format!("{}:", <T as Name>::NAME),
         <T as AllItems>::all().into_iter().collect(),
     )
     .prompt()
     .map_err(handle_inquire_error)
 }
 
-pub fn check_prompt<T>() -> InquireResult<Option<T>>
+pub fn check_prompt<T>() -> InquireResult<T>
 where
-    T: ValueName + Flags + Display + BitOr<Output = T> + Copy,
+    T: Name + Flags + Display + BitOr<Output = T> + Copy,
 {
     MultiSelect::new(
-        &format!("{}:", <T as ValueName>::NAME),
+        &format!("{}:", <T as Name>::NAME),
         T::all().iter().collect(),
     )
     .prompt()
-    .map(|items| {
-        if items.is_empty() {
-            None
-        } else {
-            Some(items.iter().fold(T::empty(), |flags, flag| flags | *flag))
-        }
-    })
+    .map(|items| items.iter().fold(T::empty(), |flags, flag| flags | *flag))
     .map_err(handle_inquire_error)
 }
 

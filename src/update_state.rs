@@ -1,7 +1,7 @@
 use std::{cmp::max, collections::BTreeSet};
 
 use strum::Display;
-use winget_types::shared::PackageVersion;
+use winget_types::PackageVersion;
 
 #[derive(Display)]
 pub enum UpdateState {

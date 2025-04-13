@@ -1,6 +1,6 @@
 use clap::Parser;
 use color_eyre::Result;
-use winget_types::shared::{PackageIdentifier, PackageVersion};
+use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{credential::handle_token, github::github_client::GitHub, manifests::print_changes};
 

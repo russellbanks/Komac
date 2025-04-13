@@ -8,14 +8,11 @@ use std::{
 };
 
 use color_eyre::eyre::Result;
-use package_family_name::PackageFamilyName;
 use quick_xml::{Reader, events::Event};
-use winget_types::{
-    installer::{
-        AppsAndFeaturesEntry, Architecture, FileExtension, InstallationMetadata, Installer,
-        InstallerType, MinimumOSVersion, Platform, UpgradeBehavior,
-    },
-    shared::Version,
+use winget_types::installer::{
+    AppsAndFeaturesEntry, Architecture, Capability, FileExtension, InstallationMetadata, Installer,
+    InstallerType, MinimumOSVersion, PackageFamilyName, Platform, RestrictedCapability,
+    UpgradeBehavior,
 };
 use zip::ZipArchive;
 
@@ -125,16 +122,25 @@ impl Msix {
                             .attributes()
                             .flatten()
                             .find(|attribute| attribute.key.as_ref() == b"Name")
-                            .map(|attribute| String::from_utf8_lossy(&attribute.value).into_owned())
-                            .is_some_and(|capability| {
+                            .is_some_and(|attribute| {
+                                let Ok(capability) = std::str::from_utf8(&attribute.value) else {
+                                    return false;
+                                };
+
                                 if event
                                     .name()
                                     .prefix()
-                                    .is_some_and(|prefix| prefix.as_ref() == b"rescap")
+                                    .is_some_and(|prefix| prefix.into_inner() == b"rescap")
                                 {
-                                    manifest.capabilities.restricted.insert(capability)
+                                    capability.parse::<RestrictedCapability>().is_ok_and(
+                                        |restricted| {
+                                            manifest.capabilities.restricted.insert(restricted)
+                                        },
+                                    )
                                 } else {
-                                    manifest.capabilities.unrestricted.insert(capability)
+                                    capability.parse::<Capability>().is_ok_and(|capability| {
+                                        manifest.capabilities.unrestricted.insert(capability)
+                                    })
                                 }
                             });
                     }
@@ -157,14 +163,12 @@ impl Msix {
 
         Ok(Self {
             installer: Installer {
-                platform: Some(
-                    manifest
-                        .dependencies
-                        .target_device_family
-                        .iter()
-                        .map(|target_device_family| target_device_family.name)
-                        .collect(),
-                ),
+                platform: manifest
+                    .dependencies
+                    .target_device_family
+                    .iter()
+                    .map(|target_device_family| target_device_family.name)
+                    .collect(),
                 minimum_os_version: manifest
                     .dependencies
                     .target_device_family
@@ -179,23 +183,20 @@ impl Msix {
                 },
                 signature_sha_256: Some(signature_sha_256),
                 upgrade_behavior: Some(UpgradeBehavior::Install),
-                file_extensions: Option::from(manifest.file_type_association.supported_file_types)
-                    .filter(|supported_file_types| !supported_file_types.is_empty()),
+                file_extensions: manifest.file_type_association.supported_file_types,
                 package_family_name: Some(PackageFamilyName::new(
                     &manifest.identity.name,
                     &manifest.identity.publisher,
                 )),
-                capabilities: Option::from(manifest.capabilities.unrestricted)
-                    .filter(|capabilities| !capabilities.is_empty()),
-                restricted_capabilities: Option::from(manifest.capabilities.restricted)
-                    .filter(|restricted| !restricted.is_empty()),
-                apps_and_features_entries: Some(vec![AppsAndFeaturesEntry {
-                    display_name: Some(manifest.properties.display_name),
-                    publisher: Some(manifest.properties.publisher_display_name),
-                    display_version: Some(Version::new(&manifest.identity.version)),
-                    ..AppsAndFeaturesEntry::default()
-                }]),
-                installation_metadata: Some(InstallationMetadata {
+                capabilities: manifest.capabilities.unrestricted,
+                restricted_capabilities: manifest.capabilities.restricted,
+                apps_and_features_entries: vec![
+                    AppsAndFeaturesEntry::new()
+                        .with_display_name(manifest.properties.display_name)
+                        .with_publisher(manifest.properties.publisher_display_name)
+                        .with_display_version(&manifest.identity.version),
+                ],
+                installation_metadata: InstallationMetadata {
                     default_install_location: Some(get_install_location(
                         &manifest.identity.name,
                         &manifest.identity.publisher,
@@ -204,7 +205,7 @@ impl Msix {
                         &manifest.identity.resource_id,
                     )),
                     ..InstallationMetadata::default()
-                }),
+                },
                 ..Installer::default()
             },
         })
@@ -254,8 +255,8 @@ pub struct TargetDeviceFamily {
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-capabilities>
 #[derive(Default)]
 struct Capabilities {
-    restricted: BTreeSet<String>,
-    unrestricted: BTreeSet<String>,
+    restricted: BTreeSet<RestrictedCapability>,
+    unrestricted: BTreeSet<Capability>,
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-uap-filetypeassociation>

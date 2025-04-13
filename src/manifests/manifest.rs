@@ -1,7 +1,7 @@
 use winget_types::{
+    PackageIdentifier, PackageVersion,
     installer::InstallerManifest,
     locale::{DefaultLocaleManifest, LocaleManifest},
-    shared::{PackageIdentifier, PackageVersion},
     version::VersionManifest,
 };
 

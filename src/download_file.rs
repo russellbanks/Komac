@@ -17,8 +17,9 @@ use tokio::io::AsyncWriteExt;
 use url::Url;
 use uuid::Uuid;
 use winget_types::{
+    Sha256String,
     installer::{Architecture, VALID_FILE_EXTENSIONS},
-    shared::{Sha256String, url::DecodedUrl},
+    url::DecodedUrl,
 };
 
 use crate::{
@@ -89,7 +90,7 @@ async fn download_file(
         url,
         mmap: unsafe { Mmap::map(&temp_file) }?,
         file: temp_file,
-        sha_256: Sha256String::from_hasher(&hasher.finalize())?,
+        sha_256: Sha256String::from_digest(&hasher.finalize()),
         file_name,
         last_modified,
     })

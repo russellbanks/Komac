@@ -17,8 +17,8 @@ use owo_colors::OwoColorize;
 use reqwest::{Client, StatusCode};
 use tokio::time::sleep;
 use winget_types::{
-    installer::InstallerManifest,
-    shared::{ManifestTypeWithLocale, PackageIdentifier, PackageVersion, url::DecodedUrl},
+    ManifestTypeWithLocale, PackageIdentifier, PackageVersion, installer::InstallerManifest,
+    url::DecodedUrl,
 };
 
 use crate::{
