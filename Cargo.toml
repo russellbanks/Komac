@@ -65,7 +65,7 @@ ordinal-trait = "0.1.0"
 owo-colors = "4.2.0"
 protobuf = "3.7.2"
 quick-xml = { version = "0.37.4", features = ["serialize"] }
-rand = "0.9.0"
+rand = "0.9.1"
 ratatui = "0.29.0"
 regex = "1.11.1"
 reqwest = { version = "0.12.15", features = ["native-tls-vendored", "stream"] }
