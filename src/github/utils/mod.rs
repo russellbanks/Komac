@@ -2,59 +2,21 @@ use std::{collections::BTreeSet, env, fmt::Write, num::NonZeroU32};
 
 use bon::builder;
 use clap::{crate_name, crate_version};
+pub use package_path::PackagePath;
 use rand::Rng;
 use uuid::Uuid;
 use winget_types::{
-    LanguageTag, Manifest, ManifestType, ManifestTypeWithLocale, PackageIdentifier, PackageVersion,
-    url::DecodedUrl,
+    LanguageTag, Manifest, ManifestType, PackageIdentifier, PackageVersion, url::DecodedUrl,
 };
 
 use crate::update_state::UpdateState;
 
+mod package_path;
 pub mod pull_request;
 
 const YAML_EXTENSION: &str = ".yaml";
 const LOCALE_PART: &str = ".locale.";
 const INSTALLER_PART: &str = ".installer";
-
-pub fn get_package_path(
-    identifier: &PackageIdentifier,
-    version: Option<&PackageVersion>,
-    manifest_type: Option<&ManifestTypeWithLocale>,
-) -> String {
-    let identifier = identifier.as_str();
-    let first_character = identifier
-        .chars()
-        .next()
-        .map(|mut first_character| {
-            first_character.make_ascii_lowercase();
-            first_character
-        })
-        .unwrap();
-    let mut result = format!("manifests/{first_character}");
-    for part in identifier.split('.') {
-        result.push('/');
-        result.push_str(part);
-    }
-    if let Some(version) = version {
-        result.push('/');
-        result.push_str(version.as_str());
-
-        // The full manifest file path should only be included if a version was passed in too
-        if let Some(manifest_type) = manifest_type {
-            result.push('/');
-            result.push_str(identifier);
-            if matches!(manifest_type, ManifestTypeWithLocale::Installer) {
-                result.push_str(INSTALLER_PART);
-            } else if let ManifestTypeWithLocale::Locale(tag) = manifest_type {
-                result.push_str(LOCALE_PART);
-                result.push_str(&tag.to_string());
-            }
-            result.push_str(YAML_EXTENSION);
-        }
-    }
-    result
-}
 
 pub fn is_manifest_file<M: Manifest>(
     file_name: &str,
@@ -192,62 +154,15 @@ pub fn get_commit_title(
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
     use winget_types::{
-        LanguageTag, ManifestTypeWithLocale, PackageIdentifier,
+        LanguageTag, PackageIdentifier,
         icu_locid::langid,
         installer::InstallerManifest,
         locale::{DefaultLocaleManifest, LocaleManifest},
         version::VersionManifest,
     };
 
-    use crate::github::utils::{get_package_path, is_manifest_file};
-
-    #[rstest]
-    #[case("Package.Identifier", None, None, "manifests/p/Package/Identifier")]
-    #[case(
-        "Package.Identifier",
-        Some("1.2.3"),
-        None,
-        "manifests/p/Package/Identifier/1.2.3"
-    )]
-    #[case(
-        "Package.Identifier",
-        Some("1.2.3"),
-        Some(ManifestTypeWithLocale::Installer),
-        "manifests/p/Package/Identifier/1.2.3/Package.Identifier.installer.yaml"
-    )]
-    #[case(
-        "Package.Identifier",
-        Some("1.2.3"),
-        Some(ManifestTypeWithLocale::Locale(langid!("en-US"))),
-        "manifests/p/Package/Identifier/1.2.3/Package.Identifier.locale.en-US.yaml"
-    )]
-    #[case(
-        "Package.Identifier",
-        Some("1.2.3"),
-        Some(ManifestTypeWithLocale::Locale(langid!("zh-CN"))),
-        "manifests/p/Package/Identifier/1.2.3/Package.Identifier.locale.zh-CN.yaml"
-    )]
-    #[case(
-        "Package.Identifier",
-        Some("1.2.3"),
-        Some(ManifestTypeWithLocale::Version),
-        "manifests/p/Package/Identifier/1.2.3/Package.Identifier.yaml"
-    )]
-    fn package_paths(
-        #[case] identifier: &str,
-        #[case] version: Option<&str>,
-        #[case] manifest_type: Option<ManifestTypeWithLocale>,
-        #[case] expected: &str,
-    ) {
-        let identifier = identifier.parse::<PackageIdentifier>().unwrap();
-        let version = version.and_then(|version| version.parse().ok());
-        assert_eq!(
-            get_package_path(&identifier, version.as_ref(), manifest_type.as_ref()),
-            expected
-        )
-    }
+    use super::is_manifest_file;
 
     #[test]
     fn valid_installer_manifest_file() {

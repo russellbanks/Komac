@@ -3,11 +3,13 @@ use std::num::NonZeroU32;
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::{Result, bail};
+use futures_util::TryFutureExt;
 use inquire::{
     Text,
     validator::{MaxLengthValidator, MinLengthValidator},
 };
 use owo_colors::OwoColorize;
+use tokio::try_join;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
@@ -65,7 +67,14 @@ impl RemoveVersion {
             );
         }
         let github = GitHub::new(&token)?;
-        let versions = github.get_versions(&self.package_identifier).await?;
+
+        let (fork, winget_pkgs, versions) = try_join!(
+            github
+                .get_username()
+                .and_then(|current_user| github.get_winget_pkgs().owner(current_user).send()),
+            github.get_winget_pkgs().send(),
+            github.get_versions(&self.package_identifier)
+        )?;
 
         if !versions.contains(&self.package_version) {
             bail!(
@@ -101,16 +110,11 @@ impl RemoveVersion {
             return Ok(());
         }
 
-        let current_user = github.get_username().await?;
-        let winget_pkgs = github.get_winget_pkgs().send().await?;
-        let fork = github.get_winget_pkgs().owner(&current_user).send().await?;
-
         let pull_request_url = github
             .remove_version()
             .identifier(&self.package_identifier)
             .version(&self.package_version)
             .reason(deletion_reason)
-            .fork_owner(&current_user)
             .fork(&fork)
             .winget_pkgs(&winget_pkgs)
             .maybe_issue_resolves(self.resolves)

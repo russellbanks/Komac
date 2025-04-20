@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, env, future::Future, num::NonZeroU32, str::FromStr};
+use std::{borrow::Cow, collections::BTreeSet, env, num::NonZeroU32, str::FromStr};
 
 use base64ct::{Base64, Encoding};
 use bon::bon;
@@ -7,6 +7,7 @@ use cynic::{
     GraphQlError, GraphQlResponse, Id, MutationBuilder, QueryBuilder,
     http::{CynicReqwestError, ReqwestExt},
 };
+use futures_util::future::OptionFuture;
 use indexmap::IndexMap;
 use indicatif::ProgressBar;
 use itertools::Itertools;
@@ -53,8 +54,7 @@ use crate::{
         },
         rest::{GITHUB_JSON_MIME, get_tree::GitTree},
         utils::{
-            get_branch_name, get_commit_title, get_package_path, is_manifest_file,
-            pull_request_body,
+            PackagePath, get_branch_name, get_commit_title, is_manifest_file, pull_request_body,
         },
     },
     manifests::Manifests,
@@ -75,9 +75,12 @@ pub enum GitHubError {
     #[error("{0} does not exist in {WINGET_PKGS_FULL_NAME}")]
     PackageNonExistent(PackageIdentifier),
     #[error("No {type} manifest was found in {path}")]
-    ManifestNotFound { r#type: ManifestType, path: String },
+    ManifestNotFound {
+        r#type: ManifestType,
+        path: PackagePath,
+    },
     #[error("No valid files were found for {path}")]
-    NoValidFiles { path: String },
+    NoValidFiles { path: PackagePath },
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
     #[error(transparent)]
@@ -88,6 +91,8 @@ pub enum GitHubError {
     UrlParseError(#[from] url::ParseError),
 }
 
+#[derive(Clone)]
+#[repr(transparent)]
 pub struct GitHub(Client);
 
 #[bon]
@@ -123,7 +128,7 @@ impl GitHub {
         self.get_all_versions(
             MICROSOFT,
             WINGET_PKGS,
-            &get_package_path(package_identifier, None, None),
+            &PackagePath::new(package_identifier, None, None),
         )
         .await
         .map_err(|_| GitHubError::PackageNonExistent(package_identifier.clone()))
@@ -133,7 +138,7 @@ impl GitHub {
         &self,
         owner: &str,
         repo: &str,
-        path: &str,
+        path: &PackagePath,
     ) -> Result<BTreeSet<PackageVersion>, GitHubError> {
         const TREE: &str = "tree";
         const SEPARATOR: char = '/';
@@ -170,9 +175,7 @@ impl GitHub {
 
         Option::from(files)
             .filter(|files| !files.is_empty())
-            .ok_or_else(|| GitHubError::NoValidFiles {
-                path: path.to_owned(),
-            })
+            .ok_or_else(|| GitHubError::NoValidFiles { path: path.clone() })
     }
 
     pub async fn get_manifests(
@@ -180,7 +183,7 @@ impl GitHub {
         identifier: &PackageIdentifier,
         latest_version: &PackageVersion,
     ) -> Result<Manifests, GitHubError> {
-        let full_package_path = get_package_path(identifier, Some(latest_version), None);
+        let full_package_path = PackagePath::new(identifier, Some(latest_version), None);
         let content = self
             .get_directory_content_with_text(MICROSOFT, WINGET_PKGS, &full_package_path)
             .await?
@@ -243,7 +246,7 @@ impl GitHub {
         &self,
         owner: &str,
         repo: &str,
-        path: &str,
+        path: &PackagePath,
     ) -> Result<impl Iterator<Item = GitHubFile>, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
@@ -275,7 +278,7 @@ impl GitHub {
         version: &PackageVersion,
         manifest_type: ManifestTypeWithLocale,
     ) -> Result<T, GitHubError> {
-        let path = get_package_path(identifier, Some(version), Some(&manifest_type));
+        let path = PackagePath::new(identifier, Some(version), Some(&manifest_type));
         let content = self.get_file_content(MICROSOFT, WINGET_PKGS, &path).await?;
         let manifest = serde_yaml::from_str::<T>(&content)?;
         Ok(manifest)
@@ -285,7 +288,7 @@ impl GitHub {
         &self,
         owner: &str,
         repo: &str,
-        path: &str,
+        path: &PackagePath,
     ) -> Result<String, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
@@ -303,9 +306,9 @@ impl GitHub {
     #[builder(finish_fn = send)]
     pub async fn get_winget_pkgs(
         &self,
-        owner: Option<&str>,
+        #[builder(into)] owner: Option<Cow<'_, str>>,
     ) -> Result<RepositoryData, GitHubError> {
-        self.get_repository_info(owner.unwrap_or(MICROSOFT), WINGET_PKGS)
+        self.get_repository_info(owner.as_deref().unwrap_or(MICROSOFT), WINGET_PKGS)
             .await
     }
 
@@ -338,6 +341,7 @@ impl GitHub {
 
         Ok(RepositoryData {
             id: repository.id,
+            owner: repository.owner.login,
             full_name: repository.name_with_owner,
             url: repository.url,
             default_branch_name: default_branch.name,
@@ -402,7 +406,7 @@ impl GitHub {
         &self,
         owner: &str,
         branch_name: &str,
-        path: &str,
+        path: &PackagePath,
     ) -> Result<impl Iterator<Item = String>, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
@@ -420,9 +424,9 @@ impl GitHub {
         Ok(entries.into_iter().filter_map(|entry| entry.path))
     }
 
-    pub async fn get_branches(
+    pub async fn get_branches<T: AsRef<str>>(
         &self,
-        user: &str,
+        user: T,
         merge_state: MergeState,
     ) -> Result<(IndexMap<PullRequest, String>, Id), GitHubError> {
         let mut pr_branch_map = IndexMap::new();
@@ -433,7 +437,7 @@ impl GitHub {
                 .0
                 .post(GITHUB_GRAPHQL_URL)
                 .run_graphql(GetBranches::build(GetBranchesVariables {
-                    owner: user,
+                    owner: user.as_ref(),
                     name: WINGET_PKGS,
                     cursor: cursor.as_deref(),
                 }))
@@ -572,17 +576,20 @@ impl GitHub {
 
     pub fn get_all_values_from_url(
         &self,
-        url: &DecodedUrl,
-    ) -> Option<impl Future<Output = Result<GitHubValues, GitHubError>> + use<'_>> {
-        let mut parts = url.path_segments()?;
-        let _file_name = parts.next_back()?;
-        let builder = self
-            .get_all_values()
-            .owner(parts.next()?.to_owned())
-            .repo(parts.next()?.to_owned());
-        let _releases = parts.next()?;
-        let _download = parts.next()?;
-        Some(builder.tag_name(parts.join("/")).send())
+        url: DecodedUrl,
+    ) -> OptionFuture<impl Future<Output = Result<GitHubValues, GitHubError>> + Sized> {
+        url.path_segments()
+            .and_then(|mut parts| {
+                let _file_name = parts.next_back()?;
+                let builder = self
+                    .get_all_values()
+                    .owner(parts.next()?.to_owned())
+                    .repo(parts.next()?.to_owned());
+                let _releases = parts.next()?;
+                let _download = parts.next()?;
+                Some(builder.tag_name(parts.join("/")).send())
+            })
+            .into()
     }
 
     #[builder(finish_fn = send)]
@@ -692,7 +699,6 @@ impl GitHub {
         identifier: &PackageIdentifier,
         version: &PackageVersion,
         reason: String,
-        fork_owner: &String,
         fork: &RepositoryData,
         winget_pkgs: &RepositoryData,
         issue_resolves: Option<Vec<NonZeroU32>>,
@@ -714,9 +720,9 @@ impl GitHub {
         let commit_title = get_commit_title(identifier, version, &UpdateState::RemoveVersion);
         let deletions = self
             .get_directory_content(
-                fork_owner,
+                &fork.owner,
                 &branch_name,
-                &get_package_path(identifier, Some(version), None),
+                &PackagePath::new(identifier, Some(version), None),
             )
             .await?
             .map(FileDeletion::new)
@@ -733,7 +739,7 @@ impl GitHub {
             .create_pull_request(
                 &winget_pkgs.id,
                 &fork.id,
-                &format!("{fork_owner}:{}", pull_request_branch.name),
+                &format!("{}:{}", fork.owner, pull_request_branch.name),
                 &winget_pkgs.default_branch_name,
                 &commit_title,
                 &pull_request_body()
@@ -789,7 +795,7 @@ impl GitHub {
                 self.get_directory_content(
                     &current_user,
                     &branch_name,
-                    &get_package_path(identifier, replace_version, None),
+                    &PackagePath::new(identifier, replace_version, None),
                 )
                 .await?
                 .map(FileDeletion::new)
@@ -841,6 +847,7 @@ pub struct GitHubFile {
 
 pub struct RepositoryData {
     pub id: Id,
+    pub owner: String,
     pub full_name: String,
     pub url: Url,
     pub default_branch_name: String,

@@ -1,12 +1,14 @@
 use anstream::println;
 use clap::Parser;
 use color_eyre::Result;
+use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
+use tokio::try_join;
 
 use crate::{
     commands::utils::SPINNER_TICK_RATE, credential::handle_token, github::github_client::GitHub,
-    hyperlink::Hyperlink,
+    terminal::Hyperlinkable,
 };
 
 /// Merges changes from microsoft/winget-pkgs into the fork repository
@@ -30,31 +32,26 @@ impl SyncFork {
         let github = GitHub::new(&token)?;
 
         // Fetch repository data from both upstream and fork repositories asynchronously
-        let winget_pkgs = github.get_winget_pkgs().send();
-        let winget_pkgs_fork = github
-            .get_winget_pkgs()
-            .owner(&github.get_username().await?)
-            .send()
-            .await?;
-        let winget_pkgs = winget_pkgs.await?;
-
-        // Create hyperlinks to the repository's URLs when their full name is printed
-        let winget_pkgs_hyperlink = winget_pkgs.full_name.hyperlink(winget_pkgs.url);
-        let winget_pkgs_fork_hyperlink = winget_pkgs_fork.full_name.hyperlink(winget_pkgs_fork.url);
+        let (winget_pkgs, fork) = try_join!(
+            github.get_winget_pkgs().send(),
+            github
+                .get_username()
+                .and_then(|username| github.get_winget_pkgs().owner(username).send()),
+        )?;
 
         // Check whether the fork is already up-to-date with upstream by their latest commit OID's
-        if winget_pkgs.default_branch_oid == winget_pkgs_fork.default_branch_oid {
+        if winget_pkgs.default_branch_oid == fork.default_branch_oid {
             println!(
                 "{} is already {} with {}",
-                winget_pkgs_fork_hyperlink.blue(),
+                fork.full_name.hyperlink(&fork.url).blue(),
                 "up-to-date".green(),
-                winget_pkgs_hyperlink.blue()
+                winget_pkgs.full_name.hyperlink(&winget_pkgs.url).blue()
             );
             return Ok(());
         }
 
         // Calculate how many commits upstream is ahead of fork
-        let new_commits_count = winget_pkgs.commit_count - winget_pkgs_fork.commit_count;
+        let new_commits_count = winget_pkgs.commit_count - fork.commit_count;
         let commit_label = match new_commits_count {
             1 => "commit",
             _ => "commits",
@@ -63,25 +60,26 @@ impl SyncFork {
         // Show an indeterminate progress bar while upstream changes are being merged
         let pb = ProgressBar::new_spinner().with_message(format!(
             "Merging {new_commits_count} upstream {commit_label} from {} into {}",
-            winget_pkgs.full_name.as_str().blue(),
-            winget_pkgs_fork.full_name.as_str().blue(),
+            winget_pkgs.full_name.blue(),
+            fork.full_name.blue(),
         ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         github
             .merge_upstream(
-                &winget_pkgs_fork.default_branch_ref_id,
+                &fork.default_branch_ref_id,
                 winget_pkgs.default_branch_oid,
                 self.force,
             )
             .await?;
 
         pb.finish_and_clear();
+
         println!(
             "{} merged {new_commits_count} upstream {commit_label} from {} into {}",
             "Successfully".green(),
-            winget_pkgs_hyperlink.blue(),
-            winget_pkgs_fork_hyperlink.blue()
+            winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
+            fork.full_name.hyperlink(fork.url).blue()
         );
 
         Ok(())

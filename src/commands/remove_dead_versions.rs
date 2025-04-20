@@ -2,6 +2,7 @@ use std::{
     collections::BTreeSet,
     fmt::Write,
     num::NonZeroUsize,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -10,19 +11,19 @@ use bon::builder;
 use chrono::TimeDelta;
 use clap::Parser;
 use color_eyre::{Result, eyre::Error};
-use futures_util::{StreamExt, TryStreamExt, stream};
-use indicatif::ProgressBar;
+use futures_util::{StreamExt, TryFutureExt, TryStreamExt, stream};
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use reqwest::{Client, StatusCode};
-use tokio::time::sleep;
+use tokio::{sync::mpsc, time::sleep, try_join};
 use winget_types::{
     ManifestTypeWithLocale, PackageIdentifier, PackageVersion, installer::InstallerManifest,
     url::DecodedUrl,
 };
 
 use crate::{
-    commands::utils::{SPINNER_SLOW_TICK_RATE, SPINNER_TICK_RATE},
+    commands::utils::SPINNER_SLOW_TICK_RATE,
     credential::{get_default_headers, handle_token},
     github::{github_client::GitHub, graphql::get_branches::PullRequestState},
     prompts::text::confirm_prompt,
@@ -77,9 +78,9 @@ pub struct RemoveDeadVersions {
     #[arg(long, hide = true, env = "CI")]
     auto: bool,
 
-    /// Number of installer URLs to check concurrently
+    /// Number of versions to check concurrently
     #[arg(short, long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
-    concurrent_head_requests: NonZeroUsize,
+    concurrent: NonZeroUsize,
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -90,18 +91,18 @@ impl RemoveDeadVersions {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
+
+        let (fork, winget_pkgs, versions) = try_join!(
+            github
+                .get_username()
+                .and_then(|current_user| github.get_winget_pkgs().owner(current_user).send()),
+            github.get_winget_pkgs().send(),
+            github.get_versions(&self.package_identifier)
+        )?;
+
         let client = Client::builder()
             .default_headers(get_default_headers(None))
             .build()?;
-
-        let current_user = github.get_username();
-        let winget_pkgs = github.get_winget_pkgs().send();
-
-        let versions = github.get_versions(&self.package_identifier).await?;
-
-        let current_user = current_user.await?;
-        let fork = github.get_winget_pkgs().owner(&current_user).send().await?;
-        let winget_pkgs = winget_pkgs.await?;
 
         let rate_limit_delay = if self.fast {
             PER_MINUTE_RATE_LIMIT_DELAY
@@ -112,97 +113,163 @@ impl RemoveDeadVersions {
         // Set a default last PR time to before the rate limit delay to do the first PR immediately
         let mut last_pr_time = Instant::now() - rate_limit_delay;
 
-        let progress_bar = ProgressBar::new_spinner();
-        progress_bar.enable_steady_tick(SPINNER_TICK_RATE);
+        let versions = versions
+            .into_iter()
+            .filter(|version| {
+                self.before.as_ref().is_none_or(|before| version < before)
+                    && self.after.as_ref().is_none_or(|after| version > after)
+            })
+            .collect::<BTreeSet<_>>();
 
-        for version in versions.iter().filter(|&version| {
-            self.before.as_ref().is_none_or(|before| version < before)
-                && self.after.as_ref().is_none_or(|after| version > after)
-        }) {
-            if progress_bar.is_finished() {
-                progress_bar.reset();
-                progress_bar.enable_steady_tick(SPINNER_TICK_RATE);
-            }
-            progress_bar.set_message(format!("Checking {} {version}", self.package_identifier));
+        let multi_progress = MultiProgress::new();
+        let overall_progress = multi_progress.add(
+            ProgressBar::new(versions.len() as u64).with_style(
+                ProgressStyle::default_bar()
+                    .template("{wide_bar:.magenta/black} {human_pos}/{human_len}")?
+                    .progress_chars("───"),
+            ),
+        );
 
-            let installer_urls = github
-                .get_manifest::<InstallerManifest>(
-                    &self.package_identifier,
-                    version,
-                    ManifestTypeWithLocale::Installer,
-                )
-                .await?
-                .installers
-                .into_iter()
-                .map(|installer| installer.url)
-                .collect::<BTreeSet<_>>();
+        // Manually tick the overall progress bar once so it draws to the terminal
+        overall_progress.tick();
 
-            let url_statuses = stream::iter(installer_urls)
-                .map(|url| {
-                    let client = &client;
-                    async move {
-                        let response = client.head(url.as_str()).send().await?;
-                        Ok::<(DecodedUrl, StatusCode), reqwest::Error>((url, response.status()))
+        // Create a vec of progress bars so they can be reused rather than destroyed and recreated
+        let progress_bars = (0..self.concurrent.get())
+            .map(|_| {
+                let pb = multi_progress.add(ProgressBar::new_spinner());
+                pb.enable_steady_tick(SPINNER_SLOW_TICK_RATE);
+                pb
+            })
+            .collect::<Vec<_>>();
+
+        // Create a channel to send versions with dead URLs to a listener
+        let (sender, mut receiver) = mpsc::channel::<(_, Vec<_>)>(1);
+
+        let package_identifier = Arc::new(self.package_identifier);
+
+        // Create a 'listener' task that waits to receive a version to prompt the user for removal
+        let listener = tokio::spawn({
+            let package_identifier = Arc::clone(&package_identifier);
+            let github = github.clone();
+            let multi_progress = multi_progress.clone();
+            async move {
+                while let Some((version, url_statuses)) = receiver.recv().await {
+                    multi_progress.set_draw_target(ProgressDrawTarget::hidden());
+
+                    let confirm = confirm_removal()
+                        .github(&github)
+                        .identifier(&package_identifier)
+                        .version(&version)
+                        .auto(self.auto)
+                        .prompt()
+                        .await?;
+
+                    if !confirm {
+                        multi_progress.set_draw_target(ProgressDrawTarget::stderr());
+                        continue;
                     }
-                })
-                .buffered(self.concurrent_head_requests.get())
-                .try_collect::<Vec<_>>()
-                .await?;
 
-            let dead_version = url_statuses
-                .iter()
-                .all(|(_url, status)| RESOURCE_MISSING_STATUS_CODES.contains(status));
+                    let deletion_reason = Self::get_deletion_reason(&url_statuses)?;
 
-            if !dead_version {
-                continue;
+                    let time_since_last_pr = Instant::now().duration_since(last_pr_time);
+                    if time_since_last_pr < rate_limit_delay {
+                        let wait_time = rate_limit_delay - time_since_last_pr;
+                        let wait_pb = ProgressBar::new_spinner()
+                            .with_message(format!(
+                                "Last pull request was created {time_since_last_pr:?} ago. Waiting for {wait_time:?}",
+                            ));
+                        wait_pb.enable_steady_tick(SPINNER_SLOW_TICK_RATE);
+                        sleep(wait_time).await;
+                        wait_pb.finish_and_clear();
+                    }
+
+                    github
+                        .remove_version()
+                        .identifier(&package_identifier)
+                        .version(&version)
+                        .reason(deletion_reason)
+                        .fork(&fork)
+                        .winget_pkgs(&winget_pkgs)
+                        .send()
+                        .await?;
+
+                    last_pr_time = Instant::now();
+
+                    multi_progress.set_draw_target(ProgressDrawTarget::stderr());
+                }
+
+                Ok::<_, color_eyre::Report>(())
             }
+        });
 
-            progress_bar.finish_and_clear();
+        let total = versions.len();
+        stream::iter(versions)
+            .enumerate()
+            .map(|(index, version)| {
+                let package_identifier = &package_identifier;
+                let github = &github;
+                let sender = &sender;
+                let client = &client;
+                let overall_progress = &overall_progress;
+                let progress_bar = &progress_bars[index % self.concurrent.get()];
+                async move {
+                    progress_bar
+                        .set_message(format!("Checking {package_identifier} {}", version.blue()));
 
-            let confirm = confirm_removal()
-                .github(&github)
-                .identifier(&self.package_identifier)
-                .version(version)
-                .auto(self.auto)
-                .prompt()
-                .await?;
+                    let installer_urls = github
+                        .get_manifest::<InstallerManifest>(
+                            package_identifier,
+                            &version,
+                            ManifestTypeWithLocale::Installer,
+                        )
+                        .await?
+                        .installers
+                        .into_iter()
+                        .map(|installer| installer.url)
+                        .unique();
 
-            if !confirm {
-                continue;
-            }
+                    let url_statuses = stream::iter(installer_urls)
+                        .map(|url| {
+                            client
+                                .head((*url).clone())
+                                .send()
+                                .map_ok(|response| (url, response.status()))
+                        })
+                        .buffered(2)
+                        .try_collect::<Vec<(_, _)>>()
+                        .await?;
 
-            let deletion_reason = Self::get_deletion_reason(url_statuses)?;
+                    let all_installers_missing = url_statuses
+                        .iter()
+                        .all(|(_url, status)| RESOURCE_MISSING_STATUS_CODES.contains(status));
 
-            let time_since_last_pr = Instant::now().duration_since(last_pr_time);
-            if time_since_last_pr < rate_limit_delay {
-                let wait_time = rate_limit_delay - time_since_last_pr;
-                let wait_pb = ProgressBar::new_spinner()
-                    .with_message(format!(
-                        "Last pull request was created {time_since_last_pr:?} ago. Waiting for {wait_time:?}",
-                    ));
-                wait_pb.enable_steady_tick(SPINNER_SLOW_TICK_RATE);
-                sleep(wait_time).await;
-                wait_pb.finish_and_clear();
-            }
+                    if all_installers_missing {
+                        sender.send((version, url_statuses)).await?;
+                    }
 
-            github
-                .remove_version()
-                .identifier(&self.package_identifier)
-                .version(version)
-                .reason(deletion_reason)
-                .fork_owner(&current_user)
-                .fork(&fork)
-                .winget_pkgs(&winget_pkgs)
-                .send()
-                .await?;
+                    overall_progress.inc(1);
 
-            last_pr_time = Instant::now();
-        }
+                    let start = total.saturating_sub(self.concurrent.get()) + 1;
+                    if (start..=total).contains(&index) {
+                        progress_bar.finish_and_clear();
+                    }
+
+                    Ok::<_, color_eyre::Report>(())
+                }
+            })
+            .buffered(self.concurrent.get())
+            .try_collect::<()>()
+            .await?;
+
+        drop(sender);
+        listener.await??;
+
+        multi_progress.clear()?;
 
         Ok(())
     }
 
-    fn get_deletion_reason(url_statuses: Vec<(DecodedUrl, StatusCode)>) -> Result<String> {
+    fn get_deletion_reason(url_statuses: &[(DecodedUrl, StatusCode)]) -> Result<String> {
         let mut deletion_reason = String::from("All InstallerUrls returned ");
         if let Ok(status) = url_statuses
             .iter()

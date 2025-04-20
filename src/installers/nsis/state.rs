@@ -52,7 +52,10 @@ impl<'data> NsisState<'data> {
         Ok(state)
     }
 
-    #[expect(clippy::cast_possible_truncation)] // Truncating u16 `as u8` is intentional
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "Truncating u16 as u8 is intentional"
+    )]
     pub fn get_string(&self, relative_offset: i32) -> Cow<'data, str> {
         // The strings block starts with a UTF-16 null byte if it is Unicode
         let unicode = &self.str_block[..size_of::<u16>()] == b"\0\0";

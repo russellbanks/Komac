@@ -2,7 +2,8 @@ use std::{
     collections::BTreeSet,
     io::{Read, Seek},
     mem,
-    num::{NonZeroU8, NonZeroU32},
+    num::{NonZeroU32, NonZeroUsize},
+    sync::Arc,
 };
 
 use anstream::println;
@@ -10,8 +11,8 @@ use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::{Result, bail};
 use indicatif::ProgressBar;
+use itertools::Itertools;
 use owo_colors::OwoColorize;
-use reqwest::Client;
 use strsim::levenshtein;
 use winget_types::{
     PackageIdentifier, PackageVersion,
@@ -24,14 +25,16 @@ use crate::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
         write_changes_to_dir,
     },
-    credential::{get_default_headers, handle_token},
-    download_file::{download_urls, process_files},
+    credential::handle_token,
+    download::{Download, Downloader},
+    download_file::process_files,
     github::{
         github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
-        utils::{get_package_path, pull_request::pr_changes},
+        utils::{PackagePath, pull_request::pr_changes},
     },
     installers::zip::Zip,
     match_installers::match_installers,
+    terminal::Hyperlinkable,
     traits::{LocaleExt, path::NormalizePath},
 };
 
@@ -51,8 +54,8 @@ pub struct UpdateVersion {
     urls: Vec<DecodedUrl>,
 
     /// Number of installers to download at the same time
-    #[arg(long, default_value_t = NonZeroU8::new(2).unwrap())]
-    concurrent_downloads: NonZeroU8,
+    #[arg(long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
+    concurrent_downloads: NonZeroUsize,
 
     /// List of issues that updating this package would resolve
     #[arg(long)]
@@ -103,20 +106,25 @@ impl UpdateVersion {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
-        let client = Client::builder()
-            .default_headers(get_default_headers(None))
-            .build()?;
 
-        let existing_pr =
-            github.get_existing_pull_request(&self.package_identifier, &self.package_version);
+        let package_identifier = Arc::new(self.package_identifier);
+        let package_version = Arc::new(self.package_version);
 
-        let versions = github.get_versions(&self.package_identifier).await?;
+        let existing_pr = tokio::spawn({
+            let github = github.clone();
+            let package_identifier = Arc::clone(&package_identifier);
+            let package_version = Arc::clone(&package_version);
+            async move {
+                github
+                    .get_existing_pull_request(&package_identifier, &package_version)
+                    .await
+            }
+        });
+
+        let versions = github.get_versions(&package_identifier).await?;
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
-        println!(
-            "Latest version of {}: {latest_version}",
-            self.package_identifier
-        );
+        println!("Latest version of {package_identifier}: {latest_version}",);
 
         let replace_version = self.replace.as_ref().map(|version| {
             if version.is_latest() {
@@ -135,11 +143,11 @@ impl UpdateVersion {
             }
         }
 
-        if let Some(pull_request) = existing_pr.await? {
+        if let Some(pull_request) = existing_pr.await?? {
             if !(self.skip_pr_check || self.dry_run)
                 && !prompt_existing_pull_request(
-                    &self.package_identifier,
-                    &self.package_version,
+                    &package_identifier,
+                    &package_version,
                     &pull_request,
                 )?
             {
@@ -147,20 +155,49 @@ impl UpdateVersion {
             }
         }
 
-        let manifests = github.get_manifests(&self.package_identifier, latest_version);
-        let github_values = self
-            .urls
-            .iter()
-            .find(|url| url.host_str() == Some(GITHUB_HOST))
-            .and_then(|url| github.get_all_values_from_url(url));
+        let manifests = tokio::spawn({
+            let github = github.clone();
+            let package_identifier = Arc::clone(&package_identifier);
+            let latest_version = latest_version.clone();
+            async move {
+                github
+                    .get_manifests(&package_identifier, &latest_version)
+                    .await
+            }
+        });
 
-        let mut files = download_urls(&client, self.urls, self.concurrent_downloads).await?;
+        let github_values = tokio::spawn({
+            let github = github.clone();
+            let github_url = self
+                .urls
+                .iter()
+                .find(|url| url.host_str() == Some(GITHUB_HOST))
+                .cloned();
+            async move {
+                github_url
+                    .map(|url| github.get_all_values_from_url(url))
+                    .unwrap_or_default()
+                    .await
+            }
+        });
+
+        let downloader = Downloader::new_with_concurrent(self.concurrent_downloads);
+        let mut files = downloader
+            .download(
+                &self
+                    .urls
+                    .into_iter()
+                    .unique()
+                    .map(Download::new)
+                    .collect::<Vec<_>>(),
+            )
+            .await?;
         let mut download_results = process_files(&mut files).await?;
         let installer_results = download_results
             .iter_mut()
             .flat_map(|(_url, analyser)| mem::take(&mut analyser.installers))
             .collect::<Vec<_>>();
-        let mut manifests = manifests.await?;
+        let mut manifests = manifests.await??;
         let previous_installers = mem::take(&mut manifests.installer.installers)
             .into_iter()
             .map(|mut installer| {
@@ -176,7 +213,7 @@ impl UpdateVersion {
                 installer
             })
             .collect::<Vec<_>>();
-        manifests.default_locale.package_version = self.package_version.clone();
+        manifests.default_locale.package_version = (&*package_version).clone();
         let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
@@ -207,6 +244,7 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
 
+        manifests.installer.package_version = (&*package_version).clone();
         manifests.installer.minimum_os_version = manifests
             .installer
             .minimum_os_version
@@ -214,37 +252,36 @@ impl UpdateVersion {
         manifests.installer.installers = installers;
         manifests.installer.optimize();
 
-        let mut github_values = match github_values {
-            Some(future) => Some(future.await?),
+        let mut github_values = match github_values.await? {
+            Some(future) => Some(future?),
             None => None,
         };
 
         manifests.default_locale.update(
-            &self.package_version,
+            &package_version,
             &mut github_values,
             self.release_notes_url.as_ref(),
         );
 
         manifests.locales.iter_mut().for_each(|locale| {
             locale.update(
-                &self.package_version,
+                &package_version,
                 &mut github_values,
                 self.release_notes_url.as_ref(),
             );
         });
 
-        manifests.version.update(&self.package_version);
+        manifests.version.update(&package_version);
 
-        let package_path =
-            get_package_path(&self.package_identifier, Some(&self.package_version), None);
+        let package_path = PackagePath::new(&package_identifier, Some(&package_version), None);
         let mut changes = pr_changes()
-            .package_identifier(&self.package_identifier)
+            .package_identifier(&package_identifier)
             .manifests(&manifests)
             .package_path(&package_path)
             .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
-        if let Some(output) = self.output.map(|out| out.join(package_path)) {
+        if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
                 "{} written all manifest files to {output}",
@@ -255,8 +292,8 @@ impl UpdateVersion {
         let submit_option = prompt_submit_option(
             &mut changes,
             self.submit,
-            &self.package_identifier,
-            &self.package_version,
+            &package_identifier,
+            &package_version,
             self.dry_run,
         )?;
 
@@ -266,15 +303,14 @@ impl UpdateVersion {
 
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request for {} {}",
-            self.package_identifier, self.package_version
+            "Creating a pull request for {package_identifier} {package_version}",
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
         let pull_request_url = github
             .add_version()
-            .identifier(&self.package_identifier)
-            .version(&self.package_version)
+            .identifier(&package_identifier)
+            .version(&package_version)
             .versions(&versions)
             .changes(changes)
             .maybe_replace_version(replace_version)
@@ -287,10 +323,10 @@ impl UpdateVersion {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a pull request to {WINGET_PKGS_FULL_NAME}",
-            "Successfully".green()
+            "{} created a {} to {WINGET_PKGS_FULL_NAME}",
+            "Successfully".green(),
+            "pull request".hyperlink(&pull_request_url)
         );
-        println!("{}", pull_request_url.as_str());
 
         if self.open_pr {
             open::that(pull_request_url.as_str())?;

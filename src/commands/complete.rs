@@ -1,5 +1,4 @@
-use std::io::stdout;
-
+use anstream::stdout;
 use clap::{CommandFactory, Parser};
 use clap_complete::{Shell, generate};
 

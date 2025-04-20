@@ -2,13 +2,16 @@ use bon::builder;
 use color_eyre::Result;
 use winget_types::PackageIdentifier;
 
-use crate::manifests::{Manifests, build_manifest_string};
+use crate::{
+    github::utils::PackagePath,
+    manifests::{Manifests, build_manifest_string},
+};
 
 #[builder(finish_fn = create)]
 pub fn pr_changes(
     package_identifier: &PackageIdentifier,
     manifests: &Manifests,
-    package_path: &str,
+    package_path: &PackagePath,
     created_with: Option<&str>,
 ) -> Result<Vec<(String, String)>> {
     let mut path_content_map = vec![

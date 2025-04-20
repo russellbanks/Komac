@@ -23,15 +23,16 @@ use crate::commands::{
 
 mod commands;
 mod credential;
+mod download;
 mod download_file;
 mod editor;
 mod file_analyser;
 mod github;
-mod hyperlink;
 mod installers;
 mod manifests;
 mod match_installers;
 mod prompts;
+mod terminal;
 mod traits;
 mod update_state;
 

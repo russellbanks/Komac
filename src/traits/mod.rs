@@ -18,7 +18,6 @@ use crate::github::{github_client::GitHubValues, graphql::types::Html};
 
 pub mod name;
 pub mod path;
-pub mod url;
 
 pub trait FromMachine {
     fn from_machine(machine: Machine) -> Self;

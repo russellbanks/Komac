@@ -1,7 +1,7 @@
 use std::{
     collections::BTreeSet,
     mem,
-    num::{NonZeroU8, NonZeroU32},
+    num::{NonZeroU32, NonZeroUsize},
 };
 
 use anstream::println;
@@ -10,9 +10,9 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use indicatif::ProgressBar;
 use inquire::CustomType;
-use ordinal_trait::Ordinal;
+use itertools::Itertools;
+use ordinal::Ordinal;
 use owo_colors::OwoColorize;
-use reqwest::Client;
 use winget_types::{
     LanguageTag, ManifestType, ManifestVersion, PackageIdentifier, PackageVersion,
     installer::{
@@ -36,11 +36,12 @@ use crate::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
         write_changes_to_dir,
     },
-    credential::{get_default_headers, handle_token},
-    download_file::{download_urls, process_files},
+    credential::handle_token,
+    download::{Download, Downloader},
+    download_file::process_files,
     github::{
         github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
-        utils::{get_package_path, pull_request::pr_changes},
+        utils::{PackagePath, pull_request::pr_changes},
     },
     manifests::Manifests,
     prompts::{
@@ -49,6 +50,7 @@ use crate::{
         radio_prompt,
         text::{confirm_prompt, optional_prompt, required_prompt},
     },
+    terminal::Hyperlinkable,
 };
 
 /// Create a new package from scratch
@@ -112,8 +114,8 @@ pub struct NewVersion {
     release_notes_url: Option<ReleaseNotesUrl>,
 
     /// Number of installers to download at the same time
-    #[arg(long, default_value_t = NonZeroU8::new(2).unwrap())]
-    concurrent_downloads: NonZeroU8,
+    #[arg(long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
+    concurrent_downloads: NonZeroUsize,
 
     /// List of issues that adding this package or version would resolve
     #[arg(long)]
@@ -156,9 +158,6 @@ impl NewVersion {
     pub async fn run(self) -> Result<()> {
         let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
-        let client = Client::builder()
-            .default_headers(get_default_headers(None))
-            .build()?;
 
         let package_identifier = required_prompt(self.package_identifier)?;
 
@@ -193,7 +192,7 @@ impl NewVersion {
         let mut urls = self.urls;
         if urls.is_empty() {
             while urls.len() < 1024 {
-                let message = format!("{} Installer URL", (urls.len() + 1).to_number());
+                let message = format!("{} Installer URL", Ordinal(urls.len() + 1));
                 let url_prompt = CustomType::<DecodedUrl>::new(&message)
                     .with_error_message("Please enter a valid URL");
                 let installer_url = if urls.len() + 1 == 1 {
@@ -212,12 +211,30 @@ impl NewVersion {
             }
         }
 
-        let github_values = urls
-            .iter()
-            .find(|url| url.host_str() == Some(GITHUB_HOST))
-            .and_then(|url| github.get_all_values_from_url(url));
+        let github_values = tokio::spawn({
+            let github = github.clone();
+            let github_url = urls
+                .iter()
+                .find(|url| url.host_str() == Some(GITHUB_HOST))
+                .cloned();
+            async move {
+                github_url
+                    .map(|url| github.get_all_values_from_url(url))
+                    .unwrap_or_default()
+                    .await
+            }
+        });
 
-        let mut files = download_urls(&client, urls, self.concurrent_downloads).await?;
+        let downloader = Downloader::new_with_concurrent(self.concurrent_downloads);
+        let mut files = downloader
+            .download(
+                &urls
+                    .into_iter()
+                    .unique()
+                    .map(Download::new)
+                    .collect::<Vec<_>>(),
+            )
+            .await?;
         let mut download_results = process_files(&mut files).await?;
 
         let mut installers = Vec::new();
@@ -288,10 +305,11 @@ impl NewVersion {
             ..InstallerManifest::default()
         };
 
-        let mut github_values = match github_values {
-            Some(future) => Some(future.await?),
+        let mut github_values = match github_values.await? {
+            Some(future) => Some(future?),
             None => None,
         };
+
         let default_locale_manifest = DefaultLocaleManifest {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
@@ -373,7 +391,7 @@ impl NewVersion {
             version: version_manifest,
         };
 
-        let package_path = get_package_path(&package_identifier, Some(&package_version), None);
+        let package_path = PackagePath::new(&package_identifier, Some(&package_version), None);
         let mut changes = pr_changes()
             .package_identifier(&package_identifier)
             .manifests(&manifests)
@@ -381,7 +399,7 @@ impl NewVersion {
             .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
-        if let Some(output) = self.output.map(|out| out.join(package_path)) {
+        if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
                 "{} written all manifest files to {output}",
@@ -422,10 +440,10 @@ impl NewVersion {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a pull request to {WINGET_PKGS_FULL_NAME}",
-            "Successfully".green()
+            "{} created a {} to {WINGET_PKGS_FULL_NAME}",
+            "Successfully".green(),
+            "pull request".hyperlink(&pull_request_url)
         );
-        println!("{}", pull_request_url.as_str());
 
         if self.open_pr {
             open::that(pull_request_url.as_str())?;

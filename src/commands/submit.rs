@@ -16,10 +16,11 @@ use crate::{
     credential::handle_token,
     github::{
         github_client::{GitHub, WINGET_PKGS_FULL_NAME},
-        utils::{get_package_path, pull_request::pr_changes},
+        utils::{PackagePath, pull_request::pr_changes},
     },
     manifests::{Manifests, manifest::Manifest},
     prompts::handle_inquire_error,
+    terminal::Hyperlinkable,
 };
 
 #[derive(Parser)]
@@ -129,7 +130,7 @@ impl Submit {
         // Reorder the keys in case the manifests weren't created by komac
         manifests.installer.optimize();
 
-        let package_path = get_package_path(identifier, Some(version), None);
+        let package_path = PackagePath::new(identifier, Some(version), None);
         let mut changes = pr_changes()
             .package_identifier(identifier)
             .manifests(manifests)
@@ -169,10 +170,10 @@ impl Submit {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a pull request to {WINGET_PKGS_FULL_NAME}",
-            "Successfully".green()
+            "{} created a {} to {WINGET_PKGS_FULL_NAME}",
+            "Successfully".green(),
+            "pull request".hyperlink(&pull_request_url)
         );
-        println!("{}", pull_request_url.as_str());
 
         if self.open_pr {
             open::that(pull_request_url.as_str())?;

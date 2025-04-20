@@ -30,6 +30,7 @@ bit-set = "0.8.0"
 bitflags = "2.9.0"
 bon = "3.6.1"
 byteorder = "1.5.0"
+bytes = "1.10.1"
 bzip2 = "0.5.2"
 cab = "0.6.0"
 camino = { version = "1.1.9", features = ["serde1"] }
@@ -41,6 +42,7 @@ color-eyre = { version = "0.6.3", default-features = false }
 compact_str = "0.9.0"
 const_format = { version = "0.2.34", features = ["derive"] }
 crc32fast = "1.4.2"
+crossbeam-channel = "0.5.15"
 crossterm = "0.29.0"
 cynic = { version = "3.10.0", features = ["http-reqwest"] }
 derive-new = "0.7.0"
@@ -61,7 +63,7 @@ memmap2 = "0.9.5"
 msi = "0.8.0"
 num_cpus = "1.16.0"
 open = "5.3.2"
-ordinal-trait = "0.1.0"
+ordinal = "0.4.0"
 owo-colors = "4.2.0"
 protobuf = "3.7.2"
 quick-xml = { version = "0.37.4", features = ["serialize"] }
@@ -75,9 +77,10 @@ serde_yaml = "0.9.34"
 sha2 = "0.10.8"
 strsim = "0.11.1"
 strum = { version = "0.27.1", features = ["derive"] }
+supports-hyperlinks = "3.1.0"
 tempfile = "3.19.1"
 thiserror = "2.0.12"
-tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros", "fs"] }
+tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros", "fs", "parking_lot"] }
 tracing = { version = "0.1.41", features = ["release_max_level_warn"] }
 tracing-indicatif = "0.3.9"
 tracing-subscriber = "0.3.19"
@@ -87,7 +90,7 @@ tui-textarea = { version = "0.7.0", features = ["search"] }
 url = { version = "2.5.3", features = ["serde"] }
 uuid = { version = "1.16.0", features = ["v4"] }
 walkdir = "2.5.0"
-winget-types = { version = "0.2.0", features = ["serde", "std"] }
+winget-types = { version = "0.3.0", features = ["serde", "std", "chrono"] }
 yara-x = { version = "0.14.0", default-features = false, features = ["pe-module"] }
 zerocopy = { version = "0.8.24", features = ["derive", "std"] }
 zip = { version = "2.6.1", default-features = false, features = ["deflate"] }

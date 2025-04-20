@@ -18,6 +18,7 @@ pub struct GetRepositoryInfo {
 #[derive(cynic::QueryFragment)]
 pub struct Repository {
     pub id: cynic::Id,
+    pub owner: RepositoryOwner,
     pub name_with_owner: String,
     pub url: Url,
     pub default_branch_ref: Option<Ref>,
@@ -28,6 +29,11 @@ pub struct Ref {
     pub name: String,
     pub id: cynic::Id,
     pub target: Option<TargetGitObject>,
+}
+
+#[derive(cynic::QueryFragment)]
+pub struct RepositoryOwner {
+    pub login: String,
 }
 
 #[derive(cynic::QueryFragment)]
@@ -74,6 +80,9 @@ mod tests {
             query GetRepositoryInfo($owner: String!, $name: String!) {
               repository(owner: $owner, name: $name) {
                 id
+                owner {
+                  login
+                }
                 nameWithOwner
                 url
                 defaultBranchRef {

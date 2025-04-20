@@ -4,6 +4,7 @@ use anstream::println;
 use bitflags::bitflags;
 use clap::Parser;
 use color_eyre::Result;
+use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use inquire::MultiSelect;
 use owo_colors::OwoColorize;
@@ -40,7 +41,7 @@ impl Cleanup {
         let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
-        let merge_state = MergeState::from_bools(self.only_merged, self.only_closed);
+        let merge_state = MergeState::from((self.only_merged, self.only_closed));
 
         let pb = ProgressBar::new_spinner().with_message(format!(
             "Retrieving branches that have a {merge_state} pull request associated with them"
@@ -49,7 +50,8 @@ impl Cleanup {
 
         // Get all fork branches with an associated pull request to microsoft/winget-pkgs
         let (pr_branch_map, repository_id) = github
-            .get_branches(&github.get_username().await?, merge_state)
+            .get_username()
+            .and_then(|username| github.get_branches(username, merge_state))
             .await?;
 
         pb.finish_and_clear();
@@ -105,6 +107,7 @@ impl Cleanup {
             .await?;
 
         pb.finish_and_clear();
+
         println!(
             "{} deleted {} selected {branch_label}",
             "Successfully".green(),
@@ -138,8 +141,8 @@ impl Display for MergeState {
     }
 }
 
-impl MergeState {
-    pub const fn from_bools(only_merged: bool, only_closed: bool) -> Self {
+impl From<(bool, bool)> for MergeState {
+    fn from((only_merged, only_closed): (bool, bool)) -> Self {
         match (only_merged, only_closed) {
             (true, false) => Self::MERGED,
             (false, true) => Self::CLOSED,
