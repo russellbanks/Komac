@@ -1,4 +1,4 @@
-use std::{fs::File, io};
+use std::{fs::File, io, num::NonZeroU32};
 
 use anstream::println;
 use camino::Utf8PathBuf;
@@ -28,13 +28,17 @@ pub struct Submit {
     #[arg(value_hint = clap::ValueHint::DirPath)]
     path: Utf8PathBuf,
 
+    /// Skip the confirmation prompt to submit the package
+    #[arg(short = 'y', long = "yes", visible_alias = "submit")]
+    skip_prompt: bool,
+
+    /// List of issues that submitting this version would resolve
+    #[arg(long)]
+    resolves: Option<Vec<NonZeroU32>>,
+
     /// Open pull request link automatically
     #[arg(long, env = "OPEN_PR")]
     open_pr: bool,
-
-    /// Skip the confirmation prompt to submit the package
-    #[arg(short = 'y', long = "yes")]
-    skip_prompt: bool,
 
     /// Run without submitting
     #[arg(long, env = "DRY_RUN")]
@@ -164,6 +168,7 @@ impl Submit {
             .version(version)
             .versions(&versions)
             .changes(changes)
+            .maybe_issue_resolves(self.resolves)
             .send()
             .await?;
 
