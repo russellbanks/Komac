@@ -1403,9 +1403,9 @@ dependencies = [
 
 [[package]]
 name = "embed-resource"
-version = "2.5.1"
+version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b68b6f9f63a0b6a38bc447d4ce84e2b388f3ec95c99c641c8ff0dd3ef89a6379"
+checksum = "7fbc6e0d8e0c03a655b53ca813f0463d2c956bc4db8138dbc89f120b066551e3"
 dependencies = [
  "cc",
  "memchr",
@@ -5855,9 +5855,9 @@ checksum = "c7651a1f62a11b8cbd5e0d42526e55f2c99886c77e007179efff86c2b137e66c"
 
 [[package]]
 name = "windows_exe_info"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0960cd3c8e7c1a55327ac8206395748c8145dc56c524057d1d50ab80300f49f"
+checksum = "3a7c2cd292e8e58e012eaf18f18f6b64ef74e0b90677b4f9e1f15bfca24056c7"
 dependencies = [
  "camino",
  "embed-resource",

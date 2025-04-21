@@ -94,7 +94,7 @@ zip = { version = "2.6.1", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
 cynic-codegen = { version = "3.10.0", features = ["rkyv"] }
-windows_exe_info = { version = "0.5.1", features = ["manifest"] }
+windows_exe_info = { version = "0.5.2", features = ["manifest"] }
 
 [dev-dependencies]
 indoc = "2.0.6"
