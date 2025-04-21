@@ -13,15 +13,16 @@ pub async fn process_files(
         |DownloadedFile {
              url,
              mmap,
+             override_arch,
              sha_256,
              file_name,
              last_modified,
              ..
          }| async move {
             let mut file_analyser = FileAnalyser::new(mmap, file_name)?;
-            let architecture_in_url = Architecture::from_url(url.as_str());
+            let architecture = override_arch.or_else(|| Architecture::from_url(url.as_str()));
             for installer in &mut file_analyser.installers {
-                if let Some(architecture) = architecture_in_url {
+                if let Some(architecture) = architecture {
                     installer.architecture = architecture;
                 }
                 installer.url = url.clone();

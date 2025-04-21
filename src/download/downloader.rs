@@ -1,4 +1,5 @@
 use std::num::NonZeroUsize;
+use std::str::FromStr;
 
 use chrono::DateTime;
 use color_eyre::{
@@ -18,7 +19,7 @@ use tokio::{
     sync::mpsc,
     try_join,
 };
-use winget_types::Sha256String;
+use winget_types::{Sha256String, installer::Architecture, url::DecodedUrl};
 
 use super::{Download, DownloadedFile};
 
@@ -74,6 +75,14 @@ impl Downloader {
         download.convert_to_github_versioned().await?;
 
         download.upgrade_to_https(client).await;
+
+        let mut override_arch: Option<Architecture> = None;
+        if let Some((base, arch)) = download.url.as_str().rsplit_once('|') {
+            if let Ok(parsed) = arch.parse::<Architecture>() {
+                override_arch = Some(parsed);
+                download.url = DecodedUrl::from_str(base).unwrap();
+            }
+        }
 
         let res = client.get(download.url.as_str()).send().await?;
 
@@ -154,6 +163,7 @@ impl Downloader {
             url: download.url,
             mmap: unsafe { Mmap::map(&temp_file) }?,
             file: temp_file,
+            override_arch,
             sha_256: Sha256String::from_digest(&sha_256),
             file_name,
             last_modified,

@@ -2,7 +2,7 @@ use std::fs::File;
 
 use chrono::NaiveDate;
 use memmap2::Mmap;
-use winget_types::{Sha256String, url::DecodedUrl};
+use winget_types::{Sha256String, installer::Architecture, url::DecodedUrl};
 
 pub struct DownloadedFile {
     // As the downloaded file is a temporary file, it's stored here so that the reference stays
@@ -12,6 +12,7 @@ pub struct DownloadedFile {
     pub file: File,
     pub url: DecodedUrl,
     pub mmap: Mmap,
+    pub override_arch: Option<Architecture>,
     pub sha_256: Sha256String,
     pub file_name: String,
     pub last_modified: Option<NaiveDate>,
