@@ -1,14 +1,19 @@
 use std::{borrow::Cow, ops::Not};
 
+use compact_str::ToCompactString;
+use tracing::debug;
 use zerocopy::{
     Immutable, KnownLayout, TryFromBytes,
     little_endian::{I32, U16},
     transmute_ref,
 };
 
-use crate::installers::{nsis::state::NsisState, utils::registry::RegRoot};
+use crate::installers::{
+    nsis::{registry::RegType, state::NsisState},
+    utils::registry::RegRoot,
+};
 
-#[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(i32)]
 pub enum PushPop {
     Push = 0i32.to_le(),
@@ -16,7 +21,7 @@ pub enum PushPop {
 }
 
 #[expect(dead_code)]
-#[derive(Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum Entry {
     Invalid = 0u32.to_le(),
@@ -254,9 +259,10 @@ pub enum Entry {
     WriteReg {
         root: RegRoot,
         key_name: I32,
-        value_name: I32,
-        value: I32,
-        type_len: I32,
+        item_name: I32,
+        item_data: I32,
+        r#type: RegType,
+        real_type: RegType,
     } = 51u32.to_le(),
     ReadRegValue {
         output: I32,
@@ -472,16 +478,38 @@ impl Entry {
             Self::WriteReg {
                 root,
                 key_name,
-                value_name,
-                value,
-                ..
+                item_name,
+                item_data,
+                r#type,
+                real_type,
             } => {
-                state.registry.set_value(
-                    *root,
-                    state.get_string(key_name.get()),
-                    state.get_string(value_name.get()),
-                    state.get_string(value.get()),
-                );
+                let key_name = state.get_string(key_name.get());
+                let item_name = state.get_string(item_name.get());
+
+                if *r#type == RegType::String {
+                    let item_data = state.get_string(item_data.get());
+                    if *real_type == RegType::String {
+                        debug!(r#"WriteRegStr: "{root:?}\{key_name}" "{item_name}"="{item_data}""#);
+                    } else {
+                        debug!(
+                            r#"WriteRegExpandStr: "{root:?}\{key_name}" "{item_name}"="{item_data}""#
+                        );
+                    }
+                    state
+                        .registry
+                        .set_value(*root, key_name, item_name, item_data);
+                } else if *r#type == RegType::DWord {
+                    debug!(
+                        r#"WriteRegDWORD: "{root:?}\{key_name}" "{item_name}"="{}""#,
+                        item_data.get()
+                    );
+                    state.registry.set_value(
+                        *root,
+                        key_name,
+                        item_name,
+                        item_data.get().to_compact_string(),
+                    );
+                }
             }
             _ => {}
         }

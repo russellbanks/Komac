@@ -1,6 +1,6 @@
 use std::{borrow::Cow, collections::HashMap};
 
-use tracing::debug;
+use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
 use crate::installers::utils::registry::RegRoot;
 
@@ -31,20 +31,18 @@ impl<'data> Registry<'data> {
         })
     }
 
-    pub fn set_value(
-        &mut self,
-        root: RegRoot,
-        key: Cow<'data, str>,
-        name: Cow<'data, str>,
-        value: Cow<'data, str>,
-    ) {
-        debug!(?root, %key, %name, %value);
+    pub fn set_value<K, N, V>(&mut self, root: RegRoot, key: K, name: N, value: V)
+    where
+        K: Into<Cow<'data, str>>,
+        N: Into<Cow<'data, str>>,
+        V: Into<Cow<'data, str>>,
+    {
         self.0
             .entry(root)
             .or_default()
-            .entry(key)
+            .entry(key.into())
             .or_default()
-            .insert(name, value);
+            .insert(name.into(), value.into());
     }
 
     pub fn remove_value(&mut self, name: &str) -> Option<Cow<'data, str>> {
@@ -52,4 +50,18 @@ impl<'data> Registry<'data> {
             .values_mut()
             .find_map(|keys| keys.values_mut().find_map(|values| values.remove(name)))
     }
+}
+
+/// <https://github.com/kichik/nsis/blob/HEAD/Source/Platform.h#L672>
+#[expect(dead_code)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[repr(i32)]
+pub enum RegType {
+    #[default]
+    None = 0i32.to_le(),
+    String = 1i32.to_le(),
+    ExpandedString = 2i32.to_le(),
+    Binary = 3i32.to_le(),
+    DWord = 4i32.to_le(),
+    MultiString = 5i32.to_le(),
 }
