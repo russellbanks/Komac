@@ -38,7 +38,7 @@ chrono = { version = "0.4.41", features = ["serde"] }
 clap = { version = "4.5.37", features = ["derive", "cargo", "env"] }
 clap_complete = "4.5.48"
 codepage = "0.1.2"
-color-eyre = { version = "0.6.3", default-features = false }
+color-eyre = { version = "0.6.4", default-features = false }
 compact_str = "0.9.0"
 const_format = { version = "0.2.34", features = ["derive"] }
 crc32fast = "1.4.2"
