@@ -3,6 +3,7 @@ use std::{
     io::{Read, Seek},
     mem,
     num::{NonZeroU32, NonZeroUsize},
+    str::FromStr,
     sync::Arc,
 };
 
@@ -50,7 +51,7 @@ pub struct UpdateVersion {
     package_version: PackageVersion,
 
     /// The list of package installers
-    #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
+    #[arg(short, long, value_hint = clap::ValueHint::Url)]
     urls: Vec<DecodedUrl>,
 
     /// Number of installers to download at the same time
@@ -181,11 +182,31 @@ impl UpdateVersion {
             }
         });
 
+        let mut manifests = manifests.await??;
+        let mut urls_to_download = self.urls.clone();
+        if urls_to_download.is_empty() {
+            println!(
+                "{}",
+                "No installer URLs provided. Attempting to guess URL(s).".yellow(),
+            );
+            urls_to_download = manifests
+                .installer
+                .installers
+                .iter()
+                .filter_map(|installer| {
+                    let replaced = installer
+                        .url
+                        .as_str()
+                        .replace(latest_version.as_str(), package_version.as_str());
+                    DecodedUrl::from_str(&replaced).ok()
+                })
+                .collect();
+        }
+
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads);
         let mut files = downloader
             .download(
-                &self
-                    .urls
+                &urls_to_download
                     .into_iter()
                     .unique()
                     .map(Download::new)
@@ -197,7 +218,6 @@ impl UpdateVersion {
             .iter_mut()
             .flat_map(|(_url, analyser)| mem::take(&mut analyser.installers))
             .collect::<Vec<_>>();
-        let mut manifests = manifests.await??;
         let previous_installers = mem::take(&mut manifests.installer.installers)
             .into_iter()
             .map(|mut installer| {
@@ -244,7 +264,7 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
 
-        manifests.installer.package_version = (&*package_version).clone();
+        manifests.installer.package_version = (*package_version).clone();
         manifests.installer.minimum_os_version = manifests
             .installer
             .minimum_os_version
