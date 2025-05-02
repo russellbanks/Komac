@@ -717,7 +717,7 @@ impl GitHub {
                 winget_pkgs.default_branch_oid.clone(),
             )
             .await?;
-        let commit_title = get_commit_title(identifier, version, &UpdateState::RemoveVersion);
+        let commit_title = get_commit_title(identifier, version, UpdateState::RemoveVersion);
         let deletions = self
             .get_directory_content(
                 &fork.owner,
@@ -780,7 +780,7 @@ impl GitHub {
             .create_branch(&fork.id, &branch_name, winget_pkgs.default_branch_oid)
             .await?;
         let commit_title =
-            get_commit_title(identifier, version, &UpdateState::get(version, versions));
+            get_commit_title(identifier, version, UpdateState::get(version, versions));
         let additions = changes
             .iter()
             .map(|(path, content)| {

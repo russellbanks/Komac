@@ -8,7 +8,7 @@ use zerocopy::{
     little_endian::{U32, U64},
 };
 
-use crate::installers::nsis::NsisError;
+use crate::installers::nsis::{NsisError, section::Section};
 
 #[derive(Clone, Debug, Default, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
@@ -71,6 +71,14 @@ impl BlockHeaders {
                 &data[usize::try_from(reader.position()).unwrap_or_default()..],
             ))
         }
+    }
+
+    pub fn sections<'data>(&self, data: &'data [u8]) -> impl Iterator<Item = &'data Section> {
+        let sections = BlockType::Sections.get(data, self);
+        let section_size = sections.len() / self[BlockType::Sections].num.get() as usize;
+        sections
+            .chunks_exact(section_size)
+            .flat_map(Section::ref_from_bytes)
     }
 }
 

@@ -26,7 +26,7 @@ const NSIS_MAX_INST_TYPES: u8 = 32;
 #[repr(C)]
 pub struct Header {
     install_reg_rootkey: I32,
-    install_rek_key_ptr: I32,
+    install_reg_key_ptr: I32,
     install_reg_value_ptr: I32,
     bg_color1: I32,
     bg_color2: I32,

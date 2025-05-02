@@ -1,8 +1,10 @@
 mod entry;
+mod file_system;
 mod first_header;
 mod header;
 mod language;
 mod registry;
+mod section;
 mod state;
 mod strings;
 mod version;
@@ -35,7 +37,8 @@ use crate::{
     file_analyser::EXE,
     installers::{
         nsis::{
-            entry::Entry,
+            entry::{Entry, EntryError},
+            file_system::Directory,
             first_header::FirstHeader,
             header::{
                 Decompressed, Header, block::BlockHeaders, compression::Compression,
@@ -53,6 +56,8 @@ pub enum NsisError {
     NotNsisFile,
     #[error("Failed to get NSIS first header offset")]
     FirstHeaderOffset,
+    #[error(transparent)]
+    InvalidEntry(#[from] EntryError),
     #[error("{0}")]
     ZeroCopy(String),
     #[error(transparent)]
@@ -102,33 +107,42 @@ impl Nsis {
         let (header, _) = Header::ref_from_prefix(rest)
             .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
+        debug!(?header);
+
         let mut state = NsisState::new(pe, &decompressed_data, header, &blocks)?;
+
+        let install_dir = (header.install_directory_ptr != I32::ZERO)
+            .then(|| state.get_string(header.install_directory_ptr.get()));
+
+        if let Some(ref install_dir) = install_dir {
+            debug!(%install_dir);
+        }
 
         let entries =
             <[Entry]>::try_ref_from_bytes(BlockType::Entries.get(&decompressed_data, &blocks))
                 .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
+        for (index, section) in blocks.sections(&decompressed_data).enumerate() {
+            debug!(
+                r#"Simulating code execution for section {index} "{}""#,
+                state.get_string(section.name.get())
+            );
+            state.execute_code_segment(section.code.get())?;
+        }
+
         let mut architecture =
             Option::from(architecture).filter(|&architecture| architecture != Architecture::X86);
 
-        for entry in entries {
-            entry.execute(&mut state);
-            if let Entry::ExtractFile { name, .. } = entry {
-                let name = state.get_string(name.get());
-                let file_stem = Utf8Path::new(&name).file_stem();
-                // If there is an app-64 file, the app is x64.
-                // If there is an app-32 file or both files are present, the app is x86
-                // (x86 apps can still install on x64 systems)
-                if file_stem == Some(APP_64) && architecture.is_none() {
-                    architecture = Some(Architecture::X64);
-                } else if file_stem == Some(APP_32) {
-                    architecture = Some(Architecture::X86);
-                }
+        for directory in state.file_system.directories().map(Directory::name) {
+            // If there is an app-64 file, the app is x64.
+            // If there is an app-32 file or both files are present, the app is x86
+            // (x86 apps can still install on x64 systems)
+            if directory == APP_64 && architecture.is_none() {
+                architecture = Some(Architecture::X64);
+            } else if directory == APP_32 {
+                architecture = Some(Architecture::X86);
             }
         }
-
-        let install_dir = (header.install_directory_ptr != I32::ZERO)
-            .then(|| state.get_string(header.install_directory_ptr.get()));
 
         architecture = architecture
             .or_else(|| {
@@ -205,16 +219,16 @@ impl Nsis {
                         )
                         .ok()?;
 
-                        let machine_value = decoder.read_u16::<LE>().ok()?;
-                        Machine::from_i32(i32::from(machine_value))
+                        let machine = decoder.read_u16::<LE>().ok()?;
+                        Machine::from_i32(machine.into())
                     })
                     .map(Architecture::from_machine)
             });
 
-        let display_name = state.registry.remove_value("DisplayName");
-        let publisher = state.registry.remove_value("Publisher");
-        let display_version = state.registry.remove_value("DisplayVersion");
-        let product_code = state.registry.get_product_code();
+        let display_name = state.registry.remove_value_by_name("DisplayName");
+        let publisher = state.registry.remove_value_by_name("Publisher");
+        let display_version = state.registry.remove_value_by_name("DisplayVersion");
+        let product_code = state.registry.product_code();
 
         Ok(Self {
             installer: Installer {

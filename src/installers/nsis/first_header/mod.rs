@@ -9,7 +9,7 @@ use crate::installers::nsis::first_header::{
     signature::{Magic, NsisSignature},
 };
 
-#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, TryFromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct FirstHeader {
     flags: HeaderFlags,

@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
-#[derive(Debug, FromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
 pub struct HeaderFlags(u32);
 

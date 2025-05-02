@@ -147,7 +147,7 @@ pub fn get_branch_name(
 pub fn get_commit_title(
     identifier: &PackageIdentifier,
     version: &PackageVersion,
-    update_state: &UpdateState,
+    update_state: UpdateState,
 ) -> String {
     format!("{update_state}: {identifier} version {version}")
 }

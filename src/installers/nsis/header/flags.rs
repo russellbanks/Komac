@@ -1,13 +1,13 @@
 use bitflags::bitflags;
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
-#[derive(Debug, FromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
 pub struct CommonHeaderFlags(u32);
 
 bitflags! {
     impl CommonHeaderFlags: u32 {
-        const DETAILS_SHOWDETAILS = (1u32 << 0).to_le();
+        const DETAILS_SHOWDETAILS = 1u32.to_le();
         const DETAILS_NEVERSHOW = (1u32 << 1).to_le();
         const PROGRESS_COLORED = (1u32 << 2).to_le();
         const FORCE_CRC = (1u32 << 3).to_le();

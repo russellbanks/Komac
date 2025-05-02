@@ -1,19 +1,19 @@
 use std::{cmp::max, collections::BTreeSet};
 
-use strum::Display;
+use derive_more::Display;
 use winget_types::PackageVersion;
 
-#[derive(Display)]
+#[derive(Copy, Clone, Display)]
 pub enum UpdateState {
-    #[strum(serialize = "New package")]
+    #[display("New package")]
     NewPackage,
-    #[strum(serialize = "New version")]
+    #[display("New version")]
     NewVersion,
-    #[strum(serialize = "Add version")]
+    #[display("Add version")]
     AddVersion,
-    #[strum(serialize = "Update version")]
+    #[display("Update version")]
     UpdateVersion,
-    #[strum(serialize = "Remove version")]
+    #[display("Remove version")]
     RemoveVersion,
 }
 impl UpdateState {

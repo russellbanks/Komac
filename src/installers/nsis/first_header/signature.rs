@@ -2,7 +2,7 @@ use derive_more::{Debug, Display};
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
 #[expect(dead_code)]
-#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum Magic {
     /// Default NSIS magic bytes
@@ -12,7 +12,7 @@ pub enum Magic {
 }
 
 #[expect(dead_code)]
-#[derive(Debug, Display, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, Display, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum Sig1 {
     #[display("Null")]
@@ -22,7 +22,7 @@ pub enum Sig1 {
 }
 
 #[expect(dead_code)]
-#[derive(Debug, Display, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, Display, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum Sig2 {
     #[display("Soft")]
@@ -34,7 +34,7 @@ pub enum Sig2 {
 }
 
 #[expect(dead_code)]
-#[derive(Debug, Display, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, Display, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum Sig3 {
     #[display("Inst")]
@@ -43,7 +43,7 @@ pub enum Sig3 {
     All0 = u32::from_le_bytes(*b"all\0").to_le(),
 }
 
-#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, TryFromBytes, KnownLayout, Immutable)]
 #[debug("{_0}{_1}{_2}")]
 #[repr(C)]
 pub struct NsisSignature(Sig1, Sig2, Sig3);

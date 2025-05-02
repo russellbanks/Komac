@@ -213,7 +213,7 @@ impl UpdateVersion {
                 installer
             })
             .collect::<Vec<_>>();
-        manifests.default_locale.package_version = (&*package_version).clone();
+        manifests.default_locale.package_version = (*package_version).clone();
         let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
@@ -244,7 +244,7 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
 
-        manifests.installer.package_version = (&*package_version).clone();
+        manifests.installer.package_version = (*package_version).clone();
         manifests.installer.minimum_os_version = manifests
             .installer
             .minimum_os_version

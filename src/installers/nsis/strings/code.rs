@@ -2,6 +2,7 @@ use std::num::NonZeroU8;
 
 use crate::installers::nsis::version::NsisVersion;
 
+#[derive(Copy, Clone)]
 #[repr(u8)]
 pub enum NsCode {
     Lang,  // 1 if >= NSIS 3, 255 otherwise

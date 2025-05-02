@@ -50,7 +50,7 @@ impl NsisVersion {
 
     pub fn from_branding_text(state: &NsisState) -> Option<Self> {
         let branding_text = state.get_string(state.language_table.string_offsets[0].get());
-        trace!(%branding_text);
+        debug!(%branding_text);
         Self::from_text(&branding_text)
     }
 

@@ -4,10 +4,11 @@ use anstream::println;
 use camino::Utf8Path;
 use chrono::Local;
 use color_eyre::Result;
+use derive_more::Display;
 use futures_util::{StreamExt, TryStreamExt, stream};
 use inquire::{Select, error::InquireResult};
 use owo_colors::OwoColorize;
-use strum::{Display, EnumIter, IntoEnumIterator};
+use strum::{EnumIter, IntoEnumIterator};
 use tokio::{fs, fs::File, io::AsyncWriteExt};
 use winget_types::{PackageIdentifier, PackageVersion};
 

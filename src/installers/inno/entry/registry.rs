@@ -85,7 +85,7 @@ impl Registry {
 }
 
 #[expect(dead_code)]
-#[derive(Debug, Default, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Clone, Copy, Debug, Default, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 enum RegistryType {
     #[default]
