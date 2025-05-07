@@ -46,7 +46,7 @@ jobs:
       - name: Clone repository
         uses: actions/checkout@v4
 
-      - uses: mlugg/setup-zig@v1
+      - uses: mlugg/setup-zig@v2
         if: contains(matrix.platform.bins, 'cargo-zigbuild')
 
       - uses: moonrepo/setup-rust@v1
