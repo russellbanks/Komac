@@ -1,17 +1,19 @@
-mod directory;
-mod file;
 mod item;
 
-use std::{iter::FilterMap, slice::Iter};
+use std::{
+    fmt,
+    iter::{FilterMap, once},
+    slice::Iter,
+};
 
 use camino::{Utf8Component, Utf8Path};
 use chrono::{DateTime, Utc};
-pub use directory::Directory;
-pub use file::File;
 use indextree::{Arena, Node, NodeId};
-use item::Item;
+pub use item::Item;
+use itertools::{Either, Itertools, Position};
 
-#[derive(Debug)]
+use super::strings::PredefinedVar;
+
 pub struct FileSystem {
     arena: Arena<Item>,
     root: NodeId,
@@ -27,7 +29,7 @@ pub enum RelativeLocation {
 impl FileSystem {
     pub fn new() -> Self {
         let mut arena = Arena::new();
-        let root = arena.new_node(Item::Directory(Directory::new_root()));
+        let root = arena.new_node(Item::new_root());
         Self {
             arena,
             root,
@@ -35,13 +37,33 @@ impl FileSystem {
         }
     }
 
+    fn parse_path<'path, T>(path: &'path T) -> impl Iterator<Item = Utf8Component<'path>>
+    where
+        T: AsRef<Utf8Path> + 'path,
+    {
+        let path = path.as_ref();
+
+        let components = path.components().filter(|component| {
+            ![PredefinedVar::InstDir, PredefinedVar::_OutDir]
+                .iter()
+                .contains(component.as_str())
+        });
+
+        if path
+            .components()
+            .next()
+            .is_some_and(|component| PredefinedVar::all().iter().contains(component.as_str()))
+        {
+            Either::Left(once(Utf8Component::RootDir).chain(components))
+        } else {
+            Either::Right(components)
+        }
+    }
+
     pub fn create_directory<T>(&mut self, name: T, location: RelativeLocation) -> NodeId
     where
         T: AsRef<Utf8Path>,
     {
-        const INST_DIR: &str = "$INSTDIR";
-        const OUT_DIR: &str = "$_OUTDIR";
-
         let current = match location {
             RelativeLocation::Root => self.root,
             RelativeLocation::Current => self.current_dir,
@@ -49,33 +71,23 @@ impl FileSystem {
 
         let mut current = current;
 
-        for mut component in name.as_ref().components() {
-            if [INST_DIR, OUT_DIR].contains(&component.as_str()) {
-                component = Utf8Component::RootDir;
-            }
-
+        for component in Self::parse_path(&name) {
             match component {
                 Utf8Component::ParentDir => {
                     if let Some(parent) = self.arena.get(current).and_then(Node::parent) {
                         current = parent;
                     }
                 }
-                Utf8Component::RootDir => {
-                    while let Some(parent) = self.arena.get(current).and_then(Node::parent) {
-                        current = parent;
-                    }
-                }
+                Utf8Component::RootDir => current = self.root,
                 Utf8Component::Normal(part) => {
                     if let Some(directory) = current.children(&self.arena).find(|&id| {
                         self.arena
                             .get(id)
-                            .map(Node::get)
-                            .is_some_and(|item| item.name() == part)
+                            .is_some_and(|item| item.get().name() == part)
                     }) {
                         current = directory;
                     } else {
-                        let new_dir = Directory::new(part);
-                        current = current.append_value(new_dir.into(), &mut self.arena);
+                        current = current.append_value(Item::new_directory(part), &mut self.arena);
                     }
                 }
                 _ => {}
@@ -92,35 +104,66 @@ impl FileSystem {
         self.current_dir = self.create_directory(path, location);
     }
 
-    #[inline]
-    pub fn create_file<T, D>(&mut self, name: T, modified: D) -> NodeId
+    pub fn create_file<T, D>(&mut self, path: T, created_at: D) -> Option<NodeId>
     where
         T: AsRef<Utf8Path>,
-        D: Into<DateTime<Utc>>,
+        D: Into<Option<DateTime<Utc>>>,
     {
-        let path = name.as_ref();
-        let mut components = path
-            .components()
-            .filter_map(|component| {
-                if let Utf8Component::Normal(part) = component {
-                    Some(part)
-                } else {
-                    None
-                }
-            })
-            .peekable();
+        let path = path.as_ref();
 
+        let file_name = path.file_name()?;
+
+        let directory = if let Some(parent) = path.parent() {
+            self.create_directory(parent, RelativeLocation::Current)
+        } else {
+            self.current_dir
+        };
+
+        if let Some(file) = directory.children(&self.arena).find(|&id| {
+            self.arena
+                .get(id)
+                .is_some_and(|node| node.get().name() == file_name)
+        }) {
+            Some(file)
+        } else {
+            let file = Item::new_file(file_name, created_at);
+            Some(directory.append_value(file, &mut self.arena))
+        }
+    }
+
+    pub fn file_exists<T>(&self, name: T) -> bool
+    where
+        T: AsRef<Utf8Path>,
+    {
         let mut current = self.current_dir;
-        while let Some(directory) = components.next() {
-            if components.peek().is_none() {
-                let file = File::new(directory, modified);
-                let id = current.append_value(file.into(), &mut self.arena);
-                return id;
+
+        for (position, component) in Self::parse_path(&name).with_position() {
+            match component {
+                Utf8Component::ParentDir => {
+                    if let Some(parent) = self.arena.get(current).and_then(Node::parent) {
+                        current = parent;
+                    }
+                }
+                Utf8Component::RootDir => current = self.root,
+                Utf8Component::Normal(part) => {
+                    if let Some(directory) = current.children(&self.arena).find(|&id| {
+                        self.arena
+                            .get(id)
+                            .is_some_and(|item| item.get().name() == part)
+                    }) {
+                        if matches!(position, Position::Last | Position::Only) {
+                            return true;
+                        }
+                        current = directory;
+                    } else {
+                        break;
+                    }
+                }
+                _ => {}
             }
-            current = self.create_directory(directory, RelativeLocation::Current);
         }
 
-        panic!()
+        false
     }
 
     pub fn delete_file<T: ?Sized>(&mut self, name: &T) -> bool
@@ -140,18 +183,35 @@ impl FileSystem {
         false
     }
 
-    pub fn files(&self) -> impl Iterator<Item = &File> {
+    pub fn directories(&self) -> impl Iterator<Item = &Item> {
         self.root
             .descendants(&self.arena)
-            .filter_map(|id| self.arena.get(id).and_then(|node| node.get().as_file()))
+            .filter_map(|id| self.arena.get(id).map(Node::get))
+            .filter(|item| item.is_directory())
     }
 
-    pub fn directories(&self) -> impl Iterator<Item = &Directory> {
-        self.root.descendants(&self.arena).filter_map(|id| {
-            self.arena
-                .get(id)
-                .and_then(|node| node.get().as_directory())
-        })
+    pub fn files(&self) -> impl Iterator<Item = &Item> {
+        self.root
+            .descendants(&self.arena)
+            .filter_map(|id| self.arena.get(id).map(Node::get))
+            .filter(|item| item.is_file())
+    }
+
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = &Item> {
+        self.into_iter()
+    }
+}
+
+impl fmt::Debug for FileSystem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.root.debug_pretty_print(&self.arena).fmt(f)
+    }
+}
+
+impl fmt::Display for FileSystem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.root.debug_pretty_print(&self.arena).fmt(f)
     }
 }
 
@@ -166,6 +226,7 @@ impl<'a> IntoIterator for &'a FileSystem {
     type Item = &'a Item;
 
     type IntoIter = FilterMap<Iter<'a, Node<Item>>, fn(&'a Node<Item>) -> Option<&'a Item>>;
+
     fn into_iter(self) -> Self::IntoIter {
         self.arena
             .iter()

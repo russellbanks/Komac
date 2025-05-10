@@ -1,54 +1,88 @@
-use crate::installers::nsis::file_system::{directory::Directory, file::File};
+use std::fmt;
 
-#[derive(Clone, Debug)]
+use chrono::{DateTime, Utc};
+use compact_str::CompactString;
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Item {
-    File(File),
-    Directory(Directory),
+    File {
+        name: CompactString,
+        modified_at: Option<DateTime<Utc>>,
+    },
+    Directory(CompactString),
 }
 
 impl Item {
+    #[inline]
+    pub const fn new_root() -> Self {
+        Self::Directory(CompactString::const_new("/"))
+    }
+
+    pub fn new_directory<T>(name: T) -> Self
+    where
+        T: Into<CompactString>,
+    {
+        Self::Directory(name.into())
+    }
+
+    pub fn new_file<T, D>(name: T, modified_at: D) -> Self
+    where
+        T: Into<CompactString>,
+        D: Into<Option<DateTime<Utc>>>,
+    {
+        Self::File {
+            name: name.into(),
+            modified_at: modified_at.into(),
+        }
+    }
+
     pub fn name(&self) -> &str {
         match self {
-            Self::Directory(directory) => directory.name(),
-            Self::File(file) => file.name(),
+            Self::File { name, .. } | Self::Directory(name) => name.as_str(),
+        }
+    }
+
+    pub const fn modified_at(&self) -> Option<&DateTime<Utc>> {
+        match self {
+            Self::File { modified_at, .. } => modified_at.as_ref(),
+            Self::Directory(_) => None,
         }
     }
 
     #[inline]
     pub const fn is_file(&self) -> bool {
-        matches!(self, Self::File(_))
+        matches!(self, Self::File { .. })
     }
 
     #[inline]
     pub const fn is_directory(&self) -> bool {
-        matches!(self, Self::Directory(_))
+        matches!(self, Self::Directory { .. })
     }
+}
 
-    pub const fn as_file(&self) -> Option<&File> {
+impl fmt::Debug for Item {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Directory(_) => None,
-            Self::File(file) => Some(file),
-        }
-    }
-
-    pub const fn as_directory(&self) -> Option<&Directory> {
-        match self {
-            Self::Directory(directory) => Some(directory),
-            Self::File(_) => None,
+            Self::File {
+                name,
+                modified_at: created_at,
+            } => {
+                if let Some(created_at) = created_at {
+                    f.debug_struct("File")
+                        .field("name", name)
+                        .field("modified_at", created_at)
+                        .finish()
+                } else {
+                    f.debug_tuple("File").field(name).finish()
+                }
+            }
+            Self::Directory(name) => f.debug_tuple("Directory").field(name).finish(),
         }
     }
 }
 
-impl From<File> for Item {
-    #[inline]
-    fn from(file: File) -> Self {
-        Self::File(file)
-    }
-}
-
-impl From<Directory> for Item {
-    #[inline]
-    fn from(directory: Directory) -> Self {
-        Self::Directory(directory)
+impl fmt::Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.name().fmt(f)
     }
 }

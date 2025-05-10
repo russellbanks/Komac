@@ -1,4 +1,4 @@
-use std::{fmt, fmt::Formatter};
+use std::fmt;
 
 use zerocopy::{Immutable, KnownLayout, TryFromBytes, ValidityError, try_transmute};
 
@@ -42,7 +42,7 @@ impl ShowWindow {
 
 impl fmt::Display for ShowWindow {
     #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
     }
 }

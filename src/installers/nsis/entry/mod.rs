@@ -12,6 +12,7 @@ use std::{
     ops::Not,
 };
 
+use chrono::DateTime;
 use compact_str::{ToCompactString, format_compact};
 use nt_time::FileTime;
 use thiserror::Error;
@@ -80,7 +81,7 @@ pub enum Entry {
         jump_amount_if_not_exists: I32,
     } = 12u32.to_le(),
     SetFlag {
-        id: I32,
+        r#type: ExecFlag,
         data: I32,
     } = 13u32.to_le(),
     IfFlag {
@@ -91,7 +92,7 @@ pub enum Entry {
     } = 14u32.to_le(),
     GetFlag {
         output: I32,
-        id: I32,
+        r#type: ExecFlag,
     } = 15u32.to_le(),
     Rename {
         old: I32,
@@ -205,7 +206,7 @@ pub enum Entry {
         window_handle: I32,
         pointer_to_struct_colors: I32,
     } = 36u32.to_le(),
-    LoadAndSetImage {
+    SetBrandingImage {
         control: I32,
         image_type: I32,
         lr_flags: I32,
@@ -352,6 +353,7 @@ pub enum Entry {
         name: I32,
         offset: I32,
         icon_size: I32,
+        alternative_path: I32,
     } = 62u32.to_le(),
     SectionSet {
         index: I32,
@@ -467,15 +469,56 @@ impl Entry {
                 jump_amount_if_not_exists,
             } => {
                 let file_name = state.get_string(file_name.get());
-                debug!(
-                    r#"IfFileExists: "{file_name}" if exists {jump_amount_if_exists} if not exists {jump_amount_if_not_exists}"#
-                );
 
-                // Because we're only simulating the control flow, assume the file does not exist
-                return Ok(jump_amount_if_not_exists.get());
+                return if state.file_system.file_exists(&*file_name) {
+                    debug!(
+                        r#"IfFileExists: jumping to {if_exists} as "{file_name}" exists"#,
+                        if_exists = state.resolve_address(jump_amount_if_exists.get()),
+                    );
+                    Ok(jump_amount_if_exists.get())
+                } else {
+                    debug!(
+                        r#"IfFileExists: jumping to {if_not_exists} as "{file_name}" does NOT exist"#,
+                        if_not_exists = state.resolve_address(jump_amount_if_not_exists.get()),
+                    );
+                    Ok(jump_amount_if_not_exists.get())
+                };
             }
-            Self::SetFlag { id, data } => {
-                debug!("SetFlag: {id} {data}");
+            Self::SetFlag { r#type, data } => {
+                // https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L3898
+
+                let value = state.get_int(data.get());
+                debug!(
+                    "Set{type}Flag {}",
+                    match r#type {
+                        ExecFlag::AutoClose | ExecFlag::Reboot => {
+                            if value == 0 { "false" } else { "true" }
+                        }
+                        ExecFlag::ShellVarContext => {
+                            if value == 0 { "current" } else { "all" }
+                        }
+                        ExecFlag::Silent => {
+                            if value == 0 { "normal" } else { "silent" }
+                        }
+                        ExecFlag::RegView => {
+                            match value {
+                                0 => "32",
+                                256 => "64",
+                                _ => "",
+                            }
+                        }
+                        ExecFlag::DetailsPrint => {
+                            match value {
+                                0 => "both",
+                                2 => "textonly",
+                                4 => "listonly",
+                                6 => "none",
+                                _ => "",
+                            }
+                        }
+                        _ => "",
+                    }
+                );
             }
             Self::IfFlag {
                 on,
@@ -485,8 +528,11 @@ impl Entry {
             } => {
                 debug!("If{type}Flag: {on} {off}");
             }
-            Self::GetFlag { output, id } => {
-                debug!("GetFlag: {id} {output}");
+            Self::GetFlag { output, r#type } => {
+                debug!("GetFlag: {type}");
+                state
+                    .variables
+                    .insert(output.get() as usize, r#type.as_str().into());
             }
             Self::Rename {
                 old,
@@ -551,11 +597,13 @@ impl Entry {
             } => {
                 let name = state.get_string(name.get());
                 let date = if *datetime == U64::MAX_VALUE {
-                    FileTime::NT_TIME_EPOCH
+                    debug!(r#"ExtractFile: "{name}"#);
+                    None
                 } else {
-                    FileTime::new(datetime.get())
+                    let date = DateTime::from(FileTime::new(datetime.get()));
+                    debug!(r#"ExtractFile: "{name}" {date}"#);
+                    Some(date)
                 };
-                debug!(r#"ExtractFile: "{name}" {date}"#);
                 state.file_system.create_file(&*name, date);
             }
             Self::DeleteFile {
@@ -837,14 +885,14 @@ impl Entry {
             } => {
                 debug!("SetCtlColors: {window_handle} {pointer_to_struct_colors}");
             }
-            Self::LoadAndSetImage {
-                control,
-                image_type,
-                lr_flags,
+            Self::SetBrandingImage {
+                control: _control,
+                image_type: _image_type,
+                lr_flags: _lr_flags,
                 image_id,
-                output,
+                output: _output,
             } => {
-                debug!("LoadAndSetImage: {control} {image_type} {lr_flags} {image_id} {output}");
+                debug!("LoadAndSetImage /IMGID={image_id}");
             }
             Self::CreateFont {
                 handle_output,
@@ -861,7 +909,7 @@ impl Entry {
                 hide_window,
                 enable_window,
             } => {
-                // https://github.com/kichik/nsis/blob/HEAD/Source/exehead/exec.c#L892
+                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L892
                 if *enable_window != I32::ZERO {
                     debug!("EnableWindow");
                 } else if *hide_window != I32::ZERO {
@@ -940,10 +988,10 @@ impl Entry {
                 icon_file,
                 create_shortcut,
             } => {
-                // <https://github.com/kichik/nsis/blob/HEAD/Source/exehead/fileform.h#L559>
+                // https://github.com/kichik/nsis/blob/v311/Source/exehead/fileform.h#L559
                 const NO_WORKING_DIRECTORY: I32 = I32::new(0x8000);
 
-                // https://github.com/kichik/nsis/blob/HEAD/Source/exehead/exec.c#L1087
+                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1087
                 let link_file = state.get_string(link_file.get());
                 let target_file = state.get_string(target_file.get());
                 let icon_file = state.get_string(icon_file.get());
@@ -963,7 +1011,7 @@ impl Entry {
                 flags,
                 status_text,
             } => {
-                // https://github.com/kichik/nsis/blob/HEAD/Source/exehead/exec.c#L1152
+                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1152
                 // https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L4505
                 debug!(
                     r#"CopyFiles {}{}"{}" -> "{}" {}"#,
@@ -1011,7 +1059,7 @@ impl Entry {
                 value_name,
                 flags,
             } => {
-                // https://github.com/kichik/nsis/blob/HEAD/Source/exehead/exec.c#L1240
+                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1240
                 // https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L4558
 
                 let key_name = state.get_string(key_name.get());
@@ -1045,7 +1093,7 @@ impl Entry {
                 r#type,
                 sub_type,
             } => {
-                // https://github.com/kichik/nsis/blob/HEAD/Source/exehead/exec.c#L1265
+                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1265
 
                 let key_name = state.get_string(key_name.get());
                 let value_name = state.get_string(value_name.get());
@@ -1199,11 +1247,31 @@ impl Entry {
             }
             Self::WriteUninstaller {
                 name,
-                offset,
-                icon_size,
+                offset: _offset,
+                icon_size: _icon_size,
+                alternative_path,
             } => {
+                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1573
+
+                // https://github.com/kichik/nsis/blob/v311/Source/exehead/util.c#L346
+                fn is_path_absolute<T: AsRef<[u8]>>(path: T) -> bool {
+                    let path = path.as_ref();
+                    if let Some((&first, &second)) = path.first().zip(path.get(1)) {
+                        (first == b'\\' && second == b'\\')
+                            || (first.is_ascii_alphabetic() && second == b':')
+                    } else {
+                        false
+                    }
+                }
+
                 let name = state.get_string(name.get());
-                debug!(r#"WriteUninstaller: "{name}" {offset} {icon_size}"#);
+                let name = if is_path_absolute(&*name) {
+                    name
+                } else {
+                    state.get_string(alternative_path.get())
+                };
+                debug!(r#"WriteUninstaller: "{name}""#);
+                state.file_system.create_file(&*name, None);
             }
             Self::SectionSet {
                 index,

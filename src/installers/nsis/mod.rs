@@ -38,7 +38,7 @@ use crate::{
     installers::{
         nsis::{
             entry::{Entry, EntryError},
-            file_system::Directory,
+            file_system::Item,
             first_header::FirstHeader,
             header::{
                 Decompressed, Header, block::BlockHeaders, compression::Compression,
@@ -133,7 +133,7 @@ impl Nsis {
         let mut architecture =
             Option::from(architecture).filter(|&architecture| architecture != Architecture::X86);
 
-        for directory in state.file_system.directories().map(Directory::name) {
+        for directory in state.file_system.directories().map(Item::name) {
             // If there is an app-64 file, the app is x64.
             // If there is an app-32 file or both files are present, the app is x86
             // (x86 apps can still install on x64 systems)
@@ -143,6 +143,8 @@ impl Nsis {
                 architecture = Some(Architecture::X86);
             }
         }
+
+        debug!(%state.file_system);
 
         architecture = architecture
             .or_else(|| {
