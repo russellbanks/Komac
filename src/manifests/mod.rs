@@ -12,6 +12,7 @@ use const_format::concatc;
 use owo_colors::{OwoColorize, Style, colors::css::SlateGrey};
 use serde::Serialize;
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
+pub use url::Url;
 use winget_types::{
     Manifest,
     installer::InstallerManifest,
@@ -20,6 +21,7 @@ use winget_types::{
 };
 
 pub mod manifest;
+mod url;
 
 pub struct Manifests {
     pub installer: InstallerManifest,

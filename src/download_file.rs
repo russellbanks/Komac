@@ -13,24 +13,25 @@ pub async fn process_files(
         |DownloadedFile {
              url,
              mmap,
-             override_arch,
              sha_256,
              file_name,
              last_modified,
              ..
          }| async move {
             let mut file_analyser = FileAnalyser::new(mmap, file_name)?;
-            let architecture = override_arch.or_else(|| Architecture::from_url(url.as_str()));
+            let architecture = url
+                .override_architecture()
+                .or_else(|| Architecture::from_url(url.as_str()));
             for installer in &mut file_analyser.installers {
                 if let Some(architecture) = architecture {
                     installer.architecture = architecture;
                 }
-                installer.url = url.clone();
+                installer.url = url.inner().clone();
                 installer.sha_256 = sha_256.clone();
                 installer.release_date = *last_modified;
             }
             file_analyser.file_name = mem::take(file_name);
-            Ok((mem::take(url), file_analyser))
+            Ok((mem::take(url.inner_mut()), file_analyser))
         },
     ))
     .buffer_unordered(num_cpus::get())
