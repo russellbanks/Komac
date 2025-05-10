@@ -33,6 +33,7 @@ use crate::{
         utils::{PackagePath, pull_request::pr_changes},
     },
     installers::zip::Zip,
+    manifests::Url,
     match_installers::match_installers,
     terminal::Hyperlinkable,
     traits::{LocaleExt, path::NormalizePath},
@@ -51,7 +52,7 @@ pub struct UpdateVersion {
 
     /// The list of package installers
     #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
-    urls: Vec<DecodedUrl>,
+    urls: Vec<Url>,
 
     /// Number of installers to download at the same time
     #[arg(long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
@@ -175,7 +176,7 @@ impl UpdateVersion {
                 .cloned();
             async move {
                 github_url
-                    .map(|url| github.get_all_values_from_url(url))
+                    .map(|url| github.get_all_values_from_url(url.into_inner()))
                     .unwrap_or_default()
                     .await
             }

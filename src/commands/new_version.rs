@@ -43,7 +43,7 @@ use crate::{
         github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
         utils::{PackagePath, pull_request::pr_changes},
     },
-    manifests::Manifests,
+    manifests::{Manifests, Url},
     prompts::{
         check_prompt, handle_inquire_error,
         list::list_prompt,
@@ -66,7 +66,7 @@ pub struct NewVersion {
 
     /// The list of package installers
     #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::Url)]
-    urls: Vec<DecodedUrl>,
+    urls: Vec<Url>,
 
     #[arg(long)]
     package_locale: Option<LanguageTag>,
@@ -193,8 +193,8 @@ impl NewVersion {
         if urls.is_empty() {
             while urls.len() < 1024 {
                 let message = format!("{} Installer URL", Ordinal(urls.len() + 1));
-                let url_prompt = CustomType::<DecodedUrl>::new(&message)
-                    .with_error_message("Please enter a valid URL");
+                let url_prompt =
+                    CustomType::new(&message).with_error_message("Please enter a valid URL");
                 let installer_url = if urls.len() + 1 == 1 {
                     Some(url_prompt.prompt().map_err(handle_inquire_error)?)
                 } else {
@@ -219,7 +219,7 @@ impl NewVersion {
                 .cloned();
             async move {
                 github_url
-                    .map(|url| github.get_all_values_from_url(url))
+                    .map(|url| github.get_all_values_from_url(url.into_inner()))
                     .unwrap_or_default()
                     .await
             }

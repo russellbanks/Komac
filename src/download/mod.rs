@@ -6,19 +6,18 @@ use const_format::formatcp;
 pub use downloader::Downloader;
 pub use file::DownloadedFile;
 use reqwest::{Client, ClientBuilder, Response, header::HeaderValue, redirect::Policy};
-use url::Url;
 use uuid::Uuid;
-use winget_types::{installer::VALID_FILE_EXTENSIONS, url::DecodedUrl};
+use winget_types::installer::VALID_FILE_EXTENSIONS;
 
-use crate::github::github_client::GITHUB_HOST;
+use crate::{github::github_client::GITHUB_HOST, manifests::Url};
 
 #[derive(Debug, Clone)]
 pub struct Download {
-    pub url: DecodedUrl,
+    pub url: Url,
 }
 
 impl Download {
-    pub const fn new(url: DecodedUrl) -> Self {
+    pub const fn new(url: Url) -> Self {
         Self { url }
     }
 
@@ -32,7 +31,7 @@ impl Download {
     /// If there is no Content-Disposition header or no filenames in the Content-Disposition, it falls
     /// back to getting the last part of the initial URL and then the final redirected URL if the
     /// initial URL does not have a valid file extension at the end.
-    fn file_name(&self, final_url: &Url, content_disposition: Option<&HeaderValue>) -> String {
+    fn file_name(&self, final_url: &url::Url, content_disposition: Option<&HeaderValue>) -> String {
         const FILENAME: &str = "filename";
         const FILENAME_EXT: &str = formatcp!("{FILENAME}*");
 
@@ -131,7 +130,7 @@ impl Download {
                 if let Err(error) = limited_redirect_client.head(self.url.as_str()).send().await {
                     if error.is_redirect() {
                         if let Some(final_url) = error.url() {
-                            *self.url = final_url.clone();
+                            **self.url = final_url.clone();
                         }
                     }
                 }
