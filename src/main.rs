@@ -71,10 +71,7 @@ async fn main() -> Result<()> {
         Commands::ListVersions(list_versions) => list_versions.run().await,
         Commands::Show(show_version) => show_version.run().await,
         Commands::SyncFork(sync_fork) => sync_fork.run().await,
-        Commands::Complete(complete) => {
-            complete.run();
-            Ok(())
-        }
+        Commands::Complete(complete) => complete.run(),
         Commands::Analyse(analyse) => analyse.run(),
         Commands::RemoveDeadVersions(remove_dead_versions) => remove_dead_versions.run().await,
         Commands::Submit(submit) => submit.run().await,
