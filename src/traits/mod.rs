@@ -250,7 +250,7 @@ impl LocaleExt for DefaultLocaleManifest {
             .and_then(|values| values.release_notes.take());
         self.release_notes_url = release_notes_url.cloned().or_else(|| {
             github_values.as_mut().and_then(|values| {
-                if values.release_notes.is_some() {
+                if self.release_notes.is_some() {
                     values.release_notes_url.take()
                 } else {
                     None
