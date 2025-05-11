@@ -35,7 +35,7 @@ bzip2 = "0.5.2"
 cab = "0.6.0"
 camino = { version = "1.1.9", features = ["serde1"] }
 chrono = { version = "0.4.41", features = ["serde"] }
-clap = { version = "4.5.37", features = ["derive", "cargo", "env"] }
+clap = { version = "4.5.38", features = ["derive", "cargo", "env"] }
 clap_complete = "4.5.50"
 codepage = "0.1.2"
 color-eyre = { version = "0.6.4", default-features = false }
