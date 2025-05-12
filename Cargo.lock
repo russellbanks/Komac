@@ -1959,9 +1959,9 @@ dependencies = [
 
 [[package]]
 name = "html2text"
-version = "0.14.4"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1637acec3b965bab873352189d887b12c87b4f8d7571f4d185e796be5654ad8"
+checksum = "d607e4e0c48e3bf811c30c3ff7e2f371855a271940e2dd535821814ff9d391cd"
 dependencies = [
  "html5ever",
  "tendril",
