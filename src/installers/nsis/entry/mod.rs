@@ -532,7 +532,7 @@ impl Entry {
                 debug!("GetFlag: {type}");
                 state
                     .variables
-                    .insert(output.get() as usize, r#type.as_str().into());
+                    .insert(output.get() as usize, r#type.as_str());
             }
             Self::Rename {
                 old,
@@ -561,7 +561,6 @@ impl Entry {
                     state
                         .variables
                         .get(&(input.get() as usize))
-                        .map(|input| &**input)
                         .unwrap_or_default(),
                     state.get_string(output.get())
                 );
@@ -572,7 +571,6 @@ impl Entry {
                     state
                         .variables
                         .get(&(output.get() as usize))
-                        .map(|input| &**input)
                         .unwrap_or_default(),
                     state.get_string(filename.get())
                 );
@@ -583,7 +581,6 @@ impl Entry {
                     state
                         .variables
                         .get(&(output.get() as usize))
-                        .map(|output| &**output)
                         .unwrap_or_default(),
                     state.get_string(base_dir.get())
                 );
@@ -591,7 +588,7 @@ impl Entry {
             Self::ExtractFile {
                 overwrite_flag: _overwrite_flag,
                 name,
-                position: _position,
+                position,
                 datetime,
                 allow_ignore: _allow_ignore,
             } => {
@@ -604,7 +601,9 @@ impl Entry {
                     debug!(r#"ExtractFile: "{name}" {date}"#);
                     Some(date)
                 };
-                state.file_system.create_file(&*name, date);
+                state
+                    .file_system
+                    .create_file(&*name, date, position.get().unsigned_abs() as usize);
             }
             Self::DeleteFile {
                 filename,
@@ -798,7 +797,7 @@ impl Entry {
                 debug!("IntFmt{}: {formatted}", if is_64_bit { "64" } else { "" });
                 state
                     .variables
-                    .insert(output.get().unsigned_abs() as usize, formatted.into());
+                    .insert(output.get().unsigned_abs() as usize, formatted);
             }
             Self::PushPop {
                 variable_or_string,
@@ -1173,7 +1172,6 @@ impl Entry {
                 let name = state
                     .variables
                     .get(&(name.get() as usize))
-                    .map(|name| &**name)
                     .unwrap_or_default();
                 let output_handle = state.get_string(output_handle.get());
                 let open_option = match (*create_mode, *open_mode) {
@@ -1215,7 +1213,6 @@ impl Entry {
                 let handle = state
                     .variables
                     .get(&(handle.get() as usize))
-                    .map(|handle| &**handle)
                     .unwrap_or_default();
                 debug!(
                     "FileSeek: {handle} {} {seek_from} {offset}",
@@ -1229,7 +1226,6 @@ impl Entry {
                 let output = state
                     .variables
                     .get(&(output.get() as usize))
-                    .map(|output| &**output)
                     .unwrap_or_default();
                 let handle = state
                     .variables
@@ -1247,7 +1243,7 @@ impl Entry {
             }
             Self::WriteUninstaller {
                 name,
-                offset: _offset,
+                offset,
                 icon_size: _icon_size,
                 alternative_path,
             } => {
@@ -1271,7 +1267,9 @@ impl Entry {
                     state.get_string(alternative_path.get())
                 };
                 debug!(r#"WriteUninstaller: "{name}""#);
-                state.file_system.create_file(&*name, None);
+                state
+                    .file_system
+                    .create_file(&*name, None, offset.get().unsigned_abs() as usize);
             }
             Self::SectionSet {
                 index,

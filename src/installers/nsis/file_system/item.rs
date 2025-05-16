@@ -8,6 +8,7 @@ pub enum Item {
     File {
         name: CompactString,
         modified_at: Option<DateTime<Utc>>,
+        position: usize,
     },
     Directory(CompactString),
 }
@@ -25,14 +26,16 @@ impl Item {
         Self::Directory(name.into())
     }
 
-    pub fn new_file<T, D>(name: T, modified_at: D) -> Self
+    pub fn new_file<T, D, P>(name: T, modified_at: D, position: P) -> Self
     where
         T: Into<CompactString>,
         D: Into<Option<DateTime<Utc>>>,
+        P: Into<usize>,
     {
         Self::File {
             name: name.into(),
             modified_at: modified_at.into(),
+            position: position.into(),
         }
     }
 
@@ -45,6 +48,13 @@ impl Item {
     pub const fn modified_at(&self) -> Option<&DateTime<Utc>> {
         match self {
             Self::File { modified_at, .. } => modified_at.as_ref(),
+            Self::Directory(_) => None,
+        }
+    }
+
+    pub const fn position(&self) -> Option<usize> {
+        match self {
+            Self::File { position, .. } => Some(*position + size_of::<u32>()),
             Self::Directory(_) => None,
         }
     }
@@ -65,12 +75,14 @@ impl fmt::Debug for Item {
         match self {
             Self::File {
                 name,
-                modified_at: created_at,
+                modified_at,
+                position,
             } => {
-                if let Some(created_at) = created_at {
+                if let Some(modified_at) = modified_at {
                     f.debug_struct("File")
                         .field("name", name)
-                        .field("modified_at", created_at)
+                        .field("modified_at", modified_at)
+                        .field("position", position)
                         .finish()
                 } else {
                     f.debug_tuple("File").field(name).finish()

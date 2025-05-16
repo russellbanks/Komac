@@ -1,59 +1,130 @@
-use std::num::NonZeroU8;
+use std::num::TryFromIntError;
+
+use itertools::Either;
+use zerocopy::{Immutable, KnownLayout, TryFromBytes, ValidityError, try_transmute};
 
 use crate::installers::nsis::version::NsisVersion;
 
-#[derive(Copy, Clone)]
+#[expect(dead_code)]
+#[derive(Copy, Clone, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum NsCode {
-    Lang,  // 1 if >= NSIS 3, 255 otherwise
-    Shell, // 2 or 254
-    Var,   // 3 or 253
-    Skip,  // 4 or 252
+    LangV3 = 1,
+    ShellV3 = 2,
+    VarV3 = 3,
+    SkipV3 = 4,
+    SkipV2 = 252,
+    VarV2 = 253,
+    ShellV2 = 254,
+    LangV2 = 255,
 }
 
 impl NsCode {
-    pub const fn get(self, nsis_version: NsisVersion) -> u8 {
-        if nsis_version.is_v3() {
-            NonZeroU8::MIN.get() + self as u8
-        } else {
-            NonZeroU8::MAX.get() - self as u8
-        }
+    pub fn try_new_with_version<T>(code: T, version: NsisVersion) -> Option<Self>
+    where
+        T: TryInto<Self>,
+    {
+        code.try_into().ok().filter(|code| code.is_version(version))
     }
 
-    pub const fn is_code(code: u8, nsis_version: NsisVersion) -> bool {
-        if nsis_version.is_v3() {
-            code <= Self::Skip.get(nsis_version)
-        } else {
-            code >= Self::Skip.get(nsis_version)
-        }
+    #[inline]
+    pub const fn is_lang(self) -> bool {
+        matches!(self, NsCode::LangV2 | NsCode::LangV3)
+    }
+
+    #[inline]
+    pub const fn is_shell(self) -> bool {
+        matches!(self, NsCode::ShellV2 | NsCode::ShellV3)
+    }
+
+    #[inline]
+    pub const fn is_var(self) -> bool {
+        matches!(self, NsCode::VarV2 | NsCode::VarV3)
+    }
+
+    #[inline]
+    pub const fn is_skip(self) -> bool {
+        matches!(self, NsCode::SkipV2 | NsCode::SkipV3)
+    }
+
+    #[inline]
+    pub const fn is_v3(self) -> bool {
+        matches!(
+            self,
+            NsCode::LangV3 | NsCode::ShellV3 | NsCode::VarV3 | NsCode::SkipV3
+        )
+    }
+
+    #[inline]
+    pub const fn is_v2(self) -> bool {
+        matches!(
+            self,
+            NsCode::LangV2 | NsCode::ShellV2 | NsCode::VarV2 | NsCode::SkipV2
+        )
+    }
+
+    #[inline]
+    pub const fn is_version(self, version: NsisVersion) -> bool {
+        (self.is_v3() && version.is_v3()) || (self.is_v2() && version.is_v2())
+    }
+
+    pub fn is_code<T>(code: T, version: NsisVersion) -> bool
+    where
+        T: TryInto<Self>,
+    {
+        code.try_into().is_ok_and(|code| code.is_version(version))
+    }
+}
+
+impl TryFrom<u8> for NsCode {
+    type Error = ValidityError<u8, Self>;
+
+    fn try_from(code: u8) -> Result<Self, Self::Error> {
+        try_transmute!(code)
+    }
+}
+
+impl TryFrom<u16> for NsCode {
+    type Error = Either<TryFromIntError, ValidityError<u8, NsCode>>;
+
+    fn try_from(code: u16) -> Result<Self, Self::Error> {
+        u8::try_from(code)
+            .map_err(Either::Left)
+            .and_then(|code| Self::try_from(code).map_err(Either::Right))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::installers::nsis::{strings::code::NsCode, version::NsisVersion};
+    use crate::installers::nsis::strings::code::NsCode;
 
     #[test]
-    fn lang() {
-        assert_eq!(NsCode::Lang.get(NsisVersion::_2), 255);
-        assert_eq!(NsCode::Lang.get(NsisVersion::_3), 1);
+    fn v3() {
+        // V3 codes
+        assert!(NsCode::LangV3.is_v3());
+        assert!(NsCode::ShellV3.is_v3());
+        assert!(NsCode::VarV3.is_v3());
+        assert!(NsCode::SkipV3.is_v3());
+
+        // V2 codes
+        assert!(!NsCode::SkipV2.is_v3());
+        assert!(!NsCode::VarV2.is_v3());
+        assert!(!NsCode::ShellV2.is_v3());
+        assert!(!NsCode::LangV2.is_v3());
     }
 
     #[test]
-    fn shell() {
-        assert_eq!(NsCode::Shell.get(NsisVersion::_2), 254);
-        assert_eq!(NsCode::Shell.get(NsisVersion::_3), 2);
-    }
+    fn v2() {
+        // V2 codes
+        assert!(NsCode::LangV2.is_v2());
+        assert!(NsCode::ShellV2.is_v2());
+        assert!(NsCode::VarV2.is_v2());
+        assert!(NsCode::SkipV2.is_v2());
 
-    #[test]
-    fn var() {
-        assert_eq!(NsCode::Var.get(NsisVersion::_2), 253);
-        assert_eq!(NsCode::Var.get(NsisVersion::_3), 3);
-    }
-
-    #[test]
-    fn skip() {
-        assert_eq!(NsCode::Skip.get(NsisVersion::_2), 252);
-        assert_eq!(NsCode::Skip.get(NsisVersion::_3), 4);
+        // V3 codes
+        assert!(!NsCode::SkipV3.is_v2());
+        assert!(!NsCode::VarV3.is_v2());
+        assert!(!NsCode::ShellV3.is_v2());
+        assert!(!NsCode::LangV3.is_v2());
     }
 }

@@ -104,10 +104,11 @@ impl FileSystem {
         self.current_dir = self.create_directory(path, location);
     }
 
-    pub fn create_file<T, D>(&mut self, path: T, created_at: D) -> Option<NodeId>
+    pub fn create_file<T, D, P>(&mut self, path: T, created_at: D, position: P) -> Option<NodeId>
     where
         T: AsRef<Utf8Path>,
         D: Into<Option<DateTime<Utc>>>,
+        P: Into<usize>,
     {
         let path = path.as_ref();
 
@@ -126,7 +127,7 @@ impl FileSystem {
         }) {
             Some(file)
         } else {
-            let file = Item::new_file(file_name, created_at);
+            let file = Item::new_file(file_name, created_at, position);
             Some(directory.append_value(file, &mut self.arena))
         }
     }
