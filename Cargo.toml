@@ -95,7 +95,7 @@ walkdir = "2.5.0"
 winget-types = { version = "0.3.0", features = ["serde", "std", "chrono"] }
 yara-x = { version = "0.14.0", default-features = false, features = ["pe-module"] }
 zerocopy = { version = "0.8.25", features = ["derive", "std"] }
-zip = { version = "2.6.1", default-features = false, features = ["deflate"] }
+zip = { version = "3.0.0", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
 cynic-codegen = { version = "3.10.0", features = ["rkyv"] }
