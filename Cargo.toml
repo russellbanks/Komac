@@ -89,7 +89,7 @@ tracing-subscriber = "0.3.19"
 tree-sitter-highlight = "0.25.4"
 tree-sitter-yaml = "0.7.0"
 tui-textarea = { version = "0.7.0", features = ["search"] }
-url = { version = "2.5.3", features = ["serde"] }
+url = { version = "2.5.4", features = ["serde"] }
 uuid = { version = "1.16.0", features = ["v4"] }
 walkdir = "2.5.0"
 winget-types = { version = "0.3.0", features = ["serde", "std", "chrono"] }
