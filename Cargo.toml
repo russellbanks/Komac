@@ -63,7 +63,7 @@ memchr = "2.7.4"
 memmap2 = "0.9.5"
 msi = "0.8.0"
 nt-time = { version = "0.11.1", features = ["chrono"] }
-num_cpus = "1.16.0"
+num_cpus = "1.17.0"
 open = "5.3.2"
 ordinal = "0.4.0"
 owo-colors = "4.2.1"
