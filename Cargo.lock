@@ -5106,9 +5106,9 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-highlight"
-version = "0.25.5"
+version = "0.25.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b95a758838aa4272d7c5c40fe35a4c8266fd3e3a36e019eef952ec5840b60ed"
+checksum = "6eea684ab5dd71e19f6c0add355be96f2b4eb58327cb305337415208681761aa"
 dependencies = [
  "regex",
  "streaming-iterator",
