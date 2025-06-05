@@ -24,7 +24,7 @@ lto = true
 strip = true
 
 [dependencies]
-anstream = "0.6.18"
+anstream = "0.6.19"
 base64ct = { version = "1.8.0", features = ["std"] }
 bit-set = "0.8.0"
 bitflags = "2.9.1"
