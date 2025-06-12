@@ -33,7 +33,7 @@ impl BlockType {
     pub fn get<'data>(self, data: &'data [u8], blocks: &BlockHeaders) -> &'data [u8] {
         let start = usize::try_from(blocks[self].offset.get()).unwrap();
         let end = blocks
-            .into_iter()
+            .iter()
             .skip(self as usize + 1)
             .find(|b| b.offset > U64::ZERO)
             .map_or(start, |block| usize::try_from(block.offset.get()).unwrap());
@@ -79,6 +79,16 @@ impl BlockHeaders {
         sections
             .chunks_exact(section_size)
             .flat_map(Section::ref_from_bytes)
+    }
+
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = &BlockHeader> {
+        self.into_iter()
+    }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut BlockHeader> {
+        self.into_iter()
     }
 }
 

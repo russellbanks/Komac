@@ -54,7 +54,7 @@ pub struct Header {
 }
 
 const HEADER_SIGNATURE_SIZE: u8 = 12;
-const NON_SOLID_EXTRA_BYTES: u8 = 1 << 2;
+const NON_SOLID_EXTRA_BYTES: usize = size_of::<u32>();
 
 const IS_COMPRESSED_MASK: u32 = 1 << 31;
 
@@ -104,9 +104,9 @@ impl Header {
             lzma_compression
         } else if signature.get(3) == Some(&0x80) {
             is_solid = false;
-            is_lzma(&signature[NON_SOLID_EXTRA_BYTES as usize..]).map_or_else(
+            is_lzma(&signature[NON_SOLID_EXTRA_BYTES..]).map_or_else(
                 || {
-                    if is_bzip2(&signature[NON_SOLID_EXTRA_BYTES as usize..]) {
+                    if is_bzip2(&signature[NON_SOLID_EXTRA_BYTES..]) {
                         Compression::BZip2
                     } else {
                         Compression::Zlib
@@ -126,7 +126,7 @@ impl Header {
             data
         } else {
             compressed_header_size &= !IS_COMPRESSED_MASK;
-            &data[NON_SOLID_EXTRA_BYTES as usize..]
+            &data[NON_SOLID_EXTRA_BYTES..]
         };
 
         let mut decoder = match compression {

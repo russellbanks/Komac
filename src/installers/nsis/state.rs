@@ -1,13 +1,15 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::borrow::Cow;
 
-use byteorder::{ByteOrder, LE};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
 use tracing::debug;
 use yara_x::mods::PE;
-use zerocopy::TryFromBytes;
+use zerocopy::{FromBytes, LE, TryFromBytes, U16, little_endian::I32};
 
-use super::entry::{Entry, EntryError};
+use super::{
+    Variables,
+    entry::{Entry, EntryError},
+};
 use crate::installers::nsis::{
     NsisError,
     file_system::FileSystem,
@@ -26,7 +28,7 @@ pub struct NsisState<'data> {
     entries: &'data [Entry],
     pub language_table: &'data LanguageTable,
     pub stack: Vec<Cow<'data, str>>,
-    pub variables: HashMap<usize, Cow<'data, str>>,
+    pub variables: Variables<'data>,
     pub registry: Registry<'data>,
     pub file_system: FileSystem,
     version: NsisVersion,
@@ -45,11 +47,17 @@ impl<'data> NsisState<'data> {
                 .map_err(|error| NsisError::ZeroCopy(error.to_string()))?,
             language_table: LanguageTable::get_main(data, header, blocks)?,
             stack: Vec::new(),
-            variables: HashMap::new(),
+            variables: Variables::new(),
             registry: Registry::new(),
             file_system: FileSystem::new(),
             version: NsisVersion::default(),
         };
+
+        if header.install_directory_ptr != I32::ZERO {
+            let install_dir = state.get_string(header.install_directory_ptr.get());
+            debug!(%install_dir);
+            state.variables.insert_install_dir(install_dir);
+        }
 
         state.version = NsisVersion::from_manifest(data, pe)
             .or_else(|| NsisVersion::from_branding_text(&state))
@@ -70,7 +78,7 @@ impl<'data> NsisState<'data> {
 
         // Double the offset if the string is Unicode as each character will be 2 bytes
         let offset = if relative_offset.is_negative() {
-            // A negative offset means it's a language table
+            // A negative offset means it's a language string from the language table
             self.language_table.string_offsets[(relative_offset + 1).unsigned_abs() as usize]
                 .get()
                 .unsigned_abs() as usize
@@ -91,18 +99,21 @@ impl<'data> NsisState<'data> {
 
         let string_bytes = &self.str_block[offset..offset + string_end_index];
 
-        // Check whether the string contains any special characters that need to be decoded
-        let contains_code = if unicode {
-            string_bytes
-                .chunks_exact(size_of::<u16>())
-                .map(LE::read_u16)
-                .any(|char| {
-                    u8::try_from(char).is_ok_and(|code| NsCode::is_code(code, self.version))
-                })
+        let string_chars = if unicode {
+            assert_eq!(string_bytes.len() % size_of::<u16>(), 0);
+            Either::Left(<[U16<LE>]>::ref_from_bytes(string_bytes).unwrap())
         } else {
-            string_bytes
+            Either::Right(string_bytes)
+        };
+
+        // Check whether the string contains any special characters that need to be decoded
+        let contains_code = match string_chars {
+            Either::Left(chars) => chars
                 .iter()
-                .any(|&char| NsCode::is_code(char, self.version))
+                .any(|char| NsCode::is_code(char.get(), self.version)),
+            Either::Right(bytes) => bytes
+                .iter()
+                .any(|&char| NsCode::is_code(char, self.version)),
         };
 
         // If the string doesn't have any special characters, we can just decode it normally
@@ -112,24 +123,18 @@ impl<'data> NsisState<'data> {
         }
 
         // Create an iterator of characters represented as an unsigned 16-bit integer
-        let mut characters = if unicode {
-            Either::Left(
-                string_bytes
-                    .chunks_exact(size_of::<u16>())
-                    .map(LE::read_u16),
-            )
-        } else {
-            Either::Right(string_bytes.iter().copied().map(u16::from))
-        };
+        let mut characters = string_chars
+            .map_left(|chars| chars.iter().copied().map(U16::get))
+            .map_right(|bytes| bytes.iter().copied().map(u16::from));
 
         let mut buf = String::new();
 
         while let Some(mut current) = characters.next() {
-            if u8::try_from(current).is_ok_and(|code| NsCode::is_code(code, self.version)) {
+            if let Some(code) = NsCode::try_new_with_version(current, self.version) {
                 let Some(next) = characters.next() else {
                     break;
                 };
-                if current != u16::from(NsCode::Skip.get(self.version)) {
+                if !code.is_skip() {
                     let special_char = if unicode {
                         next
                     } else {
@@ -138,13 +143,13 @@ impl<'data> NsisState<'data> {
                         };
                         u16::from_le_bytes([next as u8, next_next as u8])
                     };
-                    if current == u16::from(NsCode::Shell.get(self.version)) {
+                    if code.is_shell() {
                         Shell::resolve(&mut buf, self, special_char);
                     } else {
                         let index = usize::from(decode_number_from_char(special_char));
-                        if current == u16::from(NsCode::Var.get(self.version)) {
+                        if code.is_var() {
                             NsVar::resolve(&mut buf, index, &self.variables, self.version);
-                        } else if current == u16::from(NsCode::Lang.get(self.version)) {
+                        } else if code.is_lang() {
                             buf.push_str(
                                 &self.get_string(self.language_table.string_offsets[index].get()),
                             );

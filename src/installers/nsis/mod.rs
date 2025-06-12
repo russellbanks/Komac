@@ -7,6 +7,7 @@ mod registry;
 mod section;
 mod state;
 mod strings;
+mod variables;
 mod version;
 
 use std::{io, io::Read};
@@ -16,14 +17,14 @@ use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
 use compact_str::CompactString;
 use flate2::read::DeflateDecoder;
-use header::block::BlockType;
 use liblzma::read::XzDecoder;
 use msi::Language;
 use protobuf::Enum;
 use state::NsisState;
 use strsim::levenshtein;
 use thiserror::Error;
-use tracing::debug;
+use tracing::{debug, error};
+use variables::Variables;
 use winget_types::{
     LanguageTag, Version,
     installer::{
@@ -31,13 +32,13 @@ use winget_types::{
     },
 };
 use yara_x::mods::{PE, pe::Machine};
-use zerocopy::{FromBytes, TryFromBytes, little_endian::I32};
+use zerocopy::{FromBytes, TryFromBytes};
 
 use crate::{
     file_analyser::EXE,
     installers::{
         nsis::{
-            entry::{Entry, EntryError},
+            entry::EntryError,
             file_system::Item,
             first_header::FirstHeader,
             header::{
@@ -97,10 +98,10 @@ impl Nsis {
             decoder: solid_decoder,
         } = Header::decompress(&data[data_offset..], first_header)?;
 
-        let architecture = Architecture::from_machine(pe.machine());
-
         let (_flags, rest) = CommonHeaderFlags::ref_from_prefix(&decompressed_data)
             .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
+
+        let architecture = Architecture::from_machine(pe.machine());
 
         let (blocks, rest) = BlockHeaders::read_dynamic_from_prefix(rest, architecture)?;
 
@@ -110,17 +111,6 @@ impl Nsis {
         debug!(?header);
 
         let mut state = NsisState::new(pe, &decompressed_data, header, &blocks)?;
-
-        let install_dir = (header.install_directory_ptr != I32::ZERO)
-            .then(|| state.get_string(header.install_directory_ptr.get()));
-
-        if let Some(ref install_dir) = install_dir {
-            debug!(%install_dir);
-        }
-
-        let entries =
-            <[Entry]>::try_ref_from_bytes(BlockType::Entries.get(&decompressed_data, &blocks))
-                .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
         for (index, section) in blocks.sections(&decompressed_data).enumerate() {
             debug!(
@@ -150,39 +140,30 @@ impl Nsis {
 
         architecture = architecture
             .or_else(|| {
-                install_dir
-                    .as_deref()
+                state
+                    .variables
+                    .install_dir()
                     .is_some_and(|dir| dir.contains(RELATIVE_PROGRAM_FILES_64))
                     .then_some(Architecture::X64)
             })
             .or_else(|| {
                 let app_name = state.get_string(state.language_table.string_offsets[2].get());
-                entries
-                    .iter()
-                    .filter_map(|entry| {
-                        if let Entry::ExtractFile { name, position, .. } = entry {
-                            Some((
-                                state.get_string(name.get()),
-                                position.get().unsigned_abs() as usize + size_of::<u32>(),
-                            ))
-                        } else {
-                            None
-                        }
-                    })
-                    .filter(|(name, _)| {
-                        Utf8Path::new(name)
+                state
+                    .file_system
+                    .files()
+                    .filter(|file| {
+                        Utf8Path::new(file.name())
                             .extension()
                             .is_some_and(|extension| extension.eq_ignore_ascii_case(EXE))
                     })
-                    .min_by_key(|(name, _)| levenshtein(name, &app_name))
-                    .map(|(_, mut position)| {
+                    .min_by_key(|file| levenshtein(file.name(), &app_name))
+                    .and_then(|file| {
+                        let mut position = file.position()?;
                         if !is_solid {
                             position +=
                                 data_offset + non_solid_start_offset as usize + size_of::<u32>();
                         }
-                        position
-                    })
-                    .and_then(|position| {
+
                         let mut decoder = if is_solid {
                             solid_decoder
                         } else {
@@ -242,8 +223,9 @@ impl Nsis {
                     .ok(),
                 architecture: architecture.unwrap_or(Architecture::X86),
                 r#type: Some(InstallerType::Nullsoft),
-                scope: install_dir
-                    .as_deref()
+                scope: state
+                    .variables
+                    .install_dir()
                     .and_then(Scope::from_install_directory),
                 product_code: product_code.map(str::to_owned),
                 apps_and_features_entries: if display_name.is_some()
@@ -261,7 +243,7 @@ impl Nsis {
                     vec![]
                 },
                 installation_metadata: InstallationMetadata {
-                    default_install_location: install_dir.as_deref().map(Utf8PathBuf::from),
+                    default_install_location: state.variables.install_dir().map(Utf8PathBuf::from),
                     ..InstallationMetadata::default()
                 },
                 ..Installer::default()

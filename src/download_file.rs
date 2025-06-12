@@ -2,6 +2,7 @@ use std::{collections::HashMap, mem};
 
 use color_eyre::eyre::Result;
 use futures_util::{StreamExt, TryStreamExt, stream};
+use tracing::debug;
 use winget_types::{installer::Architecture, url::DecodedUrl};
 
 use crate::{download::DownloadedFile, file_analyser::FileAnalyser};
@@ -26,6 +27,7 @@ pub async fn process_files(
                 if let Some(architecture) = architecture {
                     installer.architecture = architecture;
                 }
+                debug!("{url}: {architecture:?}");
                 installer.url = url.inner().clone();
                 installer.sha_256 = sha_256.clone();
                 installer.release_date = *last_modified;
