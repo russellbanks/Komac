@@ -181,6 +181,13 @@ impl<'data> NsisState<'data> {
     }
 
     pub fn execute_code_segment(&mut self, mut position: i32) -> Result<i32, EntryError> {
+        // Create a watchdog counter to detect infinite loops
+        let mut watchdog_counter = 0;
+
+        // Set an infinite loop threshold to the number of total entries, as we're only simulating
+        // execution of a segment, not all code
+        let infinite_loop_threshold = self.entries.len();
+
         while let Ok(index) = usize::try_from(position) {
             let entry = self.entries[index];
             let address = entry.execute(self)?;
@@ -189,12 +196,18 @@ impl<'data> NsisState<'data> {
                 return Ok(0);
             }
 
+            if watchdog_counter >= infinite_loop_threshold {
+                return Err(EntryError::InfiniteLoop);
+            }
+
             let resolved_address = self.resolve_address(address);
             if resolved_address == 0 {
                 position += 1;
             } else {
                 position = resolved_address - 1; // -1 because addresses are encoded as +1
             }
+
+            watchdog_counter += 1;
         }
 
         Ok(0)

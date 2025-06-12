@@ -127,7 +127,9 @@ impl Nsis {
                 r#"Simulating code execution for section {index} "{}""#,
                 state.get_string(section.name.get())
             );
-            state.execute_code_segment(section.code.get())?;
+            if let Err(invalid_entry) = state.execute_code_segment(section.code.get()) {
+                error!(%invalid_entry);
+            }
         }
 
         let mut architecture =

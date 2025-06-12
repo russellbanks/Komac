@@ -35,8 +35,12 @@ use super::{
 use crate::installers::{nsis::file_system::RelativeLocation, utils::registry::RegRoot};
 
 #[derive(Debug, Error)]
-#[error("Reached invalid entry")]
-pub struct EntryError;
+pub enum EntryError {
+    #[error("Reached invalid entry")]
+    Invalid,
+    #[error("Ran into infinite loop")]
+    InfiniteLoop,
+}
 
 #[expect(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
@@ -400,7 +404,7 @@ impl Entry {
         match self {
             Self::Invalid => {
                 debug!("Invalid");
-                return Err(EntryError);
+                return Err(EntryError::Invalid);
             }
             Self::Return => {
                 debug!("Return");
