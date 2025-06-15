@@ -1,22 +1,22 @@
-use std::{env, time::Duration};
+pub mod environment;
+mod submit_option;
+
+use std::time::Duration;
 
 use anstream::println;
 use camino::Utf8Path;
 use chrono::Local;
 use color_eyre::Result;
-use derive_more::Display;
 use futures_util::{StreamExt, TryStreamExt, stream};
-use inquire::{Select, error::InquireResult};
+use inquire::error::InquireResult;
 use owo_colors::OwoColorize;
-use strum::{EnumIter, IntoEnumIterator};
+pub use submit_option::SubmitOption;
 use tokio::{fs, fs::File, io::AsyncWriteExt};
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
-    editor::Editor,
-    github::graphql::get_existing_pull_request::PullRequest,
-    manifests::print_changes,
-    prompts::{handle_inquire_error, text::confirm_prompt},
+    commands::utils::environment::CI, github::graphql::get_existing_pull_request::PullRequest,
+    prompts::text::confirm_prompt,
 };
 
 pub const SPINNER_TICK_RATE: Duration = Duration::from_millis(50);
@@ -36,52 +36,12 @@ pub fn prompt_existing_pull_request(
         created_at.time()
     );
     println!("{}", pull_request.url.blue());
-    if env::var("CI").is_ok_and(|ci| ci.parse() == Ok(true)) {
+    if *CI {
         // Exit instead of proceeding in CI environments
         Ok(false)
     } else {
         confirm_prompt("Would you like to proceed?")
     }
-}
-
-pub fn prompt_submit_option(
-    changes: &mut [(String, String)],
-    submit: bool,
-    identifier: &PackageIdentifier,
-    version: &PackageVersion,
-    dry_run: bool,
-) -> Result<SubmitOption> {
-    let mut submit_option;
-    loop {
-        print_changes(changes.iter().map(|(_, content)| content.as_str()));
-
-        submit_option = if dry_run {
-            SubmitOption::Exit
-        } else if submit {
-            SubmitOption::Submit
-        } else {
-            Select::new(
-                &format!("What would you like to do with {identifier} {version}?"),
-                SubmitOption::iter().collect(),
-            )
-            .prompt()
-            .map_err(handle_inquire_error)?
-        };
-
-        if submit_option == SubmitOption::Edit {
-            Editor::new(changes).run()?;
-        } else {
-            break;
-        }
-    }
-    Ok(submit_option)
-}
-
-#[derive(Display, EnumIter, Eq, PartialEq)]
-pub enum SubmitOption {
-    Submit,
-    Edit,
-    Exit,
 }
 
 pub async fn write_changes_to_dir(changes: &[(String, String)], output: &Utf8Path) -> Result<()> {

@@ -1,13 +1,18 @@
+use std::time::Duration;
+
 use anstream::println;
 use clap::Parser;
 use color_eyre::Result;
 use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
-use tokio::try_join;
+use rand::random_range;
+use tokio::{time::sleep, try_join};
 
 use crate::{
-    commands::utils::SPINNER_TICK_RATE, credential::handle_token, github::github_client::GitHub,
+    commands::utils::{SPINNER_TICK_RATE, environment::VHS},
+    credential::handle_token,
+    github::github_client::{GitHub, WINGET_PKGS, WINGET_PKGS_FULL_NAME},
     terminal::Hyperlinkable,
 };
 
@@ -28,6 +33,10 @@ pub struct SyncFork {
 
 impl SyncFork {
     pub async fn run(self) -> Result<()> {
+        if *VHS {
+            return Self::vhs().await;
+        }
+
         let token = handle_token(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
@@ -81,6 +90,26 @@ impl SyncFork {
             winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
             fork.full_name.hyperlink(fork.url).blue()
         );
+
+        Ok(())
+    }
+
+    async fn vhs() -> Result<()> {
+        let merge_message = format!(
+            "{} upstream commits from {} into {}",
+            random_range(50..=500),
+            WINGET_PKGS_FULL_NAME.blue(),
+            format_args!("octocat/{WINGET_PKGS}").blue()
+        );
+
+        let pb = ProgressBar::new_spinner().with_message(format!("Merging {merge_message}"));
+        pb.enable_steady_tick(SPINNER_TICK_RATE);
+
+        sleep(Duration::from_secs(1)).await;
+
+        pb.finish_and_clear();
+
+        print!("{} merged {merge_message}", "Successfully".green());
 
         Ok(())
     }

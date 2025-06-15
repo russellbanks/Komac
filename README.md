@@ -1,16 +1,58 @@
-<h1><img src="assets/logo.svg" align="left" height="39" alt="Komac logo">Komac - Another WinGet Manifest Creator <img src="assets/banner.svg" align="right" height="39" alt="Komac banner"></h1>
+<h2 align="center">
+  <img height="100" alt="komac" src="assets/banner.svg" />
+  <br>
+  Komac: Smart Manifest Automation for WinGet
+</h2>
 
-![GitHub release (release name instead of tag name)](https://img.shields.io/github/v/release/russellbanks/komac)
-![GitHub Repo stars](https://img.shields.io/github/stars/russellbanks/komac)
-![Issues](https://img.shields.io/github/issues/russellbanks/Komac)
-![License](https://img.shields.io/github/license/russellbanks/Komac)
+<div align="center">
 
-Komac is an advanced CLI designed to create manifests for
-the [WinGet Community Repository](https://github.com/microsoft/winget-pkgs).
+[![Latest version](https://img.shields.io/github/v/release/russellbanks/komac?label=Latest&color=A975E5)](https://github.com/russellbanks/komac/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/russellbanks/komac/build.yml?label=Build&color=647BF2)](https://github.com/russellbanks/komac/actions)
+[![GitHub Issues](https://img.shields.io/github/issues/russellbanks/komac?label=Issues&color=417EF9)](https://github.com/russellbanks/Komac/issues)
+[![License](https://img.shields.io/crates/l/komac?label=License&color=1E81FF)](https://github.com/russellbanks/Komac/blob/main/LICENSE.md)
 
-Komac is both blazingly fast 🔥 and incredibly low on memory, using just ~3.5MB of memory on my machine.
+</div>
 
-![Komac-demo](assets/demo.gif)
+<div align="center">
+
+[![Crates.io Version](https://img.shields.io/crates/v/komac)](https://crates.io/crates/komac)
+[![Crates.io Total Downloads](https://img.shields.io/crates/d/komac?label=Downloads%20from%20crates.io)](https://crates.io/crates/komac)
+[![MSRV](https://img.shields.io/crates/msrv/komac?label=MSRV)](https://github.com/russellbanks/Komac/blob/main/Cargo.toml)
+
+</div>
+
+<p align="center">
+  A <strong>fast, intelligent CLI</strong> to create and submit <a href="https://github.com/microsoft/winget-pkgs">WinGet manifests</a>.
+  <br>
+  Think: automation, deep installer analysis, and zero YAML wrangling.
+</p>
+
+
+<div align="center">
+  <img src="assets/vhs/demo.gif" alt="Demo gif" />
+</div>
+
+## ⚡ Quick start
+
+```bash
+# 1. Install komac
+winget install komac
+  
+# 2. Set your GitHub token
+komac token add
+  
+# 3. Update a package
+komac update Package.Identifier --version 1.2.3 --urls https://example.com/installer.exe
+```
+
+## 🎯 Features
+
+- 🔄 Advanced installer analysis
+    - [Inno Setup](https://jrsoftware.org/isinfo.php)
+    - [Nullsoft Scriptable Install System](https://nsis.sourceforge.io)
+    - [MSI](https://learn.microsoft.com/windows/win32/msi/windows-installer-portal)
+    - [Burn](https://docs.firegiant.com/wix/tools/burn/)
+- 🌍 Cross-platform support (Windows, Linux, macOS)
 
 ## Installation
 
@@ -18,7 +60,7 @@ Komac is cross-platform and binaries are built for Windows, Linux, and macOS.
 
 ### All platforms
 
-If you have cargo installed, you can compile Rust for any platform
+If you have cargo installed, you can compile Rust for any platform:
 
 ```bash
 cargo install --locked komac
@@ -32,8 +74,8 @@ cargo binstall komac
 
 #### Nightly
 
-Nightly releases that are built on every commit are
-available [here](https://github.com/russellbanks/Komac/releases/tag/nightly). These are useful for debugging or if you
+Nightly releases that are built on every commit are  
+available [here](https://github.com/russellbanks/Komac/releases/tag/nightly). These are useful for debugging or if you  
 want the latest features and fixes.
 
 ### Windows
@@ -54,8 +96,8 @@ scoop install komac
 
 ### Linux
 
-Portable binaries are available from the [releases](https://github.com/russellbanks/Komac/releases). Debian (`.deb`) and
-Red Hat (`.rpm`) installers are also available.
+Portable binaries are available from the [releases](https://github.com/russellbanks/Komac/releases).
+Debian (`.deb`)and Red Hat (`.rpm`) installers are also available.
 
 ### macOS
 
@@ -67,37 +109,69 @@ Portable binaries for macOS are available from the [releases](https://github.com
 brew install russellbanks/tap/komac
 ```
 
-## GitHub Token
+## GitHub Token Setup
 
-Komac is currently only able to use a classic token. Whilst Komac can fully create manifests and commit with a
-fine-grained token, it fails to create a pull request to winget-pkgs. This may change as fine-grained tokens improve.
+komac needs a classic GitHub token to submit PRs to `winget-pkgs`.
+
+This should be a classic token with the `public_repo` scope.
+
+![Screenshot of classic token being created with public_repo scope selected](https://github.com/russellbanks/komac/assets/74878137/fbe4472e-dc53-4caf-ad2b-3bef75c47b07)
+
+Adding to komac:
+
+```bash
+komac token add
+```
+
+<details>
+
+<summary>Why not fine-grained tokens?</summary>
+
+Whilst Komac can fully create manifests and commit with a fine-grained token, it fails to create a pull request to
+winget-pkgs. This may change as fine-grained tokens improve.
 See https://github.com/russellbanks/Komac/issues/310.
 
-### Classic
-
-A classic token with the `public_repo` scope.
-
-![firefox_IYiqtsd0Nl](https://github.com/russellbanks/Komac/assets/74878137/fbe4472e-dc53-4caf-ad2b-3bef75c47b07)
+</details>
 
 ## Commands
 
-| Command        | Description                                                                                         | Usage                      |
-|----------------|-----------------------------------------------------------------------------------------------------|----------------------------|
-| New            | Create a package from scratch                                                                       | `new`                      |
-| Update         | Update a pre-existing package in winget-pkgs                                                        | `update`                   |
-| Remove         | Remove a version from winget-pkgs                                                                   | `remove`                   |
-| Sync Fork      | Syncs your fork of winget-pkgs to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) | `sync-fork`, `sync`        |
-| Branch Cleanup | Deletes branches that have had a merged or closed pull request to winget-pkgs                       | `cleanup`                  |
-| List Versions  | Lists all the versions for a given package                                                          | `list-versions`, `list`    |
-| Analyse        | Analyses a file and outputs information about it. Useful for debugging                              | `analyse`                  |
-| Token update   | Update stored GitHub OAuth token                                                                    | `token update`             |
-| Token remove   | Delete stored GitHub OAuth token                                                                    | `token remove`             |
-| Complete       | Outputs an autocompletion script for the given shell                                                | `complete`, `autocomplete` |
+<details>
 
-### Update an existing package with a new version
+<summary>Full Command List</summary>
+
+| Command        | Description                                                                                         | Usage                      |  
+|----------------|-----------------------------------------------------------------------------------------------------|----------------------------|  
+| New            | Create a package from scratch                                                                       | `new`                      |  
+| Update         | Update a pre-existing package in winget-pkgs                                                        | `update`                   |  
+| Remove         | Remove a version from winget-pkgs                                                                   | `remove`                   |  
+| Sync Fork      | Syncs your fork of winget-pkgs to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) | `sync-fork`, `sync`        |  
+| Branch Cleanup | Deletes branches that have had a merged or closed pull request to winget-pkgs                       | `cleanup`                  |  
+| List Versions  | Lists all the versions for a given package                                                          | `list-versions`, `list`    |  
+| Analyse        | Analyses a file and outputs information about it. Useful for debugging                              | `analyse`                  |  
+| Token update   | Update stored GitHub OAuth token                                                                    | `token update`             |  
+| Token remove   | Delete stored GitHub OAuth token                                                                    | `token remove`             |  
+| Complete       | Outputs an autocompletion script for the given shell                                                | `complete`, `autocomplete` |  
+
+</details>
+
+### komac new
+
+Creates a new package from scratch.
+
+```bash
+komac new
+```
+
+<div align="center">
+  <img src="assets/vhs/new_package.gif" alt="New package gif" />
+</div>
+
+### komac update
+
+Add a version to a pre-existing package:
 
 ```
-komac update Package.Identifier --version 1.2.3 --urls https://www.firstUrl.com https://www.secondUrl.com --submit
+komac update Package.Identifier --version 1.2.3 --urls https://www.example.com/installer.exe https://www.example.com/installer.msi --submit
 ```
 
 | Parameter                            | Usage                             | Notes                                                      |
@@ -108,10 +182,24 @@ komac update Package.Identifier --version 1.2.3 --urls https://www.firstUrl.com 
 | Automatically submit                 | `--submit`                        |                                                            |
 | Token (if one is not already stored) | `--token`                         | Komac will check for a `GITHUB_TOKEN` environment variable |
 
-## Komac vs other tools 🏆
+### komac sync
 
-While other manifest creation tools have made a solid foundation for the manifests in winget-pkgs, they development pace
-is notably slow and lacks the advanced detection capabilities that come with Komac.
+Updates your fork of winget-pkgs to be up-to-date
+with [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs).
+
+```bash
+komac sync
+```
+
+<div align="center">
+  <img src="assets/vhs/sync.gif" alt="Sync gif" />
+</div>
+
+## Feature Comparison 🔍
+
+While other manifest creation tools have made a solid foundation for the manifests in winget-pkgs, their development
+pace
+is slower and lacks the deeper installer analysis that komac is capable of.
 
 |                                          | Komac  | WingetCreate |                           YamlCreate                           |
 |------------------------------------------|:------:|:------------:|:--------------------------------------------------------------:|
@@ -139,9 +227,10 @@ is notably slow and lacks the advanced detection capabilities that come with Kom
 Check [issues](https://github.com/Trenly/winget-pkgs/issues?q=is:issue+author:russellbanks) that I've opened to request
 this feature for YamlCreate.
 
-## Usage with GitHub Actions: [WinGet Releaser](https://github.com/vedantmgoyal9/winget-releaser) 🌟
+## GitHub Actions 🌟
 
-WinGet Releaser is a GitHub Action that invokes Komac, passing in your release's URLs. This completely automates
+[WinGet Releaser](https://github.com/vedantmgoyal9/winget-releaser) is a GitHub Action that invokes Komac, passing in
+your release's URLs. This completely automates
 publishing to WinGet.
 
 ### Example 📝
@@ -169,8 +258,8 @@ jobs:
 
 ## How can I support Komac? ❤️
 
-- 🤝 Sponsor this project through [GitHub Sponsors](https://github.com/sponsors/russellbanks)
 - ⭐ Star this project! :)
+- 🤝 Sponsor this project through [GitHub Sponsors](https://github.com/sponsors/russellbanks)
 - 🧑‍💻 Use Komac and [create an issue](https://github.com/russellbanks/Komac/issues/new) for feature requests or bugs.
 
 ## Star History ⭐
