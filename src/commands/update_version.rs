@@ -22,8 +22,7 @@ use winget_types::{
 
 use crate::{
     commands::utils::{
-        SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, prompt_submit_option,
-        write_changes_to_dir,
+        SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
     },
     credential::handle_token,
     download::{Download, Downloader},
@@ -290,11 +289,11 @@ impl UpdateVersion {
             );
         }
 
-        let submit_option = prompt_submit_option(
+        let submit_option = SubmitOption::prompt(
             &mut changes,
-            self.submit,
             &package_identifier,
             &package_version,
+            self.submit,
             self.dry_run,
         )?;
 

@@ -12,7 +12,7 @@ use walkdir::WalkDir;
 use winget_types::{GenericManifest, ManifestType};
 
 use crate::{
-    commands::utils::{SPINNER_TICK_RATE, SubmitOption, prompt_submit_option},
+    commands::utils::{SPINNER_TICK_RATE, SubmitOption},
     credential::handle_token,
     github::{
         github_client::{GitHub, WINGET_PKGS_FULL_NAME},
@@ -141,11 +141,11 @@ impl Submit {
             .package_path(&package_path)
             .create()?;
 
-        let submit_option = prompt_submit_option(
+        let submit_option = SubmitOption::prompt(
             &mut changes,
-            self.skip_prompt,
             identifier,
             version,
+            self.skip_prompt,
             self.dry_run,
         )?;
 
