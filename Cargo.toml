@@ -57,7 +57,7 @@ indicatif = "0.17.11"
 inquire = "0.7.5"
 itertools = "0.14.0"
 keyring = { version = "3.6.2", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }
-liblzma = { version = "0.4.1", features = ["static"] }
+liblzma = { version = "0.4.2", features = ["static"] }
 memchr = "2.7.5"
 memmap2 = "0.9.5"
 msi = "0.8.0"
