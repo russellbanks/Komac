@@ -6088,9 +6088,9 @@ checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "yara-x"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f37e1260d2475cf2fbea2578cbc2715445f5c7692915bdffc915a69f4fcfa94a"
+checksum = "431a991565418cd1baeb3ffa4c98fec8c884679d6c34950e5d63459762e8446f"
 dependencies = [
  "aho-corasick",
  "annotate-snippets",
@@ -6146,9 +6146,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-macros"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffa1d8ea8e21a206f3767e192f7c13a6d66c941aebd9f1c5c2c6c79c65c7a4f6"
+checksum = "3d826fb301f51e78c6ef095d1d5680a64138db875d4fbfb572010dee92f86f98"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -6158,9 +6158,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-parser"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92b13c12f2fc256f38e7b777c7c8b8b17f40d0664b1be7620d6945ac55a0fe25"
+checksum = "ef70cd0a3e0712e1e71574234308231507269b36c7cfe85d388e28094d7d3145"
 dependencies = [
  "ascii_tree",
  "bitflags 2.9.1",
@@ -6176,9 +6176,9 @@ dependencies = [
 
 [[package]]
 name = "yara-x-proto"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f9f9bc83566f2e755a22103af8dda2eea0dbe07960db69e4a6dddafcffc225a"
+checksum = "1cb300e8a86eb3631a12be1d174078a8ea146873b8f908be192ff270169501c4"
 dependencies = [
  "protobuf",
  "protobuf-codegen",
