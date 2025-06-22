@@ -11,6 +11,7 @@ on:
           - all
           - demo.tape
           - new_package.tape
+          - sync.tape
 
 jobs:
   vhs:
@@ -45,7 +46,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for tape in demo.tape new_package.tape; do
+          for tape in demo.tape new_package.tape sync.tape; do
             vhs "assets/vhs/$tape"
           done
 
