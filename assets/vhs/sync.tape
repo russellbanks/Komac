@@ -5,7 +5,7 @@ Require komac
 Set Shell pwsh
 
 Set Theme "Catppuccin Mocha"
-Set FontSize 22
+Set FontSize 20
 Set Width 1280
 Set Height 300
 Set Framerate 60
