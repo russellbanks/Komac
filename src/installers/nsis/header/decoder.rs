@@ -1,13 +1,13 @@
 use std::io::{Read, Result};
 
 use bzip2::read::BzDecoder;
-use flate2::read::DeflateDecoder;
+use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
 
 pub enum Decoder<R: Read> {
     Lzma(XzDecoder<R>),
     BZip2(BzDecoder<R>),
-    Zlib(DeflateDecoder<R>),
+    Zlib(ZlibDecoder<R>),
     None(R),
 }
 

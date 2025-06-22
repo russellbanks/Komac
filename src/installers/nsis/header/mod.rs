@@ -5,12 +5,12 @@ pub mod flags;
 
 use std::io::{Error, ErrorKind, Read, Result};
 
-use byteorder::{ByteOrder, LE, ReadBytesExt};
+use byteorder::{ByteOrder, ReadBytesExt};
 use bzip2::read::BzDecoder;
-use flate2::read::DeflateDecoder;
+use flate2::{Decompress, read::ZlibDecoder};
 use liblzma::read::XzDecoder;
 use tracing::debug;
-use zerocopy::{FromBytes, Immutable, KnownLayout, little_endian::I32};
+use zerocopy::{FromBytes, I32, Immutable, KnownLayout, LE};
 
 use crate::installers::{
     nsis::{
@@ -25,38 +25,33 @@ const NSIS_MAX_INST_TYPES: u8 = 32;
 #[derive(Debug, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct Header {
-    install_reg_rootkey: I32,
-    install_reg_key_ptr: I32,
-    install_reg_value_ptr: I32,
-    bg_color1: I32,
-    bg_color2: I32,
-    bg_textcolor: I32,
-    lb_bg: I32,
-    lb_fg: I32,
-    pub langtable_size: I32,
-    license_bg: I32,
-    code_on_init: I32,
-    code_on_inst_success: I32,
-    code_on_inst_failed: I32,
-    code_on_user_abort: I32,
-    code_on_gui_init: I32,
-    code_on_gui_end: I32,
-    code_on_mouse_over_section: I32,
-    code_on_verify_install_dir: I32,
-    code_on_sel_change: I32,
-    code_on_reboot_failed: I32,
-    install_types: [I32; NSIS_MAX_INST_TYPES as usize + 1],
-    pub install_directory_ptr: I32,
-    install_directory_auto_append: I32,
-    str_uninstall_child: I32,
-    str_uninstall_command: I32,
-    str_win_init: I32,
+    install_reg_rootkey: I32<LE>,
+    install_reg_key_ptr: I32<LE>,
+    install_reg_value_ptr: I32<LE>,
+    bg_color1: I32<LE>,
+    bg_color2: I32<LE>,
+    bg_textcolor: I32<LE>,
+    lb_bg: I32<LE>,
+    lb_fg: I32<LE>,
+    pub langtable_size: I32<LE>,
+    license_bg: I32<LE>,
+    code_on_init: I32<LE>,
+    code_on_inst_success: I32<LE>,
+    code_on_inst_failed: I32<LE>,
+    code_on_user_abort: I32<LE>,
+    code_on_gui_init: I32<LE>,
+    code_on_gui_end: I32<LE>,
+    code_on_mouse_over_section: I32<LE>,
+    code_on_verify_install_dir: I32<LE>,
+    code_on_sel_change: I32<LE>,
+    code_on_reboot_failed: I32<LE>,
+    install_types: [I32<LE>; NSIS_MAX_INST_TYPES as usize + 1],
+    pub install_directory_ptr: I32<LE>,
+    install_directory_auto_append: I32<LE>,
+    str_uninstall_child: I32<LE>,
+    str_uninstall_command: I32<LE>,
+    str_win_init: I32<LE>,
 }
-
-const HEADER_SIGNATURE_SIZE: u8 = 12;
-const NON_SOLID_EXTRA_BYTES: usize = size_of::<u32>();
-
-const IS_COMPRESSED_MASK: u32 = 1 << 31;
 
 pub struct Decompressed<'data> {
     pub data: Vec<u8>,
@@ -67,11 +62,11 @@ pub struct Decompressed<'data> {
 }
 
 fn is_lzma(data: &[u8]) -> Option<Compression> {
-    let is_lzma_header = |d: &[u8]| {
-        d.get(0..3) == Some([0x5D, 0, 0].as_slice())
-            && d.get(5) == Some(&0)
-            && d.get(6).is_some_and(|byte| byte & (1 << 7) == 0)
-    };
+    fn is_lzma_header(data: &[u8]) -> bool {
+        data.get(0..3) == Some([0x5D, 0, 0].as_slice())
+            && data.get(5) == Some(&0)
+            && data.get(6).is_some_and(|byte| byte & (1 << 7) == 0)
+    }
 
     if is_lzma_header(data) {
         Some(Compression::Lzma(false))
@@ -88,14 +83,36 @@ fn is_bzip2(data: &[u8]) -> bool {
     data.first() == Some(&BZIP2_MAGIC) && data.get(1) < Some(&14)
 }
 
+const HEADER_SIGNATURE_SIZE: u8 = 12;
+const NON_SOLID_EXTRA_BYTES: usize = size_of::<u32>();
+const IS_COMPRESSED_MASK: u32 = 1 << 31;
+
 impl Header {
+    /// <https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L5753>
     pub fn decompress<'data>(
         data: &'data [u8],
         first_header: &'data FirstHeader,
     ) -> Result<Decompressed<'data>> {
+        /*
+          XX XX XX XX             XX XX XX XX == FirstHeader.HeaderSize, nonsolid, uncompressed
+          5D 00 00 dd dd 00       solid LZMA
+          00 5D 00 00 dd dd 00    solid LZMA, empty filter (there are no such archives)
+          01 5D 00 00 dd dd 00    solid LZMA, BCJ filter   (only 7-Zip installer used that format)
+
+          SS SS SS 80 00 5D 00 00 dd dd 00     non-solid LZMA, empty filter
+          SS SS SS 80 01 5D 00 00 dd dd 00     non-solid LZMA, BCJ filter
+          SS SS SS 80 01 tt         non-solid BZip (tt < 14)
+          SS SS SS 80               non-solid Deflate
+
+          01 tt         solid BZip (tt < 14)
+          other         solid Deflate
+        */
+
         let signature = &data[..HEADER_SIGNATURE_SIZE as usize];
-        let mut compressed_header_size = LE::read_u32(signature);
+        let mut compressed_header_size = byteorder::LE::read_u32(signature);
         let mut is_solid = true;
+
+        debug!(?signature);
 
         let compression = if compressed_header_size == first_header.length_of_header.get() {
             is_solid = false;
@@ -120,8 +137,6 @@ impl Header {
             Compression::Zlib
         };
 
-        debug!(%compression);
-
         let mut data = if is_solid {
             data
         } else {
@@ -129,21 +144,32 @@ impl Header {
             &data[NON_SOLID_EXTRA_BYTES..]
         };
 
+        debug!(?compression, is_solid, compressed_header_size);
+
         let mut decoder = match compression {
             Compression::Lzma(_) => {
                 let stream = LzmaStreamHeader::from_reader(&mut data)?;
                 Decoder::Lzma(XzDecoder::new_stream(data, stream))
             }
             Compression::BZip2 => Decoder::BZip2(BzDecoder::new(data)),
-            Compression::Zlib => Decoder::Zlib(DeflateDecoder::new(data)),
+            Compression::Zlib => Decoder::Zlib(ZlibDecoder::new_with_decompress(
+                data,
+                Decompress::new(false),
+            )),
             Compression::None => Decoder::None(data),
         };
 
-        if is_solid && decoder.read_u32::<LE>()? != first_header.length_of_header.get() {
-            Error::new(
-                ErrorKind::InvalidData,
-                "Decompressed header size did not equal size defined in first header",
-            );
+        if is_solid {
+            let decompressed_header_size = decoder.read_u32::<byteorder::LE>()?;
+            let expected_size = first_header.length_of_header.get();
+            if decompressed_header_size != expected_size {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    format!(
+                        "Decompressed header size ({decompressed_header_size}) did not equal size defined in first header ({expected_size})",
+                    ),
+                ));
+            }
         }
 
         let mut decompressed_data = vec![0; first_header.length_of_header.get() as usize];

@@ -16,7 +16,7 @@ use byteorder::{LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
 use compact_str::CompactString;
-use flate2::read::DeflateDecoder;
+use flate2::read::ZlibDecoder;
 use liblzma::read::XzDecoder;
 use msi::Language;
 use protobuf::Enum;
@@ -88,7 +88,7 @@ impl Nsis {
                 FirstHeader::try_ref_from_bytes(bytes).map_err(|_| NsisError::NotNsisFile)
             })?;
 
-        debug!(first_header_offset, ?first_header);
+        debug!(first_header_offset, ?first_header, data_offset);
 
         let Decompressed {
             data: decompressed_data,
@@ -177,7 +177,7 @@ impl Nsis {
                                     Decoder::BZip2(BzDecoder::new(&data[position..]))
                                 }
                                 Compression::Zlib => {
-                                    Decoder::Zlib(DeflateDecoder::new(&data[position..]))
+                                    Decoder::Zlib(ZlibDecoder::new(&data[position..]))
                                 }
                                 Compression::None => Decoder::None(&data[position..]),
                             }
