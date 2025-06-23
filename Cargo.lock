@@ -6050,9 +6050,9 @@ checksum = "271414315aff87387382ec3d271b52d7ae78726f5d44ac98b4f4030c91880486"
 
 [[package]]
 name = "winget-types"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5ff53c359d4da8023c7699c9d2d23730b152686391ad053e70cb2fbf111e30e"
+checksum = "aef412f9ac14a50ca39a0d1d8b8a1ff74d225ebeebc6d6723d200b23f5489105"
 dependencies = [
  "base16ct",
  "bitflags 2.9.1",
