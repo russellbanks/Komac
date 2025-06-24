@@ -22,11 +22,9 @@ The `.ico` file is created using [ImageMagick](https://imagemagick.org/) to conv
 magick -background none logo.svg -define icon:auto-resize="256,48,32,24,16" logo.ico
 ```
 
-<img src="logo.svg" alt="komac logo at 256x256" width="256"/>
-<img src="logo.svg" alt="komac logo at 48x48" width="48"/>
-<img src="logo.svg" alt="komac logo at 32x32" width="32"/>
-<img src="logo.svg" alt="komac logo at 24x24" width="24"/>
-<img src="logo.svg" alt="komac logo at 16x16" width="16"/>
+|                         **16x16**                          |                         **24x24**                          |                         **32x32**                          |                         **48x48**                          |                          **256x256**                          |
+|:----------------------------------------------------------:|:----------------------------------------------------------:|:----------------------------------------------------------:|:----------------------------------------------------------:|:-------------------------------------------------------------:|
+| <img src="logo.svg" alt="komac logo at 16x16" width="16"/> | <img src="logo.svg" alt="komac logo at 24x24" width="24"/> | <img src="logo.svg" alt="komac logo at 32x32" width="32"/> | <img src="logo.svg" alt="komac logo at 48x48" width="48"/> | <img src="logo.svg" alt="komac logo at 256x256" width="256"/> |
 
 The icon sizes are
 the [minimum recommended icon sizes](https://learn.microsoft.com/windows/apps/design/style/iconography/app-icon-construction#icon-scaling)
