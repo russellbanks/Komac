@@ -12,7 +12,7 @@ documentation = "https://github.com/russellbanks/Komac/blob/main/README.md"
 categories = ["command-line-utilities", "development-tools"]
 keywords = ["winget", "winget-pkgs", "winget-cli", "windows"]
 build = "build.rs"
-include = ["**/*.rs", "assets/github.graphql", "assets/logo.ico"]
+include = ["**/*.rs", "assets/github.graphql", "assets/branding/logo.ico"]
 
 [[bin]]
 name = "komac"
