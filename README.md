@@ -1,5 +1,5 @@
 <h2 align="center">
-  <img height="100" alt="komac" src="assets/banner.svg" />
+  <img height="100" alt="komac" src="assets/branding/banner.svg" />
   <br>
   Komac: Smart Manifest Automation for WinGet
 </h2>
