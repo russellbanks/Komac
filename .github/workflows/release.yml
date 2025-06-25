@@ -58,7 +58,7 @@ jobs:
       - name: Build binary
         shell: bash
         env:
-          GLIBC_VERSION: 2.31
+          GLIBC_VERSION: 2.35
         run: |
           if [[ "${{ matrix.platform.bins }}" == *"zigbuild"* ]]; then
             build="cargo zigbuild --target ${{ matrix.platform.target }}.${GLIBC_VERSION}"
