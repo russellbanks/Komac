@@ -105,7 +105,10 @@ jobs:
       - name: Create Tar archive
         if: ${{ runner.os != 'Windows' }}
         run: |
-          tar -czvf ${{ steps.rename_binary.outputs.name }}.tar.gz -C target/${{ matrix.platform.target }}/release komac
+          tar -cvf ${{ steps.rename_binary.outputs.name }}.tar.gz \
+            --use-compress-program="gzip -9" \
+            -C target/${{ matrix.platform.target }}/release komac \
+            -C ../../../ LICENSE.md
           rm target/${{ matrix.platform.target }}/release/komac
 
       - name: Create Inno Installer
