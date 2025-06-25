@@ -1,33 +1,26 @@
 mod manifest;
 mod wix_burn_stub;
 
-use std::{io, io::Cursor};
+use std::{collections::HashMap, io, io::Cursor};
 
 use cab::Cabinet;
 use camino::Utf8PathBuf;
-use compact_str::CompactString;
+use manifest::{BurnManifest, Package, VariableType, install_condition::Value};
 use quick_xml::de::from_str;
 use thiserror::Error;
 use tracing::debug;
 use winget_types::installer::{
     AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
 };
+use wix_burn_stub::WixBurnStub;
 use yara_x::mods::{
     PE,
-    pe::{Resource, ResourceType, Section},
+    pe::{Machine, Resource, ResourceType, Section},
 };
 use zerocopy::TryFromBytes;
 
-use crate::{
-    installers::{
-        burn::{
-            manifest::{BurnManifest, Package},
-            wix_burn_stub::WixBurnStub,
-        },
-        msi::Msi,
-    },
-    traits::FromMachine,
-};
+use super::msi::Msi;
+use crate::traits::FromMachine;
 
 #[derive(Error, Debug)]
 pub enum BurnError {
@@ -56,57 +49,78 @@ impl Burn {
             let ux_cabinet = &data[stub.ux_container_slice_range()];
             let mut ux_cabinet = Cabinet::new(Cursor::new(ux_cabinet))?;
 
+            // The Burn manifest is always file "0"
             let manifest = io::read_to_string(ux_cabinet.read_file("0")?)?;
+            debug!(manifest);
             let manifest = from_str::<BurnManifest>(&manifest)?;
+            debug!("{manifest:#?}");
 
-            let mut apps_and_features_entries = vec![
-                AppsAndFeaturesEntry::new()
-                    .with_display_name(manifest.registration.arp.display_name)
-                    .with_publisher::<_, &str>(manifest.registration.arp.publisher)
-                    .with_display_version(manifest.registration.arp.display_version)
-                    .with_product_code(manifest.registration.id)
-                    .with_upgrade_code(manifest.related_bundle.code)
-                    .with_installer_type(InstallerType::Burn),
-            ];
+            let mut app_arp_entry = AppsAndFeaturesEntry::new()
+                .with_display_name(manifest.registration.arp.display_name)
+                .with_publisher::<_, &str>(manifest.registration.arp.publisher)
+                .with_display_version(manifest.registration.arp.display_version)
+                .with_product_code(manifest.registration.id)
+                .with_installer_type(InstallerType::Burn);
+
+            if let Some(related_bundle) = manifest.related_bundles.first() {
+                app_arp_entry = app_arp_entry.with_upgrade_code(related_bundle.code);
+            }
+
+            let mut apps_and_features_entries = vec![app_arp_entry];
+
+            let variables = manifest
+                .variables
+                .iter()
+                .filter_map(|variable| {
+                    let value = if variable.r#type == VariableType::Numeric {
+                        Value::Int(variable.resolved_value()?.parse().ok()?)
+                    } else {
+                        return None;
+                    };
+
+                    Some((variable.id, value))
+                })
+                .chain([
+                    ("VersionNT64", Value::Bool(true)),
+                    ("NativeMachine", Value::Int(Machine::MACHINE_AMD64 as u32)),
+                ])
+                .collect::<HashMap<_, _>>();
 
             for msi_package in manifest
                 .chain
                 .packages
                 .into_iter()
-                .filter_map(|package| match package {
-                    Package::Msi(msi_package) => Some(msi_package),
-                    _ => None,
-                })
+                .filter_map(Package::try_into_msi)
                 .filter(|msi_package| {
                     // Even though it's still written to the registry, an `ARPSYSTEMCOMPONENT` value
                     // of 1 prevents the application from being displayed in the Add or Remove
                     // Programs list of Control Panel
                     // https://learn.microsoft.com/windows/win32/msi/arpsystemcomponent
-                    msi_package
-                        .properties
-                        .iter()
-                        .find(|property| property.is_arp_system_component())
-                        .is_none_or(|property| property.value.parse() != Ok(1))
+                    !msi_package.is_arp_system_component()
                 })
+                .filter(|msi_package| msi_package.evaluate_install_condition(&variables))
             {
-                apps_and_features_entries.push(AppsAndFeaturesEntry {
-                    display_name: msi_package.provides.display_name.map(CompactString::from),
-                    publisher: manifest.registration.arp.publisher.map(CompactString::from),
-                    display_version: Some(msi_package.version),
-                    product_code: Some(manifest.registration.id.to_owned()),
-                    upgrade_code: msi_package.upgrade_code.map(str::to_owned),
-                    installer_type: manifest
-                        .payloads
-                        .iter()
-                        .any(|payload| {
-                            payload.id == msi_package.id
-                                && payload
-                                    .container
-                                    .is_some_and(|container| container.starts_with("Wix"))
-                        })
-                        .then_some(InstallerType::Wix)
-                        .or(Some(InstallerType::Msi)),
-                });
+                apps_and_features_entries.push(
+                    AppsAndFeaturesEntry::new()
+                        .with_display_name::<_, &str>(msi_package.provides.display_name)
+                        .with_publisher::<_, &str>(manifest.registration.arp.publisher)
+                        .with_display_version(msi_package.version)
+                        .with_product_code(msi_package.product_code)
+                        .with_upgrade_code::<_, &str>(msi_package.upgrade_code)
+                        .with_installer_type::<_, InstallerType>(
+                            manifest
+                                .payloads
+                                .iter()
+                                .any(|payload| {
+                                    payload.id == msi_package.base.id
+                                        && payload
+                                            .container
+                                            .is_some_and(|container| container.starts_with("Wix"))
+                                })
+                                .then_some(InstallerType::Wix)
+                                .unwrap_or(InstallerType::Msi),
+                        ),
+                );
             }
 
             Ok(Self {

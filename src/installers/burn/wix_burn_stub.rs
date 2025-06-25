@@ -36,7 +36,7 @@ impl WixBurnStub {
 
 #[cfg(test)]
 mod tests {
-    use crate::installers::burn::wix_burn_stub::WixBurnStub;
+    use super::WixBurnStub;
 
     #[test]
     fn wix_burn_stub_size() {
