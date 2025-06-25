@@ -112,8 +112,8 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
-          $input = "../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
-          iscc.exe assets/installer.iss `
+          $input = "../../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
+          iscc.exe assets/inno/installer.iss `
             /DInputExecutable=$input `
             /DArchitecture=${{ matrix.platform.inno_arch }} `
             /F$("${{ steps.rename_binary.outputs.name }}".Replace("komac", "komac-setup").TrimEnd(".exe"))
@@ -121,7 +121,7 @@ jobs:
       - name: Compute SHA256 checksum
         shell: pwsh
         run: |
-          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*","target/${{ matrix.platform.target }}/generate-rpm/*" -Include "komac-*", "komac*.deb", "komac*.rpm" | ForEach-Object {
+          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/inno/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*","target/${{ matrix.platform.target }}/generate-rpm/*" -Include "komac-*", "komac*.deb", "komac*.rpm" | ForEach-Object {
             $FileHash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
             New-Item -Force -ItemType File -Path $_.DirectoryName -Name "$($_.Name).sha256" -Value "$FileHash *$($_.Name)`n"
           }
@@ -156,7 +156,7 @@ jobs:
             target/${{ matrix.platform.target }}/generate-rpm/*.sha256
             ${{ steps.rename_binary.outputs.name }}.tar.gz
             ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
-            assets/Output/*
+            assets/inno/Output/*
 
   publish-homebrew-tap:
     needs: release
