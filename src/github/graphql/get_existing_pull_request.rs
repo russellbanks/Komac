@@ -13,7 +13,7 @@ pub struct GetExistingPullRequestVariables<'a> {
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Query", variables = "GetExistingPullRequestVariables")]
 pub struct GetExistingPullRequest {
-    #[arguments(first: 1, type: ISSUE, query: $query)]
+    #[arguments(first: 100, type: ISSUE, query: $query)]
     pub search: SearchResultItemConnection,
 }
 
@@ -30,6 +30,7 @@ pub struct SearchResultItemEdge {
 
 #[derive(cynic::QueryFragment)]
 pub struct PullRequest {
+    pub title: String,
     pub url: Url,
     pub state: PullRequestState,
     pub created_at: DateTime<Utc>,
@@ -64,11 +65,12 @@ mod tests {
     fn get_existing_pull_request_output() {
         const GET_EXISTING_PULL_REQUEST_QUERY: &str = indoc! {r#"
             query GetExistingPullRequest($query: String!) {
-              search(first: 1, type: ISSUE, query: $query) {
+              search(first: 100, type: ISSUE, query: $query) {
                 edges {
                   node {
                     __typename
                     ... on PullRequest {
+                      title
                       url
                       state
                       createdAt
