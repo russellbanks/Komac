@@ -121,14 +121,6 @@ jobs:
             /DArchitecture=${{ matrix.platform.inno_arch }} `
             /F$("${{ steps.rename_binary.outputs.name }}".Replace("komac", "komac-setup").TrimEnd(".exe"))
 
-      - name: Compute SHA256 checksum
-        shell: pwsh
-        run: |
-          Get-Item -ErrorAction SilentlyContinue -Path "${{ steps.rename_binary.outputs.name }}.tar.gz","assets/inno/Output/*","target/${{ matrix.platform.target }}/release/*","target/${{ matrix.platform.target }}/debian/*","target/${{ matrix.platform.target }}/generate-rpm/*" -Include "komac-*", "komac*.deb", "komac*.rpm" | ForEach-Object {
-            $FileHash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
-            New-Item -Force -ItemType File -Path $_.DirectoryName -Name "$($_.Name).sha256" -Value "$FileHash *$($_.Name)`n"
-          }
-
       - name: Set Release variables
         id: set_release_vars
         shell: pwsh
@@ -152,14 +144,37 @@ jobs:
           generate_release_notes: ${{ steps.set_release_vars.outputs.generate_release_notes }}
           files: |
             target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}
-            target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}.sha256
             target/${{ matrix.platform.target }}/debian/*.deb
-            target/${{ matrix.platform.target }}/debian/*.sha256
             target/${{ matrix.platform.target }}/generate-rpm/*.rpm
-            target/${{ matrix.platform.target }}/generate-rpm/*.sha256
             ${{ steps.rename_binary.outputs.name }}.tar.gz
-            ${{ steps.rename_binary.outputs.name }}.tar.gz.sha256
             assets/inno/Output/*
+
+  generate-sha256sums:
+    name: Generate SHA256SUMS
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download release assets
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: ${{ github.repository }}
+          tag: ${{ github.ref_name }}
+          fileName: "*"
+          out-file-path: ./release-assets
+
+      - name: Compute SHA256SUMS
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Upload SHA256SUMS to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: release-assets/SHA256SUMS
 
   publish-homebrew-tap:
     needs: release
