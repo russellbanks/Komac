@@ -156,24 +156,33 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Set tag name
+        id: set_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "tag=nightly" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Download release assets
         uses: robinraju/release-downloader@v1
         with:
           repository: ${{ github.repository }}
-          tag: ${{ github.ref_name }}
+          tag: ${{ steps.set_tag.outputs.tag }}
           fileName: "*"
           out-file-path: ./release-assets
 
       - name: Compute SHA256SUMS
         run: |
           cd release-assets
-          sha256sum * > SHA256SUMS
+          sha256sum --binary * > SHA256SUMS
           cat SHA256SUMS
 
       - name: Upload SHA256SUMS to release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.set_tag.outputs.tag }}
           files: release-assets/SHA256SUMS
 
   publish-homebrew-tap:
