@@ -9,6 +9,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::Result;
 use inquire::{MultiSelect, min_length};
 use memmap2::Mmap;
+use tracing::debug;
 use winget_types::installer::{Installer, InstallerType, NestedInstallerFiles};
 use zip::ZipArchive;
 
@@ -20,7 +21,7 @@ use crate::{
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
     ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];
 
-const MACOS_X_FOLDER: &str = "__MACOSX";
+const IGNORABLE_FOLDERS: [&str; 2] = ["__MACOSX", "resources"];
 
 pub struct Zip<R: Read + Seek> {
     archive: ZipArchive<R>,
@@ -43,12 +44,17 @@ impl<R: Read + Seek> Zip<R> {
                 })
             })
             .filter(|file_name| {
-                file_name
-                    .components()
-                    .all(|component| component.as_str() != MACOS_X_FOLDER)
+                // Ignore folders that the main executable is unlikely to be in
+                file_name.components().all(|component| {
+                    IGNORABLE_FOLDERS
+                        .iter()
+                        .all(|folder| !component.as_str().eq_ignore_ascii_case(folder))
+                })
             })
             .map(Utf8Path::to_path_buf)
             .collect::<Vec<_>>();
+
+        debug!(?possible_installer_files);
 
         let installer_type_counts = VALID_NESTED_FILE_EXTENSIONS
             .iter()
