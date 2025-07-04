@@ -53,7 +53,7 @@ futures-util = "0.3.31"
 html2text = "0.15.2"
 indexmap = "2.10.0"
 indextree = "4.7.4"
-indicatif = "0.17.12"
+indicatif = "0.18.0"
 inquire = "0.7.5"
 itertools = "0.14.0"
 keyring = { version = "3.6.2", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }
