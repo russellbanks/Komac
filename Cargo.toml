@@ -41,7 +41,7 @@ codepage = "0.1.2"
 color-eyre = { version = "0.6.5", default-features = false }
 compact_str = "0.9.0"
 const_format = { version = "0.2.34", features = ["derive"] }
-crc32fast = "1.4.2"
+crc32fast = "1.5.0"
 crossbeam-channel = "0.5.15"
 crossterm = "0.29.0"
 cynic = { version = "3.11.0", features = ["http-reqwest"] }
