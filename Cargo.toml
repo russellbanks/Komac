@@ -50,7 +50,7 @@ derive_more = { version = "2.0.1", features = ["as_ref", "debug", "deref", "dere
 encoding_rs = "0.8.35"
 flate2 = "1.1.2"
 futures-util = "0.3.31"
-html2text = "0.15.2"
+html2text = "0.15.3"
 indexmap = "2.10.0"
 indextree = "4.7.4"
 indicatif = "0.18.0"
