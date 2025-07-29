@@ -3,7 +3,7 @@ name = "komac"
 version = "2.12.1"
 authors = ["Russell Banks"]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 description = "A manifest creator for winget-pkgs"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/russellbanks/Komac"
@@ -26,7 +26,6 @@ strip = true
 [dependencies]
 anstream = "0.6.19"
 base64ct = { version = "1.8.0", features = ["std"] }
-bit-set = "0.8.0"
 bitflags = "2.9.1"
 bon = "3.6.5"
 byteorder = "1.5.0"
@@ -37,11 +36,9 @@ camino = { version = "1.1.10", features = ["serde1"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 clap = { version = "4.5.41", features = ["derive", "cargo", "env"] }
 clap_complete = "4.5.55"
-codepage = "0.1.2"
 color-eyre = { version = "0.6.5", default-features = false }
 compact_str = "0.9.0"
 const_format = { version = "0.2.34", features = ["derive"] }
-crc32fast = "1.5.0"
 crossbeam-channel = "0.5.15"
 crossterm = "0.29.0"
 cynic = { version = "3.11.0", features = ["http-reqwest"] }
@@ -54,6 +51,7 @@ html2text = "0.15.3"
 indexmap = "2.10.0"
 indextree = "4.7.4"
 indicatif = "0.18.0"
+inno = { version = "0.1", features = ["static-lzma"] }
 inquire = "0.7.5"
 itertools = "0.14.0"
 keyring = { version = "3.6.3", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }

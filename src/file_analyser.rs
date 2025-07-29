@@ -2,6 +2,7 @@ use std::{io::Cursor, mem};
 
 use camino::Utf8Path;
 use color_eyre::eyre::{Result, bail};
+use inno::error::InnoError;
 use memmap2::Mmap;
 use tracing::debug;
 use winget_types::{
@@ -13,7 +14,7 @@ use yara_x::mods::PE;
 use crate::{
     installers::{
         burn::{Burn, BurnError},
-        inno::{Inno, InnoError},
+        inno::Inno,
         msi::Msi,
         msix_family::{Msix, bundle::MsixBundle},
         nsis::{Nsis, NsisError},
@@ -76,7 +77,7 @@ impl<'data> FileAnalyser<'data> {
                     Ok(burn) => PossibleInstaller::Burn(burn),
                     Err(BurnError::NotBurnFile) => match Nsis::new(data.as_ref(), &pe) {
                         Ok(nsis_file) => PossibleInstaller::Nsis(nsis_file),
-                        Err(NsisError::NotNsisFile) => match Inno::new(data.as_ref(), &pe) {
+                        Err(NsisError::NotNsisFile) => match Inno::new(data.as_ref()) {
                             Ok(inno_file) => PossibleInstaller::Inno(inno_file),
                             Err(InnoError::NotInnoFile) => PossibleInstaller::Other(Installer {
                                 architecture: Architecture::from_machine(pe.machine()),

@@ -402,21 +402,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bit-set"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08807e080ed7f9d5433fa9b275196cfc35414f66a0c79d864dc51a0d825231a3"
-dependencies = [
- "bit-vec",
-]
-
-[[package]]
-name = "bit-vec"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
-
-[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1602,6 +1587,7 @@ checksum = "4a3d7db9596fecd151c5f638c0ee5d5bd487b6e0ea232e5dc96d5250f6f94b1d"
 dependencies = [
  "crc32fast",
  "libz-rs-sys",
+ "libz-sys",
  "miniz_oxide",
 ]
 
@@ -2463,6 +2449,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4c7245a08504955605670dbf141fceab975f15ca21570696aebe9d2e71576bd"
 
 [[package]]
+name = "inno"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9e0ec72e54aa65e679aee9376a5cf745cb68804c043770752fa90921f724358"
+dependencies = [
+ "bitflags 2.9.1",
+ "codepage",
+ "crc32fast",
+ "encoding_rs",
+ "flate2",
+ "itertools 0.14.0",
+ "liblzma",
+ "thiserror 2.0.12",
+ "zerocopy",
+]
+
+[[package]]
 name = "inquire"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2641,7 +2644,6 @@ version = "2.12.1"
 dependencies = [
  "anstream",
  "base64ct",
- "bit-set",
  "bitflags 2.9.1",
  "bon",
  "byteorder",
@@ -2652,11 +2654,9 @@ dependencies = [
  "chrono",
  "clap",
  "clap_complete",
- "codepage",
  "color-eyre",
  "compact_str 0.9.0",
  "const_format",
- "crc32fast",
  "crossbeam-channel",
  "crossterm 0.29.0",
  "cynic",
@@ -2671,6 +2671,7 @@ dependencies = [
  "indextree",
  "indicatif",
  "indoc",
+ "inno",
  "inquire",
  "itertools 0.14.0",
  "keyring",
@@ -2817,6 +2818,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "172a788537a2221661b480fee8dc5f96c580eb34fa88764d3205dc356c7e4221"
 dependencies = [
  "zlib-rs",
+]
+
+[[package]]
+name = "libz-sys"
+version = "1.1.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b70e7a7df205e92a1a4cd9aaae7898dac0aa555503cc0a649494d0d60e7651d"
+dependencies = [
+ "cc",
+ "pkg-config",
+ "vcpkg",
 ]
 
 [[package]]
