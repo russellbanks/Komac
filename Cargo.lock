@@ -3200,9 +3200,9 @@ dependencies = [
 
 [[package]]
 name = "nt-time"
-version = "0.11.2"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc00a186166f9dd3328adf977e4671de848dd8f01c3208c2b10c70a406885c4f"
+checksum = "5a85b412dd563216bc4c6f4c11a01e856ce0689a00d650c20e25790f1bb04460"
 dependencies = [
  "chrono",
  "jiff",
