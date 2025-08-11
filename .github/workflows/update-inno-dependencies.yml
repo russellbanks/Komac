@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download latest Inno Setup Dependency Installer script
         run: curl -L https://github.com/DomGries/InnoDependencyInstaller/raw/HEAD/CodeDependencies.iss -o assets/inno/CodeDependencies.iss
