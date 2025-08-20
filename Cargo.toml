@@ -96,7 +96,7 @@ zerocopy = { version = "0.8.26", features = ["derive", "std"] }
 zip = { version = "4.3.0", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
-cynic-codegen = { version = "3.11.0", features = ["rkyv"] }
+cynic-codegen = { version = "3.12.0", features = ["rkyv"] }
 windows_exe_info = { version = "0.5.2", features = ["manifest"] }
 
 [dev-dependencies]
