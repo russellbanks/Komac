@@ -1138,7 +1138,7 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3136ed6464e975162667c08092fcb54947ce08785fca301162fd614c4dfd974f"
 dependencies = [
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "lalrpop-util",
  "logos 0.14.4",
 ]
@@ -1793,7 +1793,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 dependencies = [
  "fallible-iterator 0.3.0",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "stable_deref_trait",
 ]
 
@@ -1850,7 +1850,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "http",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "slab",
  "tokio",
  "tokio-util",
@@ -2395,9 +2395,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.10.0"
+version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe4cd85333e22411419a0bcae1297d25e58c9443848b11dc6a86fefe8c78a661"
+checksum = "f2481980430f9f78649238835720ddccc57e52df14ffce1c6f37391d61b563e9"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.5",
@@ -2667,7 +2667,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "html2text",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "indextree",
  "indicatif",
  "indoc",
@@ -3346,7 +3346,7 @@ checksum = "62948e14d923ea95ea2c7c86c71013138b66525b86bdc08d2dcc262bdb497b87"
 dependencies = [
  "crc32fast",
  "hashbrown 0.15.5",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "memchr",
 ]
 
@@ -3822,7 +3822,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4aeaa1f2460f1d348eeaeed86aea999ce98c1bded6f089ff8514c9d9dbdc973"
 dependencies = [
  "anyhow",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "log",
  "protobuf",
  "protobuf-support",
@@ -4506,7 +4506,7 @@ version = "1.0.143"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d401abef1d108fbd9cbaebc3e46611f4b1021f714a0597a71f41ee463f5f4a5a"
 dependencies = [
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "itoa",
  "memchr",
  "ryu",
@@ -4555,7 +4555,7 @@ dependencies = [
  "chrono",
  "hex",
  "indexmap 1.9.3",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "schemars 0.9.0",
  "schemars 1.0.4",
  "serde",
@@ -4583,7 +4583,7 @@ version = "0.9.34+deprecated"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
 dependencies = [
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "itoa",
  "ryu",
  "serde",
@@ -5136,7 +5136,7 @@ version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75129e1dc5000bfbaa9fee9d1b21f974f9fbad9daec557a521ee6e080825f6e8"
 dependencies = [
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "serde",
  "serde_spanned",
  "toml_datetime 0.7.0",
@@ -5166,7 +5166,7 @@ version = "0.22.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
 dependencies = [
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "toml_datetime 0.6.11",
  "winnow",
 ]
@@ -5734,7 +5734,7 @@ dependencies = [
  "ahash 0.8.12",
  "bitflags 2.9.3",
  "hashbrown 0.14.5",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "semver",
  "serde",
 ]
@@ -5747,7 +5747,7 @@ checksum = "b51cb03afce7964bbfce46602d6cb358726f36430b6ba084ac6020d8ce5bc102"
 dependencies = [
  "bitflags 2.9.3",
  "hashbrown 0.15.5",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "semver",
  "serde",
 ]
@@ -5776,7 +5776,7 @@ dependencies = [
  "cc",
  "cfg-if",
  "hashbrown 0.15.5",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "libc",
  "log",
  "mach2",
@@ -5849,7 +5849,7 @@ dependencies = [
  "cranelift-bitset",
  "cranelift-entity",
  "gimli 0.31.1",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "log",
  "object",
  "postcard",
@@ -6421,7 +6421,7 @@ dependencies = [
  "dsa",
  "ecdsa",
  "globwalk",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "intaglio",
  "itertools 0.14.0",
  "linkme",
@@ -6479,7 +6479,7 @@ dependencies = [
  "ascii_tree",
  "bitflags 2.9.3",
  "bstr",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "itertools 0.14.0",
  "logos 0.15.1",
  "num-traits",
@@ -6713,7 +6713,7 @@ dependencies = [
  "arbitrary",
  "crc32fast",
  "flate2",
- "indexmap 2.10.0",
+ "indexmap 2.11.0",
  "memchr",
  "zopfli",
 ]
