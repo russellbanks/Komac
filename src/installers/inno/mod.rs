@@ -30,41 +30,41 @@ pub struct Inno {
 
 impl Inno {
     pub fn new(data: &[u8]) -> Result<Self, InnoError> {
-        let mut inno = inno::Inno::new(Cursor::new(data))?;
+        let inno = inno::Inno::new(Cursor::new(data))?;
 
         let install_dir = inno
             .header
-            .default_dir_name
-            .take()
+            .default_dir_name()
+            .map(str::to_owned)
             .map(to_relative_install_dir)
             .filter(|dir| !dir.contains(['{', '}']));
 
         let mut installer = Installer {
-            locale: inno.languages.first().and_then(|language_entry| {
-                CodePageLanguage::from_code(u16::try_from(language_entry.id).ok()?)
+            locale: inno.primary_language().and_then(|language_entry| {
+                CodePageLanguage::from_code(u16::try_from(language_entry.id()).ok()?)
                     .tag()
                     .parse::<LanguageTag>()
                     .ok()
             }),
-            architecture: WingetArchitecture::from_inno(inno.header.architectures_allowed),
+            architecture: WingetArchitecture::from_inno(inno.header.architectures_allowed()),
             r#type: Some(InstallerType::Inno),
             scope: install_dir
                 .as_deref()
                 .and_then(Scope::from_install_directory),
             url: DecodedUrl::default(),
             sha_256: Sha256String::default(),
-            product_code: inno.header.app_id.clone().map(to_product_code),
+            product_code: inno.header.product_code(),
             unsupported_os_architectures: UnsupportedOSArchitecture::from_inno(
-                inno.header.architectures_disallowed,
+                inno.header.architectures_disallowed(),
             ),
-            apps_and_features_entries: if inno.header.uninstall_name.is_some()
-                || inno.header.app_publisher.is_some()
-                || inno.header.app_version.is_some()
+            apps_and_features_entries: if inno.header.uninstall_name().is_some()
+                || inno.header.app_publisher().is_some()
+                || inno.header.app_version().is_some()
             {
                 vec![AppsAndFeaturesEntry {
-                    display_name: inno.header.uninstall_name.take().map(CompactString::from),
-                    publisher: inno.header.app_publisher.take().map(CompactString::from),
-                    display_version: inno.header.app_version.as_deref().map(Version::new),
+                    display_name: inno.header.uninstall_name().take().map(CompactString::from),
+                    publisher: inno.header.app_publisher().take().map(CompactString::from),
+                    display_version: inno.header.app_version().as_deref().map(Version::new),
                     product_code: inno.header.product_code(),
                     ..AppsAndFeaturesEntry::default()
                 }]
@@ -73,8 +73,8 @@ impl Inno {
             },
             elevation_requirement: inno
                 .header
-                .privileges_required
-                .to_elevation_requirement(&inno.header.privileges_required_overrides_allowed),
+                .privileges_required()
+                .to_elevation_requirement(inno.header.privileges_required_overrides_allowed()),
             installation_metadata: InstallationMetadata {
                 default_install_location: install_dir.map(Utf8PathBuf::from),
                 ..InstallationMetadata::default()
@@ -82,13 +82,17 @@ impl Inno {
             ..Default::default()
         };
 
-        let installers = if inno.header.privileges_required_overrides_allowed.is_empty() {
+        let installers = if inno
+            .header
+            .privileges_required_overrides_allowed()
+            .is_empty()
+        {
             vec![installer]
         } else {
             installer.scope = Some(Scope::Machine);
             let has_scope_switch = inno
                 .header
-                .privileges_required_overrides_allowed
+                .privileges_required_overrides_allowed()
                 .contains(PrivilegesRequiredOverrides::COMMAND_LINE);
             if has_scope_switch {
                 installer.switches = InstallerSwitches {
@@ -115,14 +119,14 @@ impl Inno {
 trait PrivilegeLevelExt {
     fn to_elevation_requirement(
         &self,
-        overrides: &PrivilegesRequiredOverrides,
+        overrides: PrivilegesRequiredOverrides,
     ) -> Option<ElevationRequirement>;
 }
 
 impl PrivilegeLevelExt for inno::header::PrivilegeLevel {
     fn to_elevation_requirement(
         &self,
-        overrides: &PrivilegesRequiredOverrides,
+        overrides: PrivilegesRequiredOverrides,
     ) -> Option<ElevationRequirement> {
         match self {
             Self::Admin | Self::PowerUser => Some(ElevationRequirement::ElevatesSelf),
@@ -167,17 +171,6 @@ impl FromInnoArch for UnsupportedOSArchitecture {
             },
         )
     }
-}
-
-pub fn to_product_code(mut app_id: String) -> String {
-    // Remove escaped bracket
-    if app_id.starts_with("{{") {
-        app_id.remove(0);
-    }
-
-    // Inno tags '_is1' onto the end of the app_id to create the Uninstall registry key
-    app_id.push_str("_is1");
-    app_id
 }
 
 pub fn to_relative_install_dir(mut install_dir: String) -> String {

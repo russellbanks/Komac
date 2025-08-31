@@ -51,7 +51,7 @@ html2text = "0.15.3"
 indexmap = "2.11.0"
 indextree = "4.7.4"
 indicatif = "0.18.0"
-inno = { version = "0.1", features = ["static-lzma"] }
+inno = { version = "0.2", features = ["lzma-static"] }
 inquire = "0.7.5"
 itertools = "0.14.0"
 keyring = { version = "3.6.3", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }

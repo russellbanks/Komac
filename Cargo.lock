@@ -2450,9 +2450,9 @@ checksum = "f4c7245a08504955605670dbf141fceab975f15ca21570696aebe9d2e71576bd"
 
 [[package]]
 name = "inno"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9e0ec72e54aa65e679aee9376a5cf745cb68804c043770752fa90921f724358"
+checksum = "60226624939e7476d16464d3c45528102b6c1f48ecd252625c0f8f16a70bf668"
 dependencies = [
  "bitflags 2.9.3",
  "codepage",
@@ -2461,6 +2461,7 @@ dependencies = [
  "flate2",
  "itertools 0.14.0",
  "liblzma",
+ "nt-time",
  "thiserror 2.0.16",
  "zerocopy",
 ]
