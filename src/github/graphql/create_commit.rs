@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-use derive_new::new;
 use url::Url;
 
 use crate::github::graphql::{
@@ -52,18 +51,35 @@ pub struct FileChanges<'a> {
 }
 
 /// <https://docs.github.com/graphql/reference/input-objects#filedeletion>
-#[derive(cynic::InputObject, new)]
+#[derive(cynic::InputObject)]
 pub struct FileDeletion<'path> {
-    #[new(into)]
     pub path: Cow<'path, str>,
 }
 
+impl<'path> FileDeletion<'path> {
+    pub fn new<P: Into<Cow<'path, str>>>(path: P) -> Self {
+        Self { path: path.into() }
+    }
+}
+
 /// <https://docs.github.com/graphql/reference/input-objects#fileaddition>
-#[derive(cynic::InputObject, new)]
+#[derive(cynic::InputObject)]
 pub struct FileAddition<'path> {
     pub contents: Base64String,
-    #[new(into)]
     pub path: Cow<'path, str>,
+}
+
+impl<'path> FileAddition<'path> {
+    pub fn new<T, P>(contents: T, path: P) -> Self
+    where
+        T: Into<Base64String>,
+        P: Into<Cow<'path, str>>,
+    {
+        Self {
+            contents: contents.into(),
+            path: path.into(),
+        }
+    }
 }
 
 /// <https://docs.github.com/graphql/reference/input-objects#committablebranch>

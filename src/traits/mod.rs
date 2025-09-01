@@ -1,6 +1,5 @@
 use std::{collections::HashMap, mem, sync::LazyLock};
 
-use derive_new::new;
 use html2text::render::{TaggedLine, TextDecorator};
 pub use name::Name;
 use regex::Regex;
@@ -46,7 +45,6 @@ impl FromMachine for Architecture {
     }
 }
 
-#[derive(new)]
 struct GitHubHtmlDecorator;
 
 impl TextDecorator for GitHubHtmlDecorator {
@@ -117,7 +115,7 @@ impl TextDecorator for GitHubHtmlDecorator {
     }
 
     fn make_subblock_decorator(&self) -> Self {
-        Self::new()
+        Self
     }
 
     fn finalise(&mut self, _links: Vec<String>) -> Vec<TaggedLine<()>> {
@@ -137,7 +135,7 @@ impl FromHtml for ReleaseNotes {
         // in yaml so this regex identifies any amount of whitespace and duplicate newlines
         static NEWLINE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+\n").unwrap());
 
-        html2text::from_read_with_decorator(html.as_bytes(), usize::MAX, GitHubHtmlDecorator::new())
+        html2text::from_read_with_decorator(html.as_bytes(), usize::MAX, GitHubHtmlDecorator)
             .ok()
             .and_then(|text| Self::new(NEWLINE_REGEX.replace_all(&text, "\n")).ok())
     }

@@ -49,7 +49,7 @@ use crate::{
             get_file_content::GetFileContent,
             get_repository_info::{GetRepositoryInfo, RepositoryVariables, TargetGitObject},
             merge_upstream::{MergeUpstream, MergeUpstreamVariables},
-            types::{Base64String, GitObjectId, GitRefName},
+            types::{GitObjectId, GitRefName},
             update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables},
         },
         rest::{GITHUB_JSON_MIME, get_tree::GitTree},
@@ -799,10 +799,7 @@ impl GitHub {
         let additions = changes
             .iter()
             .map(|(path, content)| {
-                FileAddition::new(
-                    Base64String::new(Base64::encode_string(content.as_bytes())),
-                    path,
-                )
+                FileAddition::new(Base64::encode_string(content.as_bytes()), path)
             })
             .collect::<Vec<_>>();
         let deletions = if replace_version.is_some() {

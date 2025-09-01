@@ -42,7 +42,6 @@ const_format = { version = "0.2.34", features = ["derive"] }
 crossbeam-channel = "0.5.15"
 crossterm = "0.29.0"
 cynic = { version = "3.12.0", features = ["http-reqwest"] }
-derive-new = "0.7.0"
 derive_more = { version = "2.0.1", features = ["as_ref", "debug", "deref", "deref_mut", "display", "from_str", "into", "into_iterator"] }
 encoding_rs = "0.8.35"
 flate2 = "1.1.2"
