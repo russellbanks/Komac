@@ -60,8 +60,10 @@ impl Msix {
                                         String::from_utf8_lossy(&attribute.value).into_owned();
                                 }
                                 b"Publisher" => {
-                                    manifest.identity.publisher =
-                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                    html_escape::decode_html_entities_to_string(
+                                        String::from_utf8_lossy(&attribute.value),
+                                        &mut manifest.identity.publisher,
+                                    );
                                 }
                                 b"ProcessorArchitecture" => {
                                     manifest.identity.processor_architecture =
