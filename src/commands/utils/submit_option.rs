@@ -1,5 +1,6 @@
+use std::fmt;
+
 use color_eyre::Result;
-use derive_more::Display;
 use inquire::Select;
 use strum::{EnumIter, IntoEnumIterator};
 use winget_types::{PackageIdentifier, PackageVersion};
@@ -9,7 +10,7 @@ use crate::{
     prompts::handle_inquire_error,
 };
 
-#[derive(Display, EnumIter, Eq, PartialEq)]
+#[derive(Clone, Copy, EnumIter, Eq, PartialEq)]
 pub enum SubmitOption {
     Submit,
     Edit,
@@ -55,5 +56,19 @@ impl SubmitOption {
         }
 
         Ok(submit_option)
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Submit => "Submit",
+            Self::Edit => "Edit",
+            Self::Exit => "Exit",
+        }
+    }
+}
+
+impl fmt::Display for SubmitOption {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_str().fmt(f)
     }
 }

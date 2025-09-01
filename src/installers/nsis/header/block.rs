@@ -1,6 +1,5 @@
-use std::{borrow::Cow, io::Cursor, ops::Index};
+use std::{borrow::Cow, io::Cursor, ops::Index, slice};
 
-use derive_more::IntoIterator;
 use strum::EnumCount;
 use winget_types::installer::Architecture;
 use zerocopy::{
@@ -41,9 +40,9 @@ impl BlockType {
     }
 }
 
-#[derive(Clone, Debug, Default, IntoIterator, FromBytes, KnownLayout, Immutable)]
+#[derive(Clone, Debug, Default, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
-pub struct BlockHeaders(#[into_iterator(ref, ref_mut)] [BlockHeader; BlockType::COUNT]);
+pub struct BlockHeaders([BlockHeader; BlockType::COUNT]);
 
 impl BlockHeaders {
     /// If the NSIS installer is 64-bit, the offset value in the `BlockHeader` is a u64 rather than
@@ -97,5 +96,25 @@ impl Index<BlockType> for BlockHeaders {
 
     fn index(&self, index: BlockType) -> &Self::Output {
         self.0.index(index as usize)
+    }
+}
+
+impl<'a> IntoIterator for &'a BlockHeaders {
+    type Item = &'a BlockHeader;
+
+    type IntoIter = slice::Iter<'a, BlockHeader>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut BlockHeaders {
+    type Item = &'a mut BlockHeader;
+
+    type IntoIter = slice::IterMut<'a, BlockHeader>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut()
     }
 }

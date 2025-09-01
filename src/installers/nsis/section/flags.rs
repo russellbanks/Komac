@@ -1,10 +1,9 @@
 use std::fmt;
 
 use bitflags::{Bits, bitflags};
-use derive_more::Deref;
 use zerocopy::{FromBytes, Immutable, KnownLayout};
 
-#[derive(Copy, Clone, Deref, FromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
 pub struct SectionFlags(i32);
 
@@ -34,6 +33,6 @@ impl fmt::Debug for SectionFlags {
 
 impl fmt::Display for SectionFlags {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        bitflags::parser::to_writer(&Self(**self), f)
+        bitflags::parser::to_writer(self, f)
     }
 }

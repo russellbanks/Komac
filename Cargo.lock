@@ -1321,7 +1321,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.106",
- "unicode-xid",
 ]
 
 [[package]]
@@ -2662,7 +2661,6 @@ dependencies = [
  "crossterm 0.29.0",
  "cynic",
  "cynic-codegen",
- "derive_more",
  "encoding_rs",
  "flate2",
  "futures-util",

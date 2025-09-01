@@ -1,4 +1,5 @@
-use derive_more::Display;
+use std::fmt;
+
 use itertools::Either;
 use quick_xml::de::from_str;
 use serde::Deserialize;
@@ -8,8 +9,7 @@ use zerocopy::{FromBytes, LE, U16};
 
 use crate::installers::nsis::{state::NsisState, strings::code::NsCode};
 
-#[derive(Debug, Display, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
-#[display("{_0}.{_1}{_2}")]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
 pub struct NsisVersion(pub u8, pub u8, pub u8);
 
 impl NsisVersion {
@@ -138,6 +138,12 @@ impl NsisVersion {
 impl Default for NsisVersion {
     fn default() -> Self {
         Self::v3()
+    }
+}
+
+impl fmt::Display for NsisVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}.{}{}", self.0, self.1, self.2)
     }
 }
 

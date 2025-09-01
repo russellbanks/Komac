@@ -1,7 +1,8 @@
 mod flags;
 mod signature;
 
-use derive_more::Debug;
+use std::fmt;
+
 use zerocopy::{Immutable, KnownLayout, TryFromBytes, little_endian::U32};
 
 use crate::installers::nsis::first_header::{
@@ -9,16 +10,29 @@ use crate::installers::nsis::first_header::{
     signature::{Magic, NsisSignature},
 };
 
-#[derive(Copy, Clone, Debug, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, TryFromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct FirstHeader {
     flags: HeaderFlags,
     magic: Magic,
     signature: NsisSignature,
-    #[debug("{length_of_header}")]
     pub length_of_header: U32,
-    #[debug("{length_of_following_data}")]
     length_of_following_data: U32,
+}
+
+impl fmt::Debug for FirstHeader {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FirstHeader")
+            .field("Flags", &self.flags)
+            .field("Magic", &self.magic)
+            .field("Signature", &self.signature)
+            .field("LengthOfHeader", &self.length_of_header.get())
+            .field(
+                "LengthOfFollowingData",
+                &self.length_of_following_data.get(),
+            )
+            .finish()
+    }
 }
 
 #[cfg(test)]

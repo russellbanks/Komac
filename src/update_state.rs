@@ -1,19 +1,13 @@
-use std::{cmp::max, collections::BTreeSet};
+use std::{cmp::max, collections::BTreeSet, fmt};
 
-use derive_more::Display;
 use winget_types::PackageVersion;
 
-#[derive(Copy, Clone, Display)]
+#[derive(Copy, Clone)]
 pub enum UpdateState {
-    #[display("New package")]
     NewPackage,
-    #[display("New version")]
     NewVersion,
-    #[display("Add version")]
     AddVersion,
-    #[display("Update version")]
     UpdateVersion,
-    #[display("Remove version")]
     RemoveVersion,
 }
 impl UpdateState {
@@ -32,5 +26,21 @@ impl UpdateState {
             _ if versions.is_none() => Self::NewPackage,
             _ => Self::AddVersion,
         }
+    }
+
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::NewPackage => "New package",
+            Self::NewVersion => "New version",
+            Self::AddVersion => "Add version",
+            Self::UpdateVersion => "Update version",
+            Self::RemoveVersion => "Remove version",
+        }
+    }
+}
+
+impl fmt::Display for UpdateState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_str().fmt(f)
     }
 }

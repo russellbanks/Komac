@@ -1,4 +1,5 @@
-use derive_more::Display;
+use std::fmt;
+
 use zerocopy::{Immutable, KnownLayout, TryFromBytes, ValidityError, try_transmute};
 
 /// A merge of [`Window Messages`] and [`Window Notifications`].
@@ -6,7 +7,7 @@ use zerocopy::{Immutable, KnownLayout, TryFromBytes, ValidityError, try_transmut
 /// [`Window Messages`]: https://learn.microsoft.com/windows/win32/winmsg/window-messages
 /// [`Window Notifications`]: https://learn.microsoft.com/windows/win32/winmsg/window-notifications
 #[expect(dead_code)]
-#[derive(Copy, Clone, Debug, Display, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u16)]
 pub enum WindowMessage {
     Null = 0x0000,
@@ -49,6 +50,65 @@ pub enum WindowMessage {
     EnterSizeMove = 0x0231,
     ExitSizeMove = 0x0232,
     ThemeChanged = 0x031A,
+}
+
+impl WindowMessage {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Null => "Null",
+            Self::Create => "Create",
+            Self::Destroy => "Destroy",
+            Self::Move => "Move",
+            Self::Size => "Size",
+            Self::Enable => "Enable",
+            Self::SetText => "SetText",
+            Self::GetText => "GetText",
+            Self::GetTextLength => "GetTextLength",
+            Self::Close => "Close",
+            Self::Quit => "Quit",
+            Self::QueryOpen => "QueryOpen",
+            Self::ShowWindow => "ShowWindow",
+            Self::ActivateApp => "ActivateApp",
+            Self::CancelMode => "CancelMode",
+            Self::ChildActivate => "ChildActivate",
+            Self::GetMinMaxInfo => "GetMinMaxInfo",
+            Self::SetFont => "SetFont",
+            Self::GetFont => "GetFont",
+            Self::QueryDragIcon => "QueryDragIcon",
+            Self::Compacting => "Compacting",
+            Self::WindowPosChanging => "WindowPosChanging",
+            Self::WindowPosChanged => "WindowPosChanged",
+            Self::InputLangChangeRequest => "InputLangChangeRequest",
+            Self::InputLangChange => "InputLangChange",
+            Self::UserChanged => "UserChanged",
+            Self::StyleChanging => "StyleChanging",
+            Self::StyleChanged => "StyleChanged",
+            Self::GetIcon => "GetIcon",
+            Self::SetIcon => "SetIcon",
+            Self::NCCreate => "NCCreate",
+            Self::NCDestroy => "NCDestroy",
+            Self::NCCalcSize => "NCCalcSize",
+            Self::NCActivate => "NCActivate",
+            Self::GetHMenu => "GetHMenu",
+            Self::Sizing => "Sizing",
+            Self::Moving => "Moving",
+            Self::EnterSizeMove => "EnterSizeMove",
+            Self::ExitSizeMove => "ExitSizeMove",
+            Self::ThemeChanged => "ThemeChanged",
+        }
+    }
+}
+
+impl fmt::Debug for WindowMessage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}({})", *self as u16)
+    }
+}
+
+impl fmt::Display for WindowMessage {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.as_str().fmt(f)
+    }
 }
 
 impl TryFrom<u16> for WindowMessage {

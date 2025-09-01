@@ -30,12 +30,19 @@ where
     deserializer.deserialize_str(YesNoVisitor)
 }
 
-#[expect(dead_code)]
-#[derive(derive_more::Debug)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum YesNoButton {
-    #[debug("{_0}")]
     YesNo(bool),
     Button,
+}
+
+impl fmt::Debug for YesNoButton {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::YesNo(yes_no) => write!(f, "{yes_no}"),
+            Self::Button => f.write_str("Button"),
+        }
+    }
 }
 
 impl Default for YesNoButton {
