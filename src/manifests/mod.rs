@@ -122,7 +122,7 @@ where
     Ok(convert_to_crlf(&result).into_owned())
 }
 
-fn convert_to_crlf(input: &str) -> Cow<str> {
+fn convert_to_crlf(input: &str) -> Cow<'_, str> {
     const CR: char = '\r';
     const LF: char = '\n';
     const CRLF: &str = concatc!(CR, LF);

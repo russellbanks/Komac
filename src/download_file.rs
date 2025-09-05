@@ -9,7 +9,7 @@ use crate::{download::DownloadedFile, file_analyser::FileAnalyser};
 
 pub async fn process_files(
     files: &mut [DownloadedFile],
-) -> Result<HashMap<DecodedUrl, FileAnalyser>> {
+) -> Result<HashMap<DecodedUrl, FileAnalyser<'_>>> {
     stream::iter(files.iter_mut().map(
         |DownloadedFile {
              url,

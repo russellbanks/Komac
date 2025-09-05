@@ -51,7 +51,7 @@ impl BlockHeaders {
     pub fn read_dynamic_from_prefix(
         data: &[u8],
         architecture: Architecture,
-    ) -> Result<(Cow<Self>, &[u8]), NsisError> {
+    ) -> Result<(Cow<'_, Self>, &[u8]), NsisError> {
         if architecture.is_64_bit() {
             Self::ref_from_prefix(data)
                 .map(|(headers, rest)| (Cow::Borrowed(headers), rest))

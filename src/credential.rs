@@ -19,7 +19,7 @@ pub fn get_komac_credential() -> keyring::Result<Entry> {
     Entry::new(SERVICE, USERNAME)
 }
 
-pub async fn handle_token(token: Option<&str>) -> Result<Cow<str>> {
+pub async fn handle_token(token: Option<&str>) -> Result<Cow<'_, str>> {
     let client = Client::builder()
         .default_headers(get_default_headers(None))
         .build()?;

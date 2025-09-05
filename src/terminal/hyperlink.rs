@@ -19,11 +19,11 @@ impl<D: fmt::Display, U: fmt::Display> fmt::Display for Hyperlink<'_, D, U> {
 }
 
 pub trait Hyperlinkable<D: fmt::Display, U: fmt::Display> {
-    fn hyperlink(&self, url: U) -> Hyperlink<D, U>;
+    fn hyperlink(&self, url: U) -> Hyperlink<'_, D, U>;
 }
 
 impl<D: fmt::Display, U: fmt::Display> Hyperlinkable<D, U> for D {
-    fn hyperlink(&self, url: U) -> Hyperlink<D, U> {
+    fn hyperlink(&self, url: U) -> Hyperlink<'_, D, U> {
         Hyperlink { text: self, url }
     }
 }

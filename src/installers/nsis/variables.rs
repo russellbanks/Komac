@@ -50,7 +50,7 @@ impl<'data> Variables<'data> {
         self.get(&Self::INSTALL_DIR_INDEX)
     }
 
-    pub fn insert_install_dir<T>(&mut self, install_dir: T) -> Option<Cow<str>>
+    pub fn insert_install_dir<T>(&mut self, install_dir: T) -> Option<Cow<'_, str>>
     where
         T: Into<Cow<'data, str>>,
     {
