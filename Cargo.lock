@@ -2656,7 +2656,7 @@ dependencies = [
 
 [[package]]
 name = "komac"
-version = "2.12.1"
+version = "2.13.0"
 dependencies = [
  "anstream",
  "base64ct",

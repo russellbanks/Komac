@@ -1,6 +1,6 @@
 [package]
 name = "komac"
-version = "2.12.1"
+version = "2.13.0"
 authors = ["Russell Banks"]
 edition = "2024"
 rust-version = "1.88"
