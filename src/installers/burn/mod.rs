@@ -108,27 +108,27 @@ impl Burn {
                         .with_product_code(msi_package.product_code)
                         .with_upgrade_code::<_, &str>(msi_package.upgrade_code)
                         .with_installer_type::<_, InstallerType>(
-                            manifest
-                                .payloads
-                                .iter()
-                                .any(|payload| {
-                                    payload.id == msi_package.base.id
-                                        && payload
-                                            .container
-                                            .is_some_and(|container| container.starts_with("Wix"))
-                                })
-                                .then_some(InstallerType::Wix)
-                                .unwrap_or(InstallerType::Msi),
+                            if manifest.payloads.iter().any(|payload| {
+                                payload.id == msi_package.base.id
+                                    && payload
+                                        .container
+                                        .is_some_and(|container| container.starts_with("Wix"))
+                            }) {
+                                InstallerType::Wix
+                            } else {
+                                InstallerType::Msi
+                            },
                         ),
                 );
             }
 
             Ok(Self {
                 installer: Installer {
-                    architecture: manifest
-                        .win_64
-                        .then_some(Architecture::X64)
-                        .unwrap_or_else(|| Architecture::from_machine(pe.machine())),
+                    architecture: if manifest.win_64 {
+                        Architecture::X64
+                    } else {
+                        Architecture::from_machine(pe.machine())
+                    },
                     r#type: Some(InstallerType::Burn),
                     scope: manifest
                         .registration

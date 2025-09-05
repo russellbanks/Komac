@@ -62,9 +62,9 @@ impl Inno {
                 || inno.header.app_version().is_some()
             {
                 vec![AppsAndFeaturesEntry {
-                    display_name: inno.header.uninstall_name().take().map(CompactString::from),
-                    publisher: inno.header.app_publisher().take().map(CompactString::from),
-                    display_version: inno.header.app_version().as_deref().map(Version::new),
+                    display_name: inno.header.uninstall_name().map(CompactString::from),
+                    publisher: inno.header.app_publisher().map(CompactString::from),
+                    display_version: inno.header.app_version().map(Version::new),
                     product_code: inno.header.product_code(),
                     ..AppsAndFeaturesEntry::default()
                 }]

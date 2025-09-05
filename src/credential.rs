@@ -90,10 +90,10 @@ pub fn get_default_headers(github_token: Option<&str>) -> HeaderMap {
     default_headers.insert(USER_AGENT, MICROSOFT_DELIVERY_OPTIMIZATION);
     default_headers.insert(DNT, HeaderValue::from(1));
     default_headers.insert(SEC_GPC, HeaderValue::from(1));
-    if let Some(token) = github_token {
-        if let Ok(bearer_auth) = HeaderValue::from_str(&format!("Bearer {token}")) {
-            default_headers.insert(AUTHORIZATION, bearer_auth);
-        }
+    if let Some(token) = github_token
+        && let Ok(bearer_auth) = HeaderValue::from_str(&format!("Bearer {token}"))
+    {
+        default_headers.insert(AUTHORIZATION, bearer_auth);
     }
     default_headers
 }

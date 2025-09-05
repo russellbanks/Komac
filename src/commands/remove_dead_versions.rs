@@ -300,21 +300,20 @@ async fn confirm_removal(
     if let Some(pull_request) = github
         .get_existing_pull_request(identifier, version)
         .await?
+        && pull_request.state == PullRequestState::Open
     {
-        if pull_request.state == PullRequestState::Open {
-            println!(
-                "{identifier} {version} returned {} in all its InstallerUrls but there is already {} pull request for this version that was created on {} at {}.",
-                StatusCode::NOT_FOUND.red(),
-                pull_request.state,
-                pull_request.created_at.date_naive(),
-                pull_request.created_at.time()
-            );
-            return if auto {
-                Ok(false)
-            } else {
-                confirm_prompt("Remove anyway?").map_err(Error::from)
-            };
-        }
+        println!(
+            "{identifier} {version} returned {} in all its InstallerUrls but there is already {} pull request for this version that was created on {} at {}.",
+            StatusCode::NOT_FOUND.red(),
+            pull_request.state,
+            pull_request.created_at.date_naive(),
+            pull_request.created_at.time()
+        );
+        return if auto {
+            Ok(false)
+        } else {
+            confirm_prompt("Remove anyway?").map_err(Error::from)
+        };
     }
 
     Ok(auto

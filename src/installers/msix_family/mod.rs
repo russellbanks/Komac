@@ -86,25 +86,26 @@ impl Msix {
                             reader.read_text(event.to_end().name())?.into_owned();
                     }
                     b"TargetDeviceFamily" => {
-                        let attributes = event.attributes().flatten().collect::<Vec<_>>();
-                        let platform = attributes
-                            .iter()
-                            .find(|attribute| attribute.key.as_ref() == b"Name")
-                            .and_then(|attribute| std::str::from_utf8(&attribute.value).ok())
-                            .and_then(|platform| platform.parse::<Platform>().ok());
-                        let min_version = attributes
-                            .iter()
-                            .find(|attribute| attribute.key.as_ref() == b"MinVersion")
-                            .and_then(|attribute| std::str::from_utf8(&attribute.value).ok())
-                            .and_then(|min_version| min_version.parse::<MinimumOSVersion>().ok());
-                        if let (Some(platform), Some(min_version)) = (platform, min_version) {
+                        let mut name = None;
+                        let mut min_version = None;
+                        for attribute in event.attributes().flatten() {
+                            if attribute.key.as_ref() == b"Name"
+                                && let Ok(platform) = std::str::from_utf8(&attribute.value)
+                                && let Ok(platform) = platform.parse()
+                            {
+                                name = Some(platform);
+                            } else if attribute.key.as_ref() == b"MinVersion"
+                                && let Ok(version) = std::str::from_utf8(&attribute.value)
+                                && let Ok(version) = version.parse()
+                            {
+                                min_version = Some(version);
+                            }
+                        }
+                        if let (Some(name), Some(min_version)) = (name, min_version) {
                             manifest
                                 .dependencies
                                 .target_device_family
-                                .insert(TargetDeviceFamily {
-                                    name: platform,
-                                    min_version,
-                                });
+                                .insert(TargetDeviceFamily { name, min_version });
                         }
                     }
                     b"FileType" => {
@@ -120,36 +121,34 @@ impl Msix {
                         }
                     }
                     b"Capability" => {
-                        let _ = event
+                        if let Some(attribute) = event
                             .attributes()
                             .flatten()
                             .find(|attribute| attribute.key.as_ref() == b"Name")
-                            .is_some_and(|attribute| {
-                                let Ok(capability) = std::str::from_utf8(&attribute.value) else {
-                                    return false;
-                                };
-
-                                if event
-                                    .name()
-                                    .prefix()
-                                    .is_some_and(|prefix| prefix.into_inner() == b"rescap")
+                            && let Ok(capability) = std::str::from_utf8(&attribute.value)
+                        {
+                            if event
+                                .name()
+                                .prefix()
+                                .is_some_and(|prefix| prefix.into_inner() == b"rescap")
+                            {
+                                if let Ok(restricted_capability) =
+                                    capability.parse::<RestrictedCapability>()
                                 {
-                                    capability.parse::<RestrictedCapability>().is_ok_and(
-                                        |restricted| {
-                                            manifest.capabilities.restricted.insert(restricted)
-                                        },
-                                    )
-                                } else {
-                                    capability.parse::<Capability>().is_ok_and(|capability| {
-                                        manifest.capabilities.unrestricted.insert(capability)
-                                    })
+                                    manifest
+                                        .capabilities
+                                        .restricted
+                                        .insert(restricted_capability);
                                 }
-                            });
+                            } else if let Ok(capability) = capability.parse::<Capability>() {
+                                manifest.capabilities.unrestricted.insert(capability);
+                            }
+                        }
                     }
                     _ => continue,
                 },
                 Event::Eof => break,
-                _ => (),
+                _ => {}
             }
         }
 

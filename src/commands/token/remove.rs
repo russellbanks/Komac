@@ -18,18 +18,12 @@ impl RemoveToken {
     pub fn run(self) -> Result<()> {
         let credential = get_komac_credential()?;
 
-        if matches!(
-            credential.get_password().err(),
-            Some(keyring::Error::NoEntry)
-        ) {
+        if let Some(keyring::Error::NoEntry) = credential.get_password().err() {
             println!("No token stored is currently stored in the platform's secure storage");
         }
 
-        let confirm = if self.skip_prompt {
-            true
-        } else {
-            confirm_prompt("Would you like to remove the currently stored token?")?
-        };
+        let confirm = self.skip_prompt
+            || confirm_prompt("Would you like to remove the currently stored token?")?;
 
         if confirm {
             credential.delete_credential()?;

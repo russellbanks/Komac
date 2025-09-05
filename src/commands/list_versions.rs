@@ -1,4 +1,4 @@
-use std::{io, io::Write};
+use std::io::Write;
 
 use clap::{Args, Parser};
 use color_eyre::Result;
@@ -44,15 +44,13 @@ impl ListVersions {
 
         let versions = github.get_versions(&self.package_identifier).await?;
 
-        let mut stdout_lock = io::stdout().lock();
-        match (
-            self.output_type.json,
-            self.output_type.pretty_json,
-            self.output_type.yaml,
-        ) {
-            (true, _, _) => serde_json::to_writer(stdout_lock, &versions)?,
-            (_, true, _) => serde_json::to_writer_pretty(stdout_lock, &versions)?,
-            (_, _, true) => serde_yaml::to_writer(stdout_lock, &versions)?,
+        let mut stdout_lock = anstream::stdout().lock();
+        match self.output_type {
+            OutputType {
+                pretty_json: true, ..
+            } => serde_json::to_writer_pretty(stdout_lock, &versions)?,
+            OutputType { json: true, .. } => serde_json::to_writer(stdout_lock, &versions)?,
+            OutputType { yaml: true, .. } => serde_yaml::to_writer(stdout_lock, &versions)?,
             _ => {
                 for version in versions {
                     writeln!(stdout_lock, "{version}")?;

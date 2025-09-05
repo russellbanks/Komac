@@ -134,25 +134,21 @@ impl UpdateVersion {
             }
         });
 
-        if let Some(version) = replace_version {
-            if !versions.contains(version) {
-                let closest = version.closest(&versions).unwrap_or_else(|| unreachable!());
-                bail!(
-                    "Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}"
-                )
-            }
+        if let Some(version) = replace_version
+            && !versions.contains(version)
+            && let Some(closest) = version.closest(&versions)
+        {
+            bail!(
+                "Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}"
+            )
         }
 
-        if let Some(pull_request) = existing_pr.await?? {
-            if !(self.skip_pr_check || self.dry_run)
-                && !prompt_existing_pull_request(
-                    &package_identifier,
-                    &package_version,
-                    &pull_request,
-                )?
-            {
-                return Ok(());
-            }
+        if let Some(pull_request) = existing_pr.await??
+            && !self.skip_pr_check
+            && !self.dry_run
+            && !prompt_existing_pull_request(&package_identifier, &package_version, &pull_request)?
+        {
+            return Ok(());
         }
 
         let manifests = tokio::spawn({

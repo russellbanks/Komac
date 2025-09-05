@@ -173,19 +173,14 @@ impl NewVersion {
 
         let package_version = required_prompt(self.package_version)?;
 
-        if let Some(pull_request) = github
-            .get_existing_pull_request(&package_identifier, &package_version)
-            .await?
+        if !self.skip_pr_check
+            && !self.dry_run
+            && let Some(pull_request) = github
+                .get_existing_pull_request(&package_identifier, &package_version)
+                .await?
+            && !prompt_existing_pull_request(&package_identifier, &package_version, &pull_request)?
         {
-            if !(self.skip_pr_check || self.dry_run)
-                && !prompt_existing_pull_request(
-                    &package_identifier,
-                    &package_version,
-                    &pull_request,
-                )?
-            {
-                return Ok(());
-            }
+            return Ok(());
         }
 
         let mut urls = self.urls;

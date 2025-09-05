@@ -67,11 +67,11 @@ impl Msi {
 
         let product_name = property_table.remove(PRODUCT_NAME);
         let manufacturer = property_table.remove(MANUFACTURER);
-        let product_version = product_name
-            .as_deref()
-            .is_some_and(|product_name| product_name == GOOGLE_CHROME)
-            .then(|| Self::get_actual_chrome_version(&msi).map(CompactString::from))
-            .unwrap_or_else(|| property_table.remove(PRODUCT_VERSION));
+        let product_version = if let Some(GOOGLE_CHROME) = product_name.as_deref() {
+            Self::get_actual_chrome_version(&msi).map(CompactString::from)
+        } else {
+            property_table.remove(PRODUCT_VERSION)
+        };
         let product_code = property_table
             .remove(PRODUCT_CODE)
             .map(CompactString::into_string);
@@ -187,18 +187,18 @@ impl Msi {
             .select_rows(Select::table(DIRECTORY))?
             .filter_map(|row| {
                 match (
-                    row[DIRECTORY].as_str().map(str::to_owned),
-                    row[DIRECTORY_PARENT].as_str().map(str::to_owned),
+                    row[DIRECTORY].as_str(),
+                    row[DIRECTORY_PARENT].as_str(),
                     row[DEFAULT_DIR].as_str().map(|default_dir| {
                         default_dir
                             .split_once('|')
                             .map_or(default_dir, |(_, long_dir)| long_dir)
-                            .to_owned()
                     }),
                 ) {
-                    (Some(directory), parent, Some(default)) => {
-                        Some((directory, (parent, default)))
-                    }
+                    (Some(directory), parent, Some(default)) => Some((
+                        directory.to_owned(),
+                        (parent.map(str::to_owned), default.to_owned()),
+                    )),
                     _ => None,
                 }
             })
@@ -287,11 +287,11 @@ impl Msi {
             return Some(Utf8PathBuf::new());
         }
 
-        if let Some((Some(parent), default_dir)) = directory_table.get(current_dir) {
-            if let Some(mut path) = Self::build_directory(directory_table, parent, target_dir) {
-                path.push(Self::get_property_relative_path(current_dir).unwrap_or(default_dir));
-                return Some(path);
-            }
+        if let Some((Some(parent), default_dir)) = directory_table.get(current_dir)
+            && let Some(mut path) = Self::build_directory(directory_table, parent, target_dir)
+        {
+            path.push(Self::get_property_relative_path(current_dir).unwrap_or(default_dir));
+            return Some(path);
         }
 
         None

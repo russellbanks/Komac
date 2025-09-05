@@ -41,18 +41,10 @@ impl Download {
             let _disposition = sections.next(); // Skip the disposition type
             let filenames = sections
                 .filter_map(|section| {
-                    if let Some((key, value)) = section
+                    section
                         .split_once('=')
-                        .map(|(key, value)| (key.trim(), value.trim()))
-                    {
-                        if key.starts_with(FILENAME) {
-                            let value = value.trim_matches('"').trim();
-                            if !value.is_empty() {
-                                return Some((key, value));
-                            }
-                        }
-                    }
-                    None
+                        .map(|(key, value)| (key.trim(), value.trim().trim_matches('"').trim()))
+                        .filter(|(key, value)| key.starts_with(FILENAME) && !value.is_empty())
                 })
                 .collect::<Vec<_>>();
 
@@ -127,12 +119,11 @@ impl Download {
 
                 // If there was a redirect error because max hops were reached, as intended, set the
                 // original vanity URL to the redirected versioned URL
-                if let Err(error) = limited_redirect_client.head(self.url.as_str()).send().await {
-                    if error.is_redirect() {
-                        if let Some(final_url) = error.url() {
-                            **self.url = final_url.clone();
-                        }
-                    }
+                if let Err(error) = limited_redirect_client.head(self.url.as_str()).send().await
+                    && error.is_redirect()
+                    && let Some(final_url) = error.url()
+                {
+                    **self.url = final_url.clone();
                 }
             }
         }

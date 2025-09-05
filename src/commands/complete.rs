@@ -1,4 +1,3 @@
-use anstream::stdout;
 use clap::{CommandFactory, Parser};
 use clap_complete::{Shell, generate};
 use color_eyre::{Result, Section, eyre::eyre};
@@ -33,7 +32,7 @@ impl Complete {
 
         let mut command = Cli::command();
         let command_name = command.get_name().to_owned();
-        generate(shell, &mut command, command_name, &mut stdout());
+        generate(shell, &mut command, command_name, &mut anstream::stdout());
 
         Ok(())
     }
