@@ -176,7 +176,7 @@ jobs:
       - name: Compute SHA256SUMS
         run: |
           cd release-assets
-          rm SHA256SUMS
+          rm --force SHA256SUMS
           sha256sum --binary * > SHA256SUMS
           cat SHA256SUMS
 
