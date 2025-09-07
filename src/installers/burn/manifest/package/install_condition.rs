@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
 use serde::Deserialize;
 use tracing::warn;
@@ -7,10 +7,11 @@ use tracing::warn;
 #[serde(from = "&str")]
 pub struct InstallCondition(Expr);
 
-#[derive(Debug, Clone)]
-pub enum Value {
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Value<'manifest> {
     Bool(bool),
     Int(u32),
+    Str(Cow<'manifest, str>),
 }
 
 impl InstallCondition {
@@ -109,12 +110,17 @@ impl Parser {
                 self.advance();
                 if matches!(self.peek(), Some(Token::Eq)) {
                     self.advance();
-                    if let Some(Token::Number(num)) = self.peek() {
-                        let num = *num;
-                        self.advance();
-                        Expr::Eq(name, num)
-                    } else {
-                        panic!("Expected number after '='");
+                    match self.peek() {
+                        Some(&Token::Number(num)) => {
+                            self.advance();
+                            Expr::Eq(name, Literal::Int(num))
+                        }
+                        Some(Token::Ident(s)) => {
+                            let s = s.clone();
+                            self.advance();
+                            Expr::Eq(name, Literal::Str(s))
+                        }
+                        other => panic!("Expected literal after '=', got {:?}", other),
                     }
                 } else {
                     Expr::Var(name)
@@ -176,10 +182,16 @@ fn tokenize(input: &str) -> Vec<Token> {
     tokens
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Literal {
+    Int(u32),
+    Str(String),
+}
+
 #[derive(Debug)]
 pub enum Expr {
     Var(String),
-    Eq(String, u32),
+    Eq(String, Literal),
     Not(Box<Expr>),
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
@@ -189,20 +201,23 @@ impl Expr {
     pub fn eval(&self, variables: &HashMap<&str, Value>) -> bool {
         match self {
             Self::Var(name) => match variables.get(name.as_str()) {
-                Some(Value::Bool(bool)) => *bool,
-                Some(Value::Int(int)) => *int != 0,
+                Some(&Value::Bool(bool)) => bool,
+                Some(&Value::Int(int)) => int != 0,
+                Some(Value::Str(str)) => !str.is_empty(),
                 None => {
                     warn!("Variable `{name}` not found in Burn variables");
                     true
                 }
             },
-            Self::Eq(name, val) => match variables.get(name.as_str()) {
-                Some(Value::Int(int)) => *int == *val,
-                Some(Value::Bool(bool)) => (*val == 1) == *bool,
-                None => {
+            Self::Eq(name, literal) => match (variables.get(name.as_str()), literal) {
+                (Some(Value::Int(int)), Literal::Int(lit_int)) => *int == *lit_int,
+                (Some(Value::Str(val)), Literal::Str(lit_str)) => val == lit_str,
+                (Some(Value::Bool(bool)), Literal::Int(lit_int)) => (*lit_int == 1) == *bool,
+                (None, _) => {
                     warn!("Variable `{name}` not found in Burn variables");
                     true
                 }
+                _ => true,
             },
             Self::Not(inner) => !inner.eval(variables),
             Self::And(lhs, rhs) => lhs.eval(variables) && rhs.eval(variables),

@@ -72,10 +72,12 @@ impl Burn {
                 .variables
                 .iter()
                 .filter_map(|variable| {
-                    let value = if variable.r#type == VariableType::Numeric {
-                        Value::Int(variable.resolved_value()?.parse().ok()?)
-                    } else {
-                        return None;
+                    let value = match variable.r#type {
+                        VariableType::Numeric => {
+                            Value::Int(variable.resolved_value()?.parse().ok()?)
+                        }
+                        VariableType::String => Value::Str(variable.resolved_value()?),
+                        _ => return None,
                     };
 
                     Some((variable.id, value))
