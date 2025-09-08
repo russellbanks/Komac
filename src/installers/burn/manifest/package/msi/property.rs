@@ -1,7 +1,6 @@
 use serde::Deserialize;
 
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct MsiProperty<'manifest> {
     #[serde(rename = "@Id")]
@@ -12,10 +11,32 @@ pub struct MsiProperty<'manifest> {
     pub condition: Option<&'manifest str>,
 }
 
-impl MsiProperty<'_> {
+impl<'manifest> MsiProperty<'manifest> {
+    #[expect(dead_code)]
+    #[must_use]
+    #[inline]
+    pub const fn id(&self) -> &'manifest str {
+        self.id
+    }
+
+    #[expect(dead_code)]
+    #[must_use]
+    #[inline]
+    pub const fn value(&self) -> &'manifest str {
+        self.value
+    }
+
+    #[expect(dead_code)]
+    #[must_use]
+    #[inline]
+    pub const fn condition(&self) -> Option<&'manifest str> {
+        self.condition
+    }
+
     /// Returns true if this property is [`ARPSYSTEMCOMPONENT`] with a value of 1.
     ///
     /// [`ARPSYSTEMCOMPONENT`]: https://learn.microsoft.com/windows/win32/msi/arpsystemcomponent
+    #[must_use]
     pub fn is_arp_system_component(&self) -> bool {
         const ARP_SYSTEM_COMPONENT: &str = "ARPSYSTEMCOMPONENT";
 

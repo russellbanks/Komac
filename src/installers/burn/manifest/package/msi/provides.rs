@@ -2,8 +2,7 @@ use serde::Deserialize;
 
 use crate::installers::burn::manifest::yes_no::YesNoButton;
 
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Provides<'manifest> {
     #[serde(rename = "@Key")]

@@ -3,8 +3,8 @@ use std::{borrow::Cow, collections::HashMap};
 use serde::Deserialize;
 use tracing::warn;
 
-#[derive(Debug, Deserialize)]
-#[serde(from = "&str")]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(from = "Cow<str>")]
 pub struct InstallCondition(Expr);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -15,8 +15,8 @@ pub enum Value<'manifest> {
 }
 
 impl InstallCondition {
-    pub fn new(input: &str) -> Self {
-        Self(Parser::new(tokenize(input)).parse_expr())
+    pub fn new<S: AsRef<str>>(input: S) -> Self {
+        Self(Parser::new(tokenize(input.as_ref())).parse_expr())
     }
 
     pub fn evaluate(&self, variables: &HashMap<&str, Value>) -> bool {
@@ -29,8 +29,13 @@ impl InstallCondition {
     }
 }
 
+impl From<Cow<'_, str>> for InstallCondition {
+    fn from(s: Cow<str>) -> Self {
+        Self::new(s)
+    }
+}
+
 impl From<&str> for InstallCondition {
-    #[inline]
     fn from(s: &str) -> Self {
         Self::new(s)
     }
@@ -108,30 +113,48 @@ impl Parser {
             Some(Token::Ident(name)) => {
                 let name = name.clone();
                 self.advance();
-                if matches!(self.peek(), Some(Token::Eq)) {
+                if matches!(
+                    self.peek(),
+                    Some(Token::Eq | Token::Gt | Token::Ge | Token::Lt | Token::Le)
+                ) {
+                    let op = self.peek().cloned().unwrap();
                     self.advance();
-                    match self.peek() {
+
+                    let lit = match self.peek() {
                         Some(&Token::Number(num)) => {
                             self.advance();
-                            Expr::Eq(name, Literal::Int(num))
+                            Literal::Int(num)
                         }
                         Some(Token::Ident(s)) => {
                             let s = s.clone();
                             self.advance();
-                            Expr::Eq(name, Literal::Str(s))
+                            Literal::Str(s)
                         }
-                        other => panic!("Expected literal after '=', got {:?}", other),
+                        other => panic!("Expected literal after operator, got {other:?}"),
+                    };
+
+                    match op {
+                        Token::Eq => Expr::Eq(name, lit),
+                        Token::Gt => Expr::Gt(name, lit),
+                        Token::Ge => Expr::Ge(name, lit),
+                        Token::Lt => Expr::Lt(name, lit),
+                        Token::Le => Expr::Le(name, lit),
+                        _ => unreachable!(),
                     }
                 } else {
                     Expr::Var(name)
                 }
             }
-            other => panic!("Unexpected token: {:?}", other),
+            other => panic!("Unexpected token: {other:?}"),
         }
     }
 }
 
 fn tokenize(input: &str) -> Vec<Token> {
+    const AND: &str = "AND";
+    const OR: &str = "OR";
+    const NOT: &str = "NOT";
+
     let mut tokens = Vec::new();
     let mut chars = input.chars().peekable();
 
@@ -152,27 +175,44 @@ fn tokenize(input: &str) -> Vec<Token> {
                 tokens.push(Token::Eq);
                 chars.next();
             }
+            '>' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::Ge);
+                } else {
+                    tokens.push(Token::Gt);
+                }
+            }
+            '<' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::Le);
+                } else {
+                    tokens.push(Token::Lt);
+                }
+            }
             '0'..='9' => {
                 let mut value = 0;
                 while let Some(digit) = chars.peek().and_then(|char| char.to_digit(10)) {
-                    value = value * 10 + digit;
+                    value *= 10 + digit;
                     chars.next();
                 }
                 tokens.push(Token::Number(value));
             }
             _ => {
                 let mut ident = String::new();
-                while let Some(&char) = chars
-                    .peek()
-                    .filter(|char| !char.is_whitespace() && !['(', ')', '='].contains(char))
-                {
+                while let Some(&char) = chars.peek().filter(|char| {
+                    !char.is_whitespace() && !['(', ')', '=', '<', '>'].contains(char)
+                }) {
                     ident.push(char);
                     chars.next();
                 }
                 tokens.push(match ident.as_str() {
-                    "AND" => Token::And,
-                    "OR" => Token::Or,
-                    "NOT" => Token::Not,
+                    AND => Token::And,
+                    OR => Token::Or,
+                    NOT => Token::Not,
                     _ => Token::Ident(ident),
                 });
             }
@@ -188,10 +228,14 @@ pub enum Literal {
     Str(String),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expr {
     Var(String),
     Eq(String, Literal),
+    Gt(String, Literal),
+    Ge(String, Literal),
+    Lt(String, Literal),
+    Le(String, Literal),
     Not(Box<Expr>),
     And(Box<Expr>, Box<Expr>),
     Or(Box<Expr>, Box<Expr>),
@@ -210,9 +254,41 @@ impl Expr {
                 }
             },
             Self::Eq(name, literal) => match (variables.get(name.as_str()), literal) {
-                (Some(Value::Int(int)), Literal::Int(lit_int)) => *int == *lit_int,
+                (Some(Value::Int(int)), Literal::Int(lit_int)) => int == lit_int,
                 (Some(Value::Str(val)), Literal::Str(lit_str)) => val == lit_str,
-                (Some(Value::Bool(bool)), Literal::Int(lit_int)) => (*lit_int == 1) == *bool,
+                (Some(Value::Bool(bool)), &Literal::Int(lit_int)) => (lit_int == 1) == *bool,
+                (None, _) => {
+                    warn!("Variable `{name}` not found in Burn variables");
+                    true
+                }
+                _ => true,
+            },
+            Self::Gt(name, literal) => match (variables.get(name.as_str()), literal) {
+                (Some(Value::Int(int)), Literal::Int(lit_int)) => int > lit_int,
+                (None, _) => {
+                    warn!("Variable `{name}` not found in Burn variables");
+                    true
+                }
+                _ => true,
+            },
+            Self::Ge(name, literal) => match (variables.get(name.as_str()), literal) {
+                (Some(Value::Int(int)), Literal::Int(lit_int)) => int >= lit_int,
+                (None, _) => {
+                    warn!("Variable `{name}` not found in Burn variables");
+                    true
+                }
+                _ => true,
+            },
+            Self::Lt(name, literal) => match (variables.get(name.as_str()), literal) {
+                (Some(Value::Int(int)), Literal::Int(lit_int)) => int < lit_int,
+                (None, _) => {
+                    warn!("Variable `{name}` not found in Burn variables");
+                    true
+                }
+                _ => true,
+            },
+            Self::Le(name, literal) => match (variables.get(name.as_str()), literal) {
+                (Some(Value::Int(int)), Literal::Int(lit_int)) => int <= lit_int,
                 (None, _) => {
                     warn!("Variable `{name}` not found in Burn variables");
                     true
@@ -228,12 +304,16 @@ impl Expr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
-    LParen,
-    RParen,
-    And,
-    Or,
-    Not,
-    Eq,
+    LParen, // (
+    RParen, // )
+    And,    // AND
+    Or,     // OR
+    Not,    // NOT
+    Eq,     // =
+    Gt,     // >
+    Lt,     // <
+    Ge,     // >=
+    Le,     // <=
     Ident(String),
     Number(u32),
 }

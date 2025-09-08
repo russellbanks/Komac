@@ -3,7 +3,7 @@ use std::ops::Range;
 use zerocopy::{Immutable, KnownLayout, TryFromBytes, little_endian::U32};
 
 #[expect(dead_code)]
-#[derive(Debug, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 enum WixBurnStubMagic {
     F14300 = 0x00F1_4300_u32.to_le(),

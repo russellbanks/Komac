@@ -14,8 +14,7 @@ use super::super::package::PackageBase;
 use crate::installers::burn::manifest::install_condition::Value;
 
 /// <https://github.com/wixtoolset/wix/blob/main/src/wix/WixToolset.Core.Burn/Bundles/CreateBurnManifestCommand.cs#L355>
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct MsiPackage<'manifest> {
     #[serde(flatten, borrow)]
@@ -36,7 +35,12 @@ pub struct MsiPackage<'manifest> {
     pub related_package: Vec<RelatedPackage<'manifest>>,
 }
 
-impl MsiPackage<'_> {
+impl<'manifest> MsiPackage<'manifest> {
+    #[expect(dead_code)]
+    pub const fn id(&self) -> &'manifest str {
+        self.base.id()
+    }
+
     /// Returns true if any of this package's properties are [`ARPSYSTEMCOMPONENT`] with a value of
     /// 1.
     ///

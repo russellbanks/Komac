@@ -22,8 +22,7 @@ pub use variable::VariableType;
 use winget_types::Version;
 use yes_no::{YesNoButton, bool_from_yes_no};
 
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct BurnManifest<'manifest> {
     #[serde(rename = "@EngineVersion")]

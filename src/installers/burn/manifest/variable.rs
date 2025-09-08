@@ -11,8 +11,7 @@ use crate::installers::utils::{
 };
 
 /// <https://github.com/wixtoolset/wix/blob/main/src/wix/WixToolset.Core.Burn/Bundles/CreateBurnManifestCommand.cs#L133>
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Variable<'manifest> {
     #[serde(rename = "@Id")]
@@ -94,7 +93,7 @@ impl<'manifest> Variable<'manifest> {
 }
 
 /// <https://github.com/wixtoolset/wix/blob/main/src/api/wix/WixToolset.Data/Symbols/WixBundleVariableSymbol.cs#L40>
-#[derive(Debug, Default, PartialEq, Eq, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum VariableType {
     #[default]

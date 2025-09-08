@@ -2,8 +2,7 @@ use serde::Deserialize;
 
 use super::{Package, bool_from_yes_no};
 
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Chain<'manifest> {
     #[serde(

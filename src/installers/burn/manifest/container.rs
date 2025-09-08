@@ -2,8 +2,7 @@ use serde::Deserialize;
 
 use super::bool_from_yes_no;
 
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Container<'manifest> {
     #[serde(rename = "@Id")]

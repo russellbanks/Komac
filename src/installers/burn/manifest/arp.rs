@@ -3,8 +3,7 @@ use winget_types::Version;
 
 use super::{YesNoButton, bool_from_yes_no};
 
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Arp<'manifest> {
     #[serde(rename = "@Register", deserialize_with = "bool_from_yes_no", default)]

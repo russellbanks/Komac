@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BundleCacheType {
     // Wix v4+

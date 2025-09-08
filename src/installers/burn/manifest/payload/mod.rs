@@ -6,8 +6,7 @@ use serde::Deserialize;
 use super::bool_from_yes_no;
 
 /// <https://github.com/wixtoolset/wix/blob/main/src/wix/WixToolset.Core.Burn/Bundles/CreateBurnManifestCommand.cs#L753>
-#[expect(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Payload<'manifest> {
     #[serde(rename = "@Id")]

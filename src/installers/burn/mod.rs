@@ -111,7 +111,7 @@ impl Burn {
                         .with_upgrade_code::<_, &str>(msi_package.upgrade_code)
                         .with_installer_type::<_, InstallerType>(
                             if manifest.payloads.iter().any(|payload| {
-                                payload.id == msi_package.base.id
+                                payload.id == msi_package.base.id()
                                     && payload
                                         .container
                                         .is_some_and(|container| container.starts_with("Wix"))
