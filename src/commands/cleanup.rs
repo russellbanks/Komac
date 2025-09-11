@@ -10,8 +10,8 @@ use inquire::MultiSelect;
 use owo_colors::OwoColorize;
 
 use crate::{
-    commands::utils::SPINNER_TICK_RATE, credential::handle_token, github::github_client::GitHub,
-    prompts::handle_inquire_error,
+    commands::utils::SPINNER_TICK_RATE, github::github_client::GitHub,
+    prompts::handle_inquire_error, token::TokenManager,
 };
 
 /// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to
@@ -38,7 +38,7 @@ pub struct Cleanup {
 
 impl Cleanup {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token.as_deref()).await?;
+        let token = TokenManager::handle(self.token).await?;
         let github = GitHub::new(&token)?;
 
         let merge_state = MergeState::from((self.only_merged, self.only_closed));

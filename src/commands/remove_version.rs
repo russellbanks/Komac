@@ -13,9 +13,9 @@ use tokio::try_join;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
-    credential::handle_token,
     github::github_client::{GitHub, WINGET_PKGS_FULL_NAME},
     prompts::{handle_inquire_error, text::confirm_prompt},
+    token::TokenManager,
 };
 
 /// Remove a version from winget-pkgs
@@ -59,7 +59,7 @@ impl RemoveVersion {
     const MAX_REASON_LENGTH: usize = 1000;
 
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token.as_deref()).await?;
+        let token = TokenManager::handle(self.token).await?;
         if !self.no_warning {
             println!(
                 "{}",

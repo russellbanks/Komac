@@ -13,7 +13,6 @@ use winget_types::{GenericManifest, ManifestType};
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, SubmitOption},
-    credential::handle_token,
     github::{
         github_client::{GitHub, WINGET_PKGS_FULL_NAME},
         utils::{PackagePath, pull_request::pr_changes},
@@ -21,6 +20,7 @@ use crate::{
     manifests::{Manifests, manifest::Manifest},
     prompts::handle_inquire_error,
     terminal::Hyperlinkable,
+    token::TokenManager,
 };
 
 #[derive(Parser)]
@@ -51,7 +51,7 @@ pub struct Submit {
 
 impl Submit {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token.as_deref());
+        let token = TokenManager::handle(self.token.as_deref()).await?;
 
         let yaml_entries = self.get_yaml_file_paths()?;
 
@@ -153,7 +153,7 @@ impl Submit {
             return Ok(());
         }
 
-        let github = GitHub::new(&token.await?)?;
+        let github = GitHub::new(token)?;
         let versions = github.get_versions(identifier).await.unwrap_or_default();
 
         // Create an indeterminate progress bar to show as a pull request is being created

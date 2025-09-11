@@ -3,7 +3,7 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
 
-use crate::{credential::get_komac_credential, prompts::text::confirm_prompt};
+use crate::{prompts::text::confirm_prompt, token::TokenManager};
 
 /// Remove the stored token
 #[derive(Parser)]
@@ -16,9 +16,12 @@ pub struct RemoveToken {
 
 impl RemoveToken {
     pub fn run(self) -> Result<()> {
-        let credential = get_komac_credential()?;
+        let credential = TokenManager::credential()?;
 
-        if let Some(keyring::Error::NoEntry) = credential.get_password().err() {
+        if matches!(
+            credential.get_password().err(),
+            Some(keyring::Error::NoEntry)
+        ) {
             println!("No token stored is currently stored in the platform's secure storage");
         }
 

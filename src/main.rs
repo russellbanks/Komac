@@ -22,7 +22,6 @@ use crate::commands::{
 };
 
 mod commands;
-mod credential;
 mod download;
 mod download_file;
 mod editor;
@@ -33,6 +32,7 @@ mod manifests;
 mod match_installers;
 mod prompts;
 mod terminal;
+mod token;
 mod traits;
 mod update_state;
 

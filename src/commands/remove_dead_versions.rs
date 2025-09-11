@@ -24,9 +24,9 @@ use winget_types::{
 
 use crate::{
     commands::utils::SPINNER_SLOW_TICK_RATE,
-    credential::{get_default_headers, handle_token},
     github::{github_client::GitHub, graphql::get_branches::PullRequestState},
     prompts::text::confirm_prompt,
+    token::{TokenManager, default_headers},
 };
 
 /// GitHub has an undocumented limit of 150 pull requests per hour
@@ -89,8 +89,8 @@ pub struct RemoveDeadVersions {
 
 impl RemoveDeadVersions {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token.as_deref()).await?;
-        let github = GitHub::new(&token)?;
+        let token = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(token)?;
 
         let (fork, winget_pkgs, versions) = try_join!(
             github
@@ -101,7 +101,7 @@ impl RemoveDeadVersions {
         )?;
 
         let client = Client::builder()
-            .default_headers(get_default_headers(None))
+            .default_headers(default_headers(None))
             .build()?;
 
         let rate_limit_delay = if self.fast {

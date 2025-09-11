@@ -26,7 +26,6 @@ use winget_types::{
 
 use crate::{
     commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
-    credential::get_default_headers,
     github::{
         graphql::{
             create_commit::{
@@ -58,6 +57,7 @@ use crate::{
         },
     },
     manifests::Manifests,
+    token::default_headers,
     traits::FromHtml,
     update_state::UpdateState,
 };
@@ -97,10 +97,10 @@ pub struct GitHub(Client);
 
 #[bon]
 impl GitHub {
-    pub fn new(token: &str) -> Result<Self, GitHubError> {
+    pub fn new<T: AsRef<str>>(token: T) -> Result<Self, GitHubError> {
         Ok(Self(
             Client::builder()
-                .default_headers(get_default_headers(Some(token)))
+                .default_headers(default_headers(Some(token.as_ref())))
                 .build()?,
         ))
     }

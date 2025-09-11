@@ -11,9 +11,9 @@ use tokio::{time::sleep, try_join};
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
-    credential::handle_token,
     github::github_client::{GitHub, WINGET_PKGS, WINGET_PKGS_FULL_NAME},
     terminal::Hyperlinkable,
+    token::TokenManager,
 };
 
 /// Merges changes from microsoft/winget-pkgs into the fork repository
@@ -37,8 +37,8 @@ impl SyncFork {
             return Self::vhs().await;
         }
 
-        let token = handle_token(self.token.as_deref()).await?;
-        let github = GitHub::new(&token)?;
+        let token = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(token)?;
 
         // Fetch repository data from both upstream and fork repositories asynchronously
         let (winget_pkgs, fork) = try_join!(

@@ -4,7 +4,7 @@ use clap::{Args, Parser};
 use color_eyre::Result;
 use winget_types::PackageIdentifier;
 
-use crate::{credential::handle_token, github::github_client::GitHub};
+use crate::{github::github_client::GitHub, token::TokenManager};
 
 /// Lists all versions for a given package
 #[derive(Parser)]
@@ -39,7 +39,7 @@ struct OutputType {
 
 impl ListVersions {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token.as_deref()).await?;
+        let token = TokenManager::handle(self.token).await?;
         let github = GitHub::new(&token)?;
 
         let versions = github.get_versions(&self.package_identifier).await?;

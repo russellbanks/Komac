@@ -4,7 +4,7 @@ use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
 use reqwest::Client;
 
-use crate::credential::{get_default_headers, get_komac_credential, token_prompt, validate_token};
+use crate::token::{TokenManager, default_headers};
 
 /// Update the stored token
 #[derive(Parser)]
@@ -17,15 +17,21 @@ pub struct UpdateToken {
 
 impl UpdateToken {
     pub async fn run(self) -> Result<()> {
-        let credential = get_komac_credential()?;
+        let credential = TokenManager::credential()?;
 
         let client = Client::builder()
-            .default_headers(get_default_headers(None))
+            .default_headers(default_headers(None))
             .build()?;
 
         let token = match self.token {
-            Some(token) => validate_token(&client, &token).await.map(|()| token)?,
-            None => token_prompt(client, Some("Please enter the new token to set"))?,
+            Some(token) => {
+                TokenManager::validate(&client, &token).await?;
+                token
+            }
+            None => TokenManager::prompt()
+                .client(&client)
+                .message("Please enter the new token to set")
+                .call()?,
         };
 
         if credential.set_password(&token).is_ok() {

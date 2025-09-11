@@ -24,7 +24,6 @@ use crate::{
     commands::utils::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
     },
-    credential::handle_token,
     download::{Download, Downloader},
     download_file::process_files,
     github::{
@@ -35,6 +34,7 @@ use crate::{
     manifests::Url,
     match_installers::match_installers,
     terminal::Hyperlinkable,
+    token::TokenManager,
     traits::{LocaleExt, path::NormalizePath},
 };
 
@@ -104,7 +104,7 @@ pub struct UpdateVersion {
 
 impl UpdateVersion {
     pub async fn run(self) -> Result<()> {
-        let token = handle_token(self.token.as_deref()).await?;
+        let token = TokenManager::handle(self.token).await?;
         let github = GitHub::new(&token)?;
 
         let package_identifier = Arc::new(self.package_identifier);
