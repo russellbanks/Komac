@@ -20,6 +20,7 @@ use winget_types::{
     url::{DecodedUrl, ReleaseNotesUrl},
 };
 
+use super::utils::pointer::arc;
 use crate::{
     commands::utils::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
@@ -42,12 +43,12 @@ use crate::{
 #[derive(Parser)]
 pub struct UpdateVersion {
     /// The package's unique identifier
-    #[arg()]
-    package_identifier: PackageIdentifier,
+    #[arg(value_parser = arc::<PackageIdentifier>)]
+    package_identifier: Arc<PackageIdentifier>,
 
     /// The package's version
-    #[arg(short = 'v', long = "version")]
-    package_version: PackageVersion,
+    #[arg(short = 'v', long = "version", value_parser = arc::<PackageVersion>)]
+    package_version: Arc<PackageVersion>,
 
     /// The list of package installers
     #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
@@ -107,13 +108,10 @@ impl UpdateVersion {
         let token = TokenManager::handle(self.token).await?;
         let github = GitHub::new(&token)?;
 
-        let package_identifier = Arc::new(self.package_identifier);
-        let package_version = Arc::new(self.package_version);
-
         let existing_pr = tokio::spawn({
             let github = github.clone();
-            let package_identifier = Arc::clone(&package_identifier);
-            let package_version = Arc::clone(&package_version);
+            let package_identifier = Arc::clone(&self.package_identifier);
+            let package_version = Arc::clone(&self.package_version);
             async move {
                 github
                     .get_existing_pull_request(&package_identifier, &package_version)
@@ -121,10 +119,13 @@ impl UpdateVersion {
             }
         });
 
-        let versions = github.get_versions(&package_identifier).await?;
+        let versions = github.get_versions(&self.package_identifier).await?;
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
-        println!("Latest version of {package_identifier}: {latest_version}",);
+        println!(
+            "Latest version of {}: {latest_version}",
+            self.package_identifier
+        );
 
         let replace_version = self.replace.as_ref().map(|version| {
             if version.is_latest() {
@@ -146,14 +147,18 @@ impl UpdateVersion {
         if let Some(pull_request) = existing_pr.await??
             && !self.skip_pr_check
             && !self.dry_run
-            && !prompt_existing_pull_request(&package_identifier, &package_version, &pull_request)?
+            && !prompt_existing_pull_request(
+                &self.package_identifier,
+                &self.package_version,
+                &pull_request,
+            )?
         {
             return Ok(());
         }
 
         let manifests = tokio::spawn({
             let github = github.clone();
-            let package_identifier = Arc::clone(&package_identifier);
+            let package_identifier = Arc::clone(&self.package_identifier);
             let latest_version = latest_version.clone();
             async move {
                 github
@@ -209,7 +214,7 @@ impl UpdateVersion {
                 installer
             })
             .collect::<Vec<_>>();
-        manifests.default_locale.package_version = (*package_version).clone();
+        manifests.default_locale.package_version = (*self.package_version).clone();
         let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
@@ -240,7 +245,7 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
 
-        manifests.installer.package_version = (*package_version).clone();
+        manifests.installer.package_version = (*self.package_version).clone();
         manifests.installer.minimum_os_version = manifests
             .installer
             .minimum_os_version
@@ -254,24 +259,25 @@ impl UpdateVersion {
         };
 
         manifests.default_locale.update(
-            &package_version,
+            &self.package_version,
             &mut github_values,
             self.release_notes_url.as_ref(),
         );
 
         manifests.locales.iter_mut().for_each(|locale| {
             locale.update(
-                &package_version,
+                &self.package_version,
                 &mut github_values,
                 self.release_notes_url.as_ref(),
             );
         });
 
-        manifests.version.update(&package_version);
+        manifests.version.update(&self.package_version);
 
-        let package_path = PackagePath::new(&package_identifier, Some(&package_version), None);
+        let package_path =
+            PackagePath::new(&self.package_identifier, Some(&self.package_version), None);
         let mut changes = pr_changes()
-            .package_identifier(&package_identifier)
+            .package_identifier(&self.package_identifier)
             .manifests(&manifests)
             .package_path(&package_path)
             .maybe_created_with(self.created_with.as_deref())
@@ -287,8 +293,8 @@ impl UpdateVersion {
 
         let submit_option = SubmitOption::prompt(
             &mut changes,
-            &package_identifier,
-            &package_version,
+            &self.package_identifier,
+            &self.package_version,
             self.submit,
             self.dry_run,
         )?;
@@ -299,14 +305,15 @@ impl UpdateVersion {
 
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request for {package_identifier} {package_version}",
+            "Creating a pull request for {} {}",
+            self.package_identifier, self.package_version
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
         let pull_request_url = github
             .add_version()
-            .identifier(&package_identifier)
-            .version(&package_version)
+            .identifier(&self.package_identifier)
+            .version(&self.package_version)
             .versions(&versions)
             .changes(changes)
             .maybe_replace_version(replace_version)
