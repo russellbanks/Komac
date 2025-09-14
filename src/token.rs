@@ -45,50 +45,51 @@ impl<'a> TokenManager<'a> {
     where
         T: Into<Cow<'a, str>>,
     {
+        // Token rules:
+        // - If caller passed `--token`: validate it and fail if invalid.
+        // - Otherwise try keyring:
+        //     * In CI: if no token or if stored token is invalid -> error (never prompt).
+        //     * Interactive: if no stored token or stored token is invalid -> prompt and store.
+
         let client = Client::builder()
             .default_headers(default_headers(None))
             .build()?;
 
         let credential = Self::credential()?;
 
+        let token_passed = token.is_some();
+
         let token = if let Some(token) = token.map(T::into) {
-            token
+            Some(token)
         } else {
             match credential.get_password() {
-                Ok(token) => Cow::Owned(token),
+                Ok(token) => Some(Cow::Owned(token)),
                 Err(keyring::Error::NoEntry) if *CI => return Err(TokenError::NoTokenInCI),
-                Err(keyring::Error::NoEntry) => {
-                    let validated_token = Self::prompt().client(&client).call()?;
-
-                    if credential.set_password(&validated_token).is_ok() {
-                        println!("Successfully stored token in platform's secure storage");
-                    }
-
-                    return Ok(Self {
-                        token: Cow::Owned(validated_token),
-                    });
-                }
+                Err(keyring::Error::NoEntry) => None, // No stored token, must prompt
                 Err(error) => return Err(TokenError::Keyring(error)),
             }
         };
 
-        match Self::validate(&client, &token).await {
-            Ok(()) => Ok(Self { token }),
-            Err(TokenError::InvalidToken) if *CI => Err(TokenError::InvalidToken),
-            Err(TokenError::InvalidToken) => {
-                // If the stored token has expired or the passed token is invalid, prompt the user
-                let token = Self::prompt().client(&client).call()?;
-
-                if !*CI && credential.set_password(&token).is_ok() {
-                    println!("Successfully stored token in platform's secure storage");
+        if let Some(token) = token {
+            match Self::validate(&client, &token).await {
+                Ok(()) => return Ok(Self { token }),
+                Err(TokenError::InvalidToken) if token_passed || *CI => {
+                    return Err(TokenError::InvalidToken);
                 }
-
-                Ok(Self {
-                    token: Cow::Owned(token),
-                })
+                Err(TokenError::InvalidToken) => {}
+                Err(err) => return Err(err),
             }
-            Err(err) => Err(err),
         }
+
+        let validated_token = Self::prompt().client(&client).call()?;
+
+        if credential.set_password(&validated_token).is_ok() {
+            println!("Successfully stored token in platform's secure storage");
+        }
+
+        Ok(Self {
+            token: Cow::Owned(validated_token),
+        })
     }
 
     #[builder]
