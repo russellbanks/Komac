@@ -24,10 +24,10 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - os: windows-latest
+          - os: windows-2025
             target: x86_64-pc-windows-msvc
             inno_arch: x64
-          - os: windows-latest
+          - os: windows-2025
             target: aarch64-pc-windows-msvc
             inno_arch: arm64
           - os: ubuntu-latest
