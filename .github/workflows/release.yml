@@ -24,10 +24,10 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - os: windows-latest
+          - os: windows-2025
             target: x86_64-pc-windows-msvc
             inno_arch: x64
-          - os: windows-latest
+          - os: windows-2025
             target: aarch64-pc-windows-msvc
             inno_arch: arm64
           - os: ubuntu-latest
@@ -115,8 +115,9 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
+          winget install --exact JRSoftware.InnoSetup --accept-package-agreements --accept-source-agreements --disable-interactivity --scope machine
           $input = "../../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
-          iscc.exe assets/inno/installer.iss `
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\iscc.exe" assets/inno/installer.iss `
             /DInputExecutable=$input `
             /DArchitecture=${{ matrix.platform.inno_arch }} `
             /F$("${{ steps.rename_binary.outputs.name }}".Replace("komac", "komac-setup").TrimEnd(".exe"))
