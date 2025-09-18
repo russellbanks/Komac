@@ -24,7 +24,7 @@ pub struct Payload<'manifest> {
     #[serde(rename = "@LayoutOnly", deserialize_with = "bool_from_yes_no", default)]
     pub layout_only: bool,
     #[serde(rename = "@DownloadUrl")]
-    pub download_url: Option<&'manifest str>,
+    pub download_url: Option<String>,
     #[serde(rename = "@Packaging", default)]
     pub packaging: Packaging,
     #[serde(rename = "@SourcePath")]

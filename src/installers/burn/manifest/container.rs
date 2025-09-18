@@ -12,7 +12,7 @@ pub struct Container<'manifest> {
     #[serde(rename = "@Hash")]
     pub hash: &'manifest str,
     #[serde(rename = "@DownloadUrl")]
-    pub download_url: Option<&'manifest str>,
+    pub download_url: Option<String>,
     #[serde(rename = "@FilePath")]
     pub file_path: &'manifest str,
     #[serde(rename = "@AttachedIndex")]
