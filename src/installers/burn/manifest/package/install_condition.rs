@@ -3,6 +3,7 @@ use std::{borrow::Cow, collections::HashMap};
 use serde::Deserialize;
 use tracing::warn;
 
+// https://docs.firegiant.com/wix3/tutorial/com-expression-syntax-miscellanea/expression-syntax/
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(from = "Cow<str>")]
 pub struct InstallCondition(Expr);
@@ -115,7 +116,7 @@ impl Parser {
                 self.advance();
                 if matches!(
                     self.peek(),
-                    Some(Token::Eq | Token::Gt | Token::Ge | Token::Lt | Token::Le)
+                    Some(Token::Eq | Token::NotEq | Token::Gt | Token::Ge | Token::Lt | Token::Le)
                 ) {
                     let op = self.peek().cloned().unwrap();
                     self.advance();
@@ -130,11 +131,14 @@ impl Parser {
                             self.advance();
                             Literal::Str(s)
                         }
-                        other => panic!("Expected literal after operator, got {other:?}"),
+                        other => panic!(
+                            "Expected literal after operator {op:?} and name {name}, got {other:?}"
+                        ),
                     };
 
                     match op {
                         Token::Eq => Expr::Eq(name, lit),
+                        Token::NotEq => Expr::NotEq(name, lit),
                         Token::Gt => Expr::Gt(name, lit),
                         Token::Ge => Expr::Ge(name, lit),
                         Token::Lt => Expr::Lt(name, lit),
@@ -189,6 +193,9 @@ fn tokenize(input: &str) -> Vec<Token> {
                 if chars.peek() == Some(&'=') {
                     chars.next();
                     tokens.push(Token::Le);
+                } else if chars.peek() == Some(&'>') {
+                    chars.next();
+                    tokens.push(Token::NotEq);
                 } else {
                     tokens.push(Token::Lt);
                 }
@@ -232,6 +239,7 @@ pub enum Literal {
 pub enum Expr {
     Var(String),
     Eq(String, Literal),
+    NotEq(String, Literal),
     Gt(String, Literal),
     Ge(String, Literal),
     Lt(String, Literal),
@@ -263,6 +271,7 @@ impl Expr {
                 }
                 _ => true,
             },
+            Self::NotEq(name, literal) => !Self::Eq(name.clone(), literal.clone()).eval(variables),
             Self::Gt(name, literal) => match (variables.get(name.as_str()), literal) {
                 (Some(Value::Int(int)), Literal::Int(lit_int)) => int > lit_int,
                 (None, _) => {
@@ -310,6 +319,7 @@ pub enum Token {
     Or,     // OR
     Not,    // NOT
     Eq,     // =
+    NotEq,  // <>
     Gt,     // >
     Lt,     // <
     Ge,     // >=
