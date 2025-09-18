@@ -30,7 +30,7 @@ pub struct MsiPackage<'manifest> {
     #[serde(rename = "MsiProperty", borrow, default)]
     pub properties: Vec<MsiProperty<'manifest>>,
     #[serde(borrow)]
-    pub provides: Provides<'manifest>,
+    pub provides: Vec<Provides<'manifest>>,
     #[serde(default, borrow)]
     pub related_package: Vec<RelatedPackage<'manifest>>,
 }
