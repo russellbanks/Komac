@@ -116,7 +116,15 @@ impl Parser {
                 self.advance();
                 if matches!(
                     self.peek(),
-                    Some(Token::Eq | Token::NotEq | Token::Gt | Token::Ge | Token::Lt | Token::Le)
+                    Some(
+                        Token::Eq
+                            | Token::NotEq
+                            | Token::EqAnyCase
+                            | Token::Gt
+                            | Token::Ge
+                            | Token::Lt
+                            | Token::Le
+                    )
                 ) {
                     let op = self.peek().cloned().unwrap();
                     self.advance();
@@ -139,6 +147,7 @@ impl Parser {
                     match op {
                         Token::Eq => Expr::Eq(name, lit),
                         Token::NotEq => Expr::NotEq(name, lit),
+                        Token::EqAnyCase => Expr::EqAnyCase(name, lit),
                         Token::Gt => Expr::Gt(name, lit),
                         Token::Ge => Expr::Ge(name, lit),
                         Token::Lt => Expr::Lt(name, lit),
@@ -200,6 +209,13 @@ fn tokenize(input: &str) -> Vec<Token> {
                     tokens.push(Token::Lt);
                 }
             }
+            '~' => {
+                chars.next();
+                if chars.peek() == Some(&'=') {
+                    chars.next();
+                    tokens.push(Token::EqAnyCase);
+                }
+            }
             '0'..='9' => {
                 let mut value = 0;
                 while let Some(digit) = chars.peek().and_then(|char| char.to_digit(10)) {
@@ -240,6 +256,7 @@ pub enum Expr {
     Var(String),
     Eq(String, Literal),
     NotEq(String, Literal),
+    EqAnyCase(String, Literal),
     Gt(String, Literal),
     Ge(String, Literal),
     Lt(String, Literal),
@@ -272,6 +289,10 @@ impl Expr {
                 _ => true,
             },
             Self::NotEq(name, literal) => !Self::Eq(name.clone(), literal.clone()).eval(variables),
+            Self::EqAnyCase(name, literal) => match (variables.get(name.as_str()), literal) {
+                (Some(Value::Str(val)), Literal::Str(lit_str)) => val.eq_ignore_ascii_case(lit_str),
+                _ => Self::Eq(name.clone(), literal.clone()).eval(variables),
+            },
             Self::Gt(name, literal) => match (variables.get(name.as_str()), literal) {
                 (Some(Value::Int(int)), Literal::Int(lit_int)) => int > lit_int,
                 (None, _) => {
@@ -313,17 +334,18 @@ impl Expr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
-    LParen, // (
-    RParen, // )
-    And,    // AND
-    Or,     // OR
-    Not,    // NOT
-    Eq,     // =
-    NotEq,  // <>
-    Gt,     // >
-    Lt,     // <
-    Ge,     // >=
-    Le,     // <=
+    LParen,    // (
+    RParen,    // )
+    And,       // AND
+    Or,        // OR
+    Not,       // NOT
+    Eq,        // =
+    NotEq,     // <>
+    EqAnyCase, // ~=
+    Gt,        // >
+    Lt,        // <
+    Ge,        // >=
+    Le,        // <=
     Ident(String),
     Number(u32),
 }
