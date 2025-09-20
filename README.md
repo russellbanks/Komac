@@ -106,7 +106,7 @@ Portable binaries for macOS are available from the [releases](https://github.com
 #### Homebrew
 
 ```bash
-brew install russellbanks/tap/komac
+brew install komac
 ```
 
 ## GitHub Token Setup
