@@ -104,7 +104,9 @@ impl Burn {
             {
                 apps_and_features_entries.push(
                     AppsAndFeaturesEntry::new()
-                        .with_display_name::<_, &str>(msi_package.provides.display_name)
+                        .with_display_name::<_, &str>(
+                            msi_package.provides.iter().find_map(|p| p.display_name),
+                        )
                         .with_publisher::<_, &str>(manifest.registration.arp.publisher)
                         .with_display_version(msi_package.version)
                         .with_product_code(msi_package.product_code)
