@@ -10,7 +10,8 @@ use quick_xml::de::from_str;
 use thiserror::Error;
 use tracing::debug;
 use winget_types::installer::{
-    AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
+    AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer,
+    InstallerType, Scope,
 };
 use wix_burn_stub::WixBurnStub;
 use yara_x::mods::{
@@ -55,18 +56,16 @@ impl Burn {
             let manifest = from_str::<BurnManifest>(&manifest)?;
             debug!("{manifest:#?}");
 
-            let mut app_arp_entry = AppsAndFeaturesEntry::new()
-                .with_display_name(manifest.registration.arp.display_name)
-                .with_publisher::<_, &str>(manifest.registration.arp.publisher)
-                .with_display_version(manifest.registration.arp.display_version)
-                .with_product_code(manifest.registration.id)
-                .with_installer_type(InstallerType::Burn);
-
-            if let Some(related_bundle) = manifest.related_bundles.first() {
-                app_arp_entry = app_arp_entry.with_upgrade_code(related_bundle.code);
-            }
-
-            let mut apps_and_features_entries = vec![app_arp_entry];
+            let mut apps_and_features_entries = AppsAndFeaturesEntries::from(
+                AppsAndFeaturesEntry::builder()
+                    .display_name(manifest.registration.arp.display_name)
+                    .maybe_publisher(manifest.registration.arp.publisher)
+                    .display_version(manifest.registration.arp.display_version)
+                    .product_code(manifest.registration.id)
+                    .maybe_upgrade_code(manifest.related_bundles.first().map(|bundle| bundle.code))
+                    .installer_type(InstallerType::Burn)
+                    .build(),
+            );
 
             let variables = manifest
                 .variables
@@ -103,13 +102,13 @@ impl Burn {
                 .filter(|msi_package| msi_package.evaluate_install_condition(&variables))
             {
                 apps_and_features_entries.push(
-                    AppsAndFeaturesEntry::new()
-                        .with_display_name::<_, &str>(msi_package.provides.display_name)
-                        .with_publisher::<_, &str>(manifest.registration.arp.publisher)
-                        .with_display_version(msi_package.version)
-                        .with_product_code(msi_package.product_code)
-                        .with_upgrade_code::<_, &str>(msi_package.upgrade_code)
-                        .with_installer_type::<_, InstallerType>(
+                    AppsAndFeaturesEntry::builder()
+                        .maybe_display_name(msi_package.provides.display_name)
+                        .maybe_publisher(manifest.registration.arp.publisher)
+                        .display_version(msi_package.version)
+                        .product_code(msi_package.product_code)
+                        .maybe_upgrade_code(msi_package.upgrade_code)
+                        .installer_type(
                             if manifest.payloads.iter().any(|payload| {
                                 payload.id == msi_package.base.id()
                                     && payload
@@ -120,7 +119,8 @@ impl Burn {
                             } else {
                                 InstallerType::Msi
                             },
-                        ),
+                        )
+                        .build(),
                 );
             }
 

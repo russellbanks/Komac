@@ -64,7 +64,7 @@ impl Display for PackagePath {
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
-    use winget_types::{ManifestTypeWithLocale, PackageIdentifier, icu_locid::langid};
+    use winget_types::{ManifestTypeWithLocale, PackageIdentifier, icu_locale::langid};
 
     use super::PackagePath;
 

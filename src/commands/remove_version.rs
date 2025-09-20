@@ -60,12 +60,14 @@ impl RemoveVersion {
 
     pub async fn run(self) -> Result<()> {
         let token = TokenManager::handle(self.token).await?;
+
         if !self.no_warning {
             println!(
                 "{}",
                 "Packages should only be removed when necessary".yellow()
             );
         }
+
         let github = GitHub::new(&token)?;
 
         let (fork, winget_pkgs, versions) = try_join!(

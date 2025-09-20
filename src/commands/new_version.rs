@@ -233,7 +233,9 @@ impl NewVersion {
 
         let mut installers = Vec::new();
         for analyser in &mut download_results.values_mut() {
-            let mut installer_switches = InstallerSwitches::default();
+            let mut silent = None;
+            let mut silent_with_progress = None;
+            let mut custom = None;
             if analyser
                 .installers
                 .iter()
@@ -244,28 +246,33 @@ impl NewVersion {
                         installer.r#type = Some(InstallerType::Portable);
                     }
                 }
-                installer_switches.silent = Some(required_prompt::<SilentSwitch>(None)?);
-                installer_switches.silent_with_progress =
-                    Some(required_prompt::<SilentWithProgressSwitch>(None)?);
+                silent = Some(required_prompt::<SilentSwitch>(None)?);
+                silent_with_progress = Some(required_prompt::<SilentWithProgressSwitch>(None)?);
             }
             if analyser
                 .installers
                 .iter()
                 .any(|installer| installer.r#type == Some(InstallerType::Portable))
             {
-                installer_switches.custom = optional_prompt::<CustomSwitch>(None)?;
+                custom = optional_prompt::<CustomSwitch>(None)?;
             }
             if let Some(zip) = &mut analyser.zip {
                 zip.prompt()?;
             }
+            let switches = InstallerSwitches::builder()
+                .maybe_silent(silent)
+                .maybe_silent_with_progress(silent_with_progress)
+                .maybe_custom(custom)
+                .build();
             let mut analyser_installers = mem::take(&mut analyser.installers);
             for installer in &mut analyser_installers {
-                if !installer_switches.is_empty() {
-                    installer.switches = installer_switches.clone();
+                if !switches.is_empty() {
+                    installer.switches = switches.clone();
                 }
             }
             installers.extend(analyser_installers);
         }
+
         let default_locale = required_prompt(self.package_locale)?;
         let manifests = match manifests {
             Some(manifests) => Some(manifests.await?),

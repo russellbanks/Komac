@@ -71,7 +71,8 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-bin: false
 
-      - uses: taiki-e/install-action@v2
+      - name: Install cargo-msrv
+        uses: taiki-e/install-action@v2
         with:
           tool: cargo-msrv
 

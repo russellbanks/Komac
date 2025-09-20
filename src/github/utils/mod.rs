@@ -156,7 +156,7 @@ pub fn get_commit_title(
 mod tests {
     use winget_types::{
         LanguageTag, PackageIdentifier,
-        icu_locid::langid,
+        icu_locale::langid,
         installer::InstallerManifest,
         locale::{DefaultLocaleManifest, LocaleManifest},
         version::VersionManifest,

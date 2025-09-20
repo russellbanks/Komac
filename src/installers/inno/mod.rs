@@ -1,7 +1,6 @@
 use std::io::Cursor;
 
 use camino::Utf8PathBuf;
-use compact_str::CompactString;
 use const_format::formatcp;
 use inno::{
     error::InnoError,
@@ -9,10 +8,11 @@ use inno::{
 };
 use msi::Language as CodePageLanguage;
 use winget_types::{
-    LanguageTag, Sha256String, Version,
+    LanguageTag, Sha256String,
     installer::{
-        AppsAndFeaturesEntry, Architecture as WingetArchitecture, ElevationRequirement,
-        InstallationMetadata, Installer, InstallerType, Scope, UnsupportedOSArchitecture,
+        AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture as WingetArchitecture,
+        ElevationRequirement, InstallationMetadata, Installer, InstallerType, Scope,
+        UnsupportedOSArchitecture,
         switches::{CustomSwitch, InstallerSwitches},
     },
     url::DecodedUrl,
@@ -61,15 +61,15 @@ impl Inno {
                 || inno.header.app_publisher().is_some()
                 || inno.header.app_version().is_some()
             {
-                vec![AppsAndFeaturesEntry {
-                    display_name: inno.header.uninstall_name().map(CompactString::from),
-                    publisher: inno.header.app_publisher().map(CompactString::from),
-                    display_version: inno.header.app_version().map(Version::new),
-                    product_code: inno.header.product_code(),
-                    ..AppsAndFeaturesEntry::default()
-                }]
+                AppsAndFeaturesEntry::builder()
+                    .maybe_display_name(inno.header.uninstall_name())
+                    .maybe_publisher(inno.header.app_publisher())
+                    .maybe_display_version(inno.header.app_version())
+                    .maybe_product_code(inno.header.product_code())
+                    .build()
+                    .into()
             } else {
-                vec![]
+                AppsAndFeaturesEntries::new()
             },
             elevation_requirement: inno
                 .header
@@ -95,17 +95,15 @@ impl Inno {
                 .privileges_required_overrides_allowed()
                 .contains(PrivilegesRequiredOverrides::COMMAND_LINE);
             if has_scope_switch {
-                installer.switches = InstallerSwitches {
-                    custom: Some(CustomSwitch::all_users()),
-                    ..InstallerSwitches::default()
-                };
+                installer.switches = InstallerSwitches::builder()
+                    .custom(CustomSwitch::all_users())
+                    .build();
             }
             let user_installer = Installer {
                 scope: Some(Scope::User),
-                switches: InstallerSwitches {
-                    custom: has_scope_switch.then(CustomSwitch::current_user),
-                    ..InstallerSwitches::default()
-                },
+                switches: InstallerSwitches::builder()
+                    .maybe_custom(has_scope_switch.then(CustomSwitch::current_user))
+                    .build(),
                 installation_metadata: InstallationMetadata::default(),
                 ..installer.clone()
             };

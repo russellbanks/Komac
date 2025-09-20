@@ -186,17 +186,17 @@ impl Msix {
                 upgrade_behavior: Some(UpgradeBehavior::Install),
                 file_extensions: manifest.file_type_association.supported_file_types,
                 package_family_name: Some(PackageFamilyName::new(
-                    &manifest.identity.name,
+                    manifest.identity.name.to_owned(),
                     &manifest.identity.publisher,
                 )),
                 capabilities: manifest.capabilities.unrestricted,
                 restricted_capabilities: manifest.capabilities.restricted,
-                apps_and_features_entries: vec![
-                    AppsAndFeaturesEntry::new()
-                        .with_display_name(manifest.properties.display_name)
-                        .with_publisher(manifest.properties.publisher_display_name)
-                        .with_display_version(&manifest.identity.version),
-                ],
+                apps_and_features_entries: AppsAndFeaturesEntry::builder()
+                    .display_name(manifest.properties.display_name)
+                    .publisher(manifest.properties.publisher_display_name)
+                    .display_version(&manifest.identity.version)
+                    .build()
+                    .into(),
                 installation_metadata: InstallationMetadata {
                     default_install_location: Some(get_install_location(
                         &manifest.identity.name,

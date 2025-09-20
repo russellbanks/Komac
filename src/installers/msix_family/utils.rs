@@ -5,7 +5,7 @@ use std::{
 
 use camino::Utf8PathBuf;
 use color_eyre::eyre::Result;
-use winget_types::{Sha256String, installer::PackageFamilyName};
+use winget_types::{Sha256String, package_family_name::PublisherId};
 use zip::ZipArchive;
 
 use crate::installers::{msix_family::APPX_SIGNATURE_P7X, utils::RELATIVE_PROGRAM_FILES_64};
@@ -35,7 +35,7 @@ pub fn get_install_location(
     path.push(WINDOWS_APPS);
     path.push(format!(
         "{name}_{version}_{architecture}_{resource_id}_{}",
-        PackageFamilyName::get_id(publisher)
+        PublisherId::new(publisher)
     ));
     path
 }
