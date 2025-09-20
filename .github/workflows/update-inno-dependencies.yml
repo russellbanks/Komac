@@ -1,6 +1,7 @@
 name: Update local copy of Inno Setup Dependency Installer script
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 9 1 * *'
 
@@ -16,7 +17,13 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download latest Inno Setup Dependency Installer script
-        run: curl -L https://github.com/DomGries/InnoDependencyInstaller/raw/HEAD/CodeDependencies.iss -o assets/inno/CodeDependencies.iss
+        run: |
+          curl --location \
+            --output assets/inno/CodeDependencies.iss \
+            --fail \
+            --silent \
+            --show-error \
+            https://github.com/DomGries/InnoDependencyInstaller/raw/HEAD/CodeDependencies.iss
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7

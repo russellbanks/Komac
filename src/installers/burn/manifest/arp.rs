@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::Deserialize;
 use winget_types::Version;
 
@@ -17,13 +19,13 @@ pub struct Arp<'manifest> {
     #[serde(rename = "@Publisher")]
     pub publisher: Option<&'manifest str>,
     #[serde(rename = "@HelpLink")]
-    pub help_link: Option<&'manifest str>,
+    pub help_link: Option<Cow<'manifest, str>>,
     #[serde(rename = "@HelpTelephone")]
     pub help_telephone: Option<&'manifest str>,
     #[serde(rename = "@AboutUrl")]
-    pub about_url: Option<&'manifest str>,
+    pub about_url: Option<Cow<'manifest, str>>,
     #[serde(rename = "@UpdateUrl")]
-    pub update_url: Option<&'manifest str>,
+    pub update_url: Option<Cow<'manifest, str>>,
     #[serde(rename = "@ParentDisplayName")]
     pub parent_display_name: Option<&'manifest str>,
     #[serde(rename = "@DisableModify", default)]

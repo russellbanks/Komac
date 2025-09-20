@@ -110,7 +110,7 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
-          winget install --exact JRSoftware.InnoSetup --accept-package-agreements --accept-source-agreements --disable-interactivity --scope machine
+          winget install --exact JRSoftware.InnoSetup --scope machine --silent --accept-package-agreements --accept-source-agreements --disable-interactivity
           $input = "../../target/${{ matrix.platform.target }}/release/${{ steps.rename_binary.outputs.name }}"
           & "${env:ProgramFiles(x86)}\Inno Setup 6\iscc.exe" assets/inno/installer.iss `
             /DInputExecutable=$input `
@@ -181,17 +181,6 @@ jobs:
         with:
           tag_name: ${{ steps.set_tag.outputs.tag }}
           files: release-assets/SHA256SUMS
-
-  publish-homebrew-tap:
-    needs: release
-    if: ${{ github.event_name == 'release' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger update formula workflow (homebrew-tap)
-        run: gh workflow run komac.yml -f version=$($env:GITHUB_REF_NAME.TrimStart('v')) -R russellbanks/homebrew-tap
-        env:
-          GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
-        shell: pwsh
 
   upload-virus-total:
     needs: release

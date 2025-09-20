@@ -15,7 +15,6 @@ use std::{io, io::Read};
 use byteorder::{LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
-use compact_str::CompactString;
 use flate2::{Decompress, read::ZlibDecoder};
 use liblzma::read::XzDecoder;
 use msi::Language;
@@ -26,9 +25,10 @@ use thiserror::Error;
 use tracing::{debug, error};
 use variables::Variables;
 use winget_types::{
-    LanguageTag, Version,
+    LanguageTag,
     installer::{
-        AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
+        AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture, InstallationMetadata,
+        Installer, InstallerType, Scope,
     },
 };
 use yara_x::mods::{PE, pe::Machine};
@@ -235,15 +235,15 @@ impl Nsis {
                     || publisher.is_some()
                     || display_version.is_some()
                 {
-                    vec![AppsAndFeaturesEntry {
-                        display_name: display_name.map(CompactString::from),
-                        publisher: publisher.map(CompactString::from),
-                        display_version: display_version.as_deref().map(Version::new),
-                        product_code: product_code.map(str::to_owned),
-                        ..AppsAndFeaturesEntry::default()
-                    }]
+                    AppsAndFeaturesEntry::builder()
+                        .maybe_display_name(display_name)
+                        .maybe_publisher(publisher)
+                        .maybe_display_version(display_version)
+                        .maybe_product_code(product_code)
+                        .build()
+                        .into()
                 } else {
-                    vec![]
+                    AppsAndFeaturesEntries::new()
                 },
                 installation_metadata: InstallationMetadata {
                     default_install_location: state.variables.install_dir().map(Utf8PathBuf::from),

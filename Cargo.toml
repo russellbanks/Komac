@@ -34,7 +34,7 @@ bzip2 = "0.6.0"
 cab = "0.6.0"
 camino = { version = "1.2.0", features = ["serde1"] }
 chrono = { version = "0.4.42", features = ["serde"] }
-clap = { version = "4.5.47", features = ["derive", "cargo", "env"] }
+clap = { version = "4.5.48", features = ["derive", "cargo", "env"] }
 clap_complete = "4.5.58"
 color-eyre = { version = "0.6.5", default-features = false }
 compact_str = "0.9.0"
@@ -46,7 +46,7 @@ flate2 = "1.1.2"
 futures-util = "0.3.31"
 html-escape = "0.2.13"
 html2text = "0.15.5"
-indexmap = "2.11.3"
+indexmap = "2.11.4"
 indextree = "4.7.4"
 indicatif = "0.18.0"
 inno = { version = "0.2", features = ["lzma-static"] }
@@ -70,7 +70,7 @@ regex = "1.11.2"
 reqwest = { version = "0.12.23", features = ["native-tls-vendored", "stream"] }
 serde = { version = "1.0.225", features = ["derive"] }
 serde_json = "1.0.145"
-serde_with = "3.14.0"
+serde_with = "3.14.1"
 serde_yaml = "0.9.34"
 sha2 = "0.10.9"
 strsim = "0.11.1"
@@ -88,8 +88,8 @@ tui-textarea = { version = "0.7.0", features = ["search"] }
 url = { version = "2.5.7", features = ["serde"] }
 uuid = { version = "1.18.1", features = ["v4"] }
 walkdir = "2.5.0"
-winget-types = { version = "0.3.2", features = ["serde", "std", "chrono"] }
-yara-x = { version = "1.6.0", default-features = false, features = ["pe-module"] }
+winget-types = { version = "0.4.0", features = ["serde", "std", "chrono"] }
+yara-x = { version = "1.7.1", default-features = false, features = ["pe-module"] }
 zerocopy = { version = "0.8.27", features = ["derive", "std"] }
 zip = { version = "5.1.1", default-features = false, features = ["deflate"] }
 

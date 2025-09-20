@@ -13,7 +13,7 @@ use indicatif::ProgressBar;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use reqwest::{Client, header::ACCEPT};
-use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use thiserror::Error;
 use url::Url;
 use winget_types::{
@@ -272,7 +272,7 @@ impl GitHub {
             .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
     }
 
-    pub async fn get_manifest<T: Manifest + for<'de> Deserialize<'de>>(
+    pub async fn get_manifest<T: Manifest + DeserializeOwned>(
         &self,
         identifier: &PackageIdentifier,
         version: &PackageVersion,

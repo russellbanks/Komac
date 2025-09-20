@@ -9,9 +9,10 @@ use compact_str::CompactString;
 use msi::{Language, Package, Select};
 use tracing::debug;
 use winget_types::{
-    LanguageTag, Version,
+    LanguageTag,
     installer::{
-        AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
+        AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture, InstallationMetadata,
+        Installer, InstallerType, Scope,
     },
 };
 
@@ -115,16 +116,16 @@ impl Msi {
                     || product_version.is_some()
                     || upgrade_code.is_some()
                 {
-                    vec![AppsAndFeaturesEntry {
-                        display_name: product_name,
-                        publisher: manufacturer,
-                        display_version: product_version.as_deref().map(Version::new),
-                        product_code,
-                        upgrade_code: upgrade_code.map(CompactString::into_string),
-                        ..AppsAndFeaturesEntry::default()
-                    }]
+                    AppsAndFeaturesEntry::builder()
+                        .maybe_display_name(product_name)
+                        .maybe_publisher(manufacturer)
+                        .maybe_display_version(product_version.as_deref())
+                        .maybe_product_code(product_code)
+                        .maybe_upgrade_code(upgrade_code)
+                        .build()
+                        .into()
                 } else {
-                    vec![]
+                    AppsAndFeaturesEntries::new()
                 },
                 installation_metadata: InstallationMetadata {
                     default_install_location: Self::find_install_directory(
