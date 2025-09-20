@@ -2641,7 +2641,6 @@ dependencies = [
  "compact_str 0.9.0",
  "const_format",
  "crossbeam-channel",
- "crossterm 0.29.0",
  "cynic",
  "cynic-codegen",
  "encoding_rs",

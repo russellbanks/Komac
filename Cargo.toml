@@ -40,7 +40,6 @@ color-eyre = { version = "0.6.5", default-features = false }
 compact_str = "0.9.0"
 const_format = { version = "0.2.34", features = ["derive"] }
 crossbeam-channel = "0.5.15"
-crossterm = "0.29.0"
 cynic = { version = "3.12.0", features = ["http-reqwest"] }
 encoding_rs = "0.8.35"
 flate2 = "1.1.2"
