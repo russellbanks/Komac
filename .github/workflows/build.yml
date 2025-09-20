@@ -20,6 +20,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For setup-rust
 
 jobs:
   build_and_test:
