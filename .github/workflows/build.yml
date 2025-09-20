@@ -64,5 +64,5 @@ jobs:
         run: cargo msrv verify
 
       - name: Find actual MSRV
-        if: steps.verify.outcome == 'failure'
+        if: ${{ failure() && steps.verify.conclusion == 'failure' }}
         run: cargo msrv find
