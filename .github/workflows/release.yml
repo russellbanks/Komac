@@ -1,11 +1,8 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: [ "Cargo Build & Test" ]
-    branches: [ main ]
-    types:
-      - completed
+  schedule:
+    - cron: "0 0 * * 0"
   release:
     types: [ released ]
 
@@ -17,8 +14,6 @@ env:
 
 jobs:
   release:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
-
     name: Release - ${{ matrix.platform.target }}
     strategy:
       fail-fast: false
@@ -71,14 +66,14 @@ jobs:
         if: contains(matrix.platform.bins, 'cargo-deb')
         shell: pwsh
         run: |
-          $nightly = if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') { "--deb-version=2.nightly" } else { "" }
+          $nightly = if ($env:GITHUB_EVENT_NAME -ne 'release') { "--deb-version=2.nightly" } else { "" }
           cargo deb --target ${{ matrix.platform.target }} --no-build --no-strip $nightly
 
       - name: Create RPM package
         if: contains(matrix.platform.bins, 'cargo-generate-rpm')
         shell: pwsh
         run: |
-          if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
+          if ($env:GITHUB_EVENT_NAME -ne 'release') {
             cargo generate-rpm --target ${{ matrix.platform.target }} --set-metadata='version="nightly"'
           } else {
             cargo generate-rpm --target ${{ matrix.platform.target }}
@@ -90,7 +85,7 @@ jobs:
         run: |
           $bin = if ($env:RUNNER_OS -eq 'Windows') { "komac.exe" } else { "komac" }
           $newName = "komac"
-          if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
+          if ($env:GITHUB_EVENT_NAME -ne 'release') {
             $newName += "-nightly"
           } else {
             $newName += "-$($env:GITHUB_REF_NAME.TrimStart('v'))"
@@ -126,7 +121,7 @@ jobs:
         id: set_release_vars
         shell: pwsh
         run: |
-          if ($env:GITHUB_EVENT_NAME -eq 'workflow_run') {
+          if ($env:GITHUB_EVENT_NAME -ne 'release') {
             "name=Nightly release" >> $env:GITHUB_OUTPUT
             "tag_name=nightly" >> $env:GITHUB_OUTPUT
             "prerelease=true" >> $env:GITHUB_OUTPUT
@@ -160,7 +155,7 @@ jobs:
       - name: Set tag name
         id: set_tag
         run: |
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+          if [ "${{ github.event_name }}" != "release" ]; then
             echo "tag=nightly" >> $GITHUB_OUTPUT
           else
             echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
@@ -189,7 +184,7 @@ jobs:
 
   publish-homebrew-tap:
     needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger update formula workflow (homebrew-tap)
@@ -200,7 +195,7 @@ jobs:
 
   upload-virus-total:
     needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
       - name: VirusTotal Scan
@@ -216,7 +211,7 @@ jobs:
 
   publish-crates-io:
     needs: release
-    if: ${{ github.event_name != 'workflow_run' }}
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
       - name: Clone repository
@@ -233,7 +228,7 @@ jobs:
 
   publish-winget:
     needs: [ release, publish-crates-io ]
-    if: ${{ github.event_name != 'workflow_run' }}
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     steps:
       - uses: vedantmgoyal9/winget-releaser@main
