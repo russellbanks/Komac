@@ -52,6 +52,8 @@ jobs:
 
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
+        with:
+          cache-target: package
 
       - name: Publish dry run
         run: cargo publish --dry-run
