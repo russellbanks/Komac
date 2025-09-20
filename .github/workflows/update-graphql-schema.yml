@@ -2,7 +2,7 @@ name: Update local copy of GraphQL schema
 
 on:
   schedule:
-    - cron: '0 9 * * *'
+    - cron: '0 9 * * 1'
 
 jobs:
   update-schema:
@@ -17,7 +17,7 @@ jobs:
 
       - name: Download latest GitHub GraphQL Schema
         run: curl -L https://docs.github.com/public/fpt/schema.docs.graphql -o assets/github.graphql
-          
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
