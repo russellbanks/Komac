@@ -64,3 +64,18 @@ jobs:
       - name: Find actual MSRV
         if: ${{ failure() && steps.verify.conclusion == 'failure' }}
         run: cargo msrv find
+
+  unused_dependencies:
+    name: Unused dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install cargo-machete
+        uses: moonrepo/setup-rust@v1
+        with:
+          bins: cargo-machete
+
+      - name: Check for unused dependencies
+        run: cargo machete
