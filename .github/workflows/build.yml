@@ -69,6 +69,7 @@ jobs:
         uses: moonrepo/setup-rust@v1
         with:
           bins: cargo-msrv
+          target-dirs: target,x86_64-unknown-linux-gnu
 
       - name: Verify MSRV
         id: verify
