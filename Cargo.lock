@@ -2646,7 +2646,7 @@ dependencies = [
  "openssl",
  "secret-service",
  "security-framework 2.11.1",
- "security-framework 3.4.0",
+ "security-framework 3.5.0",
  "windows-sys 0.60.2",
  "zeroize",
 ]
@@ -4438,9 +4438,9 @@ dependencies = [
 
 [[package]]
 name = "security-framework"
-version = "3.4.0"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60b369d18893388b345804dc0007963c99b7d665ae71d275812d828c6f089640"
+checksum = "cc198e42d9b7510827939c9a15f5062a0c913f3371d765977e586d2fe6c16f4a"
 dependencies = [
  "bitflags",
  "core-foundation 0.10.1",
