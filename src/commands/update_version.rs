@@ -3,6 +3,7 @@ use std::{
     io::{Read, Seek},
     mem,
     num::{NonZeroU32, NonZeroUsize},
+    str::FromStr,
     sync::Arc,
 };
 
@@ -51,7 +52,7 @@ pub struct UpdateVersion {
     package_version: Arc<PackageVersion>,
 
     /// The list of package installers
-    #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
+    #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::Url)]
     urls: Vec<Url>,
 
     /// Number of installers to download at the same time
@@ -167,10 +168,31 @@ impl UpdateVersion {
             }
         });
 
+        let mut manifests = manifests.await??;
+
+        let mut urls = self.urls.clone();
+        if self.urls.is_empty() {
+            println!(
+                "{}",
+                "Warning: No URLs provided. Using URLs from latest version with updated version number. Verify URLs are correct before submitting.".yellow(),
+            );
+            urls = manifests
+                .installer
+                .installers
+                .iter()
+                .filter_map(|installer| {
+                    let replaced = installer
+                        .url
+                        .as_str()
+                        .replace(latest_version.as_str(), package_version.as_str());
+                    Url::from_str(&replaced).ok()
+                })
+                .collect();
+        }
+
         let github_values = tokio::spawn({
             let github = github.clone();
-            let github_url = self
-                .urls
+            let github_url = urls
                 .iter()
                 .find(|url| url.host_str() == Some(GITHUB_HOST))
                 .cloned();
@@ -185,8 +207,7 @@ impl UpdateVersion {
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads);
         let mut files = downloader
             .download(
-                &self
-                    .urls
+                &urls
                     .into_iter()
                     .unique()
                     .map(Download::new)
@@ -198,7 +219,6 @@ impl UpdateVersion {
             .iter_mut()
             .flat_map(|(_url, analyser)| mem::take(&mut analyser.installers))
             .collect::<Vec<_>>();
-        let mut manifests = manifests.await??;
         let previous_installers = mem::take(&mut manifests.installer.installers)
             .into_iter()
             .map(|mut installer| {
