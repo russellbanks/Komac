@@ -1,6 +1,8 @@
 mod downloader;
 mod file;
 
+use std::borrow::Cow;
+
 use camino::Utf8Path;
 use const_format::formatcp;
 pub use downloader::Downloader;
@@ -25,17 +27,24 @@ impl Download {
     /// Content-Disposition header.
     ///
     /// This works by getting the filename from the Content-Disposition header. It aims to mimic
-    /// Firefox's functionality whereby the filename* parameter is prioritised over filename even if
-    /// both are provided. See [Content-Disposition](https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Disposition).
+    /// Firefox's functionality whereby the `filename*` parameter is prioritised over `filename`
+    /// even if both are provided. See [Content-Disposition].
     ///
     /// If there is no Content-Disposition header or no filenames in the Content-Disposition, it falls
     /// back to getting the last part of the initial URL and then the final redirected URL if the
     /// initial URL does not have a valid file extension at the end.
-    fn file_name(&self, final_url: &url::Url, content_disposition: Option<&HeaderValue>) -> String {
+    ///
+    /// [Content-Disposition]: https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Disposition
+    fn file_name<'a>(
+        &'a self,
+        final_url: &'a url::Url,
+        content_disposition: Option<&'a HeaderValue>,
+    ) -> Cow<'a, str> {
         const FILENAME: &str = "filename";
         const FILENAME_EXT: &str = formatcp!("{FILENAME}*");
 
-        if let Some(content_disposition) = content_disposition.and_then(|value| value.to_str().ok())
+        if let Some(content_disposition) = content_disposition
+            && let Ok(content_disposition) = content_disposition.to_str()
         {
             let mut sections = content_disposition.split(';');
             let _disposition = sections.next(); // Skip the disposition type
@@ -57,7 +66,7 @@ impl Download {
                         .find_map(|(key, value)| (key == FILENAME).then_some(value))
                 });
             if let Some(filename) = filename {
-                return filename.to_owned();
+                return Cow::Borrowed(filename);
             }
         }
 
@@ -75,7 +84,7 @@ impl Download {
                     .path_segments()
                     .and_then(|mut segments| segments.next_back())
             })
-            .map_or_else(|| Uuid::new_v4().to_string(), str::to_owned)
+            .map_or_else(|| Cow::Owned(Uuid::new_v4().to_string()), Cow::Borrowed)
     }
 
     pub async fn upgrade_to_https(&mut self, client: &Client) {

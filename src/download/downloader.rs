@@ -9,8 +9,8 @@ use futures_util::{StreamExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use memmap2::Mmap;
 use reqwest::{
+    header::{HeaderMap, HeaderValue, CONTENT_DISPOSITION, DNT, LAST_MODIFIED, USER_AGENT},
     Client,
-    header::{CONTENT_DISPOSITION, DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT},
 };
 use sha2::{Digest, Sha256};
 use tokio::{
@@ -85,11 +85,12 @@ impl Downloader {
             )
         }
 
-        let content_disposition = res.headers().get(CONTENT_DISPOSITION);
-        let file_name = download.file_name(res.url(), content_disposition);
         let total_size = res
             .content_length()
             .ok_or_else(|| eyre!("Failed to get content length from '{}'", download.url))?;
+        let file_name = download
+            .file_name(res.url(), res.headers().get(CONTENT_DISPOSITION))
+            .into_owned();
 
         let last_modified = res
             .headers()
