@@ -53,7 +53,7 @@ inno = { version = "0.2", features = ["lzma-static"] }
 inquire = "0.9.1"
 itertools = "0.14.0"
 keyring = { version = "3.6.3", features = ["apple-native", "crypto-openssl", "sync-secret-service", "vendored", "windows-native"] }
-liblzma = { version = "0.4.4", features = ["static"] }
+liblzma = { version = "0.4.5", features = ["static"] }
 memchr = "2.7.5"
 memmap2 = "0.9.8"
 msi = "0.9.0"
