@@ -1,16 +1,13 @@
 use std::num::NonZeroUsize;
 
 use chrono::DateTime;
-use color_eyre::{
-    Result,
-    eyre::{bail, eyre},
-};
+use color_eyre::{Result, eyre::bail};
 use futures_util::{StreamExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use memmap2::Mmap;
 use reqwest::{
-    header::{HeaderMap, HeaderValue, CONTENT_DISPOSITION, DNT, LAST_MODIFIED, USER_AGENT},
     Client,
+    header::{CONTENT_DISPOSITION, DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT},
 };
 use sha2::{Digest, Sha256};
 use tokio::{
@@ -28,6 +25,9 @@ pub struct Downloader {
 
 impl Downloader {
     const PROGRESS_TEMPLATE: &'static str = "{msg}\n{wide_bar:.magenta/black} {decimal_bytes:.green}/{decimal_total_bytes:.green} {decimal_bytes_per_sec:.red} eta {eta:.blue}";
+
+    const INDETERMINATE_PROGRESS_TEMPLATE: &'static str =
+        "{msg}\n{spinner} {decimal_bytes:.green} {decimal_bytes_per_sec:.red} {elapsed:.blue}";
 
     const PROGRESS_CHARS: &'static str = "───";
 
@@ -85,9 +85,6 @@ impl Downloader {
             )
         }
 
-        let total_size = res
-            .content_length()
-            .ok_or_else(|| eyre!("Failed to get content length from '{}'", download.url))?;
         let file_name = download
             .file_name(res.url(), res.headers().get(CONTENT_DISPOSITION))
             .into_owned();
@@ -99,15 +96,18 @@ impl Downloader {
             .and_then(|last_modified| DateTime::parse_from_rfc2822(last_modified).ok())
             .map(|date_time| date_time.date_naive());
 
-        let progress = multi_progress.add(
-            ProgressBar::new(total_size)
-                .with_style(
-                    ProgressStyle::default_bar()
-                        .template(Self::PROGRESS_TEMPLATE)?
-                        .progress_chars(Self::PROGRESS_CHARS),
-                )
-                .with_message(format!("Downloading {}", download.url)),
-        );
+        let progress_bar = match res.content_length() {
+            Some(len) => ProgressBar::new(len).with_style(
+                ProgressStyle::with_template(Self::PROGRESS_TEMPLATE)?
+                    .progress_chars(Self::PROGRESS_CHARS),
+            ),
+            None => ProgressBar::no_length().with_style(ProgressStyle::with_template(
+                Self::INDETERMINATE_PROGRESS_TEMPLATE,
+            )?),
+        };
+
+        let progress =
+            multi_progress.add(progress_bar.with_message(format!("Downloading {}", download.url)));
 
         // Create a temporary file
         let temp_file = tempfile::tempfile()?;
