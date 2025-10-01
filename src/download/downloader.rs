@@ -96,7 +96,7 @@ impl Downloader {
             HeaderValue::from_static("Microsoft-Delivery-Optimization/10.1");
         const SEC_GPC: &str = "Sec-GPC";
 
-        let mut headers = HeaderMap::new();
+        let mut headers = HeaderMap::with_capacity(3);
         headers.insert(USER_AGENT, MICROSOFT_DELIVERY_OPTIMIZATION);
         headers.insert(DNT, HeaderValue::from(1));
         headers.insert(SEC_GPC, HeaderValue::from(1));

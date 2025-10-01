@@ -1,7 +1,6 @@
 use std::{
     collections::BTreeSet,
     io::{Read, Seek},
-    mem,
     num::{NonZeroU32, NonZeroUsize},
 };
 
@@ -16,7 +15,7 @@ use strsim::levenshtein;
 use tokio::try_join;
 use winget_types::{
     PackageIdentifier, PackageVersion,
-    installer::{InstallerType, MinimumOSVersion, NestedInstallerFiles},
+    installer::{InstallerManifest, NestedInstallerFiles},
     url::{DecodedUrl, ReleaseNotesUrl},
 };
 
@@ -136,50 +135,15 @@ impl UpdateVersion {
             downloader.download(self.urls.iter().cloned()),
         )?;
 
-        let mut download_results = process_files(&mut files).await?;
-        let installer_results = download_results
-            .iter_mut()
-            .flat_map(|(_url, analyser)| mem::take(&mut analyser.installers))
+        manifests.default_locale.package_version = self.package_version.clone();
+        let installers = process_files(&mut files)
+            .await?
+            .into_iter()
+            .flat_map(|(_, analyser)| analyser.installers)
             .collect::<Vec<_>>();
-        let previous_installers = mem::take(&mut manifests.installer.installers)
+        let installers = match_installers(&manifests.installer.installers, installers)
             .into_iter()
             .map(|mut installer| {
-                if manifests.installer.r#type.is_some() {
-                    installer.r#type = manifests.installer.r#type;
-                }
-                if manifests.installer.nested_installer_type.is_some() {
-                    installer.nested_installer_type = manifests.installer.nested_installer_type;
-                }
-                if manifests.installer.scope.is_some() {
-                    installer.scope = manifests.installer.scope;
-                }
-                installer
-            })
-            .collect::<Vec<_>>();
-        manifests.default_locale.package_version = self.package_version.clone();
-        let matched_installers = match_installers(previous_installers, &installer_results);
-        let installers = matched_installers
-            .into_iter()
-            .map(|(previous_installer, new_installer)| {
-                let analyser = &download_results[&new_installer.url];
-                let installer_type = match previous_installer.r#type {
-                    Some(InstallerType::Portable) => previous_installer.r#type,
-                    _ => match new_installer.r#type {
-                        Some(InstallerType::Portable) => previous_installer.r#type,
-                        _ => new_installer.r#type,
-                    },
-                };
-                let mut installer = new_installer.clone().merge_with(previous_installer);
-                installer.r#type = installer_type;
-                installer.url.clone_from(&new_installer.url);
-                installer.nested_installer_files = fix_relative_paths(
-                    if installer.nested_installer_files.is_empty() {
-                        manifests.installer.nested_installer_files.clone()
-                    } else {
-                        installer.nested_installer_files
-                    },
-                    analyser.zip.as_ref(),
-                );
                 for entry in &mut installer.apps_and_features_entries {
                     entry.deduplicate(&manifests.default_locale);
                 }
@@ -187,13 +151,14 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
 
-        manifests.installer.package_version = self.package_version.clone();
-        manifests.installer.minimum_os_version = manifests
-            .installer
-            .minimum_os_version
-            .filter(|minimum_os_version| *minimum_os_version != MinimumOSVersion::new(10, 0, 0, 0));
-        manifests.installer.installers = installers;
-        manifests.installer.optimize();
+        let mut installer_manifest = InstallerManifest {
+            package_identifier: self.package_identifier.clone(),
+            package_version: self.package_version.clone(),
+            installers,
+            ..InstallerManifest::default()
+        };
+        installer_manifest.optimize();
+        manifests.installer = installer_manifest;
 
         manifests.default_locale.update(
             &self.package_version,
