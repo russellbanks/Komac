@@ -7,7 +7,11 @@ use camino::Utf8Path;
 use const_format::formatcp;
 pub use downloader::Downloader;
 pub use file::DownloadedFile;
-use reqwest::{Client, ClientBuilder, Response, header::HeaderValue, redirect::Policy};
+use reqwest::{
+    Client, ClientBuilder, Response,
+    header::{CONTENT_DISPOSITION, HeaderMap, HeaderValue},
+    redirect::Policy,
+};
 use uuid::Uuid;
 use winget_types::installer::VALID_FILE_EXTENSIONS;
 
@@ -46,13 +50,14 @@ impl Download {
     fn file_name<'a>(
         &'a self,
         final_url: &'a url::Url,
-        content_disposition: Option<&'a HeaderValue>,
+        http_headers: &'a HeaderMap,
     ) -> Cow<'a, str> {
         const FILENAME: &str = "filename";
         const FILENAME_EXT: &str = formatcp!("{FILENAME}*");
 
-        if let Some(content_disposition) = content_disposition
-            && let Ok(content_disposition) = content_disposition.to_str()
+        if let Some(Ok(content_disposition)) = http_headers
+            .get(CONTENT_DISPOSITION)
+            .map(HeaderValue::to_str)
         {
             let mut sections = content_disposition.split(';');
             let _disposition = sections.next(); // Skip the disposition type
@@ -73,6 +78,7 @@ impl Download {
                         .into_iter()
                         .find_map(|(key, value)| (key == FILENAME).then_some(value))
                 });
+
             if let Some(filename) = filename {
                 return Cow::Borrowed(filename);
             }

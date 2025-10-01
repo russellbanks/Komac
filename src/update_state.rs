@@ -28,7 +28,7 @@ impl UpdateState {
         }
     }
 
-    pub const fn as_str(&self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::NewPackage => "New package",
             Self::NewVersion => "New version",

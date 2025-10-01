@@ -36,6 +36,13 @@ pub struct GitObject {
     pub oid: GitObjectId,
 }
 
+impl From<GitObject> for GitObjectId {
+    #[inline]
+    fn from(object: GitObject) -> Self {
+        object.oid
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use cynic::{Id, MutationBuilder};

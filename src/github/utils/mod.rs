@@ -66,7 +66,7 @@ pub fn is_manifest_file<M: Manifest>(
     }
 }
 
-#[builder(finish_fn = get)]
+#[builder(finish_fn = build)]
 pub fn pull_request_body(
     #[builder(default)] issue_resolves: &[NonZeroU32],
     alternative_text: Option<&str>,
@@ -131,12 +131,14 @@ pub fn pull_request_body(
     body
 }
 
-pub fn get_branch_name(
+pub fn branch_name(
     package_identifier: &PackageIdentifier,
     package_version: &PackageVersion,
 ) -> String {
-    /// GitHub rejects branch names longer than 255 bytes. Considering `refs/heads/`, 244 bytes are left for the name.
+    /// GitHub rejects branch names longer than 255 bytes. Considering `refs/heads/`, 244 bytes are
+    /// left for the name.
     const MAX_BRANCH_NAME_LEN: usize = u8::MAX as usize - "refs/heads/".len();
+
     let mut uuid_buffer = Uuid::encode_buffer();
     let uuid = Uuid::new_v4().simple().encode_upper(&mut uuid_buffer);
     let mut branch_name = format!("{package_identifier}-{package_version}-{uuid}");
@@ -147,12 +149,12 @@ pub fn get_branch_name(
     branch_name
 }
 
-pub fn get_commit_title(
-    identifier: &PackageIdentifier,
-    version: &PackageVersion,
+pub fn commit_title(
+    package_identifier: &PackageIdentifier,
+    package_version: &PackageVersion,
     update_state: UpdateState,
 ) -> String {
-    format!("{update_state}: {identifier} version {version}")
+    format!("{update_state}: {package_identifier} version {package_version}")
 }
 
 #[cfg(test)]

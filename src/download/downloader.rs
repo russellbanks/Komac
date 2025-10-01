@@ -8,9 +8,7 @@ use itertools::Itertools;
 use memmap2::Mmap;
 use reqwest::{
     Client,
-    header::{
-        CONTENT_DISPOSITION, CONTENT_TYPE, DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT,
-    },
+    header::{CONTENT_TYPE, DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT},
 };
 use sha2::{Digest, Sha256};
 use tokio::{
@@ -96,7 +94,7 @@ impl Downloader {
             HeaderValue::from_static("Microsoft-Delivery-Optimization/10.1");
         const SEC_GPC: &str = "Sec-GPC";
 
-        let mut headers = HeaderMap::new();
+        let mut headers = HeaderMap::with_capacity(3);
         headers.insert(USER_AGENT, MICROSOFT_DELIVERY_OPTIMIZATION);
         headers.insert(DNT, HeaderValue::from(1));
         headers.insert(SEC_GPC, HeaderValue::from(1));
@@ -135,9 +133,7 @@ impl Downloader {
             );
         }
 
-        let file_name = download
-            .file_name(res.url(), res.headers().get(CONTENT_DISPOSITION))
-            .into_owned();
+        let file_name = download.file_name(res.url(), res.headers()).into_owned();
 
         let last_modified = res
             .headers()
@@ -198,7 +194,7 @@ impl Downloader {
         drop(hash_sender);
 
         let sha_256 = match try_join!(writer, hasher)? {
-            (Ok(_), sha_256) => sha_256,
+            (Ok(()), sha_256) => sha_256,
             (Err(err), _) => return Err(err.into()),
         };
 
