@@ -35,7 +35,7 @@ use crate::{
     commands::utils::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
     },
-    download::{Download, Downloader},
+    download::Downloader,
     download_file::process_files,
     github::{
         github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
@@ -118,7 +118,7 @@ pub struct NewVersion {
 
     /// List of issues that adding this package or version would resolve
     #[arg(long)]
-    resolves: Option<Vec<NonZeroU32>>,
+    resolves: Vec<NonZeroU32>,
 
     /// Automatically submit a pull request
     #[arg(short, long)]
@@ -220,15 +220,7 @@ impl NewVersion {
         });
 
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads);
-        let mut files = downloader
-            .download(
-                &urls
-                    .into_iter()
-                    .unique()
-                    .map(Download::new)
-                    .collect::<Vec<_>>(),
-            )
-            .await?;
+        let mut files = downloader.download(urls.iter().cloned().unique()).await?;
         let mut download_results = process_files(&mut files).await?;
 
         let mut installers = Vec::new();
@@ -432,9 +424,9 @@ impl NewVersion {
             .version(&package_version)
             .maybe_versions(versions.as_ref())
             .changes(changes)
-            .maybe_issue_resolves(self.resolves)
-            .maybe_created_with(self.created_with)
-            .maybe_created_with_url(self.created_with_url)
+            .issue_resolves(&self.resolves)
+            .maybe_created_with(self.created_with.as_deref())
+            .maybe_created_with_url(self.created_with_url.as_ref())
             .send()
             .await?;
 

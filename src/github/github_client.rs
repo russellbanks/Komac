@@ -1,6 +1,5 @@
 use std::{borrow::Cow, collections::BTreeSet, env, num::NonZeroU32, str::FromStr};
 
-use base64ct::{Base64, Encoding};
 use bon::bon;
 use const_format::{formatcp, str_repeat};
 use cynic::{
@@ -28,10 +27,7 @@ use crate::{
     commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
     github::{
         graphql::{
-            create_commit::{
-                CommitMessage, CommittableBranch, CreateCommit, CreateCommitOnBranchInput,
-                CreateCommitVariables, FileAddition, FileChanges, FileDeletion,
-            },
+            create_commit::{FileAddition, FileDeletion},
             create_pull_request::{
                 CreatePullRequest, CreatePullRequestInput, CreatePullRequestVariables,
             },
@@ -52,9 +48,7 @@ use crate::{
             update_refs::{RefUpdate, UpdateRefs, UpdateRefsVariables},
         },
         rest::{GITHUB_JSON_MIME, get_tree::GitTree},
-        utils::{
-            PackagePath, get_branch_name, get_commit_title, is_manifest_file, pull_request_body,
-        },
+        utils::{PackagePath, branch_name, commit_title, is_manifest_file, pull_request_body},
     },
     manifests::Manifests,
     token::default_headers,
@@ -66,7 +60,6 @@ pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
 pub const WINGET_PKGS_FULL_NAME: &str = formatcp!("{MICROSOFT}/{WINGET_PKGS}");
 pub const GITHUB_HOST: &str = "github.com";
-const GITHUB_GRAPHQL_URL: &str = "https://api.github.com/graphql";
 
 #[derive(Debug, Error)]
 pub enum GitHubError {
@@ -93,10 +86,12 @@ pub enum GitHubError {
 
 #[derive(Clone)]
 #[repr(transparent)]
-pub struct GitHub(Client);
+pub struct GitHub(pub(super) Client);
 
 #[bon]
 impl GitHub {
+    pub(super) const GRAPHQL_URL: &'static str = "https://api.github.com/graphql";
+
     pub fn new<T: AsRef<str>>(token: T) -> Result<Self, GitHubError> {
         Ok(Self(
             Client::builder()
@@ -113,7 +108,7 @@ impl GitHub {
         } else {
             let GraphQlResponse { data, errors } = self
                 .0
-                .post(GITHUB_GRAPHQL_URL)
+                .post(Self::GRAPHQL_URL)
                 .run_graphql(GetCurrentUserLogin::build(()))
                 .await?;
             data.map(|data| data.viewer.login)
@@ -250,7 +245,7 @@ impl GitHub {
     ) -> Result<impl Iterator<Item = GitHubFile>, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(GetDirectoryContentWithText::build(
                 GetDirectoryContentVariables {
                     owner,
@@ -292,7 +287,7 @@ impl GitHub {
     ) -> Result<String, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(GetFileContent::build(GetDirectoryContentVariables {
                 owner,
                 name: repo,
@@ -319,7 +314,7 @@ impl GitHub {
     ) -> Result<RepositoryData, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(GetRepositoryInfo::build(RepositoryVariables {
                 owner,
                 name,
@@ -359,7 +354,7 @@ impl GitHub {
     ) -> Result<CreateBranchRef, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(CreateRef::build(CreateRefVariables {
                 name: &format!("refs/heads/{branch_name}"),
                 oid,
@@ -367,38 +362,6 @@ impl GitHub {
             }))
             .await?;
         data.and_then(|data| data.create_ref?.ref_)
-            .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
-    }
-
-    #[builder(finish_fn = send)]
-    pub async fn create_commit(
-        &self,
-        branch_id: &Id,
-        head_sha: GitObjectId,
-        message: &str,
-        additions: Option<Vec<FileAddition<'_>>>,
-        deletions: Option<Vec<FileDeletion<'_>>>,
-    ) -> Result<Url, GitHubError> {
-        let GraphQlResponse { data, errors } = self
-            .0
-            .post(GITHUB_GRAPHQL_URL)
-            .run_graphql(CreateCommit::build(CreateCommitVariables {
-                input: CreateCommitOnBranchInput {
-                    branch: CommittableBranch { id: branch_id },
-                    expected_head_oid: head_sha,
-                    file_changes: Some(FileChanges {
-                        additions,
-                        deletions,
-                    }),
-                    message: CommitMessage {
-                        body: None,
-                        headline: message,
-                    },
-                },
-            }))
-            .await?;
-        data.and_then(|data| data.create_commit_on_branch?.commit)
-            .map(|commit| commit.url)
             .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
     }
 
@@ -410,7 +373,7 @@ impl GitHub {
     ) -> Result<impl Iterator<Item = String>, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(GetDirectoryContent::build(GetDirectoryContentVariables {
                 expression: &format!("{branch_name}:{path}"),
                 name: WINGET_PKGS,
@@ -435,7 +398,7 @@ impl GitHub {
         loop {
             let GraphQlResponse { data, errors } = self
                 .0
-                .post(GITHUB_GRAPHQL_URL)
+                .post(Self::GRAPHQL_URL)
                 .run_graphql(GetBranches::build(GetBranchesVariables {
                     owner: user.as_ref(),
                     name: WINGET_PKGS,
@@ -515,11 +478,13 @@ impl GitHub {
                 title,
             },
         });
+
         let GraphQlResponse { data, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(operation)
             .await?;
+
         data.and_then(|data| data.create_pull_request?.pull_request)
             .map(|pull_request| pull_request.url)
             .ok_or_else(|| GitHubError::GraphQL(errors.unwrap_or_default()))
@@ -534,7 +499,7 @@ impl GitHub {
 
         let GraphQlResponse { data: _, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(UpdateRefs::build(UpdateRefsVariables {
                 ref_updates: branch_names
                     .iter()
@@ -558,7 +523,7 @@ impl GitHub {
     ) -> Result<Option<get_existing_pull_request::PullRequest>, GitHubError> {
         self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(GetExistingPullRequest::build(GetExistingPullRequestVariables {
                 query: &format!("repo:{WINGET_PKGS_FULL_NAME} is:pull-request in:title {identifier} {version}"),
             }))
@@ -621,7 +586,7 @@ impl GitHub {
     ) -> Result<GitHubValues, GitHubError> {
         let GraphQlResponse { data, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(GetAllValues::build(GetAllValuesVariables {
                 name: &repo,
                 owner: &owner,
@@ -703,7 +668,7 @@ impl GitHub {
     ) -> Result<(), GitHubError> {
         let GraphQlResponse { data: _, errors } = self
             .0
-            .post(GITHUB_GRAPHQL_URL)
+            .post(Self::GRAPHQL_URL)
             .run_graphql(MergeUpstream::build(MergeUpstreamVariables {
                 branch_ref_id,
                 upstream_target_oid,
@@ -718,10 +683,10 @@ impl GitHub {
         &self,
         identifier: &PackageIdentifier,
         version: &PackageVersion,
-        reason: String,
+        reason: &str,
         fork: &RepositoryData,
         winget_pkgs: &RepositoryData,
-        issue_resolves: Option<Vec<NonZeroU32>>,
+        #[builder(default)] issue_resolves: &[NonZeroU32],
     ) -> Result<Url, GitHubError> {
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
@@ -729,7 +694,7 @@ impl GitHub {
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
-        let branch_name = get_branch_name(identifier, version);
+        let branch_name = branch_name(identifier, version);
         let pull_request_branch = self
             .create_branch(
                 &fork.id,
@@ -737,7 +702,7 @@ impl GitHub {
                 winget_pkgs.default_branch_oid.clone(),
             )
             .await?;
-        let commit_title = get_commit_title(identifier, version, UpdateState::RemoveVersion);
+        let commit_title = commit_title(identifier, version, UpdateState::RemoveVersion);
         let deletions = self
             .get_directory_content(
                 &fork.owner,
@@ -750,7 +715,7 @@ impl GitHub {
         let _commit_url = self
             .create_commit()
             .branch_id(&pull_request_branch.id)
-            .head_sha(pull_request_branch.target.map(|object| object.oid).unwrap())
+            .head_sha(pull_request_branch.target.unwrap())
             .message(&commit_title)
             .deletions(deletions)
             .send()
@@ -763,9 +728,9 @@ impl GitHub {
                 &winget_pkgs.default_branch_name,
                 &commit_title,
                 &pull_request_body()
-                    .maybe_issue_resolves(issue_resolves)
+                    .issue_resolves(issue_resolves)
                     .alternative_text(reason)
-                    .get(),
+                    .build(),
             )
             .await?;
 
@@ -787,39 +752,33 @@ impl GitHub {
         versions: Option<&BTreeSet<PackageVersion>>,
         changes: Vec<(String, String)>,
         replace_version: Option<&PackageVersion>,
-        issue_resolves: Option<Vec<NonZeroU32>>,
-        created_with: Option<String>,
-        created_with_url: Option<DecodedUrl>,
+        issue_resolves: &[NonZeroU32],
+        created_with: Option<&str>,
+        created_with_url: Option<&DecodedUrl>,
     ) -> Result<Url, GitHubError> {
-        let current_user = self.get_username();
-        let winget_pkgs = self.get_winget_pkgs().send().await?;
-        let current_user = current_user.await?;
+        let (current_user, winget_pkgs) =
+            tokio::try_join!(self.get_username(), self.get_winget_pkgs().send())?;
         let fork = self.get_winget_pkgs().owner(&current_user).send().await?;
-        let branch_name = get_branch_name(identifier, version);
+        let branch_name = branch_name(identifier, version);
         let pull_request_branch = self
             .create_branch(&fork.id, &branch_name, winget_pkgs.default_branch_oid)
             .await?;
-        let commit_title =
-            get_commit_title(identifier, version, UpdateState::get(version, versions));
+        let commit_title = commit_title(identifier, version, UpdateState::get(version, versions));
         let additions = changes
             .iter()
-            .map(|(path, content)| {
-                FileAddition::new(Base64::encode_string(content.as_bytes()), path)
-            })
+            .map(|(path, content)| FileAddition::new(content, path))
             .collect::<Vec<_>>();
         let deletions = if replace_version.is_some() {
-            Some(
-                self.get_directory_content(
-                    &current_user,
-                    &branch_name,
-                    &PackagePath::new(identifier, replace_version, None),
-                )
-                .await?
-                .map(FileDeletion::new)
-                .collect::<Vec<_>>(),
+            self.get_directory_content(
+                &current_user,
+                &branch_name,
+                &PackagePath::new(identifier, replace_version, None),
             )
+            .await?
+            .map(FileDeletion::new)
+            .collect::<Vec<_>>()
         } else {
-            None
+            Vec::new()
         };
         let _commit_url = self
             .create_commit()
@@ -827,7 +786,7 @@ impl GitHub {
             .head_sha(pull_request_branch.target.map(|target| target.oid).unwrap())
             .message(&commit_title)
             .additions(additions)
-            .maybe_deletions(deletions)
+            .deletions(deletions)
             .send()
             .await?;
         self.create_pull_request(
@@ -837,10 +796,10 @@ impl GitHub {
             &winget_pkgs.default_branch_name,
             &commit_title,
             &pull_request_body()
-                .maybe_issue_resolves(issue_resolves)
+                .issue_resolves(issue_resolves)
                 .maybe_created_with(created_with)
                 .maybe_created_with_url(created_with_url)
-                .get(),
+                .build(),
         )
         .await
     }

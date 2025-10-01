@@ -1,7 +1,8 @@
-use std::{collections::BTreeSet, env, fmt::Write, num::NonZeroU32};
+use std::{env, fmt::Write, num::NonZeroU32};
 
 use bon::builder;
 use clap::{crate_name, crate_version};
+use itertools::Itertools;
 pub use package_path::PackagePath;
 use rand::Rng;
 use uuid::Uuid;
@@ -65,12 +66,12 @@ pub fn is_manifest_file<M: Manifest>(
     }
 }
 
-#[builder(finish_fn = get)]
+#[builder(finish_fn = build)]
 pub fn pull_request_body(
-    issue_resolves: Option<Vec<NonZeroU32>>,
-    alternative_text: Option<String>,
-    created_with: Option<String>,
-    created_with_url: Option<DecodedUrl>,
+    issue_resolves: &[NonZeroU32],
+    alternative_text: Option<&str>,
+    created_with: Option<&str>,
+    created_with_url: Option<&DecodedUrl>,
 ) -> String {
     const FRUITS: [&str; 16] = [
         "apple",
@@ -119,21 +120,25 @@ pub fn pull_request_body(
 
         let _ = writeln!(body, " :{emoji}:");
     }
-    if let Some(issue_resolves) = issue_resolves.filter(|resolves| !resolves.is_empty()) {
+
+    if !issue_resolves.is_empty() {
         let _ = writeln!(body);
-        for resolve in BTreeSet::from_iter(issue_resolves) {
-            let _ = writeln!(body, "- Resolves #{resolve}");
+        for issue in issue_resolves.iter().sorted_unstable() {
+            let _ = writeln!(body, "- Resolves #{issue}");
         }
     }
+
     body
 }
 
-pub fn get_branch_name(
+pub fn branch_name(
     package_identifier: &PackageIdentifier,
     package_version: &PackageVersion,
 ) -> String {
-    /// GitHub rejects branch names longer than 255 bytes. Considering `refs/heads/`, 244 bytes are left for the name.
+    /// GitHub rejects branch names longer than 255 bytes. Considering `refs/heads/`, 244 bytes are
+    /// left for the name.
     const MAX_BRANCH_NAME_LEN: usize = u8::MAX as usize - "refs/heads/".len();
+
     let mut uuid_buffer = Uuid::encode_buffer();
     let uuid = Uuid::new_v4().simple().encode_upper(&mut uuid_buffer);
     let mut branch_name = format!("{package_identifier}-{package_version}-{uuid}");
@@ -144,12 +149,12 @@ pub fn get_branch_name(
     branch_name
 }
 
-pub fn get_commit_title(
-    identifier: &PackageIdentifier,
-    version: &PackageVersion,
+pub fn commit_title(
+    package_identifier: &PackageIdentifier,
+    package_version: &PackageVersion,
     update_state: UpdateState,
 ) -> String {
-    format!("{update_state}: {identifier} version {version}")
+    format!("{update_state}: {package_identifier} version {package_version}")
 }
 
 #[cfg(test)]

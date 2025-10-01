@@ -1,26 +1,39 @@
 mod downloader;
 mod file;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt};
 
 use camino::Utf8Path;
 use const_format::formatcp;
 pub use downloader::Downloader;
 pub use file::DownloadedFile;
-use reqwest::{Client, ClientBuilder, Response, header::HeaderValue, redirect::Policy};
+use reqwest::{
+    Client, ClientBuilder, Response,
+    header::{CONTENT_DISPOSITION, HeaderMap, HeaderValue},
+    redirect::Policy,
+};
 use uuid::Uuid;
 use winget_types::installer::VALID_FILE_EXTENSIONS;
 
 use crate::{github::github_client::GITHUB_HOST, manifests::Url};
 
-#[derive(Debug, Clone)]
-pub struct Download {
-    pub url: Url,
-}
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub struct Download(Url);
 
 impl Download {
+    #[inline]
     pub const fn new(url: Url) -> Self {
-        Self { url }
+        Self(url)
+    }
+
+    #[expect(unused)]
+    #[inline]
+    pub const fn url(&self) -> &Url {
+        &self.0
+    }
+
+    pub fn into_url(self) -> Url {
+        self.0
     }
 
     /// Gets the filename from a URL given the URL, a final redirected URL, and an optional
@@ -38,13 +51,14 @@ impl Download {
     fn file_name<'a>(
         &'a self,
         final_url: &'a url::Url,
-        content_disposition: Option<&'a HeaderValue>,
+        http_headers: &'a HeaderMap,
     ) -> Cow<'a, str> {
         const FILENAME: &str = "filename";
         const FILENAME_EXT: &str = formatcp!("{FILENAME}*");
 
-        if let Some(content_disposition) = content_disposition
-            && let Ok(content_disposition) = content_disposition.to_str()
+        if let Some(Ok(content_disposition)) = http_headers
+            .get(CONTENT_DISPOSITION)
+            .map(HeaderValue::to_str)
         {
             let mut sections = content_disposition.split(';');
             let _disposition = sections.next(); // Skip the disposition type
@@ -65,13 +79,14 @@ impl Download {
                         .into_iter()
                         .find_map(|(key, value)| (key == FILENAME).then_some(value))
                 });
+
             if let Some(filename) = filename {
                 return Cow::Borrowed(filename);
             }
         }
 
         // Fallback if there is no Content-Disposition header or no filenames in Content-Disposition
-        self.url
+        self.0
             .path_segments()
             .and_then(|mut segments| segments.next_back())
             .filter(|last_segment| {
@@ -91,20 +106,17 @@ impl Download {
         const HTTP: &str = "http";
         const HTTPS: &str = "https";
 
-        if self.url.scheme() == HTTP {
-            self.url
-                .set_scheme(HTTPS)
-                .unwrap_or_else(|()| unreachable!());
+        if self.0.scheme() == HTTP {
+            self.0.set_scheme(HTTPS).unwrap_or_else(|()| unreachable!());
+
             if client
-                .head(self.url.as_str())
+                .head(self.as_str())
                 .send()
                 .await
                 .and_then(Response::error_for_status)
                 .is_err()
             {
-                self.url
-                    .set_scheme(HTTP)
-                    .unwrap_or_else(|()| unreachable!());
+                self.0.set_scheme(HTTP).unwrap_or_else(|()| unreachable!());
             }
         }
     }
@@ -114,11 +126,11 @@ impl Download {
         const DOWNLOAD: &str = "download";
         const MAX_HOPS: u8 = 2;
 
-        if self.url.host_str() != Some(GITHUB_HOST) {
+        if self.0.host_str() != Some(GITHUB_HOST) {
             return Ok(());
         }
 
-        if let Some(mut segments) = self.url.path_segments() {
+        if let Some(mut segments) = self.0.path_segments() {
             // If the 4th and 5th segments are 'latest' and 'download', it's a vanity URL
             if segments.nth(3) == Some(LATEST) && segments.next() == Some(DOWNLOAD) {
                 // Create a client that will redirect only once
@@ -128,14 +140,35 @@ impl Download {
 
                 // If there was a redirect error because max hops were reached, as intended, set the
                 // original vanity URL to the redirected versioned URL
-                if let Err(error) = limited_redirect_client.head(self.url.as_str()).send().await
+                if let Err(error) = limited_redirect_client.head(self.as_str()).send().await
                     && error.is_redirect()
                     && let Some(final_url) = error.url()
                 {
-                    **self.url = final_url.clone();
+                    **self.0 = final_url.clone();
                 }
             }
         }
         Ok(())
+    }
+
+    /// Returns the serialization of the download's URL.
+    #[inline]
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl fmt::Display for Download {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<T> From<T> for Download
+where
+    T: Into<Url>,
+{
+    fn from(value: T) -> Self {
+        Self::new(value.into())
     }
 }

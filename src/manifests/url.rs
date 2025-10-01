@@ -15,17 +15,17 @@ pub struct Url {
 
 impl Url {
     #[inline]
-    pub fn override_architecture(&self) -> Option<Architecture> {
+    pub const fn override_architecture(&self) -> Option<Architecture> {
         self.override_architecture
     }
 
     #[inline]
-    pub fn inner(&self) -> &DecodedUrl {
+    pub const fn inner(&self) -> &DecodedUrl {
         &self.inner
     }
 
     #[inline]
-    pub fn inner_mut(&mut self) -> &mut DecodedUrl {
+    pub const fn inner_mut(&mut self) -> &mut DecodedUrl {
         &mut self.inner
     }
 

@@ -4,10 +4,11 @@ use chrono::DateTime;
 use color_eyre::{Result, eyre::bail};
 use futures_util::{StreamExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use itertools::Itertools;
 use memmap2::Mmap;
 use reqwest::{
     Client,
-    header::{CONTENT_DISPOSITION, DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT},
+    header::{DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT},
 };
 use sha2::{Digest, Sha256};
 use tokio::{
@@ -37,13 +38,17 @@ impl Downloader {
         }
     }
 
-    pub async fn download(&self, downloads: &[Download]) -> Result<Vec<DownloadedFile>> {
+    pub async fn download<I, D>(&self, downloads: I) -> Result<Vec<DownloadedFile>>
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<Download>,
+    {
         let client = Client::builder().default_headers(Self::headers()).build()?;
 
         let multi_progress = MultiProgress::new();
 
-        let downloaded_files = stream::iter(downloads)
-            .map(|download| self.fetch(&client, download.clone(), &multi_progress))
+        let downloaded_files = stream::iter(downloads.into_iter().map(D::into).unique())
+            .map(|download| self.fetch(&client, download, &multi_progress))
             .buffer_unordered(self.concurrent_downloads.get())
             .try_collect::<Vec<_>>()
             .await?;
@@ -58,7 +63,7 @@ impl Downloader {
             HeaderValue::from_static("Microsoft-Delivery-Optimization/10.1");
         const SEC_GPC: &str = "Sec-GPC";
 
-        let mut headers = HeaderMap::new();
+        let mut headers = HeaderMap::with_capacity(3);
         headers.insert(USER_AGENT, MICROSOFT_DELIVERY_OPTIMIZATION);
         headers.insert(DNT, HeaderValue::from(1));
         headers.insert(SEC_GPC, HeaderValue::from(1));
@@ -75,7 +80,7 @@ impl Downloader {
 
         download.upgrade_to_https(client).await;
 
-        let res = client.get(download.url.as_str()).send().await?;
+        let res = client.get(download.as_str()).send().await?;
 
         if let Err(err) = res.error_for_status_ref() {
             bail!(
@@ -85,9 +90,7 @@ impl Downloader {
             )
         }
 
-        let file_name = download
-            .file_name(res.url(), res.headers().get(CONTENT_DISPOSITION))
-            .into_owned();
+        let file_name = download.file_name(res.url(), res.headers()).into_owned();
 
         let last_modified = res
             .headers()
@@ -107,7 +110,7 @@ impl Downloader {
         };
 
         let progress =
-            multi_progress.add(progress_bar.with_message(format!("Downloading {}", download.url)));
+            multi_progress.add(progress_bar.with_message(format!("Downloading {download}")));
 
         // Create a temporary file
         let temp_file = tempfile::tempfile()?;
@@ -148,14 +151,14 @@ impl Downloader {
         drop(hash_sender);
 
         let sha_256 = match try_join!(writer, hasher)? {
-            (Ok(_), sha_256) => sha_256,
+            (Ok(()), sha_256) => sha_256,
             (Err(err), _) => return Err(err.into()),
         };
 
         progress.finish();
 
         Ok(DownloadedFile {
-            url: download.url,
+            url: download.into_url(),
             mmap: unsafe { Mmap::map(&temp_file) }?,
             file: temp_file,
             sha_256: Sha256String::from_digest(&sha_256),

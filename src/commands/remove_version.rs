@@ -36,7 +36,7 @@ pub struct RemoveVersion {
 
     /// List of issues that removing this version would resolve
     #[arg(long)]
-    resolves: Option<Vec<NonZeroU32>>,
+    resolves: Vec<NonZeroU32>,
 
     #[arg(short, long)]
     submit: bool,
@@ -116,10 +116,10 @@ impl RemoveVersion {
             .remove_version()
             .identifier(&self.package_identifier)
             .version(&self.package_version)
-            .reason(deletion_reason)
+            .reason(&deletion_reason)
             .fork(&fork)
             .winget_pkgs(&winget_pkgs)
-            .maybe_issue_resolves(self.resolves)
+            .issue_resolves(&self.resolves)
             .send()
             .await?;
 

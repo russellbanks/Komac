@@ -48,6 +48,7 @@ impl<'data> Variables<'data> {
 
     pub fn install_dir(&self) -> Option<&str> {
         self.get(&Self::INSTALL_DIR_INDEX)
+            .filter(|&dir| dir != PredefinedVar::InstDir.as_str())
     }
 
     pub fn insert_install_dir<T>(&mut self, install_dir: T) -> Option<Cow<'_, str>>

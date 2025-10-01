@@ -84,7 +84,7 @@ impl ShowVersion {
             contents.push(serde_yaml::to_string(&manifests.version)?);
         }
 
-        print_changes(contents.iter().map(String::as_str));
+        print_changes(contents);
 
         Ok(())
     }
