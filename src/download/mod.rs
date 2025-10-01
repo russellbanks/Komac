@@ -51,9 +51,7 @@ impl Download {
         const FILENAME: &str = "filename";
         const FILENAME_EXT: &str = formatcp!("{FILENAME}*");
 
-        if let Some(content_disposition) = content_disposition
-            && let Ok(content_disposition) = content_disposition.to_str()
-        {
+        if let Some(Ok(content_disposition)) = content_disposition.map(HeaderValue::to_str) {
             let mut sections = content_disposition.split(';');
             let _disposition = sections.next(); // Skip the disposition type
             let filenames = sections
@@ -73,6 +71,7 @@ impl Download {
                         .into_iter()
                         .find_map(|(key, value)| (key == FILENAME).then_some(value))
                 });
+
             if let Some(filename) = filename {
                 return Cow::Borrowed(filename);
             }

@@ -60,15 +60,15 @@ impl SyncFork {
         }
 
         // Calculate how many commits upstream is ahead of fork
-        let new_commits_count = winget_pkgs.commit_count - fork.commit_count;
-        let commit_label = match new_commits_count {
+        let missing_commits_count = winget_pkgs.commit_count - fork.commit_count;
+        let commit_label = match missing_commits_count {
             1 => "commit",
             _ => "commits",
         };
 
         // Show an indeterminate progress bar while upstream changes are being merged
         let pb = ProgressBar::new_spinner().with_message(format!(
-            "Merging {new_commits_count} upstream {commit_label} from {} into {}",
+            "Merging {missing_commits_count} upstream {commit_label} from {} into {}",
             winget_pkgs.full_name.blue(),
             fork.full_name.blue(),
         ));
@@ -85,7 +85,7 @@ impl SyncFork {
         pb.finish_and_clear();
 
         println!(
-            "{} merged {new_commits_count} upstream {commit_label} from {} into {}",
+            "{} merged {missing_commits_count} upstream {commit_label} from {} into {}",
             "Successfully".green(),
             winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
             fork.full_name.hyperlink(fork.url).blue()
