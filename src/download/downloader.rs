@@ -20,6 +20,7 @@ use winget_types::Sha256String;
 use super::{Download, DownloadedFile};
 
 pub struct Downloader {
+    client: Client,
     concurrent_downloads: NonZeroUsize,
 }
 
@@ -31,19 +32,44 @@ impl Downloader {
 
     const PROGRESS_CHARS: &'static str = "───";
 
-    pub const fn new_with_concurrent(concurrent_downloads: NonZeroUsize) -> Self {
-        Self {
+    /// Creates a new Downloader with a maximum number of concurrent downloads of the number of
+    /// logical cores the system has.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error from [`ClientBuilder::build`] which fails if a TLS backend cannot be
+    /// initialized, or the resolver cannot load the system configuration.
+    ///
+    /// [`ClientBuilder::build`]: reqwest::ClientBuilder::build
+    #[expect(unused)]
+    pub fn new() -> reqwest::Result<Self> {
+        Self::new_with_concurrent(
+            num_cpus::get()
+                .try_into()
+                .unwrap_or_else(|_| unreachable!("num_cpus::get should always returns at least 1")),
+        )
+    }
+
+    /// Creates a new Downloader with a specified number of maximum concurrent downloads.
+    ///
+    /// # Errors
+    ///
+    /// Propagates the error from [`ClientBuilder::build`] which fails if a TLS backend cannot be
+    /// initialized, or the resolver cannot load the system configuration.
+    ///
+    /// [`ClientBuilder::build`]: reqwest::ClientBuilder::build
+    pub fn new_with_concurrent(concurrent_downloads: NonZeroUsize) -> reqwest::Result<Self> {
+        Ok(Self {
+            client: Client::builder().default_headers(Self::headers()).build()?,
             concurrent_downloads,
-        }
+        })
     }
 
     pub async fn download(&self, downloads: &[Download]) -> Result<Vec<DownloadedFile>> {
-        let client = Client::builder().default_headers(Self::headers()).build()?;
-
         let multi_progress = MultiProgress::new();
 
         let downloaded_files = stream::iter(downloads)
-            .map(|download| self.fetch(&client, download.clone(), &multi_progress))
+            .map(|download| self.fetch(&self.client, download.clone(), &multi_progress))
             .buffer_unordered(self.concurrent_downloads.get())
             .try_collect::<Vec<_>>()
             .await?;

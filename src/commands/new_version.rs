@@ -219,7 +219,7 @@ impl NewVersion {
             }
         });
 
-        let downloader = Downloader::new_with_concurrent(self.concurrent_downloads);
+        let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
         let mut files = downloader
             .download(
                 &urls
