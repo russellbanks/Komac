@@ -74,9 +74,9 @@ cargo binstall komac
 
 #### Nightly
 
-Nightly releases that are built on every commit are  
-available [here](https://github.com/russellbanks/Komac/releases/tag/nightly). These are useful for debugging or if you  
-want the latest features and fixes.
+Nightly releases that are built every week are
+available [here](https://github.com/russellbanks/Komac/releases/tag/nightly).
+These are useful for debugging or if you want the latest features and fixes.
 
 ### Windows
 
