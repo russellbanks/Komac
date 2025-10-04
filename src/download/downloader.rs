@@ -7,7 +7,9 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use memmap2::Mmap;
 use reqwest::{
     Client,
-    header::{CONTENT_DISPOSITION, DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT},
+    header::{
+        CONTENT_DISPOSITION, CONTENT_TYPE, DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT,
+    },
 };
 use sha2::{Digest, Sha256};
 use tokio::{
@@ -31,6 +33,8 @@ impl Downloader {
         "{msg}\n{spinner} {decimal_bytes:.green} {decimal_bytes_per_sec:.red} {elapsed:.blue}";
 
     const PROGRESS_CHARS: &'static str = "───";
+
+    const OCTET_STREAM: &'static str = "application/octet-stream";
 
     /// Creates a new Downloader with a maximum number of concurrent downloads of the number of
     /// logical cores the system has.
@@ -109,6 +113,17 @@ impl Downloader {
                 err.url().unwrap().as_str(),
                 err.status().unwrap()
             )
+        }
+
+        // Check that we're downloading an `octet-stream`
+        if let Some(content_type) = res.headers().get(CONTENT_TYPE)
+            && content_type.as_bytes() != Self::OCTET_STREAM.as_bytes()
+        {
+            bail!(
+                "The content type for {url} was {content_type:?} but {octet_stream} was expected",
+                url = download.url,
+                octet_stream = Self::OCTET_STREAM
+            );
         }
 
         let file_name = download
