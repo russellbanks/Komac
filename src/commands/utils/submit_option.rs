@@ -2,7 +2,6 @@ use std::fmt;
 
 use color_eyre::Result;
 use inquire::Select;
-use strum::{EnumIter, IntoEnumIterator};
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
@@ -10,7 +9,7 @@ use crate::{
     prompts::handle_inquire_error,
 };
 
-#[derive(Clone, Copy, EnumIter, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum SubmitOption {
     Submit,
     Edit,
@@ -24,7 +23,7 @@ impl SubmitOption {
         version: &PackageVersion,
         submit: bool,
         dry_run: bool,
-    ) -> Result<SubmitOption> {
+    ) -> Result<Self> {
         let mut submit_option;
 
         loop {
@@ -36,19 +35,19 @@ impl SubmitOption {
             }
 
             submit_option = if dry_run {
-                SubmitOption::Exit
+                Self::Exit
             } else if submit {
-                SubmitOption::Submit
+                Self::Submit
             } else {
                 Select::new(
                     &format!("What would you like to do with {identifier} {version}?"),
-                    SubmitOption::iter().collect(),
+                    Self::all().into(),
                 )
                 .prompt()
                 .map_err(handle_inquire_error)?
             };
 
-            if submit_option == SubmitOption::Edit {
+            if submit_option.is_edit() {
                 Editor::new(changes).run()?;
             } else {
                 break;
@@ -56,6 +55,31 @@ impl SubmitOption {
         }
 
         Ok(submit_option)
+    }
+
+    /// Returns `true` if the submit option is submit.
+    #[expect(unused)]
+    #[inline]
+    pub const fn is_submit(self) -> bool {
+        matches!(self, Self::Submit)
+    }
+
+    /// Returns `true` if the submit option is edit.
+    #[inline]
+    pub const fn is_edit(self) -> bool {
+        matches!(self, Self::Edit)
+    }
+
+    /// Returns `true` if the submit option is exit.
+    #[inline]
+    pub const fn is_exit(self) -> bool {
+        matches!(self, Self::Exit)
+    }
+
+    /// Returns an array of all the submit options.
+    #[inline]
+    pub const fn all() -> [Self; 3] {
+        [Self::Submit, Self::Edit, Self::Exit]
     }
 
     pub const fn as_str(self) -> &'static str {

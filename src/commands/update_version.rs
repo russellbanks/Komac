@@ -299,7 +299,7 @@ impl UpdateVersion {
             self.dry_run,
         )?;
 
-        if submit_option == SubmitOption::Exit {
+        if submit_option.is_exit() {
             return Ok(());
         }
 
