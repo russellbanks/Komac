@@ -64,7 +64,10 @@ impl Downloader {
     /// [`ClientBuilder::build`]: reqwest::ClientBuilder::build
     pub fn new_with_concurrent(concurrent_downloads: NonZeroUsize) -> reqwest::Result<Self> {
         Ok(Self {
-            client: Client::builder().default_headers(Self::headers()).build()?,
+            client: Client::builder()
+                .default_headers(Self::headers())
+                .referer(false)
+                .build()?,
             concurrent_downloads,
         })
     }
