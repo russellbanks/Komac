@@ -4,6 +4,7 @@ use chrono::DateTime;
 use color_eyre::{Result, eyre::bail};
 use futures_util::{StreamExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use itertools::Itertools;
 use memmap2::Mmap;
 use reqwest::{
     Client,
@@ -72,11 +73,15 @@ impl Downloader {
         })
     }
 
-    pub async fn download(&self, downloads: &[Download]) -> Result<Vec<DownloadedFile>> {
+    pub async fn download<I, D>(&self, downloads: I) -> Result<Vec<DownloadedFile>>
+    where
+        I: IntoIterator<Item = D>,
+        D: Into<Download>,
+    {
         let multi_progress = MultiProgress::new();
 
-        let downloaded_files = stream::iter(downloads)
-            .map(|download| self.fetch(&self.client, download.clone(), &multi_progress))
+        let downloaded_files = stream::iter(downloads.into_iter().map(D::into).unique())
+            .map(|download| self.fetch(&self.client, download, &multi_progress))
             .buffer_unordered(self.concurrent_downloads.get())
             .try_collect::<Vec<_>>()
             .await?;
@@ -108,7 +113,7 @@ impl Downloader {
 
         download.upgrade_to_https(client).await;
 
-        let res = client.get((**download.url).clone()).send().await?;
+        let res = client.get((***download.url()).clone()).send().await?;
 
         if let Err(err) = res.error_for_status_ref() {
             bail!(
@@ -125,8 +130,7 @@ impl Downloader {
                 .starts_with(Self::APPLICATION.as_bytes())
         {
             bail!(
-                "The content type for {url} was {content_type:?} but an {application} content type was expected",
-                url = download.url,
+                "The content type for {download} was {content_type:?} but an {application} content type was expected",
                 application = Self::APPLICATION
             );
         }
@@ -153,7 +157,7 @@ impl Downloader {
         };
 
         let progress =
-            multi_progress.add(progress_bar.with_message(format!("Downloading {}", download.url)));
+            multi_progress.add(progress_bar.with_message(format!("Downloading {download}")));
 
         // Create a temporary file
         let temp_file = tempfile::tempfile()?;
@@ -201,7 +205,7 @@ impl Downloader {
         progress.finish();
 
         Ok(DownloadedFile {
-            url: download.url,
+            url: download.into_url(),
             mmap: unsafe { Mmap::map(&temp_file) }?,
             file: temp_file,
             sha_256: Sha256String::from_digest(&sha_256),

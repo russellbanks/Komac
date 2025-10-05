@@ -10,7 +10,6 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use indicatif::ProgressBar;
 use inquire::CustomType;
-use itertools::Itertools;
 use ordinal::Ordinal;
 use owo_colors::OwoColorize;
 use winget_types::{
@@ -35,7 +34,7 @@ use crate::{
     commands::utils::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
     },
-    download::{Download, Downloader},
+    download::Downloader,
     download_file::process_files,
     github::{
         github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
@@ -220,15 +219,7 @@ impl NewVersion {
         });
 
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
-        let mut files = downloader
-            .download(
-                &urls
-                    .into_iter()
-                    .unique()
-                    .map(Download::new)
-                    .collect::<Vec<_>>(),
-            )
-            .await?;
+        let mut files = downloader.download(urls.iter().cloned()).await?;
         let mut download_results = process_files(&mut files).await?;
 
         let mut installers = Vec::new();
