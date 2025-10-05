@@ -1,7 +1,8 @@
-use std::{collections::BTreeSet, env, fmt::Write, num::NonZeroU32};
+use std::{env, fmt::Write, num::NonZeroU32};
 
 use bon::builder;
 use clap::{crate_name, crate_version};
+use itertools::Itertools;
 pub use package_path::PackagePath;
 use rand::Rng;
 use uuid::Uuid;
@@ -67,10 +68,10 @@ pub fn is_manifest_file<M: Manifest>(
 
 #[builder(finish_fn = get)]
 pub fn pull_request_body(
-    issue_resolves: Option<Vec<NonZeroU32>>,
-    alternative_text: Option<String>,
-    created_with: Option<String>,
-    created_with_url: Option<DecodedUrl>,
+    #[builder(default)] issue_resolves: &[NonZeroU32],
+    alternative_text: Option<&str>,
+    created_with: Option<&str>,
+    created_with_url: Option<&DecodedUrl>,
 ) -> String {
     const FRUITS: [&str; 16] = [
         "apple",
@@ -119,12 +120,14 @@ pub fn pull_request_body(
 
         let _ = writeln!(body, " :{emoji}:");
     }
-    if let Some(issue_resolves) = issue_resolves.filter(|resolves| !resolves.is_empty()) {
+
+    if !issue_resolves.is_empty() {
         let _ = writeln!(body);
-        for resolve in BTreeSet::from_iter(issue_resolves) {
-            let _ = writeln!(body, "- Resolves #{resolve}");
+        for issue in issue_resolves.iter().sorted_unstable() {
+            let _ = writeln!(body, "- Resolves #{issue}");
         }
     }
+
     body
 }
 

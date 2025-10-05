@@ -117,7 +117,7 @@ pub struct NewVersion {
 
     /// List of issues that adding this package or version would resolve
     #[arg(long)]
-    resolves: Option<Vec<NonZeroU32>>,
+    resolves: Vec<NonZeroU32>,
 
     /// Automatically submit a pull request
     #[arg(short, long)]
@@ -423,9 +423,9 @@ impl NewVersion {
             .version(&package_version)
             .maybe_versions(versions.as_ref())
             .changes(changes)
-            .maybe_issue_resolves(self.resolves)
-            .maybe_created_with(self.created_with)
-            .maybe_created_with_url(self.created_with_url)
+            .issue_resolves(&self.resolves)
+            .maybe_created_with(self.created_with.as_deref())
+            .maybe_created_with_url(self.created_with_url.as_ref())
             .send()
             .await?;
 

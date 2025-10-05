@@ -34,7 +34,7 @@ pub struct Submit {
 
     /// List of issues that submitting this version would resolve
     #[arg(long)]
-    resolves: Option<Vec<NonZeroU32>>,
+    resolves: Vec<NonZeroU32>,
 
     /// Open pull request link automatically
     #[arg(long, env = "OPEN_PR")]
@@ -168,7 +168,7 @@ impl Submit {
             .version(version)
             .versions(&versions)
             .changes(changes)
-            .maybe_issue_resolves(self.resolves)
+            .issue_resolves(&self.resolves)
             .send()
             .await?;
 

@@ -718,10 +718,10 @@ impl GitHub {
         &self,
         identifier: &PackageIdentifier,
         version: &PackageVersion,
-        reason: String,
+        reason: &str,
         fork: &RepositoryData,
         winget_pkgs: &RepositoryData,
-        issue_resolves: Option<Vec<NonZeroU32>>,
+        #[builder(default)] issue_resolves: &[NonZeroU32],
     ) -> Result<Url, GitHubError> {
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
@@ -763,7 +763,7 @@ impl GitHub {
                 &winget_pkgs.default_branch_name,
                 &commit_title,
                 &pull_request_body()
-                    .maybe_issue_resolves(issue_resolves)
+                    .issue_resolves(issue_resolves)
                     .alternative_text(reason)
                     .get(),
             )
@@ -787,9 +787,9 @@ impl GitHub {
         versions: Option<&BTreeSet<PackageVersion>>,
         changes: Vec<(String, String)>,
         replace_version: Option<&PackageVersion>,
-        issue_resolves: Option<Vec<NonZeroU32>>,
-        created_with: Option<String>,
-        created_with_url: Option<DecodedUrl>,
+        issue_resolves: &[NonZeroU32],
+        created_with: Option<&str>,
+        created_with_url: Option<&DecodedUrl>,
     ) -> Result<Url, GitHubError> {
         let current_user = self.get_username();
         let winget_pkgs = self.get_winget_pkgs().send().await?;
@@ -837,7 +837,7 @@ impl GitHub {
             &winget_pkgs.default_branch_name,
             &commit_title,
             &pull_request_body()
-                .maybe_issue_resolves(issue_resolves)
+                .issue_resolves(issue_resolves)
                 .maybe_created_with(created_with)
                 .maybe_created_with_url(created_with_url)
                 .get(),

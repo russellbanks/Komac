@@ -187,7 +187,7 @@ impl RemoveDeadVersions {
                         .remove_version()
                         .identifier(&package_identifier)
                         .version(&version)
-                        .reason(deletion_reason)
+                        .reason(&deletion_reason)
                         .fork(&fork)
                         .winget_pkgs(&winget_pkgs)
                         .send()

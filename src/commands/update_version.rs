@@ -3,23 +3,23 @@ use std::{
     io::{Read, Seek},
     mem,
     num::{NonZeroU32, NonZeroUsize},
-    sync::Arc,
 };
 
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use color_eyre::eyre::{Result, bail};
+use color_eyre::eyre::{Error, Result, bail};
+use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use strsim::levenshtein;
+use tokio::try_join;
 use winget_types::{
     PackageIdentifier, PackageVersion,
     installer::{InstallerType, MinimumOSVersion, NestedInstallerFiles},
     url::{DecodedUrl, ReleaseNotesUrl},
 };
 
-use super::utils::pointer::arc;
 use crate::{
     commands::utils::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
@@ -27,7 +27,7 @@ use crate::{
     download::Downloader,
     download_file::process_files,
     github::{
-        github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
+        github_client::{GITHUB_HOST, GitHub, GitHubError, GitHubValues, WINGET_PKGS_FULL_NAME},
         utils::{PackagePath, pull_request::pr_changes},
     },
     installers::zip::Zip,
@@ -42,12 +42,12 @@ use crate::{
 #[derive(Parser)]
 pub struct UpdateVersion {
     /// The package's unique identifier
-    #[arg(value_parser = arc::<PackageIdentifier>)]
-    package_identifier: Arc<PackageIdentifier>,
+    #[arg()]
+    package_identifier: PackageIdentifier,
 
     /// The package's version
-    #[arg(short = 'v', long = "version", value_parser = arc::<PackageVersion>)]
-    package_version: Arc<PackageVersion>,
+    #[arg(short = 'v', long = "version")]
+    package_version: PackageVersion,
 
     /// The list of package installers
     #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
@@ -59,7 +59,7 @@ pub struct UpdateVersion {
 
     /// List of issues that updating this package would resolve
     #[arg(long)]
-    resolves: Option<Vec<NonZeroU32>>,
+    resolves: Vec<NonZeroU32>,
 
     /// Automatically submit a pull request
     #[arg(short, long)]
@@ -104,21 +104,13 @@ pub struct UpdateVersion {
 
 impl UpdateVersion {
     pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token).await?;
+        let token = TokenManager::handle(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
-        let existing_pr = tokio::spawn({
-            let github = github.clone();
-            let package_identifier = Arc::clone(&self.package_identifier);
-            let package_version = Arc::clone(&self.package_version);
-            async move {
-                github
-                    .get_existing_pull_request(&package_identifier, &package_version)
-                    .await
-            }
-        });
-
-        let versions = github.get_versions(&self.package_identifier).await?;
+        let (versions, existing_pr) = try_join!(
+            github.get_versions(&self.package_identifier),
+            github.get_existing_pull_request(&self.package_identifier, &self.package_version),
+        )?;
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
         println!(
@@ -126,24 +118,9 @@ impl UpdateVersion {
             self.package_identifier
         );
 
-        let replace_version = self.replace.as_ref().map(|version| {
-            if version.is_latest() {
-                latest_version
-            } else {
-                version
-            }
-        });
+        let replace_version = self.resolve_replace_version(&versions, latest_version)?;
 
-        if let Some(version) = replace_version
-            && !versions.contains(version)
-            && let Some(closest) = version.closest(&versions)
-        {
-            bail!(
-                "Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}"
-            )
-        }
-
-        if let Some(pull_request) = existing_pr.await??
+        if let Some(pull_request) = existing_pr
             && !self.skip_pr_check
             && !self.dry_run
             && !prompt_existing_pull_request(
@@ -155,40 +132,20 @@ impl UpdateVersion {
             return Ok(());
         }
 
-        let manifests = tokio::spawn({
-            let github = github.clone();
-            let package_identifier = Arc::clone(&self.package_identifier);
-            let latest_version = latest_version.clone();
-            async move {
-                github
-                    .get_manifests(&package_identifier, &latest_version)
-                    .await
-            }
-        });
-
-        let github_values = tokio::spawn({
-            let github = github.clone();
-            let github_url = self
-                .urls
-                .iter()
-                .find(|url| url.host_str() == Some(GITHUB_HOST))
-                .cloned();
-            async move {
-                github_url
-                    .map(|url| github.get_all_values_from_url(url.into_inner()))
-                    .unwrap_or_default()
-                    .await
-            }
-        });
-
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
-        let mut files = downloader.download(self.urls.iter().cloned()).await?;
+        let (mut manifests, mut github_values, mut files) = tokio::try_join!(
+            github
+                .get_manifests(&self.package_identifier, latest_version)
+                .map_err(Error::new),
+            self.fetch_github_values(&github).map_err(Error::new),
+            downloader.download(self.urls.iter().cloned()),
+        )?;
+
         let mut download_results = process_files(&mut files).await?;
         let installer_results = download_results
             .iter_mut()
             .flat_map(|(_url, analyser)| mem::take(&mut analyser.installers))
             .collect::<Vec<_>>();
-        let mut manifests = manifests.await??;
         let previous_installers = mem::take(&mut manifests.installer.installers)
             .into_iter()
             .map(|mut installer| {
@@ -204,7 +161,7 @@ impl UpdateVersion {
                 installer
             })
             .collect::<Vec<_>>();
-        manifests.default_locale.package_version = (*self.package_version).clone();
+        manifests.default_locale.package_version = self.package_version.clone();
         let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
             .into_iter()
@@ -235,18 +192,13 @@ impl UpdateVersion {
             })
             .collect::<Vec<_>>();
 
-        manifests.installer.package_version = (*self.package_version).clone();
+        manifests.installer.package_version = self.package_version.clone();
         manifests.installer.minimum_os_version = manifests
             .installer
             .minimum_os_version
             .filter(|minimum_os_version| *minimum_os_version != MinimumOSVersion::new(10, 0, 0, 0));
         manifests.installer.installers = installers;
         manifests.installer.optimize();
-
-        let mut github_values = match github_values.await? {
-            Some(future) => Some(future?),
-            None => None,
-        };
 
         manifests.default_locale.update(
             &self.package_version,
@@ -273,7 +225,11 @@ impl UpdateVersion {
             .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
-        if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
+        if let Some(output) = self
+            .output
+            .as_ref()
+            .map(|out| out.join(package_path.as_str()))
+        {
             write_changes_to_dir(&changes, output.as_path()).await?;
             println!(
                 "{} written all manifest files to {output}",
@@ -307,9 +263,9 @@ impl UpdateVersion {
             .versions(&versions)
             .changes(changes)
             .maybe_replace_version(replace_version)
-            .maybe_issue_resolves(self.resolves)
-            .maybe_created_with(self.created_with)
-            .maybe_created_with_url(self.created_with_url)
+            .issue_resolves(&self.resolves)
+            .maybe_created_with(self.created_with.as_deref())
+            .maybe_created_with_url(self.created_with_url.as_ref())
             .send()
             .await?;
 
@@ -326,6 +282,49 @@ impl UpdateVersion {
         }
 
         Ok(())
+    }
+
+    fn resolve_replace_version<'a>(
+        &'a self,
+        versions: &'a BTreeSet<PackageVersion>,
+        latest_version: &'a PackageVersion,
+    ) -> Result<Option<&'a PackageVersion>> {
+        let replace_version = self.replace.as_ref().map(|version| {
+            if version.is_latest() {
+                latest_version
+            } else {
+                version
+            }
+        });
+
+        if let Some(version) = replace_version
+            && !versions.contains(version)
+            && let Some(closest) = version.closest(versions)
+        {
+            bail!(
+                "Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}"
+            )
+        }
+
+        Ok(replace_version)
+    }
+
+    async fn fetch_github_values(
+        &self,
+        github: &GitHub,
+    ) -> Result<Option<GitHubValues>, GitHubError> {
+        if let Some(url) = self
+            .urls
+            .iter()
+            .find(|url| url.host_str() == Some(GITHUB_HOST))
+        {
+            github
+                .get_all_values_from_url(url.clone().into_inner())
+                .await
+                .transpose()
+        } else {
+            Ok(None)
+        }
     }
 }
 

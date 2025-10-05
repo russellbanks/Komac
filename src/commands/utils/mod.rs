@@ -1,5 +1,4 @@
 pub mod environment;
-pub mod pointer;
 mod submit_option;
 
 use std::time::Duration;
