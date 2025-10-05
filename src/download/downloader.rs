@@ -108,7 +108,7 @@ impl Downloader {
 
         download.upgrade_to_https(client).await;
 
-        let res = client.get(download.url.as_str()).send().await?;
+        let res = client.get((**download.url).clone()).send().await?;
 
         if let Err(err) = res.error_for_status_ref() {
             bail!(
