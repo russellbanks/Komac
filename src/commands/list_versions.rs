@@ -8,7 +8,7 @@ use crate::{github::github_client::GitHub, token::TokenManager};
 
 /// Lists all versions for a given package
 #[derive(Parser)]
-#[clap(visible_alias = "list")]
+#[clap(visible_alias = "list-versions")]
 pub struct ListVersions {
     #[arg()]
     package_identifier: PackageIdentifier,
