@@ -34,7 +34,7 @@ impl Downloader {
 
     const PROGRESS_CHARS: &'static str = "───";
 
-    const OCTET_STREAM: &'static str = "application/octet-stream";
+    const APPLICATION: &'static str = "application";
 
     /// Creates a new Downloader with a maximum number of concurrent downloads of the number of
     /// logical cores the system has.
@@ -115,14 +115,16 @@ impl Downloader {
             )
         }
 
-        // Check that we're downloading an `octet-stream`
+        // Check that we're downloading an application
         if let Some(content_type) = res.headers().get(CONTENT_TYPE)
-            && content_type.as_bytes() != Self::OCTET_STREAM.as_bytes()
+            && !content_type
+                .as_bytes()
+                .starts_with(Self::APPLICATION.as_bytes())
         {
             bail!(
-                "The content type for {url} was {content_type:?} but {octet_stream} was expected",
+                "The content type for {url} was {content_type:?} but an {application} content type was expected",
                 url = download.url,
-                octet_stream = Self::OCTET_STREAM
+                application = Self::APPLICATION
             );
         }
 
