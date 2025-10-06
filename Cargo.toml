@@ -38,7 +38,7 @@ clap = { version = "4.5.48", features = ["derive", "cargo", "env"] }
 clap_complete = "4.5.58"
 color-eyre = { version = "0.6.5", default-features = false }
 compact_str = "0.9.0"
-const_format = { version = "0.2.34", features = ["derive"] }
+const_format = { version = "0.2.35", features = ["derive"] }
 crossbeam-channel = "0.5.15"
 cynic = { version = "3.12.0", features = ["http-reqwest"] }
 encoding_rs = "0.8.35"
