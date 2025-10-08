@@ -2,6 +2,7 @@ use std::io::Write;
 
 use clap::{Args, Parser};
 use color_eyre::Result;
+use owo_colors::OwoColorize;
 use winget_types::PackageIdentifier;
 
 use crate::{github::github_client::GitHub, token::TokenManager};
@@ -15,6 +16,10 @@ pub struct ListVersions {
 
     #[command(flatten)]
     output_type: OutputType,
+
+    /// Output the number of versions the package has
+    #[arg(long)]
+    count: bool,
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -48,14 +53,22 @@ impl ListVersions {
         match self.output_type {
             OutputType {
                 pretty_json: true, ..
-            } => serde_json::to_writer_pretty(stdout_lock, &versions)?,
-            OutputType { json: true, .. } => serde_json::to_writer(stdout_lock, &versions)?,
-            OutputType { yaml: true, .. } => serde_yaml::to_writer(stdout_lock, &versions)?,
+            } => serde_json::to_writer_pretty(&mut stdout_lock, &versions)?,
+            OutputType { json: true, .. } => serde_json::to_writer(&mut stdout_lock, &versions)?,
+            OutputType { yaml: true, .. } => serde_yaml::to_writer(&mut stdout_lock, &versions)?,
             _ => {
-                for version in versions {
-                    writeln!(stdout_lock, "{version}")?;
+                for version in &versions {
+                    writeln!(&mut stdout_lock, "{version}")?;
                 }
             }
+        }
+
+        if self.count {
+            writeln!(
+                stdout_lock,
+                "There are {} versions",
+                versions.len().blue().bold()
+            )?;
         }
 
         Ok(())
