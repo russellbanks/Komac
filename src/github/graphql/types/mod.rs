@@ -1,4 +1,8 @@
-use crate::github::graphql::github_schema::github_schema as schema;
+mod pull_request;
+
+pub use pull_request::PullRequestState;
+
+use super::github_schema as schema;
 
 /// <https://docs.github.com/graphql/reference/scalars#base64string>
 #[derive(cynic::Scalar)]
@@ -10,8 +14,11 @@ impl Base64String {
     }
 }
 
-impl From<String> for Base64String {
-    fn from(s: String) -> Self {
+impl<T> From<T> for Base64String
+where
+    T: Into<String>,
+{
+    fn from(s: T) -> Self {
         Self::new(s)
     }
 }
@@ -27,8 +34,11 @@ impl GitObjectId {
     }
 }
 
-impl From<String> for GitObjectId {
-    fn from(s: String) -> Self {
+impl<T> From<T> for GitObjectId
+where
+    T: Into<String>,
+{
+    fn from(s: T) -> Self {
         Self::new(s)
     }
 }
@@ -44,8 +54,11 @@ impl GitRefName {
     }
 }
 
-impl From<String> for GitRefName {
-    fn from(s: String) -> Self {
+impl<T> From<T> for GitRefName
+where
+    T: Into<String>,
+{
+    fn from(s: T) -> Self {
         Self::new(s)
     }
 }
@@ -66,8 +79,11 @@ impl Html {
     }
 }
 
-impl From<String> for Html {
-    fn from(s: String) -> Self {
+impl<T> From<T> for Html
+where
+    T: Into<String>,
+{
+    fn from(s: T) -> Self {
         Self::new(s)
     }
 }

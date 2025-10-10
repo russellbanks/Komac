@@ -1,4 +1,4 @@
-use crate::github::graphql::{github_schema::github_schema as schema, types::GitObjectId};
+use crate::github::graphql::{schema::github_schema as schema, types::GitObjectId};
 
 /// <https://docs.github.com/graphql/reference/input-objects#createrefinput>
 #[derive(cynic::QueryVariables)]
@@ -34,6 +34,13 @@ pub struct Ref {
 #[derive(cynic::QueryFragment)]
 pub struct GitObject {
     pub oid: GitObjectId,
+}
+
+impl From<GitObject> for GitObjectId {
+    #[inline]
+    fn from(object: GitObject) -> Self {
+        object.oid
+    }
 }
 
 #[cfg(test)]

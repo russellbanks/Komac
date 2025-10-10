@@ -1,9 +1,7 @@
 use chrono::{DateTime, Utc};
 use url::Url;
 
-use crate::github::graphql::{
-    get_branches::PullRequestState, github_schema::github_schema as schema,
-};
+use super::{github_schema as schema, types::PullRequestState};
 
 #[derive(cynic::QueryVariables)]
 pub struct GetExistingPullRequestVariables<'a> {

@@ -7,9 +7,14 @@ pub mod get_current_user_login;
 pub mod get_directory_content;
 pub mod get_directory_content_with_text;
 pub mod get_existing_pull_request;
-pub mod get_file_content;
+mod get_file_content;
 pub mod get_repository_info;
-pub mod github_schema;
 pub mod merge_upstream;
+mod schema;
 pub mod types;
 pub mod update_refs;
+
+pub use get_file_content::GetFileContent;
+pub use schema::github_schema;
+
+pub const GRAPHQL_URL: &'static str = "https://api.github.com/graphql";

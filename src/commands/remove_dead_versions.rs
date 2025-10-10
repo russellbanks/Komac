@@ -24,7 +24,7 @@ use winget_types::{
 
 use crate::{
     commands::utils::SPINNER_SLOW_TICK_RATE,
-    github::{github_client::GitHub, graphql::get_branches::PullRequestState},
+    github::{github_client::GitHub, graphql::types::PullRequestState},
     prompts::text::confirm_prompt,
     token::{TokenManager, default_headers},
 };

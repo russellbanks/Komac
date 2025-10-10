@@ -1,7 +1,4 @@
-use crate::github::graphql::{
-    get_directory_content::GetDirectoryContentVariablesFields,
-    github_schema::github_schema as schema,
-};
+use super::{get_directory_content::GetDirectoryContentVariablesFields, github_schema as schema};
 
 #[derive(cynic::QueryFragment)]
 pub struct Tree {
@@ -74,7 +71,7 @@ mod tests {
     use indoc::indoc;
 
     use crate::github::{
-        github_client::{MICROSOFT, WINGET_PKGS},
+        MICROSOFT, WINGET_PKGS,
         graphql::{
             get_directory_content::GetDirectoryContentVariables,
             get_directory_content_with_text::GetDirectoryContentWithText,
@@ -104,11 +101,11 @@ mod tests {
             }
         "#};
 
-        let operation = GetDirectoryContentWithText::build(GetDirectoryContentVariables {
-            owner: MICROSOFT,
-            name: WINGET_PKGS,
-            expression: "",
-        });
+        let operation = GetDirectoryContentWithText::build(GetDirectoryContentVariables::new(
+            &MICROSOFT,
+            &WINGET_PKGS,
+            &"",
+        ));
 
         assert_eq!(operation.query, GET_DIRECTORY_CONTENT_WITH_TEXT_QUERY);
     }

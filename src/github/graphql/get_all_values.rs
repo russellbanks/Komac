@@ -1,6 +1,6 @@
 use url::Url;
 
-use crate::github::graphql::{github_schema::github_schema as schema, types::Html};
+use super::{github_schema as schema, types::Html};
 
 #[derive(cynic::QueryVariables)]
 pub struct GetAllValuesVariables<'a> {
@@ -102,7 +102,7 @@ mod tests {
     use indoc::indoc;
 
     use crate::github::{
-        github_client::{MICROSOFT, WINGET_PKGS},
+        MICROSOFT, WINGET_PKGS,
         graphql::get_all_values::{GetAllValues, GetAllValuesVariables},
     };
 

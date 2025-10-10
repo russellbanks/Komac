@@ -11,7 +11,7 @@ use reqwest::{Client, ClientBuilder, Response, header::HeaderValue, redirect::Po
 use uuid::Uuid;
 use winget_types::installer::VALID_FILE_EXTENSIONS;
 
-use crate::{github::github_client::GITHUB_HOST, manifests::Url};
+use crate::{github::GITHUB_HOST, manifests::Url};
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Download(Url);
