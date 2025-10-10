@@ -50,7 +50,7 @@ impl PackagePath {
         Self(result)
     }
 
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         self.0.as_str()
     }
 }

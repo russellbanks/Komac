@@ -24,7 +24,7 @@ use winget_types::{
 
 use crate::{
     commands::utils::SPINNER_SLOW_TICK_RATE,
-    github::{github_client::GitHub, graphql::get_branches::PullRequestState},
+    github::client::GitHub,
     prompts::text::confirm_prompt,
     token::{TokenManager, default_headers},
 };
@@ -300,7 +300,7 @@ async fn confirm_removal(
     if let Some(pull_request) = github
         .get_existing_pull_request(identifier, version)
         .await?
-        && pull_request.state == PullRequestState::Open
+        && pull_request.is_open()
     {
         println!(
             "{identifier} {version} returned {} in all its InstallerUrls but there is already {} pull request for this version that was created on {} at {}.",

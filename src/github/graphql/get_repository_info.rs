@@ -1,11 +1,18 @@
 use url::Url;
 
-use crate::github::graphql::{github_schema::github_schema as schema, types::GitObjectId};
+use super::{github_schema as schema, types::GitObjectId};
 
 #[derive(cynic::QueryVariables)]
 pub struct RepositoryVariables<'a> {
     pub owner: &'a str,
     pub name: &'a str,
+}
+
+impl<'a> RepositoryVariables<'a> {
+    #[inline]
+    pub const fn new(owner: &'a str, name: &'a str) -> Self {
+        RepositoryVariables { owner, name }
+    }
 }
 
 #[derive(cynic::QueryFragment)]
@@ -70,7 +77,7 @@ mod tests {
     use indoc::indoc;
 
     use crate::github::{
-        github_client::{MICROSOFT, WINGET_PKGS},
+        MICROSOFT, WINGET_PKGS,
         graphql::get_repository_info::{GetRepositoryInfo, RepositoryVariables},
     };
 

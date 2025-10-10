@@ -1,6 +1,7 @@
+use bon::Builder;
 use url::Url;
 
-use crate::github::graphql::github_schema::github_schema as schema;
+use super::github_schema as schema;
 
 #[derive(cynic::QueryVariables)]
 pub struct CreatePullRequestVariables<'a> {
@@ -27,7 +28,7 @@ pub struct PullRequest {
 }
 
 /// <https://docs.github.com/graphql/reference/input-objects#createpullrequestinput>
-#[derive(cynic::InputObject)]
+#[derive(Builder, cynic::InputObject)]
 pub struct CreatePullRequestInput<'a> {
     pub base_ref_name: &'a str,
     #[cynic(skip_serializing_if = "Option::is_none")]
@@ -48,9 +49,7 @@ mod tests {
     use cynic::{Id, MutationBuilder};
     use indoc::indoc;
 
-    use crate::github::graphql::create_pull_request::{
-        CreatePullRequest, CreatePullRequestInput, CreatePullRequestVariables,
-    };
+    use super::{CreatePullRequest, CreatePullRequestInput, CreatePullRequestVariables};
 
     #[test]
     fn create_commit_output() {

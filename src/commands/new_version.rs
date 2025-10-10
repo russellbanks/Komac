@@ -37,7 +37,8 @@ use crate::{
     download::Downloader,
     download_file::process_files,
     github::{
-        github_client::{GITHUB_HOST, GitHub, WINGET_PKGS_FULL_NAME},
+        GITHUB_HOST, WINGET_PKGS_FULL_NAME,
+        client::GitHub,
         utils::{PackagePath, pull_request::pr_changes},
     },
     manifests::{Manifests, Url},

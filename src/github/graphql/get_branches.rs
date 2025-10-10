@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use url::Url;
 
-use crate::github::graphql::github_schema::github_schema as schema;
+use super::{github_schema as schema, types::PullRequestState};
 
 #[derive(cynic::QueryVariables)]
 pub struct GetBranchesVariables<'a> {
@@ -87,37 +87,13 @@ pub struct PullRequestRepository {
     pub name_with_owner: String,
 }
 
-/// <https://docs.github.com/graphql/reference/enums#pullrequeststate>
-#[derive(cynic::Enum, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum PullRequestState {
-    Closed,
-    Merged,
-    Open,
-}
-
-impl Display for PullRequestState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Merged => "a merged",
-                Self::Open => "an open",
-                Self::Closed => "a closed",
-            }
-        )
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use cynic::QueryBuilder;
     use indoc::indoc;
 
-    use crate::github::{
-        github_client::{MICROSOFT, WINGET_PKGS},
-        graphql::get_branches::{GetBranches, GetBranchesVariables},
-    };
+    use super::{GetBranches, GetBranchesVariables};
+    use crate::github::{MICROSOFT, WINGET_PKGS};
 
     #[test]
     fn get_branches_query_output() {

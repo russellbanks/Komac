@@ -11,7 +11,7 @@ use tokio::{time::sleep, try_join};
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
-    github::github_client::{GitHub, WINGET_PKGS, WINGET_PKGS_FULL_NAME},
+    github::{WINGET_PKGS, WINGET_PKGS_FULL_NAME, client::GitHub},
     terminal::Hyperlinkable,
     token::TokenManager,
 };

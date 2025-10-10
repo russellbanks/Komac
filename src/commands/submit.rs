@@ -14,7 +14,8 @@ use winget_types::{GenericManifest, ManifestType};
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, SubmitOption},
     github::{
-        github_client::{GitHub, WINGET_PKGS_FULL_NAME},
+        WINGET_PKGS_FULL_NAME,
+        client::GitHub,
         utils::{PackagePath, pull_request::pr_changes},
     },
     manifests::{Manifests, manifest::Manifest},
@@ -22,7 +23,6 @@ use crate::{
     terminal::Hyperlinkable,
     token::TokenManager,
 };
-
 #[derive(Parser)]
 pub struct Submit {
     #[arg(value_hint = clap::ValueHint::DirPath)]

@@ -27,7 +27,8 @@ use crate::{
     download::Downloader,
     download_file::process_files,
     github::{
-        github_client::{GITHUB_HOST, GitHub, GitHubError, GitHubValues, WINGET_PKGS_FULL_NAME},
+        GITHUB_HOST, GitHubError, WINGET_PKGS_FULL_NAME,
+        client::{GitHub, GitHubValues},
         utils::{PackagePath, pull_request::pr_changes},
     },
     installers::zip::Zip,

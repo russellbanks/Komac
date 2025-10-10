@@ -10,8 +10,8 @@ use inquire::MultiSelect;
 use owo_colors::OwoColorize;
 
 use crate::{
-    commands::utils::SPINNER_TICK_RATE, github::github_client::GitHub,
-    prompts::handle_inquire_error, token::TokenManager,
+    commands::utils::SPINNER_TICK_RATE, github::client::GitHub, prompts::handle_inquire_error,
+    token::TokenManager,
 };
 
 /// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to
@@ -102,8 +102,10 @@ impl Cleanup {
         ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
+        let branches_count = branches_to_delete.len();
+
         github
-            .delete_branches(&repository_id, &branches_to_delete)
+            .delete_branches(&repository_id, branches_to_delete)
             .await?;
 
         pb.finish_and_clear();
@@ -111,7 +113,7 @@ impl Cleanup {
         println!(
             "{} deleted {} selected {branch_label}",
             "Successfully".green(),
-            branches_to_delete.len().blue(),
+            branches_count.blue(),
         );
 
         Ok(())

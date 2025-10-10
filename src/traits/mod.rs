@@ -13,7 +13,7 @@ use winget_types::{
 };
 use yara_x::mods::pe::Machine;
 
-use crate::github::{github_client::GitHubValues, graphql::types::Html};
+use crate::github::{client::GitHubValues, graphql::types::Html};
 
 pub mod name;
 pub mod path;

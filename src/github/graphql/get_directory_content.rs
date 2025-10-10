@@ -1,10 +1,34 @@
-use crate::github::graphql::github_schema::github_schema as schema;
+use std::fmt;
+
+use bon::bon;
+use color_eyre::eyre::eyre;
+use cynic::{GraphQlResponse, QueryBuilder, http::ReqwestExt};
+
+use super::{
+    super::{GitHubError, MICROSOFT, WINGET_PKGS, client::GitHub, utils::PackagePath},
+    GRAPHQL_URL, GetFileContent, github_schema as schema,
+};
 
 #[derive(cynic::QueryVariables)]
 pub struct GetDirectoryContentVariables<'a> {
-    pub owner: &'a str,
-    pub name: &'a str,
-    pub expression: &'a str,
+    owner: &'a str,
+    name: &'a str,
+    expression: &'a str,
+}
+
+impl<'a> GetDirectoryContentVariables<'a> {
+    pub fn new<O, N, E>(owner: &'a O, name: &'a N, expression: &'a E) -> Self
+    where
+        O: AsRef<str>,
+        N: AsRef<str>,
+        E: AsRef<str>,
+    {
+        Self {
+            owner: owner.as_ref(),
+            name: name.as_ref(),
+            expression: expression.as_ref(),
+        }
+    }
 }
 
 #[derive(cynic::QueryFragment)]
@@ -49,14 +73,69 @@ impl TreeGitObject {
     }
 }
 
+#[bon]
+impl GitHub {
+    pub async fn get_file_content<O, R, P>(
+        &self,
+        owner: O,
+        repo: R,
+        path: P,
+    ) -> Result<String, GitHubError>
+    where
+        O: AsRef<str>,
+        R: AsRef<str>,
+        P: fmt::Display,
+    {
+        let GraphQlResponse { data, errors } = self
+            .0
+            .post(GRAPHQL_URL)
+            .run_graphql(GetFileContent::build(GetDirectoryContentVariables::new(
+                &owner,
+                &repo,
+                &format!("HEAD:{path}"),
+            )))
+            .await?;
+
+        data.and_then(|data| data.repository?.object?.into_blob_text())
+            .ok_or_else(|| GitHubError::graphql_errors(eyre!("failed to get {path}"), errors))
+    }
+
+    #[builder]
+    pub async fn get_directory_content(
+        &self,
+        #[builder(default = MICROSOFT)] owner: &str,
+        #[builder(default = WINGET_PKGS)] repo: &str,
+        #[builder(default = "HEAD")] branch_name: &str,
+        path: &PackagePath,
+    ) -> Result<impl Iterator<Item = String>, GitHubError> {
+        let GraphQlResponse { data, errors } = self
+            .0
+            .post(GRAPHQL_URL)
+            .run_graphql(GetDirectoryContent::build(
+                GetDirectoryContentVariables::new(&owner, &repo, &format!("{branch_name}:{path}")),
+            ))
+            .await?;
+        let entries = data
+            .and_then(|data| data.repository?.object?.into_entries())
+            .ok_or_else(|| {
+                GitHubError::graphql_errors(
+                    eyre!("failed to get {path} in {branch_name} from {owner}/{repo}"),
+                    errors,
+                )
+            })?;
+
+        Ok(entries.into_iter().filter_map(|entry| entry.path))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use cynic::QueryBuilder;
     use indoc::indoc;
 
-    use crate::github::{
-        github_client::{MICROSOFT, WINGET_PKGS},
-        graphql::get_directory_content::{GetDirectoryContent, GetDirectoryContentVariables},
+    use super::{
+        super::super::{MICROSOFT, WINGET_PKGS},
+        GetDirectoryContent, GetDirectoryContentVariables,
     };
 
     #[test]
@@ -76,11 +155,11 @@ mod tests {
             }
         "#};
 
-        let operation = GetDirectoryContent::build(GetDirectoryContentVariables {
-            owner: MICROSOFT,
-            name: WINGET_PKGS,
-            expression: "",
-        });
+        let operation = GetDirectoryContent::build(GetDirectoryContentVariables::new(
+            &MICROSOFT,
+            &WINGET_PKGS,
+            &"",
+        ));
 
         assert_eq!(operation.query, GET_DIRECTORY_CONTENT_QUERY);
     }
