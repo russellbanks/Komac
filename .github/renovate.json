@@ -5,5 +5,21 @@
     ":maintainLockFilesWeekly",
     ":semanticCommitsDisabled"
   ],
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        "clap",
+        "clap_complete"
+      ],
+      "groupName": "clap ecosystem"
+    },
+    {
+      "matchPackageNames": [
+        "cynic",
+        "cynic-codegen"
+      ],
+      "groupName": "cynic ecosystem"
+    }
+  ],
   "rangeStrategy": "bump"
 }
