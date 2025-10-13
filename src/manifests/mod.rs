@@ -40,11 +40,15 @@ impl Display for Manifests {
     }
 }
 
-pub fn print_changes<'a>(contents: impl Iterator<Item = &'a str>) {
+pub fn print_changes<I, S>(contents: I)
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
     let mut lock = anstream::stdout().lock();
 
     for content in contents {
-        print_manifest(&mut lock, content);
+        print_manifest(&mut lock, content.as_ref());
         let _ = writeln!(lock);
     }
 }
