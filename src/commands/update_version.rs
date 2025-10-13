@@ -40,6 +40,7 @@ use crate::{
 };
 
 /// Add a version to a pre-existing package
+#[expect(clippy::struct_excessive_bools)]
 #[derive(Parser)]
 pub struct UpdateVersion {
     /// The package's unique identifier

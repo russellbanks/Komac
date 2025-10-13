@@ -99,7 +99,7 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
             }
             Ok(HighlightEvent::HighlightStart(highlight)) => current_highlight = Some(highlight),
             Ok(HighlightEvent::HighlightEnd) => current_highlight = None,
-            Err(_) => continue,
+            Err(_) => {}
         }
     }
 }

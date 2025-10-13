@@ -82,16 +82,16 @@ impl<'data> Registry<'data> {
     }
 
     /// Removes the entire set of values associated with a given key from a specific registry root.
-    pub fn remove_key<K: ?Sized>(&mut self, root: RegRoot, key: &K) -> Option<Values<'data>>
+    pub fn remove_key<K>(&mut self, root: RegRoot, key: &K) -> Option<Values<'data>>
     where
         Key<'data>: Borrow<K>,
-        K: Hash + Eq,
+        K: Hash + Eq + ?Sized,
     {
         self.0.get_mut(&root)?.shift_remove(key)
     }
 
     /// Removes a specific named value from a key within a given registry root.
-    pub fn remove_value_name<K: ?Sized, N: ?Sized>(
+    pub fn remove_value_name<K, N>(
         &mut self,
         root: RegRoot,
         key: &K,
@@ -100,18 +100,18 @@ impl<'data> Registry<'data> {
     where
         Key<'data>: Borrow<K>,
         ValueName<'data>: Borrow<N>,
-        K: Hash + Eq,
-        N: Hash + Eq,
+        K: Hash + Eq + ?Sized,
+        N: Hash + Eq + ?Sized,
     {
         self.0.get_mut(&root)?.get_mut(key)?.shift_remove(name)
     }
 
     /// Removes the first occurrence of a value with the specified name across all registry roots
     /// and keys.
-    pub fn remove_value_by_name<N: ?Sized>(&mut self, name: &N) -> Option<Value<'data>>
+    pub fn remove_value_by_name<N>(&mut self, name: &N) -> Option<Value<'data>>
     where
         ValueName<'data>: Borrow<N>,
-        N: Hash + Eq,
+        N: Hash + Eq + ?Sized,
     {
         self.0.values_mut().find_map(|keys| {
             keys.values_mut()

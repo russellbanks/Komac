@@ -167,9 +167,9 @@ impl FileSystem {
         false
     }
 
-    pub fn delete_file<T: ?Sized>(&mut self, name: &T) -> bool
+    pub fn delete_file<T>(&mut self, name: &T) -> bool
     where
-        T: AsRef<str>,
+        T: AsRef<str> + ?Sized,
     {
         if let Some(file) = self.current_dir.children(&self.arena).find(|&id| {
             self.arena

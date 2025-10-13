@@ -23,10 +23,10 @@ impl<'data> Variables<'data> {
         Self(HashMap::new())
     }
 
-    pub fn get<Q: ?Sized>(&self, index: &Q) -> Option<&str>
+    pub fn get<Q>(&self, index: &Q) -> Option<&str>
     where
         usize: Borrow<Q>,
-        Q: Hash + Eq,
+        Q: Hash + Eq + ?Sized,
     {
         self.0.get(index).map(Cow::as_ref)
     }
@@ -38,10 +38,10 @@ impl<'data> Variables<'data> {
         self.0.insert(index, variable.into())
     }
 
-    pub fn remove<Q: ?Sized>(&mut self, index: &Q) -> Option<Cow<'data, str>>
+    pub fn remove<Q>(&mut self, index: &Q) -> Option<Cow<'data, str>>
     where
         usize: Borrow<Q>,
-        Q: Hash + Eq,
+        Q: Hash + Eq + ?Sized,
     {
         self.0.remove(index)
     }

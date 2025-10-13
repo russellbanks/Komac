@@ -111,7 +111,7 @@ impl RemoveDeadVersions {
         };
 
         // Set a default last PR time to before the rate limit delay to do the first PR immediately
-        let mut last_pr_time = Instant::now() - rate_limit_delay;
+        let mut last_pr_time = Instant::now().checked_sub(rate_limit_delay).unwrap();
 
         let versions = versions
             .into_iter()

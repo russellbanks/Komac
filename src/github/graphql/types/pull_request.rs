@@ -36,7 +36,7 @@ impl PullRequestState {
         matches!(self, Self::Open)
     }
 
-    pub const fn as_str(&self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::Merged => "a merged",
             Self::Open => "an open",

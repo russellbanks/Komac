@@ -23,7 +23,7 @@ pub struct UpdateRefsInput<'id> {
 
 impl<'id> UpdateRefsInput<'id> {
     #[inline]
-    pub fn new(ref_updates: Vec<RefUpdate>, repository_id: &'id cynic::Id) -> Self {
+    pub const fn new(ref_updates: Vec<RefUpdate>, repository_id: &'id cynic::Id) -> Self {
         Self {
             client_mutation_id: None,
             ref_updates,

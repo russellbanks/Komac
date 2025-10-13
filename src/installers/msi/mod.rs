@@ -68,7 +68,7 @@ impl Msi {
 
         let product_name = property_table.remove(PRODUCT_NAME);
         let manufacturer = property_table.remove(MANUFACTURER);
-        let product_version = if let Some(GOOGLE_CHROME) = product_name.as_deref() {
+        let product_version = if product_name.as_deref() == Some(GOOGLE_CHROME) {
             Self::get_actual_chrome_version(&msi).map(CompactString::from)
         } else {
             property_table.remove(PRODUCT_VERSION)

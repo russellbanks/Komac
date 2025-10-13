@@ -63,7 +63,7 @@ impl GitRefName {
 
     /// Returns the Git reference kind.
     #[inline]
-    pub fn kind(&self) -> GitRefKind {
+    pub const fn kind(&self) -> GitRefKind {
         self.kind
     }
 }
@@ -97,7 +97,7 @@ impl FromStr for GitRefName {
             .ok_or_else(|| Self::Err::InvalidFormat(s.into()))?
             .parse()?;
 
-        Ok(GitRefName {
+        Ok(Self {
             kind,
             name: split
                 .next()

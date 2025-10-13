@@ -20,7 +20,7 @@ impl NsVar {
                     if let Some(dir) = variables.get(&index) {
                         buf.push_str(dir);
                     } else {
-                        buf.push_str(PredefinedVar::InstDir.as_str())
+                        buf.push_str(PredefinedVar::InstDir.as_str());
                     }
                 }
                 Ok(var) => buf.push_str(var.as_str()),

@@ -33,7 +33,7 @@ impl MsixBundle {
         let bundle_manifest = from_str::<Bundle>(&appx_bundle_manifest)?;
 
         let package_family_name = PackageFamilyName::new(
-            bundle_manifest.identity.name.to_owned(),
+            bundle_manifest.identity.name.clone(),
             &bundle_manifest.identity.publisher,
         );
 

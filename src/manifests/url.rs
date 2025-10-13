@@ -15,17 +15,17 @@ pub struct Url {
 
 impl Url {
     #[inline]
-    pub fn override_architecture(&self) -> Option<Architecture> {
+    pub const fn override_architecture(&self) -> Option<Architecture> {
         self.override_architecture
     }
 
     #[inline]
-    pub fn inner(&self) -> &DecodedUrl {
+    pub const fn inner(&self) -> &DecodedUrl {
         &self.inner
     }
 
     #[inline]
-    pub fn inner_mut(&mut self) -> &mut DecodedUrl {
+    pub const fn inner_mut(&mut self) -> &mut DecodedUrl {
         &mut self.inner
     }
 
@@ -64,7 +64,7 @@ impl FromStr for Url {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (url, architecture) = s.rsplit_once('|').unwrap_or((s, ""));
 
-        Ok(Url {
+        Ok(Self {
             inner: url.parse()?,
             override_architecture: architecture.parse().ok(),
         })

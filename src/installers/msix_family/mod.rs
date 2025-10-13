@@ -73,7 +73,7 @@ impl Msix {
                                     manifest.identity.resource_id =
                                         String::from_utf8_lossy(&attribute.value).into_owned();
                                 }
-                                _ => continue,
+                                _ => {}
                             }
                         }
                     }
@@ -145,7 +145,7 @@ impl Msix {
                             }
                         }
                     }
-                    _ => continue,
+                    _ => {}
                 },
                 Event::Eof => break,
                 _ => {}
@@ -186,7 +186,7 @@ impl Msix {
                 upgrade_behavior: Some(UpgradeBehavior::Install),
                 file_extensions: manifest.file_type_association.supported_file_types,
                 package_family_name: Some(PackageFamilyName::new(
-                    manifest.identity.name.to_owned(),
+                    manifest.identity.name.clone(),
                     &manifest.identity.publisher,
                 )),
                 capabilities: manifest.capabilities.unrestricted,

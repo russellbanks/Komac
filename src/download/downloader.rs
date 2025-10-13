@@ -198,7 +198,7 @@ impl Downloader {
         drop(hash_sender);
 
         let sha_256 = match try_join!(writer, hasher)? {
-            (Ok(_), sha_256) => sha_256,
+            (Ok(()), sha_256) => sha_256,
             (Err(err), _) => return Err(err.into()),
         };
 

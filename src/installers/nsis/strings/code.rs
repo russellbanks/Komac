@@ -5,7 +5,7 @@ use zerocopy::{Immutable, KnownLayout, TryFromBytes, ValidityError, try_transmut
 
 use crate::installers::nsis::version::NsisVersion;
 
-#[expect(dead_code)]
+#[allow(dead_code)]
 #[derive(Copy, Clone, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u8)]
 pub enum NsCode {
@@ -29,29 +29,29 @@ impl NsCode {
 
     #[inline]
     pub const fn is_lang(self) -> bool {
-        matches!(self, NsCode::LangV2 | NsCode::LangV3)
+        matches!(self, Self::LangV2 | Self::LangV3)
     }
 
     #[inline]
     pub const fn is_shell(self) -> bool {
-        matches!(self, NsCode::ShellV2 | NsCode::ShellV3)
+        matches!(self, Self::ShellV2 | Self::ShellV3)
     }
 
     #[inline]
     pub const fn is_var(self) -> bool {
-        matches!(self, NsCode::VarV2 | NsCode::VarV3)
+        matches!(self, Self::VarV2 | Self::VarV3)
     }
 
     #[inline]
     pub const fn is_skip(self) -> bool {
-        matches!(self, NsCode::SkipV2 | NsCode::SkipV3)
+        matches!(self, Self::SkipV2 | Self::SkipV3)
     }
 
     #[inline]
     pub const fn is_v3(self) -> bool {
         matches!(
             self,
-            NsCode::LangV3 | NsCode::ShellV3 | NsCode::VarV3 | NsCode::SkipV3
+            Self::LangV3 | Self::ShellV3 | Self::VarV3 | Self::SkipV3
         )
     }
 
@@ -59,7 +59,7 @@ impl NsCode {
     pub const fn is_v2(self) -> bool {
         matches!(
             self,
-            NsCode::LangV2 | NsCode::ShellV2 | NsCode::VarV2 | NsCode::SkipV2
+            Self::LangV2 | Self::ShellV2 | Self::VarV2 | Self::SkipV2
         )
     }
 
@@ -85,7 +85,7 @@ impl TryFrom<u8> for NsCode {
 }
 
 impl TryFrom<u16> for NsCode {
-    type Error = Either<TryFromIntError, ValidityError<u8, NsCode>>;
+    type Error = Either<TryFromIntError, ValidityError<u8, Self>>;
 
     fn try_from(code: u16) -> Result<Self, Self::Error> {
         u8::try_from(code)
@@ -96,7 +96,7 @@ impl TryFrom<u16> for NsCode {
 
 #[cfg(test)]
 mod tests {
-    use crate::installers::nsis::strings::code::NsCode;
+    use super::NsCode;
 
     #[test]
     fn v3() {
