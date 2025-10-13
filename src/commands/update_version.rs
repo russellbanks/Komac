@@ -29,6 +29,7 @@ use crate::{
     github::{
         GITHUB_HOST, GitHubError, WINGET_PKGS_FULL_NAME,
         client::{GitHub, GitHubValues},
+        graphql::get_existing_pull_request::PullRequest,
         utils::{PackagePath, pull_request::pr_changes},
     },
     installers::zip::Zip,
@@ -122,15 +123,7 @@ impl UpdateVersion {
 
         let replace_version = self.resolve_replace_version(&versions, latest_version)?;
 
-        if let Some(pull_request) = existing_pr
-            && !self.skip_pr_check
-            && !self.dry_run
-            && !prompt_existing_pull_request(
-                &self.package_identifier,
-                &self.package_version,
-                &pull_request,
-            )?
-        {
+        if self.should_abort_for_existing_pr(existing_pr)? {
             return Ok(());
         }
 
@@ -309,6 +302,25 @@ impl UpdateVersion {
         }
 
         Ok(replace_version)
+    }
+
+    fn should_abort_for_existing_pr<T>(&self, existing_pr: T) -> Result<bool>
+    where
+        T: Into<Option<PullRequest>>,
+    {
+        if let Some(ref pull_request) = existing_pr.into()
+            && !self.skip_pr_check
+            && !self.dry_run
+            && !prompt_existing_pull_request(
+                &self.package_identifier,
+                &self.package_version,
+                pull_request,
+            )?
+        {
+            return Ok(true);
+        }
+
+        Ok(false)
     }
 
     async fn fetch_github_values(
