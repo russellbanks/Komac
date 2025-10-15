@@ -18,12 +18,39 @@ jobs:
 
       - name: Download latest GitHub GraphQL Schema
         run: |
-          curl --location \
-            --output assets/github.graphql \
+          curl \
+            --location \
             --fail \
             --silent \
             --show-error \
+            --dump-header headers.txt \
+            --output assets/github.graphql \
             https://docs.github.com/public/fpt/schema.docs.graphql
+
+
+      - name: Get last modified date
+        id: schema_last_modified
+        run: |
+          last_modified=$(
+            grep --ignore-case '^last-modified:' headers.txt 2>/dev/null \
+              | sed --expression 's/^[Ll]ast-[Mm]odified:[[:space:]]*//' \
+              | tr --delete '\r'
+          )
+          
+          rm --force headers.txt
+          
+          if [ -n "$last_modified" ]; then
+            echo "Schema Last-Modified header: ${last_modified}"
+            if ! last_modified=$(date --utc --date "$last_modified" '+%A %d %b %Y %H:%M:%S' 2>/dev/null); then
+              echo "Failed to parse Last-Modified date, using current UTC time"
+              last_modified=$(date --utc '+%A %d %b %Y %H:%M:%S')
+            fi
+          else
+            echo "No Last-Modified header found, using current UTC time"
+            last_modified=$(date --utc '+%A %d %b %Y %H:%M:%S')
+          fi
+          
+          echo "LAST_MODIFIED=${last_modified}" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
@@ -31,4 +58,4 @@ jobs:
           commit-message: "Update GitHub GraphQL Schema"
           branch: update-github-graphql-schema
           title: "Update GitHub GraphQL Schema"
-          body: "This is an automated pull request to update the local GitHub GraphQL schema"
+          body: "This is an automated pull request to update the local GitHub GraphQL schema as of ${{ steps.schema_last_modified.outputs.LAST_MODIFIED }}"
