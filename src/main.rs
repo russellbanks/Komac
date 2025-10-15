@@ -42,22 +42,7 @@ async fn main() -> Result<()> {
         .display_env_section(false)
         .install()?;
 
-    let indicatif_layer = IndicatifLayer::new();
-
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::fmt::layer()
-                .with_writer(indicatif_layer.get_stderr_writer())
-                .with_target(cfg!(debug_assertions))
-                .without_time(),
-        )
-        .with(indicatif_layer)
-        .with(
-            filter::Targets::new()
-                .with_default(LevelFilter::INFO)
-                .with_target(crate_name!(), Level::TRACE),
-        )
-        .init();
+    setup_logging();
 
     match Cli::parse().command {
         Commands::New(new_version) => new_version.run().await,
@@ -76,6 +61,25 @@ async fn main() -> Result<()> {
         Commands::RemoveDeadVersions(remove_dead_versions) => remove_dead_versions.run().await,
         Commands::Submit(submit) => submit.run().await,
     }
+}
+
+fn setup_logging() {
+    let indicatif_layer = IndicatifLayer::new();
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(indicatif_layer.get_stderr_writer())
+                .with_target(cfg!(debug_assertions))
+                .without_time(),
+        )
+        .with(indicatif_layer)
+        .with(
+            filter::Targets::new()
+                .with_default(LevelFilter::INFO)
+                .with_target(crate_name!(), Level::TRACE),
+        )
+        .init();
 }
 
 #[derive(Parser)]
