@@ -49,11 +49,13 @@ jobs:
   publish_dry_run:
     name: Publish dry run
     runs-on: ubuntu-latest
-    container: rust:alpine
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Publish dry run
         run: cargo publish --dry-run --no-verify
