@@ -21,6 +21,7 @@ use winget_types::{
 };
 
 use crate::{
+    analysis::installers::Zip,
     commands::utils::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
     },
@@ -32,7 +33,6 @@ use crate::{
         graphql::get_existing_pull_request::PullRequest,
         utils::{PackagePath, pull_request::pr_changes},
     },
-    installers::zip::Zip,
     manifests::Url,
     match_installers::match_installers,
     terminal::Hyperlinkable,
@@ -128,7 +128,7 @@ impl UpdateVersion {
         }
 
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
-        let (mut manifests, mut github_values, mut files) = tokio::try_join!(
+        let (mut manifests, mut github_values, mut files) = try_join!(
             github
                 .get_manifests(&self.package_identifier, latest_version)
                 .map_err(Error::new),

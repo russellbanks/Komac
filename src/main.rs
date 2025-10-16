@@ -21,13 +21,12 @@ use crate::commands::{
     update_version::UpdateVersion,
 };
 
+mod analysis;
 mod commands;
 mod download;
 mod download_file;
 mod editor;
-mod file_analyser;
 mod github;
-mod installers;
 mod manifests;
 mod match_installers;
 mod prompts;

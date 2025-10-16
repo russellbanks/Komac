@@ -5,11 +5,11 @@ use futures_util::{StreamExt, TryStreamExt, stream};
 use tracing::debug;
 use winget_types::{installer::Architecture, url::DecodedUrl};
 
-use crate::{download::DownloadedFile, file_analyser::FileAnalyser};
+use crate::{analysis::Analyzer, download::DownloadedFile};
 
 pub async fn process_files(
     files: &mut [DownloadedFile],
-) -> Result<HashMap<DecodedUrl, FileAnalyser<'_>>> {
+) -> Result<HashMap<DecodedUrl, Analyzer<'_>>> {
     stream::iter(files.iter_mut().map(
         |DownloadedFile {
              url,
@@ -19,7 +19,7 @@ pub async fn process_files(
              last_modified,
              ..
          }| async move {
-            let mut file_analyser = FileAnalyser::new(mmap, file_name)?;
+            let mut file_analyser = Analyzer::new(mmap, file_name)?;
             let architecture = url
                 .override_architecture()
                 .or_else(|| Architecture::from_url(url.as_str()));
