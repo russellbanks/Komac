@@ -8,7 +8,7 @@ use memmap2::Mmap;
 use sha2::{Digest, Sha256};
 use winget_types::Sha256String;
 
-use crate::{file_analyser::FileAnalyser, manifests::print_manifest};
+use crate::{analysis::Analyzer, manifests::print_manifest};
 
 /// Analyses a file and outputs information about it
 #[derive(Parser)]
@@ -45,7 +45,7 @@ impl Analyse {
             .file_path
             .file_name()
             .unwrap_or_else(|| self.file_path.as_str());
-        let mut analyser = FileAnalyser::new(&mmap, file_name)?;
+        let mut analyser = Analyzer::new(&mmap, file_name)?;
         if self.hash {
             let sha_256 = Sha256String::from_digest(&Sha256::digest(&mmap));
             for installer in &mut analyser.installers {

@@ -1,5 +1,9 @@
+mod ascii_ext;
+pub mod name;
+pub mod path;
 use std::{collections::HashMap, mem, sync::LazyLock};
 
+pub use ascii_ext::AsciiExt;
 use html2text::render::{TaggedLine, TextDecorator};
 pub use name::Name;
 use regex::Regex;
@@ -14,9 +18,6 @@ use winget_types::{
 use yara_x::mods::pe::Machine;
 
 use crate::github::{client::GitHubValues, graphql::types::Html};
-
-pub mod name;
-pub mod path;
 
 pub trait FromMachine {
     fn from_machine(machine: Machine) -> Self;
