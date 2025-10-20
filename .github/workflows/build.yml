@@ -85,14 +85,3 @@ jobs:
       - name: Find actual MSRV
         if: ${{ failure() && steps.verify.conclusion == 'failure' }}
         run: cargo msrv find
-
-  unused_dependencies:
-    name: Unused dependencies
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Check for unused dependencies
-        uses: bnjbvr/cargo-machete@main

@@ -1,4 +1,4 @@
-name: Security audit
+name: Audit
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
 jobs:
   security_audit:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -17,3 +18,14 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ignore: RUSTSEC-2023-0071,RUSTSEC-2024-0436
+
+  unused_dependencies:
+    name: Unused dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check for unused dependencies
+        uses: bnjbvr/cargo-machete@main
