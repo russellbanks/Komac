@@ -1,4 +1,5 @@
-extern crate core;
+#[cfg(all(feature = "openssl", feature = "rustls"))]
+compile_error!("`openssl` and `rustls` are mutually exclusive. Please enable only one.");
 
 use clap::{Parser, Subcommand, crate_name};
 use color_eyre::eyre::Result;
