@@ -54,7 +54,7 @@ impl Exe {
                         .iter()
                         .any(|keyword| value.contains(keyword))
                 }) {
-                    Some(InstallerType::Exe)
+                Some(InstallerType::Exe)
             } else {
                 Some(InstallerType::Portable)
             },

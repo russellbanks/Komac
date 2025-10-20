@@ -12,7 +12,7 @@ use indextree::{Arena, Node, NodeId};
 pub use item::Item;
 use itertools::{Either, Itertools, Position};
 
-use super::strings::PredefinedVar;
+use super::{entry::DelFlags, strings::PredefinedVar};
 
 pub struct FileSystem {
     arena: Arena<Item>,
@@ -167,18 +167,64 @@ impl FileSystem {
         false
     }
 
-    pub fn delete_file<T>(&mut self, name: &T) -> bool
+    pub fn delete<T>(&mut self, name: T, flags: DelFlags) -> bool
     where
-        T: AsRef<str> + ?Sized,
+        T: AsRef<str> + Sized,
     {
-        if let Some(file) = self.current_dir.children(&self.arena).find(|&id| {
-            self.arena
-                .get(id)
-                .map(Node::get)
-                .is_some_and(|item| item.is_file() && item.name() == name.as_ref())
-        }) {
-            file.remove(&mut self.arena);
-            return true;
+        let name = name.as_ref();
+
+        if flags.contains(DelFlags::SIMPLE) {
+            if let Some(file) = self.current_dir.children(&self.arena).find(|&id| {
+                self.arena
+                    .get(id)
+                    .map(Node::get)
+                    .is_some_and(|item| item.is_file() && item.name() == name)
+            }) {
+                file.remove(&mut self.arena);
+                return true;
+            }
+        } else if flags.contains(DelFlags::DIRECTORY) {
+            let mut current = self.root;
+
+            for component in Self::parse_path(&name) {
+                match component {
+                    Utf8Component::RootDir => current = self.root,
+                    Utf8Component::ParentDir => {
+                        if let Some(parent) = self.arena.get(current).and_then(Node::parent) {
+                            current = parent;
+                        }
+                    }
+                    Utf8Component::Normal(part) => {
+                        if let Some(child) = current.children(&self.arena).find(|&id| {
+                            self.arena
+                                .get(id)
+                                .is_some_and(|node| node.get().name() == part)
+                        }) {
+                            current = child;
+                        } else {
+                            return false;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            if let Some(node) = self.arena.get(current)
+                && node.get().is_directory()
+            {
+                return if flags.contains(DelFlags::RECURSE) {
+                    current.remove_subtree(&mut self.arena);
+                    true
+                } else {
+                    // Only delete the directory if its empty
+                    if current.children(&self.arena).next().is_some() {
+                        current.remove(&mut self.arena);
+                        true
+                    } else {
+                        false
+                    }
+                };
+            }
         }
 
         false

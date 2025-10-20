@@ -1,4 +1,5 @@
 mod creation_disposition;
+mod del_flags;
 mod exec_flag;
 mod generic_access_rights;
 mod push_pop;
@@ -14,10 +15,11 @@ use std::{
 
 use chrono::DateTime;
 use compact_str::{ToCompactString, format_compact};
+pub use del_flags::DelFlags;
 use nt_time::FileTime;
 use thiserror::Error;
 use tracing::debug;
-use zerocopy::{I32, Immutable, KnownLayout, LE, TryFromBytes, U16, U64, transmute_ref};
+use zerocopy::{I32, Immutable, KnownLayout, LE, TryFromBytes, U16, U64, transmute};
 
 use super::{
     entry::{
@@ -25,10 +27,11 @@ use super::{
         generic_access_rights::GenericAccessRights, push_pop::PushPop, seek_from::SeekFrom,
         show_window::ShowWindow, window_message::WindowMessage,
     },
+    file_system::RelativeLocation,
     registry::RegType,
     state::NsisState,
 };
-use crate::analysis::installers::{nsis::file_system::RelativeLocation, utils::registry::RegRoot};
+use crate::analysis::installers::utils::registry::RegRoot;
 
 #[derive(Debug, Error)]
 pub enum EntryError {
@@ -121,7 +124,7 @@ pub enum Entry {
     } = 20u32.to_le(),
     DeleteFile {
         filename: I32<LE>,
-        reboot_ok: I32<LE>,
+        flags: DelFlags,
     } = 21u32.to_le(),
     MessageBox {
         mb_flags: I32<LE>,
@@ -129,7 +132,7 @@ pub enum Entry {
     } = 22u32.to_le(),
     RemoveDir {
         path: I32<LE>,
-        recursive: I32<LE>,
+        flags: DelFlags,
     } = 23u32.to_le(),
     StrLen {
         output: I32<LE>,
@@ -605,21 +608,19 @@ impl Entry {
                     .file_system
                     .create_file(&*name, date, position.get().unsigned_abs());
             }
-            Self::DeleteFile {
-                filename,
-                reboot_ok: _reboot_ok,
-            } => {
+            Self::DeleteFile { filename, flags } => {
                 let filename = state.get_string(filename.get());
                 debug!(r#"Delete: "{filename}""#);
-                state.file_system.delete_file(&*filename);
+                state.file_system.delete(filename, *flags);
             }
             Self::MessageBox { mb_flags, text } => {
                 let text = state.get_string(text.get());
                 debug!(r#"MessageBox: {}, "{text}""#, mb_flags);
             }
-            Self::RemoveDir { path, recursive } => {
+            Self::RemoveDir { path, flags } => {
                 let path = state.get_string(path.get());
-                debug!(r#"RMDir: "{path}", recursive={recursive}"#);
+                debug!(r#"RMDir: "{path}""#);
+                state.file_system.delete(path, *flags);
             }
             Self::StrLen { output, input } => {
                 let input = state.get_string(input.get());
@@ -637,8 +638,8 @@ impl Entry {
             } => {
                 let mut result = state.get_string(string_offset.get());
                 let mut start = start_position.get();
-                let [low, high]: &[U16<LE>; 2] = transmute_ref!(max_length);
-                let new_length = if high == &U16::ZERO {
+                let [low, high]: [U16<LE>; 2] = transmute!(*max_length);
+                let new_length = if high == U16::ZERO {
                     result.len()
                 } else {
                     usize::from(low.get())
