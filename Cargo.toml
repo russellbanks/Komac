@@ -103,7 +103,7 @@ cynic-codegen = { version = "3.12.0", features = ["rkyv"] }
 windows_exe_info = { version = "0.5.2", features = ["manifest"] }
 
 [dev-dependencies]
-indoc = "2.0.6"
+indoc = "2.0.7"
 rstest = "0.26.1"
 
 [package.metadata.generate-rpm]
