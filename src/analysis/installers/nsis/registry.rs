@@ -125,7 +125,7 @@ impl Registry {
     }
 }
 
-/// <https://github.com/kichik/nsis/blob/HEAD/Source/Platform.h#L672>
+/// <https://github.com/NSIS-Dev/nsis/blob/HEAD/Source/Platform.h#L672>
 #[expect(dead_code)]
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
@@ -137,4 +137,39 @@ pub enum RegType {
     Binary = 3u32.to_le(),
     DWord = 4u32.to_le(),
     MultiString = 5u32.to_le(),
+}
+
+impl RegType {
+    #[expect(unused)]
+    #[inline]
+    pub const fn is_none(self) -> bool {
+        matches!(self, Self::None)
+    }
+
+    #[inline]
+    pub const fn is_string(self) -> bool {
+        matches!(self, Self::String)
+    }
+
+    #[expect(unused)]
+    #[inline]
+    pub const fn is_expanded_string(self) -> bool {
+        matches!(self, Self::ExpandedString)
+    }
+
+    #[inline]
+    pub const fn is_binary(self) -> bool {
+        matches!(self, Self::Binary)
+    }
+
+    #[inline]
+    pub const fn is_dword(self) -> bool {
+        matches!(self, Self::DWord)
+    }
+
+    #[expect(unused)]
+    #[inline]
+    pub const fn is_multi_string(self) -> bool {
+        matches!(self, Self::MultiString)
+    }
 }

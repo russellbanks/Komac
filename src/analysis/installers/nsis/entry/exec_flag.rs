@@ -1,10 +1,13 @@
-use std::fmt;
+use std::{
+    fmt,
+    ops::{Index, IndexMut},
+};
 
-use zerocopy::{Immutable, KnownLayout, TryFromBytes};
+use strum::EnumCount;
+use zerocopy::{FromBytes, FromZeros, I32, Immutable, KnownLayout, LE, TryFromBytes};
 
-/// <https://github.com/kichik/nsis/blob/v311/Source/exehead/api.h#L41>
 #[expect(dead_code)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable, EnumCount)]
 #[repr(u32)]
 pub enum ExecFlag {
     AutoClose = 0u32,
@@ -48,5 +51,38 @@ impl fmt::Display for ExecFlag {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
+    }
+}
+
+/// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/api.h#L41>
+#[derive(Copy, Clone, Debug, FromBytes, KnownLayout, Immutable)]
+#[repr(transparent)]
+pub struct ExecFlags([I32<LE>; ExecFlag::COUNT]);
+
+impl ExecFlags {
+    #[inline]
+    pub fn new() -> Self {
+        Self::new_zeroed()
+    }
+}
+
+impl Index<ExecFlag> for ExecFlags {
+    type Output = I32<LE>;
+
+    fn index(&self, r#type: ExecFlag) -> &Self::Output {
+        self.0.index(r#type as usize)
+    }
+}
+
+impl IndexMut<ExecFlag> for ExecFlags {
+    fn index_mut(&mut self, r#type: ExecFlag) -> &mut Self::Output {
+        self.0.index_mut(r#type as usize)
+    }
+}
+
+impl Default for ExecFlags {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -4,11 +4,11 @@ use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
 use tracing::debug;
 use yara_x::mods::PE;
-use zerocopy::{FromBytes, LE, TryFromBytes, U16};
+use zerocopy::{FromBytes, I32, LE, TryFromBytes, U16};
 
 use super::{
     Variables,
-    entry::{Entry, EntryError},
+    entry::{Entry, EntryError, ExecFlags},
 };
 use crate::analysis::installers::nsis::{
     NsisError,
@@ -31,6 +31,9 @@ pub struct NsisState<'data> {
     pub variables: Variables<'data>,
     pub registry: Registry,
     pub file_system: FileSystem,
+    pub exec_flags: ExecFlags,
+    pub last_used_exec_flags: ExecFlags,
+    pub status_up_hack: I32<LE>,
     version: NsisVersion,
 }
 
@@ -50,6 +53,9 @@ impl<'data> NsisState<'data> {
             variables: Variables::new(),
             registry: Registry::new(),
             file_system: FileSystem::new(),
+            exec_flags: ExecFlags::new(),
+            last_used_exec_flags: ExecFlags::new(),
+            status_up_hack: I32::ZERO,
             version: NsisVersion::default(),
         };
 

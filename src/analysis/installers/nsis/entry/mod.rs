@@ -15,28 +15,28 @@ use std::{
 
 use chrono::DateTime;
 use compact_str::{ToCompactString, format_compact};
+use creation_disposition::CreationDisposition;
 pub use del_flags::DelFlags;
+pub use exec_flag::{ExecFlag, ExecFlags};
+use generic_access_rights::GenericAccessRights;
 use nt_time::FileTime;
+use push_pop::PushPop;
+use seek_from::SeekFrom;
+use show_window::ShowWindow;
 use thiserror::Error;
 use tracing::debug;
+use window_message::WindowMessage;
 use zerocopy::{I32, Immutable, KnownLayout, LE, TryFromBytes, U16, U64, transmute};
 
-use super::{
-    entry::{
-        creation_disposition::CreationDisposition, exec_flag::ExecFlag,
-        generic_access_rights::GenericAccessRights, push_pop::PushPop, seek_from::SeekFrom,
-        show_window::ShowWindow, window_message::WindowMessage,
-    },
-    file_system::RelativeLocation,
-    registry::RegType,
-    state::NsisState,
-};
+use super::{file_system::RelativeLocation, registry::RegType, state::NsisState};
 use crate::analysis::installers::utils::registry::RegRoot;
 
 #[derive(Debug, Error)]
 pub enum EntryError {
     #[error("Reached invalid entry")]
     Invalid,
+    #[error("Execution error")]
+    Execute,
     #[error("Ran into infinite loop")]
     InfiniteLoop,
 }
@@ -86,6 +86,8 @@ pub enum Entry {
     SetFlag {
         r#type: ExecFlag,
         data: I32<LE>,
+        mode: I32<LE>,
+        restore_control: I32<LE>,
     } = 13u32.to_le(),
     IfFlag {
         on: I32<LE>,
@@ -272,7 +274,7 @@ pub enum Entry {
         flags: I32<LE>,
         status_text: I32<LE>,
     } = 46u32.to_le(),
-    Reboot = 47u32.to_le(),
+    Reboot(I32<LE>) = 47u32.to_le(),
     WriteIni {
         section: I32<LE>,
         name: I32<LE>,
@@ -487,7 +489,12 @@ impl Entry {
                     Ok(jump_amount_if_not_exists.get())
                 };
             }
-            Self::SetFlag { r#type, data } => {
+            Self::SetFlag {
+                r#type,
+                data,
+                mode,
+                restore_control,
+            } => {
                 // https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L3898
 
                 let value = state.get_int(data.get());
@@ -522,20 +529,47 @@ impl Entry {
                         _ => "",
                     }
                 );
+
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L321
+                if *mode <= I32::ZERO {
+                    if *mode < I32::ZERO {
+                        state.status_up_hack = state.exec_flags[*r#type];
+                    } else {
+                        state.last_used_exec_flags[*r#type] = state.exec_flags[*r#type]
+                    }
+                    state.exec_flags[*r#type].set(value);
+                } else {
+                    state.exec_flags[*r#type] = state.last_used_exec_flags[*r#type];
+                    if *restore_control < I32::ZERO {
+                        state.exec_flags[*r#type] = state.status_up_hack
+                    }
+                }
             }
             Self::IfFlag {
                 on,
                 off,
                 r#type,
-                new_value_mask: _new_value_mask,
+                new_value_mask,
             } => {
-                debug!("If{type}Flag: {on} {off}");
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L342
+                let exec_flag = &mut state.exec_flags[*r#type];
+
+                let result = if *exec_flag == I32::ZERO {
+                    debug!("If{type}Flag: on -> {on}");
+                    on
+                } else {
+                    debug!("If{type}Flag: off -> {off}");
+                    off
+                };
+
+                *exec_flag &= *new_value_mask;
+                return Ok(result.get());
             }
             Self::GetFlag { output, r#type } => {
                 debug!("GetFlag: {type}");
                 state
                     .variables
-                    .insert(output.get() as usize, r#type.as_str());
+                    .insert(output.get() as usize, state.exec_flags[*r#type].to_string());
             }
             Self::Rename {
                 old,
@@ -909,7 +943,7 @@ impl Entry {
                 hide_window,
                 enable_window,
             } => {
-                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L892
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L892
                 if *enable_window != I32::ZERO {
                     debug!("EnableWindow");
                 } else if *hide_window != I32::ZERO {
@@ -988,10 +1022,10 @@ impl Entry {
                 icon_file,
                 create_shortcut,
             } => {
-                // https://github.com/kichik/nsis/blob/v311/Source/exehead/fileform.h#L559
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/fileform.h#L562
                 const NO_WORKING_DIRECTORY: I32<LE> = I32::new(0x8000);
 
-                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1087
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L1087
                 let link_file = state.get_string(link_file.get());
                 let target_file = state.get_string(target_file.get());
                 let icon_file = state.get_string(icon_file.get());
@@ -1011,7 +1045,7 @@ impl Entry {
                 flags,
                 status_text,
             } => {
-                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1152
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L1152
                 // https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L4505
                 debug!(
                     r#"CopyFiles {}{}"{}" -> "{}" {}"#,
@@ -1030,8 +1064,18 @@ impl Entry {
                     state.get_string(status_text.get()),
                 );
             }
-            Self::Reboot => {
+            Self::Reboot(bad_food) => {
+                // <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L1193>
+
+                const BAD_FOOD: I32<LE> = I32::new(0xbadf00d);
+
                 debug!("Reboot");
+
+                if *bad_food != BAD_FOOD {
+                    return Err(EntryError::Execute);
+                }
+
+                state.exec_flags[ExecFlag::Reboot] += 1;
             }
             Self::WriteIni {
                 section,
@@ -1059,7 +1103,7 @@ impl Entry {
                 value_name,
                 flags,
             } => {
-                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1240
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L1240
                 // https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L4558
 
                 let key_name = state.get_string(key_name.get());
@@ -1093,15 +1137,15 @@ impl Entry {
                 r#type,
                 sub_type,
             } => {
-                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1265
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L1265
 
                 let key_name = state.get_string(key_name.get());
                 let value_name = state.get_string(value_name.get());
 
-                if *r#type == RegType::String {
+                if r#type.is_string() {
                     let value = state.get_string(value.get());
 
-                    if *sub_type == RegType::String {
+                    if sub_type.is_string() {
                         debug!(r#"WriteRegStr: "{root}\{key_name}" "{value_name}"="{value}""#);
                     } else {
                         debug!(
@@ -1112,7 +1156,7 @@ impl Entry {
                     state
                         .registry
                         .insert_value(*root, key_name, value_name, value);
-                } else if *r#type == RegType::DWord {
+                } else if r#type.is_dword() {
                     let value = state.get_int(value.get());
 
                     debug!(r#"WriteRegDWORD: "{root}\{key_name}" "{value_name}"="{value}""#);
@@ -1123,7 +1167,7 @@ impl Entry {
                         value_name,
                         value.to_compact_string(),
                     );
-                } else if *r#type == RegType::Binary {
+                } else if r#type.is_binary() {
                     debug!(
                         r#"WriteReg{}: "{root}\{key_name}" "{value_name}"="{{BINARY DATA}}""#,
                         match *sub_type {
@@ -1248,9 +1292,9 @@ impl Entry {
                 icon_size: _icon_size,
                 alternative_path,
             } => {
-                // https://github.com/kichik/nsis/blob/v311/Source/exehead/exec.c#L1573
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L1573
 
-                // https://github.com/kichik/nsis/blob/v311/Source/exehead/util.c#L346
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/util.c#L346
                 fn is_path_absolute<T: AsRef<[u8]>>(path: T) -> bool {
                     let path = path.as_ref();
                     if let Some((&first, &second)) = path.first().zip(path.get(1)) {
