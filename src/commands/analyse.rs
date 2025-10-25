@@ -12,6 +12,7 @@ use crate::{analysis::Analyzer, manifests::print_manifest};
 
 /// Analyses a file and outputs information about it
 #[derive(Parser)]
+#[clap(visible_alias = "analyze")]
 pub struct Analyse {
     #[arg(value_parser = is_valid_file, value_hint = clap::ValueHint::FilePath)]
     file_path: Utf8PathBuf,
