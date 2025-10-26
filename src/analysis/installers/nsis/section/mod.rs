@@ -3,18 +3,31 @@ mod flags;
 use std::fmt;
 
 use flags::SectionFlags;
-use zerocopy::{FromBytes, I32, Immutable, KnownLayout, LittleEndian};
+use zerocopy::{FromBytes, I32, Immutable, KnownLayout, LE};
 
 #[derive(FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct Section {
-    pub name: I32<LittleEndian>,
-    pub install_types: I32<LittleEndian>,
-    pub flags: SectionFlags,
-    pub code: I32<LittleEndian>,
-    pub code_size: I32<LittleEndian>,
-    pub size_kb: I32<LittleEndian>,
-    pub rest: [u8],
+    name: I32<LE>,
+    install_types: I32<LE>,
+    flags: SectionFlags,
+    code: I32<LE>,
+    code_size: I32<LE>,
+    size_kb: I32<LE>,
+    rest: [u8],
+}
+
+impl Section {
+    /// Returns an offset to the name in the string table.
+    #[inline]
+    pub const fn name_offset(&self) -> i32 {
+        self.name.get()
+    }
+
+    #[inline]
+    pub const fn code_offset(&self) -> i32 {
+        self.code.get()
+    }
 }
 
 impl fmt::Debug for Section {

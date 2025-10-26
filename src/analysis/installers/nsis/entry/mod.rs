@@ -535,13 +535,13 @@ impl Entry {
                     if *mode < I32::ZERO {
                         state.status_up_hack = state.exec_flags[*r#type];
                     } else {
-                        state.last_used_exec_flags[*r#type] = state.exec_flags[*r#type]
+                        state.last_used_exec_flags[*r#type] = state.exec_flags[*r#type];
                     }
                     state.exec_flags[*r#type].set(value);
                 } else {
                     state.exec_flags[*r#type] = state.last_used_exec_flags[*r#type];
                     if *restore_control < I32::ZERO {
-                        state.exec_flags[*r#type] = state.status_up_hack
+                        state.exec_flags[*r#type] = state.status_up_hack;
                     }
                 }
             }
@@ -1067,7 +1067,7 @@ impl Entry {
             Self::Reboot(bad_food) => {
                 // <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L1193>
 
-                const BAD_FOOD: I32<LE> = I32::new(0xbadf00d);
+                const BAD_FOOD: I32<LE> = I32::new(0x0bad_f00d);
 
                 debug!("Reboot");
 

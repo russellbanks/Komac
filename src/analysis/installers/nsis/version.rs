@@ -4,28 +4,36 @@ use itertools::Either;
 use quick_xml::de::from_str;
 use serde::Deserialize;
 use tracing::{debug, trace};
-use yara_x::mods::{PE, pe::ResourceType::RESOURCE_TYPE_MANIFEST};
 use zerocopy::{FromBytes, LE, U16};
 
-use crate::analysis::installers::nsis::{state::NsisState, strings::code::NsCode};
+use super::{state::NsisState, strings::code::NsCode};
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
-pub struct NsisVersion(pub u8, pub u8, pub u8);
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct NsisVersion {
+    major: u8,
+    minor: u8,
+}
 
 impl NsisVersion {
+    /// Creates a new NSIS version from a major and minor part.
+    #[inline]
+    pub const fn new(major: u8, minor: u8) -> Self {
+        Self { major, minor }
+    }
+
     #[inline]
     pub const fn v3() -> Self {
-        Self(3, 0, 0)
+        Self::new(3, 0)
     }
 
     #[inline]
     pub const fn v2() -> Self {
-        Self(2, 0, 0)
+        Self::new(2, 0)
     }
 
     #[inline]
     pub const fn is_v3(self) -> bool {
-        self.0 >= 3
+        self.major >= 3
     }
 
     #[inline]
@@ -33,7 +41,7 @@ impl NsisVersion {
         !self.is_v3()
     }
 
-    pub fn from_manifest(data: &[u8], pe: &PE) -> Option<Self> {
+    pub fn from_manifest(manifest: &str) -> Option<Self> {
         #[derive(Deserialize)]
         struct Assembly<'data> {
             #[serde(borrow)]
@@ -46,22 +54,15 @@ impl NsisVersion {
             inner: &'data str,
         }
 
-        pe.resources
-            .iter()
-            .find(|resource| resource.type_() == RESOURCE_TYPE_MANIFEST)
-            .and_then(|manifest| {
-                let offset = manifest.offset() as usize;
-                data.get(offset..offset + manifest.length() as usize)
-            })
-            .and_then(|manifest_bytes| std::str::from_utf8(manifest_bytes).ok())
-            .and_then(|manifest| from_str::<Assembly>(manifest).ok())
+        from_str::<Assembly>(manifest)
+            .ok()
             .map(|assembly| assembly.description.inner)
             .inspect(|description| debug!(manifest.description = description))
             .and_then(Self::from_text)
     }
 
     pub fn from_branding_text(state: &NsisState) -> Option<Self> {
-        let branding_text = state.get_string(state.language_table.string_offsets[0].get());
+        let branding_text = state.get_string(state.language_table.branding_offset()?);
         debug!(%branding_text);
         Self::from_text(&branding_text)
     }
@@ -80,11 +81,7 @@ impl NsisVersion {
             .split('.')
             .flat_map(str::parse::<u8>);
 
-        Some(Self(
-            parts.next()?,
-            parts.next()?,
-            parts.next().unwrap_or_default(),
-        ))
+        Some(Self::new(parts.next()?, parts.next()?))
     }
 
     pub fn detect(strings_block: &[u8]) -> Self {
@@ -143,23 +140,29 @@ impl Default for NsisVersion {
 
 impl fmt::Display for NsisVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}{}", self.0, self.1, self.2)
+        write!(f, "{}.{}", self.major, self.minor)
+    }
+}
+
+impl PartialEq<f32> for NsisVersion {
+    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    fn eq(&self, other: &f32) -> bool {
+        let major = *other as u8;
+        let minor = (other.fract() * 100.0).round() as u8;
+        self.major == major && self.minor == minor
     }
 }
 
 #[cfg(test)]
 mod tests {
     use indoc::indoc;
-    use yara_x::mods::{
-        PE,
-        pe::{Resource, ResourceType::RESOURCE_TYPE_MANIFEST},
-    };
+    use rstest::rstest;
 
-    use crate::analysis::installers::nsis::version::NsisVersion;
+    use super::NsisVersion;
 
     #[test]
     fn version_from_manifest() {
-        const MANIFEST: &[u8] = indoc! {br#"
+        const MANIFEST: &str = indoc! {r#"
             <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
             <assembly
                 xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
@@ -168,20 +171,9 @@ mod tests {
             </assembly>
         "#};
 
-        let pe = PE {
-            resources: {
-                let mut resource = Resource::new();
-                resource.set_type(RESOURCE_TYPE_MANIFEST);
-                resource.set_offset(0);
-                resource.set_length(MANIFEST.len() as u32);
-                vec![resource]
-            },
-            ..PE::default()
-        };
-
         assert_eq!(
-            NsisVersion::from_manifest(MANIFEST, &pe).unwrap(),
-            NsisVersion(3, 9, 0)
+            NsisVersion::from_manifest(MANIFEST).unwrap(),
+            NsisVersion::new(3, 9)
         );
     }
 
@@ -197,5 +189,12 @@ mod tests {
         const STRINGS_BLOCK: &[u8; 25] = b"\0\xFEShell\0\xFCSkip\0\xFFLang\0\xFDVar\0";
 
         assert_eq!(NsisVersion::detect(STRINGS_BLOCK), NsisVersion::v2());
+    }
+
+    #[rstest]
+    #[case(NsisVersion::new(3, 11), 3.11)]
+    #[case(NsisVersion::new(3, 9), 3.09)]
+    fn compare_version_with_f32(#[case] nsis_version: NsisVersion, #[case] other: f32) {
+        assert_eq!(nsis_version, other);
     }
 }

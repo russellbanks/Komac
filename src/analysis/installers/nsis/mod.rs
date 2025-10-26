@@ -117,9 +117,9 @@ impl Nsis {
         for (index, section) in blocks.sections(&decompressed_data).enumerate() {
             debug!(
                 r#"Simulating code execution for section {index} "{}""#,
-                state.get_string(section.name.get())
+                state.get_string(section.name_offset())
             );
-            if let Err(invalid_entry) = state.execute_code_segment(section.code.get()) {
+            if let Err(invalid_entry) = state.execute_code_segment(section.code_offset()) {
                 error!(%invalid_entry);
             }
         }
@@ -149,7 +149,7 @@ impl Nsis {
                     .then_some(Architecture::X64)
             })
             .or_else(|| {
-                let app_name = state.get_string(state.language_table.string_offsets[2].get());
+                let app_name = state.get_string(state.language_table.name_offset()?);
                 state
                     .file_system
                     .files()

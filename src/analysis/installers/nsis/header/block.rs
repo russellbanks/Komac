@@ -13,7 +13,19 @@ use crate::analysis::installers::nsis::{NsisError, section::Section};
 #[repr(C)]
 pub struct BlockHeader {
     pub offset: U64,
-    pub num: U32,
+    num: U32,
+}
+
+impl BlockHeader {
+    #[inline]
+    pub const fn offset(&self) -> u64 {
+        self.offset.get()
+    }
+
+    #[inline]
+    pub const fn num(&self) -> u32 {
+        self.num.get()
+    }
 }
 
 #[derive(Copy, Clone, EnumCount)]
@@ -30,12 +42,12 @@ pub enum BlockType {
 
 impl BlockType {
     pub fn get<'data>(self, data: &'data [u8], blocks: &BlockHeaders) -> &'data [u8] {
-        let start = usize::try_from(blocks[self].offset.get()).unwrap();
+        let start = usize::try_from(blocks[self].offset()).unwrap();
         let end = blocks
             .iter()
             .skip(self as usize + 1)
             .find(|block_header| block_header.offset > U64::ZERO)
-            .map_or(start, |block| usize::try_from(block.offset.get()).unwrap());
+            .map_or(start, |block| usize::try_from(block.offset()).unwrap());
         &data[start..end]
     }
 }
@@ -61,7 +73,7 @@ impl BlockHeaders {
             let mut block_headers = Self::default();
             for header in &mut block_headers {
                 *header = BlockHeader {
-                    offset: U64::from(U32::read_from_io(&mut reader)?),
+                    offset: U32::read_from_io(&mut reader)?.into(),
                     num: U32::read_from_io(&mut reader)?,
                 }
             }
@@ -74,7 +86,7 @@ impl BlockHeaders {
 
     pub fn sections<'data>(&self, data: &'data [u8]) -> impl Iterator<Item = &'data Section> {
         let sections = BlockType::Sections.get(data, self);
-        let section_size = sections.len() / self[BlockType::Sections].num.get() as usize;
+        let section_size = sections.len() / self[BlockType::Sections].num() as usize;
         sections
             .chunks_exact(section_size)
             .flat_map(Section::ref_from_bytes)

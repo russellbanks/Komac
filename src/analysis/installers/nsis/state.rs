@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
 use tracing::debug;
-use yara_x::mods::PE;
+use yara_x::mods::{PE, pe::ResourceType::RESOURCE_TYPE_MANIFEST};
 use zerocopy::{FromBytes, I32, LE, TryFromBytes, U16};
 
 use super::{
@@ -65,7 +65,18 @@ impl<'data> NsisState<'data> {
             state.variables.insert_install_dir(install_dir);
         }
 
-        state.version = NsisVersion::from_manifest(data, pe)
+        let manifest = pe
+            .resources
+            .iter()
+            .find(|resource| resource.type_() == RESOURCE_TYPE_MANIFEST)
+            .and_then(|manifest| {
+                let offset = manifest.offset() as usize;
+                data.get(offset..offset + manifest.length() as usize)
+            })
+            .and_then(|manifest_bytes| std::str::from_utf8(manifest_bytes).ok());
+
+        state.version = manifest
+            .and_then(NsisVersion::from_manifest)
             .or_else(|| NsisVersion::from_branding_text(&state))
             .unwrap_or_else(|| NsisVersion::detect(state.str_block));
 
@@ -85,9 +96,14 @@ impl<'data> NsisState<'data> {
         // Double the offset if the string is Unicode as each character will be 2 bytes
         let offset = if relative_offset.is_negative() {
             // A negative offset means it's a language string from the language table
-            self.language_table.string_offsets[(relative_offset + 1).unsigned_abs() as usize]
-                .get()
-                .unsigned_abs() as usize
+            let Some(offset) = self
+                .language_table
+                .string_offset((relative_offset + 1).unsigned_abs() as usize)
+            else {
+                return Cow::default();
+            };
+
+            offset.unsigned_abs() as usize
         } else {
             relative_offset.unsigned_abs() as usize
         } * (usize::from(unicode) + 1);
@@ -155,10 +171,10 @@ impl<'data> NsisState<'data> {
                         let index = usize::from(decode_number_from_char(special_char));
                         if code.is_var() {
                             NsVar::resolve(&mut buf, index, &self.variables, self.version);
-                        } else if code.is_lang() {
-                            buf.push_str(
-                                &self.get_string(self.language_table.string_offsets[index].get()),
-                            );
+                        } else if code.is_lang()
+                            && let Some(offset) = self.language_table.string_offset(index)
+                        {
+                            buf.push_str(&self.get_string(offset));
                         }
                     }
                     continue;

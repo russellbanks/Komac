@@ -1,10 +1,10 @@
-use crate::analysis::installers::{
-    nsis::state::NsisState,
-    utils::{
+use super::super::{
+    super::utils::{
         RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64,
         RELATIVE_LOCAL_APP_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
         RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
     },
+    state::NsisState,
 };
 
 /// NSIS can use one name for two CSIDL_*** and `CSIDL_COMMON`_*** items (`CurrentUser` / `AllUsers`)

@@ -3,7 +3,7 @@ use std::fmt;
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
 /// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/fileform.h#L227>
-#[expect(dead_code)]
+#[expect(dead_code, clippy::enum_variant_names)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, TryFromBytes, Immutable, KnownLayout)]
 #[repr(u128)]
 pub enum NsisSignature {

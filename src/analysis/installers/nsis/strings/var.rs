@@ -12,7 +12,7 @@ impl NsVar {
     ) {
         if let Variables::NUM_REGISTERS..Variables::NUM_INTERNAL_VARS = index {
             let mut offset = index - Variables::NUM_REGISTERS;
-            if nsis_version == NsisVersion(2, 2, 5) && offset >= PredefinedVar::ExePath as usize {
+            if nsis_version == 2.25 && offset >= PredefinedVar::ExePath as usize {
                 offset += size_of::<u16>();
             }
             match PredefinedVar::try_from(offset) {
