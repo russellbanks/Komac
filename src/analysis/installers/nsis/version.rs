@@ -140,7 +140,7 @@ impl Default for NsisVersion {
 
 impl fmt::Display for NsisVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}", self.major, self.minor)
+        write!(f, "{}.{:02}", self.major, self.minor)
     }
 }
 
