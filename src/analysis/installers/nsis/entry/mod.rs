@@ -856,7 +856,7 @@ impl Entry {
                         return Err(EntryError::Execute);
                     }
 
-                    if count != 1 {
+                    if count == 1 {
                         debug!("Exchange");
                     } else {
                         debug!("Exchange: {exchange}");
