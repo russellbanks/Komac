@@ -658,7 +658,11 @@ impl Entry {
             }
             Self::StrLen { output, input } => {
                 let input = state.get_string(input.get());
-                debug!(r#"StrLen: "{input}".len() = {}"#, input.len());
+                debug!(
+                    r#"StrLen: "{input}".len() = {} (inserted into {})"#,
+                    input.len(),
+                    output.get()
+                );
                 state.variables.insert(
                     output.get().unsigned_abs() as usize,
                     Cow::Owned(input.len().to_string()),
@@ -839,12 +843,20 @@ impl Entry {
                 push_pop,
                 exchange,
             } => {
+                // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L774
+
                 if *exchange != I32::ZERO {
-                    let count = exchange.get().unsigned_abs() as usize;
-                    if state.stack.len() > count {
-                        state.stack.swap(0, count);
+                    let count = exchange.get() as usize;
+
+                    if count < state.stack.len() {
+                        let top = state.stack.len() - 1;
+                        let target = top - count;
+                        state.stack.swap(top, target);
+                    } else {
+                        return Err(EntryError::Execute);
                     }
-                    if *exchange == I32::ZERO {
+
+                    if count != 1 {
                         debug!("Exchange");
                     } else {
                         debug!("Exchange: {exchange}");
