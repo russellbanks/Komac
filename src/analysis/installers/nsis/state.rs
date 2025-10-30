@@ -207,7 +207,7 @@ impl<'data> NsisState<'data> {
         i32::from_str_radix(value, radix).unwrap_or_default()
     }
 
-    pub fn execute_code_segment(&mut self, mut position: i32) -> Result<i32, EntryError> {
+    pub fn execute_code_segment(&mut self, mut position: i32) -> Result<Entry, EntryError> {
         // Create a watchdog counter to detect infinite loops
         let mut watchdog_counter = 0;
 
@@ -219,8 +219,8 @@ impl<'data> NsisState<'data> {
             let entry = self.entries[index];
             let address = entry.execute(self)?;
 
-            if entry.is_return() {
-                return Ok(0);
+            if matches!(entry, Entry::Return | Entry::Quit) {
+                return Ok(entry);
             }
 
             if watchdog_counter >= infinite_loop_threshold {
@@ -237,7 +237,7 @@ impl<'data> NsisState<'data> {
             watchdog_counter += 1;
         }
 
-        Ok(0)
+        Ok(Entry::Return)
     }
 
     pub fn resolve_address(&self, address: i32) -> i32 {

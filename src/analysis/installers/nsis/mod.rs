@@ -41,7 +41,7 @@ use zerocopy::FromBytes;
 use super::{
     super::extensions::EXE,
     nsis::{
-        entry::EntryError,
+        entry::{Entry, EntryError},
         file_system::Item,
         first_header::FirstHeader,
         header::{
@@ -119,8 +119,10 @@ impl Nsis {
                 r#"Simulating code execution for section {index} "{}""#,
                 state.get_string(section.name_offset())
             );
-            if let Err(invalid_entry) = state.execute_code_segment(section.code_offset()) {
-                error!(%invalid_entry);
+            match state.execute_code_segment(section.code_offset()) {
+                Ok(Entry::Quit) => break,
+                Err(invalid_entry) => error!(%invalid_entry),
+                _ => {}
             }
         }
 

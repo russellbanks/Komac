@@ -31,8 +31,10 @@ use zerocopy::{I32, Immutable, KnownLayout, LE, TryFromBytes, U16, U64, transmut
 use super::{file_system::RelativeLocation, registry::RegType, state::NsisState};
 use crate::analysis::installers::utils::registry::RegRoot;
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum EntryError {
+    #[error("Reached aborting entry: {status}")]
+    Abort { status: String },
     #[error("Reached invalid entry")]
     Invalid,
     #[error("Execution error")]
@@ -415,7 +417,11 @@ impl Entry {
                 return Ok(address.get());
             }
             Self::Abort { status } => {
-                debug!(r#"Aborting: "{}""#, state.get_string(status.get()));
+                let status = state.get_string(status.get());
+                debug!(r#"Aborting: "{status}""#);
+                return Err(EntryError::Abort {
+                    status: status.into_owned(),
+                });
             }
             Self::Quit => {
                 debug!("Quit");
@@ -423,7 +429,7 @@ impl Entry {
             Self::Call { address } => {
                 let resolved_address = state.resolve_address(address.get()) - 1;
                 debug!("Call: {resolved_address}");
-                return state.execute_code_segment(resolved_address);
+                state.execute_code_segment(resolved_address)?;
             }
             Self::UpdateText { update_str, .. } => {
                 debug!("DetailPrint: {}", state.get_string(update_str.get()));
@@ -861,14 +867,14 @@ impl Entry {
                     } else {
                         debug!("Exchange: {exchange}");
                     }
-                } else if *push_pop == PushPop::Pop {
+                } else if push_pop.is_pop() {
                     if let Some(variable) = state.stack.pop() {
                         debug!(r#"Pop: "{variable}""#);
                         state
                             .variables
                             .insert(variable_or_string.get().unsigned_abs() as usize, variable);
                     }
-                } else if *push_pop == PushPop::Push {
+                } else if push_pop.is_push() {
                     let string = state.get_string(variable_or_string.get());
                     debug!(r#"Push: "{string}""#);
                     state.stack.push(string);
@@ -1406,9 +1412,17 @@ impl Entry {
     }
 
     /// Returns `true` if this entry is a return.
+    #[expect(unused)]
     #[inline]
     pub const fn is_return(&self) -> bool {
         matches!(self, Self::Return)
+    }
+
+    /// Returns `true` if this is a quit entry.
+    #[expect(unused)]
+    #[inline]
+    pub const fn is_quit(&self) -> bool {
+        matches!(self, Self::Quit)
     }
 }
 
