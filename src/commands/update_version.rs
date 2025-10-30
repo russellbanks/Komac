@@ -169,17 +169,25 @@ impl UpdateVersion {
                         _ => new_installer.r#type,
                     },
                 };
+
+                let previous_nested_files = previous_installer.nested_installer_files.clone();
+
                 let mut installer = new_installer.clone().merge_with(previous_installer);
                 installer.r#type = installer_type;
                 installer.url.clone_from(&new_installer.url);
-                installer.nested_installer_files = fix_relative_paths(
-                    if installer.nested_installer_files.is_empty() {
-                        manifests.installer.nested_installer_files.clone()
-                    } else {
-                        installer.nested_installer_files
-                    },
-                    analyser.zip.as_ref(),
-                );
+
+                let nested_files_to_fix = [
+                    &previous_nested_files,
+                    &manifests.installer.nested_installer_files,
+                    &installer.nested_installer_files,
+                ]
+                .into_iter()
+                .find(|files| !files.is_empty())
+                .unwrap()
+                .clone();
+
+                installer.nested_installer_files =
+                    fix_relative_paths(nested_files_to_fix, analyser.zip.as_ref());
                 for entry in &mut installer.apps_and_features_entries {
                     entry.deduplicate(&manifests.default_locale);
                 }
@@ -346,31 +354,32 @@ fn fix_relative_paths<R: Read + Seek>(
     nested_installer_files: BTreeSet<NestedInstallerFiles>,
     zip: Option<&Zip<R>>,
 ) -> BTreeSet<NestedInstallerFiles> {
+    let Some(zip) = zip else {
+        return nested_installer_files;
+    };
+
     nested_installer_files
         .into_iter()
         .filter_map(|nested_installer_files| {
-            if let Some(zip) = zip {
-                return if zip
-                    .possible_installer_files
-                    .contains(&nested_installer_files.relative_file_path.normalize())
-                {
-                    Some(nested_installer_files)
-                } else {
-                    zip.possible_installer_files
-                        .iter()
-                        .min_by_key(|file_path| {
-                            levenshtein(
-                                file_path.as_str(),
-                                nested_installer_files.relative_file_path.as_str(),
-                            )
-                        })
-                        .map(|path| NestedInstallerFiles {
-                            relative_file_path: path.to_path_buf(),
-                            ..nested_installer_files
-                        })
-                };
+            return if zip
+                .possible_installer_files
+                .contains(&nested_installer_files.relative_file_path.normalize())
+            {
+                Some(nested_installer_files)
+            } else {
+                zip.possible_installer_files
+                    .iter()
+                    .min_by_key(|file_path| {
+                        levenshtein(
+                            file_path.as_str(),
+                            nested_installer_files.relative_file_path.as_str(),
+                        )
+                    })
+                    .map(|path| NestedInstallerFiles {
+                        relative_file_path: path.to_path_buf(),
+                        ..nested_installer_files
+                    })
             }
-            None
         })
         .collect::<BTreeSet<_>>()
 }
