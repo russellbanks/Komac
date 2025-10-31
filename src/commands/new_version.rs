@@ -250,6 +250,13 @@ impl NewVersion {
             }
             if let Some(zip) = &mut analyser.zip {
                 zip.prompt()?;
+                for (analyser_installer, zip_installer) in
+                    analyser.installers.iter_mut().zip(zip.installers.iter())
+                {
+                    analyser_installer.nested_installer_type = zip_installer.nested_installer_type;
+                    analyser_installer.nested_installer_files =
+                        zip_installer.nested_installer_files.clone();
+                }
             }
             let switches = InstallerSwitches::builder()
                 .maybe_silent(silent)
