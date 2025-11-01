@@ -183,11 +183,13 @@ impl UpdateVersion {
                 ]
                 .into_iter()
                 .find(|files| !files.is_empty())
-                .unwrap()
-                .clone();
+                .cloned();
 
-                installer.nested_installer_files =
-                    fix_relative_paths(nested_files_to_fix, analyser.zip.as_ref());
+                if let Some(nested_files) = nested_files_to_fix {
+                    installer.nested_installer_files =
+                        fix_relative_paths(nested_files, analyser.zip.as_ref());
+                }
+
                 for entry in &mut installer.apps_and_features_entries {
                     entry.deduplicate(&manifests.default_locale);
                 }
