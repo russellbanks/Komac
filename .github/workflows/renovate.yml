@@ -1,0 +1,22 @@
+name: Validate Renovate Config
+
+on:
+  push:
+    paths:
+      - .github/renovate.json
+  pull_request:
+    paths:
+      - .github/renovate.json
+
+jobs:
+  validate:
+    name: Validate Renovate Config
+    runs-on: ubuntu-latest
+    container: ghcr.io/renovatebot/renovate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Validate renovate.json
+        run: renovate-config-validator
