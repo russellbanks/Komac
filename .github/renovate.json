@@ -2,22 +2,17 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
+    ":label(dependencies)",
     ":maintainLockFilesWeekly",
     ":semanticCommitsDisabled"
   ],
   "packageRules": [
     {
-      "matchPackageNames": [
-        "clap",
-        "clap_complete"
-      ],
+      "matchPackageNames": ["clap", "clap_complete"],
       "groupName": "clap ecosystem"
     },
     {
-      "matchPackageNames": [
-        "cynic",
-        "cynic-codegen"
-      ],
+      "matchPackageNames": ["cynic", "cynic-codegen"],
       "groupName": "cynic ecosystem"
     }
   ],
