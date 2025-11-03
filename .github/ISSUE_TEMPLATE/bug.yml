@@ -1,8 +1,9 @@
-name: 'Bug Report'
+name: Bug Report
 description: File a bug report
-title: '[Bug]: '
-labels: [bug, help wanted]
-assignees: russellbanks
+title: "[Bug]: "
+labels: ["bug"]
+assignees:
+  - russellbanks
 body:
   - type: markdown
     attributes:
@@ -15,6 +16,14 @@ body:
       options:
         - label: I have searched the existing issues
           required: true
+  - type: input
+    attributes:
+      label: Command used
+      description: |
+        Please copy and paste the **exact command** you ran that triggered the issue.
+      placeholder: komac update Package.Identifier --version 1.2.3 --urls https://example.com
+    validations:
+      required: true
   - type: textarea
     attributes:
       label: What happened?
