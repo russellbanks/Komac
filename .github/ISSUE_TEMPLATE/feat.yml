@@ -1,8 +1,9 @@
-name: 'Feature Request'
+name: "Feature Request"
 description: Request a new feature
-title: '[Feature/Idea]: '
-labels: [feat]
-assignees: russellbanks
+title: "[Feature]: "
+labels: ["enhancement"]
+assignees:
+  - russellbanks
 body:
   - type: markdown
     attributes:
