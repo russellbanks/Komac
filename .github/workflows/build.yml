@@ -46,6 +46,28 @@ jobs:
       - name: Test
         run: cargo test
 
+  clippy:
+    name: Cargo clippy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Run clippy
+        run: cargo clippy
+        env:
+          RUSTFLAGS: "-Dwarnings"
+
   publish_dry_run:
     name: Publish dry run
     runs-on: ubuntu-latest

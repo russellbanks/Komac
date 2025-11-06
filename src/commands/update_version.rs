@@ -363,7 +363,7 @@ fn fix_relative_paths<R: Read + Seek>(
     nested_installer_files
         .into_iter()
         .filter_map(|nested_installer_files| {
-            return if zip
+            if zip
                 .possible_installer_files
                 .contains(&nested_installer_files.relative_file_path.normalize())
             {
