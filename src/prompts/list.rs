@@ -9,21 +9,26 @@ use winget_types::{
 use crate::{prompts::handle_inquire_error, traits::Name};
 
 pub trait ListPrompt: Name {
+    const PLURAL_NAME: &'static str = Self::NAME;
     const HELP_MESSAGE: &'static str;
     const MAX_ITEMS: u16;
 }
 
 impl ListPrompt for InstallerReturnCode {
+    const PLURAL_NAME: &'static str = "Installer return codes";
     const HELP_MESSAGE: &'static str = "List of additional non-zero installer success exit codes other than known default values by winget";
     const MAX_ITEMS: u16 = 16;
 }
 
 impl ListPrompt for Protocol {
-    const HELP_MESSAGE: &'static str = "List of protocols the package provides a handler for";
+    const PLURAL_NAME: &'static str = "Protocols";
+    const HELP_MESSAGE: &'static str =
+        "List of protocols the package provides a handler for. Example: http, https";
     const MAX_ITEMS: u16 = 16;
 }
 
 impl ListPrompt for FileExtension {
+    const PLURAL_NAME: &str = "File extensions";
     const HELP_MESSAGE: &'static str = "List of file extensions the package could support";
     const MAX_ITEMS: u16 = 512;
 }
@@ -34,6 +39,7 @@ impl ListPrompt for Tag {
 }
 
 impl ListPrompt for Command {
+    const PLURAL_NAME: &'static str = "Commands";
     const HELP_MESSAGE: &'static str = "List of commands or aliases to run the package";
     const MAX_ITEMS: u16 = 16;
 }
@@ -44,7 +50,7 @@ where
     <T as FromStr>::Err: Display,
 {
     const DELIMITERS: [char; 2] = [' ', ','];
-    let items = Text::new(&format!("{}:", <T as Name>::NAME))
+    let items = Text::new(&format!("{}:", T::PLURAL_NAME))
         .with_help_message(T::HELP_MESSAGE)
         .with_validator(|input: &str| {
             let items = input

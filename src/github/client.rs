@@ -456,7 +456,7 @@ impl GitHub {
             .flat_map(|topic_node| Tag::new(topic_node.topic.name))
             .collect::<BTreeSet<_>>();
 
-        let publisher_support_url = if repository.has_issues_enabled {
+        let issues_url = if repository.has_issues_enabled {
             format!("https://github.com/{owner}/{repo}/issues")
                 .parse::<PublisherSupportUrl>()
                 .ok()
@@ -465,8 +465,9 @@ impl GitHub {
         };
 
         Ok(GitHubValues {
+            description: repository.description,
             publisher_url: PublisherUrl::from_str(repository.owner.url.as_str())?,
-            publisher_support_url,
+            issues_url,
             license: repository
                 .license_info
                 .and_then(|license| {
@@ -612,8 +613,9 @@ impl GitHub {
 }
 
 pub struct GitHubValues {
+    pub description: Option<String>,
     pub publisher_url: PublisherUrl,
-    pub publisher_support_url: Option<PublisherSupportUrl>,
+    pub issues_url: Option<PublisherSupportUrl>,
     pub license: Option<License>,
     pub license_url: Option<LicenseUrl>,
     pub package_url: PackageUrl,

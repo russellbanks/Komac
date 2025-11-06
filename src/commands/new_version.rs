@@ -158,7 +158,7 @@ impl NewVersion {
         let token = TokenManager::handle(self.token).await?;
         let github = GitHub::new(&token)?;
 
-        let package_identifier = required_prompt(self.package_identifier)?;
+        let package_identifier = required_prompt(self.package_identifier, None::<&str>)?;
 
         let versions = github.get_versions(&package_identifier).await.ok();
 
@@ -171,7 +171,7 @@ impl NewVersion {
         let manifests =
             latest_version.map(|version| github.get_manifests(&package_identifier, version));
 
-        let package_version = required_prompt(self.package_version)?;
+        let package_version = required_prompt(self.package_version, None::<&str>)?;
 
         if !self.skip_pr_check
             && !self.dry_run
@@ -238,15 +238,17 @@ impl NewVersion {
                         installer.r#type = Some(InstallerType::Portable);
                     }
                 }
-                silent = Some(required_prompt::<SilentSwitch>(None)?);
-                silent_with_progress = Some(required_prompt::<SilentWithProgressSwitch>(None)?);
+                silent = Some(required_prompt::<SilentSwitch, &str>(None, None)?);
+                silent_with_progress = Some(required_prompt::<SilentWithProgressSwitch, &str>(
+                    None, None,
+                )?);
             }
             if analyser
                 .installers
                 .iter()
                 .any(|installer| installer.r#type == Some(InstallerType::Portable))
             {
-                custom = optional_prompt::<CustomSwitch>(None)?;
+                custom = optional_prompt::<CustomSwitch, &str>(None, None)?;
             }
             if let Some(zip) = &mut analyser.zip {
                 zip.prompt()?;
@@ -272,11 +274,7 @@ impl NewVersion {
             installers.extend(analyser_installers);
         }
 
-        let default_locale = required_prompt(self.package_locale)?;
-        let manifests = match manifests {
-            Some(manifests) => Some(manifests.await?),
-            None => None,
-        };
+        let default_locale = required_prompt(self.package_locale, None::<&str>)?;
         let mut installer_manifest = InstallerManifest {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
@@ -314,46 +312,63 @@ impl NewVersion {
             package_identifier: package_identifier.clone(),
             package_version: package_version.clone(),
             package_locale: default_locale.clone(),
-            publisher: match download_results
-                .values_mut()
-                .find(|analyser| analyser.publisher.is_some())
-                .and_then(|analyser| analyser.publisher.take())
-            {
-                Some(publisher) => publisher,
-                None => required_prompt(self.publisher)?,
-            },
-            publisher_url: optional_prompt(self.publisher_url)?,
-            publisher_support_url: optional_prompt(self.publisher_support_url)?,
-            author: optional_prompt(self.author)?,
-            package_name: match download_results
-                .values_mut()
-                .find(|analyser| analyser.package_name.is_some())
-                .and_then(|analyser| analyser.package_name.take())
-            {
-                Some(package_name) => package_name,
-                None => required_prompt(self.package_name)?,
-            },
-            package_url: optional_prompt(self.package_url)?,
-            license: match github_values
-                .as_mut()
-                .and_then(|values| values.license.take())
-            {
-                Some(license) => license,
-                None => required_prompt(self.license)?,
-            },
-            license_url: optional_prompt(self.license_url)?,
-            copyright: match download_results
-                .values_mut()
-                .find(|analyser| analyser.copyright.is_some())
-                .and_then(|analyser| analyser.copyright.take())
-            {
-                Some(copyright) => Some(copyright),
-                None => optional_prompt(self.copyright)?,
-            },
-            copyright_url: optional_prompt(self.copyright_url)?,
-            short_description: required_prompt(self.short_description)?,
-            description: optional_prompt(self.description)?,
-            moniker: optional_prompt(self.moniker)?,
+            publisher: required_prompt(
+                self.publisher,
+                download_results
+                    .values()
+                    .find(|analyser| analyser.publisher.is_some())
+                    .and_then(|analyser| analyser.publisher.as_ref()),
+            )?,
+            publisher_url: optional_prompt(
+                self.publisher_url,
+                github_values.as_ref().map(|values| &values.publisher_url),
+            )?,
+            publisher_support_url: optional_prompt(
+                self.publisher_support_url,
+                github_values
+                    .as_ref()
+                    .and_then(|values| values.issues_url.as_ref()),
+            )?,
+            author: optional_prompt(self.author, None::<&str>)?,
+            package_name: required_prompt(
+                self.package_name,
+                download_results
+                    .values()
+                    .find(|analyser| analyser.package_name.is_some())
+                    .and_then(|analyser| analyser.package_name.as_ref()),
+            )?,
+            package_url: optional_prompt(
+                self.package_url,
+                github_values.as_ref().map(|values| &values.package_url),
+            )?,
+            license: required_prompt(
+                self.license,
+                github_values
+                    .as_ref()
+                    .and_then(|values| values.license.as_ref()),
+            )?,
+            license_url: optional_prompt(
+                self.license_url,
+                github_values
+                    .as_ref()
+                    .and_then(|values| values.license_url.as_ref()),
+            )?,
+            copyright: optional_prompt(
+                self.copyright,
+                download_results
+                    .values()
+                    .find(|analyser| analyser.copyright.is_some())
+                    .and_then(|analyser| analyser.copyright.as_ref()),
+            )?,
+            copyright_url: optional_prompt(self.copyright_url, None::<&str>)?,
+            short_description: required_prompt(
+                self.short_description,
+                github_values
+                    .as_ref()
+                    .and_then(|values| values.description.as_ref()),
+            )?,
+            description: optional_prompt(self.description, None::<&str>)?,
+            moniker: optional_prompt(self.moniker, None::<&str>)?,
             tags: match github_values
                 .as_mut()
                 .map(|values| mem::take(&mut values.topics))
@@ -361,7 +376,15 @@ impl NewVersion {
                 Some(topics) => topics,
                 None => list_prompt::<Tag>()?,
             },
-            release_notes_url: optional_prompt(self.release_notes_url)?,
+            release_notes: github_values
+                .as_mut()
+                .and_then(|values| values.release_notes.take()),
+            release_notes_url: optional_prompt(
+                self.release_notes_url,
+                github_values
+                    .as_ref()
+                    .and_then(|values| values.release_notes_url.as_ref()),
+            )?,
             manifest_type: ManifestType::DefaultLocale,
             ..DefaultLocaleManifest::default()
         };
@@ -380,6 +403,11 @@ impl NewVersion {
             default_locale,
             manifest_type: ManifestType::Version,
             manifest_version: ManifestVersion::default(),
+        };
+
+        let manifests = match manifests {
+            Some(manifests) => Some(manifests.await?),
+            None => None,
         };
 
         let manifests = Manifests {

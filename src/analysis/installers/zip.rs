@@ -145,7 +145,7 @@ impl<R: Read + Seek> Zip<R> {
                         portable_command_alias: if file_analyser.installers[0].r#type
                             == Some(InstallerType::Portable)
                         {
-                            Some(required_prompt(None)?)
+                            Some(required_prompt(None, None::<&str>)?)
                         } else {
                             None
                         },

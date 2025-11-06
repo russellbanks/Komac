@@ -94,10 +94,11 @@ impl TextPrompt for ReleaseNotesUrl {}
 
 impl TextPrompt for PortableCommandAlias {}
 
-pub fn optional_prompt<T>(parameter: Option<T>) -> InquireResult<Option<T>>
+pub fn optional_prompt<T, U>(parameter: Option<T>, default: Option<U>) -> InquireResult<Option<T>>
 where
     T: FromStr + TextPrompt,
     <T as FromStr>::Err: Display + Debug + Sync + Send + 'static,
+    U: AsRef<str>,
 {
     if let Some(value) = parameter {
         Ok(Some(value))
@@ -119,6 +120,10 @@ where
         if let Some(placeholder) = T::PLACEHOLDER {
             prompt = prompt.with_placeholder(placeholder);
         }
+        let default = default.as_ref().map(U::as_ref);
+        if let Some(default) = default {
+            prompt = prompt.with_default(default);
+        }
         let result = prompt.prompt().map_err(handle_inquire_error)?;
         if result.is_empty() {
             Ok(None)
@@ -130,10 +135,11 @@ where
     }
 }
 
-pub fn required_prompt<T>(parameter: Option<T>) -> InquireResult<T>
+pub fn required_prompt<T, U>(parameter: Option<T>, default: Option<U>) -> InquireResult<T>
 where
     T: FromStr + TextPrompt,
     <T as FromStr>::Err: ToString,
+    U: AsRef<str>,
 {
     if let Some(value) = parameter {
         Ok(value)
@@ -148,6 +154,10 @@ where
         }
         if let Some(placeholder) = T::PLACEHOLDER {
             prompt = prompt.with_placeholder(placeholder);
+        }
+        let default = default.as_ref().map(U::as_ref);
+        if let Some(default) = default {
+            prompt = prompt.with_default(default);
         }
         prompt
             .prompt()

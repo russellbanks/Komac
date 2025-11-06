@@ -219,7 +219,7 @@ impl LocaleExt for DefaultLocaleManifest {
         if self.publisher_support_url.is_none() {
             self.publisher_support_url = github_values
                 .as_mut()
-                .and_then(|values| values.publisher_support_url.take());
+                .and_then(|values| values.issues_url.take());
         }
         if self.package_url.is_none() {
             self.package_url = github_values
