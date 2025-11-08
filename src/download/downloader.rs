@@ -37,6 +37,8 @@ impl Downloader {
 
     const APPLICATION: &'static str = "application";
 
+    const OCTET_STREAM: HeaderValue = HeaderValue::from_static("binary/octet-stream");
+
     /// Creates a new Downloader with a maximum number of concurrent downloads of the number of
     /// logical cores the system has.
     ///
@@ -125,13 +127,15 @@ impl Downloader {
 
         // Check that we're downloading an application
         if let Some(content_type) = res.headers().get(CONTENT_TYPE)
+            && content_type != Self::OCTET_STREAM
             && !content_type
                 .as_bytes()
                 .starts_with(Self::APPLICATION.as_bytes())
         {
             bail!(
-                "The content type for {download} was {content_type:?} but an {application} content type was expected",
-                application = Self::APPLICATION
+                "The content type for {download} was {content_type:?} but an {application} or {octet_stream:?} content type was expected",
+                application = Self::APPLICATION,
+                octet_stream = Self::OCTET_STREAM,
             );
         }
 
