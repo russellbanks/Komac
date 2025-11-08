@@ -133,8 +133,9 @@ impl Downloader {
                 .starts_with(Self::APPLICATION.as_bytes())
         {
             bail!(
-                "The content type for {download} was {content_type:?} but an {application} content type was expected",
-                application = Self::APPLICATION
+                "The content type for {download} was {content_type:?} but an {application} or {octet_stream:?} content type was expected",
+                application = Self::APPLICATION,
+                octet_stream = Self::OCTET_STREAM,
             );
         }
 
