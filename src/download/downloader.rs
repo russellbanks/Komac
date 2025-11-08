@@ -1,18 +1,20 @@
-use std::num::NonZeroUsize;
+use std::{fmt, num::NonZeroUsize};
 
 use chrono::DateTime;
 use color_eyre::{Result, eyre::bail};
 use futures_util::{StreamExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use itertools::Itertools;
+use itertools::{Itertools, Position};
 use memmap2::Mmap;
 use reqwest::{
     Client,
     header::{
-        CONTENT_DISPOSITION, CONTENT_TYPE, DNT, HeaderMap, HeaderValue, LAST_MODIFIED, USER_AGENT,
+        CONTENT_DISPOSITION, CONTENT_TYPE, DNT, GetAll, HeaderMap, HeaderValue, LAST_MODIFIED,
+        USER_AGENT,
     },
 };
 use sha2::{Digest, Sha256};
+use thiserror::Error;
 use tokio::{
     io::{AsyncWriteExt, BufWriter},
     sync::mpsc,
@@ -105,6 +107,22 @@ impl Downloader {
         headers
     }
 
+    fn check_content_types(
+        download: &Download,
+        content_types: GetAll<HeaderValue>,
+    ) -> Result<(), ContentTypeError> {
+        if content_types.iter().all(|content_type| {
+            content_type != Self::OCTET_STREAM
+                && !content_type
+                    .as_bytes()
+                    .starts_with(Self::APPLICATION.as_bytes())
+        }) {
+            return Err(ContentTypeError::new(download.clone(), content_types));
+        }
+
+        Ok(())
+    }
+
     pub async fn fetch(
         &self,
         client: &Client,
@@ -126,18 +144,7 @@ impl Downloader {
         }
 
         // Check that we're downloading an application
-        if let Some(content_type) = res.headers().get(CONTENT_TYPE)
-            && content_type != Self::OCTET_STREAM
-            && !content_type
-                .as_bytes()
-                .starts_with(Self::APPLICATION.as_bytes())
-        {
-            bail!(
-                "The content type for {download} was {content_type:?} but an {application} or {octet_stream:?} content type was expected",
-                application = Self::APPLICATION,
-                octet_stream = Self::OCTET_STREAM,
-            );
-        }
+        Self::check_content_types(&download, res.headers().get_all(CONTENT_TYPE))?;
 
         let file_name = download
             .file_name(res.url(), res.headers().get(CONTENT_DISPOSITION))
@@ -216,5 +223,49 @@ impl Downloader {
             file_name,
             last_modified,
         })
+    }
+}
+
+#[derive(Debug, Error)]
+pub struct ContentTypeError {
+    download: Download,
+    content_types: Vec<HeaderValue>,
+}
+
+impl ContentTypeError {
+    pub fn new<D, I, C>(download: D, content_types: I) -> Self
+    where
+        D: Into<Download>,
+        I: IntoIterator<Item = C>,
+        C: Into<HeaderValue>,
+    {
+        Self {
+            download: download.into(),
+            content_types: content_types.into_iter().map(C::into).collect(),
+        }
+    }
+}
+
+impl fmt::Display for ContentTypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "The content type for {} was ", self.download)?;
+        for (position, content_type) in self
+            .content_types
+            .iter()
+            .flat_map(HeaderValue::to_str)
+            .with_position()
+        {
+            match position {
+                Position::First | Position::Only => write!(f, "{content_type:?}")?,
+                Position::Middle => write!(f, ", {content_type:?}")?,
+                Position::Last => write!(f, " and {content_type:?}")?,
+            }
+        }
+        write!(
+            f,
+            " but an {application} or {octet_stream:?} content type was expected",
+            application = Downloader::APPLICATION,
+            octet_stream = Downloader::OCTET_STREAM
+        )
     }
 }
