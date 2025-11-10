@@ -10,7 +10,9 @@ use inquire::MultiSelect;
 use owo_colors::OwoColorize;
 
 use crate::{
-    commands::utils::SPINNER_TICK_RATE, github::client::GitHub, prompts::handle_inquire_error,
+    commands::utils::SPINNER_TICK_RATE,
+    github::{WingetPkgsSource, client::GitHub},
+    prompts::handle_inquire_error,
     token::TokenManager,
 };
 
@@ -31,6 +33,9 @@ pub struct Cleanup {
     #[arg(short, long, env = "CI")]
     all: bool,
 
+    #[command(flatten)]
+    winget_pkgs_source: WingetPkgsSource,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -39,7 +44,7 @@ pub struct Cleanup {
 impl Cleanup {
     pub async fn run(self) -> Result<()> {
         let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(&token)?;
+        let github = GitHub::new(&token, self.winget_pkgs_source)?;
 
         let merge_state = MergeState::from((self.only_merged, self.only_closed));
 

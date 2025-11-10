@@ -48,7 +48,7 @@ impl GitHub {
         force: bool,
     ) -> Result<(), GitHubError> {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(UpdateRef::build(MergeUpstreamVariables::new(
                 branch_ref_id,

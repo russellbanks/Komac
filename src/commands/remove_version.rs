@@ -13,7 +13,7 @@ use tokio::try_join;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
-    github::{WINGET_PKGS_FULL_NAME, client::GitHub},
+    github::{WingetPkgsSource, client::GitHub},
     prompts::{handle_inquire_error, text::confirm_prompt},
     token::TokenManager,
 };
@@ -49,6 +49,9 @@ pub struct RemoveVersion {
     #[arg(long, env = "OPEN_PR")]
     open_pr: bool,
 
+    #[command(flatten)]
+    winget_pkgs_source: WingetPkgsSource,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -68,21 +71,22 @@ impl RemoveVersion {
             );
         }
 
-        let github = GitHub::new(&token)?;
+        let github = GitHub::new(&token, self.winget_pkgs_source)?;
 
         let (fork, winget_pkgs, versions) = try_join!(
             github
                 .get_username()
-                .and_then(|current_user| github.get_winget_pkgs().owner(current_user).send()),
-            github.get_winget_pkgs().send(),
+                .and_then(|current_user| github.winget_pkgs().owner(current_user).get()),
+            github.winget_pkgs().get(),
             github.get_versions(&self.package_identifier)
         )?;
 
         if !versions.contains(&self.package_version) {
             bail!(
-                "{} version {} does not exist in {WINGET_PKGS_FULL_NAME}",
+                "{} version {} does not exist in {}",
                 self.package_identifier,
                 self.package_version,
+                github.winget_pkgs_source(),
             );
         }
 

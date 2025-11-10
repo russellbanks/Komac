@@ -37,7 +37,7 @@ use crate::{
     download::Downloader,
     download_file::process_files,
     github::{
-        GITHUB_HOST, WINGET_PKGS_FULL_NAME,
+        GITHUB_HOST, WingetPkgsSource,
         client::GitHub,
         utils::{PackagePath, pull_request::pr_changes},
     },
@@ -148,6 +148,9 @@ pub struct NewVersion {
     #[arg(long, env)]
     skip_pr_check: bool,
 
+    #[command(flatten)]
+    winget_pkgs_source: WingetPkgsSource,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -156,7 +159,7 @@ pub struct NewVersion {
 impl NewVersion {
     pub async fn run(self) -> Result<()> {
         let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(&token)?;
+        let github = GitHub::new(&token, self.winget_pkgs_source)?;
 
         let package_identifier = required_prompt(self.package_identifier, None::<&str>)?;
 
@@ -468,9 +471,10 @@ impl NewVersion {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a {} to {WINGET_PKGS_FULL_NAME}",
+            "{} created a {} to {}",
             "Successfully".green(),
-            "pull request".hyperlink(&pull_request_url)
+            "pull request".hyperlink(&pull_request_url),
+            github.winget_pkgs_source()
         );
 
         if self.open_pr {

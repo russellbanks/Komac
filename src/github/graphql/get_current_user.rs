@@ -41,7 +41,7 @@ impl GitHub {
             Ok(login)
         } else {
             let GraphQlResponse { data, errors } = self
-                .0
+                .client
                 .post(GRAPHQL_URL)
                 .run_graphql(GetCurrentUserLogin::build(()))
                 .await?;

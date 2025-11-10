@@ -14,7 +14,7 @@ use winget_types::{GenericManifest, ManifestType};
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, SubmitOption},
     github::{
-        WINGET_PKGS_FULL_NAME,
+        WingetPkgsSource,
         client::GitHub,
         utils::{PackagePath, pull_request::pr_changes},
     },
@@ -23,6 +23,7 @@ use crate::{
     terminal::Hyperlinkable,
     token::TokenManager,
 };
+
 #[derive(Parser)]
 pub struct Submit {
     #[arg(value_hint = clap::ValueHint::DirPath)]
@@ -43,6 +44,9 @@ pub struct Submit {
     /// Run without submitting
     #[arg(long, env = "DRY_RUN")]
     dry_run: bool,
+
+    #[command(flatten)]
+    winget_pkgs_source: WingetPkgsSource,
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -153,7 +157,7 @@ impl Submit {
             return Ok(());
         }
 
-        let github = GitHub::new(token)?;
+        let github = GitHub::new(token, self.winget_pkgs_source)?;
         let versions = github.get_versions(identifier).await.unwrap_or_default();
 
         // Create an indeterminate progress bar to show as a pull request is being created
@@ -175,9 +179,10 @@ impl Submit {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a {} to {WINGET_PKGS_FULL_NAME}",
+            "{} created a {} to {}",
             "Successfully".green(),
-            "pull request".hyperlink(&pull_request_url)
+            "pull request".hyperlink(&pull_request_url),
+            github.winget_pkgs_source()
         );
 
         if self.open_pr {

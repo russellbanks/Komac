@@ -87,7 +87,7 @@ impl GitHub {
         P: fmt::Display,
     {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(GetFileContent::build(GetDirectoryContentVariables::new(
                 &owner,
@@ -109,7 +109,7 @@ impl GitHub {
         path: &PackagePath,
     ) -> Result<impl Iterator<Item = String>, GitHubError> {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(GetDirectoryContent::build(
                 GetDirectoryContentVariables::new(&owner, &repo, &format!("{branch_name}:{path}")),

@@ -28,7 +28,7 @@ use crate::{
     download::Downloader,
     download_file::process_files,
     github::{
-        GITHUB_HOST, GitHubError, WINGET_PKGS_FULL_NAME,
+        GITHUB_HOST, GitHubError, WingetPkgsSource,
         client::{GitHub, GitHubValues},
         graphql::get_existing_pull_request::PullRequest,
         utils::{PackagePath, pull_request::pr_changes},
@@ -100,6 +100,9 @@ pub struct UpdateVersion {
     #[arg(long, env)]
     skip_pr_check: bool,
 
+    #[command(flatten)]
+    winget_pkgs_source: WingetPkgsSource,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -108,7 +111,7 @@ pub struct UpdateVersion {
 impl UpdateVersion {
     pub async fn run(self) -> Result<()> {
         let token = TokenManager::handle(self.token.as_deref()).await?;
-        let github = GitHub::new(&token)?;
+        let github = GitHub::new(&token, self.winget_pkgs_source.clone())?;
 
         let (versions, existing_pr) = try_join!(
             github.get_versions(&self.package_identifier),
@@ -277,9 +280,10 @@ impl UpdateVersion {
         pr_progress.finish_and_clear();
 
         println!(
-            "{} created a {} to {WINGET_PKGS_FULL_NAME}",
+            "{} created a {} to {}",
             "Successfully".green(),
-            "pull request".hyperlink(&pull_request_url)
+            "pull request".hyperlink(&pull_request_url),
+            self.winget_pkgs_source
         );
 
         if self.open_pr {
@@ -307,7 +311,8 @@ impl UpdateVersion {
             && let Some(closest) = version.closest(versions)
         {
             bail!(
-                "Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}"
+                "Replacement version {version} does not exist in {}. The closest version is {closest}",
+                self.winget_pkgs_source
             )
         }
 

@@ -3,11 +3,11 @@ mod error;
 pub mod graphql;
 mod rest;
 pub mod utils;
+mod winget_source;
 
-use const_format::formatcp;
 pub use error::GitHubError;
+pub use winget_source::WingetPkgsSource;
 
 pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
-pub const WINGET_PKGS_FULL_NAME: &str = formatcp!("{MICROSOFT}/{WINGET_PKGS}");
 pub const GITHUB_HOST: &str = "github.com";

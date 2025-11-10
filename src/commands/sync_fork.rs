@@ -11,7 +11,7 @@ use tokio::{time::sleep, try_join};
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
-    github::{WINGET_PKGS, WINGET_PKGS_FULL_NAME, client::GitHub},
+    github::{MICROSOFT, WINGET_PKGS, WingetPkgsSource, client::GitHub},
     terminal::Hyperlinkable,
     token::TokenManager,
 };
@@ -26,6 +26,9 @@ pub struct SyncFork {
     #[arg(short, long)]
     force: bool,
 
+    #[command(flatten)]
+    winget_pkgs_source: WingetPkgsSource,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -38,14 +41,14 @@ impl SyncFork {
         }
 
         let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(token)?;
+        let github = GitHub::new(token, self.winget_pkgs_source)?;
 
         // Fetch repository data from both upstream and fork repositories asynchronously
         let (winget_pkgs, fork) = try_join!(
-            github.get_winget_pkgs().send(),
+            github.winget_pkgs().get(),
             github
                 .get_username()
-                .and_then(|username| github.get_winget_pkgs().owner(username).send()),
+                .and_then(|username| github.winget_pkgs().owner(username).get()),
         )?;
 
         // Check whether the fork is already up-to-date with upstream by their latest commit OID's
@@ -98,7 +101,7 @@ impl SyncFork {
         let merge_message = format!(
             "{} upstream commits from {} into {}",
             random_range(50..=500),
-            WINGET_PKGS_FULL_NAME.blue(),
+            format_args!("{MICROSOFT}/{WINGET_PKGS}").blue(),
             format_args!("octocat/{WINGET_PKGS}").blue()
         );
 

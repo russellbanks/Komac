@@ -140,7 +140,7 @@ impl GitHub {
         #[builder(default)] deletions: Vec<FileDeletion<'_>>,
     ) -> Result<Url, GitHubError> {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(CreateCommit::build(CreateCommitVariables {
                 input: CreateCommitOnBranchInput::builder()

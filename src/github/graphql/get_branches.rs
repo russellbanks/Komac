@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 use url::Url;
 
 use super::{github_schema as schema, types::PullRequestState};
+use crate::github::graphql::get_repository_info::RepositoryOwner;
 
 #[derive(cynic::QueryVariables)]
 pub struct GetBranchesVariables<'a> {
@@ -84,7 +85,14 @@ impl Display for PullRequest {
 #[derive(cynic::QueryFragment, Hash, PartialEq, Eq)]
 #[cynic(graphql_type = "Repository")]
 pub struct PullRequestRepository {
-    pub name_with_owner: String,
+    pub owner: RepositoryOwner,
+    pub name: String,
+}
+
+impl PullRequestRepository {
+    pub const fn owner(&self) -> &str {
+        self.owner.login.as_str()
+    }
 }
 
 #[cfg(test)]

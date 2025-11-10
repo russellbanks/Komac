@@ -5,7 +5,10 @@ use color_eyre::Result;
 use owo_colors::OwoColorize;
 use winget_types::PackageIdentifier;
 
-use crate::{github::client::GitHub, token::TokenManager};
+use crate::{
+    github::{WingetPkgsSource, client::GitHub},
+    token::TokenManager,
+};
 
 /// Lists all versions for a given package
 #[derive(Parser)]
@@ -20,6 +23,9 @@ pub struct ListVersions {
     /// Output the number of versions the package has
     #[arg(long)]
     count: bool,
+
+    #[command(flatten)]
+    winget_pkgs_source: WingetPkgsSource,
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -45,7 +51,7 @@ struct OutputType {
 impl ListVersions {
     pub async fn run(self) -> Result<()> {
         let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(&token)?;
+        let github = GitHub::new(&token, self.winget_pkgs_source)?;
 
         let versions = github.get_versions(&self.package_identifier).await?;
 

@@ -24,7 +24,7 @@ use winget_types::{
 
 use crate::{
     commands::utils::SPINNER_SLOW_TICK_RATE,
-    github::client::GitHub,
+    github::{WingetPkgsSource, client::GitHub},
     prompts::text::confirm_prompt,
     token::{TokenManager, default_headers},
 };
@@ -82,6 +82,9 @@ pub struct RemoveDeadVersions {
     #[arg(short, long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
     concurrent: NonZeroUsize,
 
+    #[command(flatten)]
+    winget_pkgs_source: WingetPkgsSource,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
     token: Option<String>,
@@ -90,13 +93,13 @@ pub struct RemoveDeadVersions {
 impl RemoveDeadVersions {
     pub async fn run(self) -> Result<()> {
         let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(token)?;
+        let github = GitHub::new(token, self.winget_pkgs_source)?;
 
         let (fork, winget_pkgs, versions) = try_join!(
             github
                 .get_username()
-                .and_then(|current_user| github.get_winget_pkgs().owner(current_user).send()),
-            github.get_winget_pkgs().send(),
+                .and_then(|current_user| github.winget_pkgs().owner(current_user).get()),
+            github.winget_pkgs().get(),
             github.get_versions(&self.package_identifier)
         )?;
 

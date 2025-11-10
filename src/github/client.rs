@@ -23,7 +23,6 @@ use super::GitHubError;
 use crate::{
     commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
     github::{
-        MICROSOFT, WINGET_PKGS, WINGET_PKGS_FULL_NAME,
         graphql::{
             GRAPHQL_URL,
             create_commit::{FileAddition, FileDeletion},
@@ -43,6 +42,7 @@ use crate::{
             CommitTitle, PackagePath, branch_name, commit_title, is_manifest_file,
             pull_request_body,
         },
+        winget_source::WingetPkgsSource,
     },
     manifests::Manifests,
     token::default_headers,
@@ -51,17 +51,27 @@ use crate::{
 };
 
 #[derive(Clone)]
-#[repr(transparent)]
-pub struct GitHub(pub(super) Client);
+pub struct GitHub {
+    pub(super) client: Client,
+    pub(super) source: WingetPkgsSource,
+}
 
 #[bon]
 impl GitHub {
-    pub fn new<T: AsRef<str>>(token: T) -> Result<Self, GitHubError> {
-        Ok(Self(
-            Client::builder()
+    pub fn new<T: AsRef<str>>(
+        token: T,
+        winget_pkgs_source: WingetPkgsSource,
+    ) -> Result<Self, GitHubError> {
+        Ok(Self {
+            client: Client::builder()
                 .default_headers(default_headers(Some(token.as_ref())))
                 .build()?,
-        ))
+            source: winget_pkgs_source,
+        })
+    }
+
+    pub const fn winget_pkgs_source(&self) -> &WingetPkgsSource {
+        &self.source
     }
 
     pub async fn get_manifests(
@@ -71,7 +81,11 @@ impl GitHub {
     ) -> Result<Manifests, GitHubError> {
         let full_package_path = PackagePath::new(identifier, Some(latest_version), None);
         let content = self
-            .get_directory_content_with_text(MICROSOFT, WINGET_PKGS, &full_package_path)
+            .get_directory_content_with_text(
+                self.source.owner(),
+                self.source.repo(),
+                &full_package_path,
+            )
             .await?
             .collect::<Vec<_>>();
 
@@ -135,7 +149,7 @@ impl GitHub {
         path: &PackagePath,
     ) -> Result<impl Iterator<Item = GitHubFile>, GitHubError> {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(GetDirectoryContentWithText::build(
                 GetDirectoryContentVariables::new(&owner, &repo, &format!("HEAD:{path}")),
@@ -164,18 +178,23 @@ impl GitHub {
         manifest_type: ManifestTypeWithLocale,
     ) -> Result<T, GitHubError> {
         let path = PackagePath::new(identifier, Some(version), Some(&manifest_type));
-        let content = self.get_file_content(MICROSOFT, WINGET_PKGS, &path).await?;
+        let content = self
+            .get_file_content(self.source.owner(), self.source.repo(), &path)
+            .await?;
         let manifest = serde_yaml::from_str::<T>(&content)?;
         Ok(manifest)
     }
 
-    #[builder(finish_fn = send)]
-    pub async fn get_winget_pkgs(
+    #[builder(finish_fn = get)]
+    pub async fn winget_pkgs(
         &self,
         #[builder(into)] owner: Option<Cow<'_, str>>,
     ) -> Result<RepositoryData, GitHubError> {
-        self.get_repository_info(owner.as_deref().unwrap_or(MICROSOFT), WINGET_PKGS)
-            .await
+        self.get_repository_info(
+            owner.as_deref().unwrap_or(self.source.repo()),
+            self.source.repo(),
+        )
+        .await
     }
 
     async fn get_repository_info(
@@ -184,7 +203,7 @@ impl GitHub {
         name: &str,
     ) -> Result<RepositoryData, GitHubError> {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(GetRepositoryInfo::build(RepositoryVariables::new(
                 owner, name,
@@ -234,7 +253,7 @@ impl GitHub {
         oid: GitObjectId,
     ) -> Result<CreateBranchRef, GitHubError> {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(CreateRef::build(
                 CreateRefVariables::builder()
@@ -262,11 +281,11 @@ impl GitHub {
 
         loop {
             let GraphQlResponse { data, errors } = self
-                .0
+                .client
                 .post(GRAPHQL_URL)
                 .run_graphql(GetBranches::build(GetBranchesVariables {
                     owner: user,
-                    name: WINGET_PKGS,
+                    name: self.source.repo(),
                     cursor: cursor.as_deref(),
                 }))
                 .await?;
@@ -307,7 +326,8 @@ impl GitHub {
                         _ => !pull_request.state.is_open(),
                     })
                     .find(|pull_request| {
-                        pull_request.repository.name_with_owner == WINGET_PKGS_FULL_NAME
+                        pull_request.repository.owner() == self.source.owner()
+                            && pull_request.repository.name == self.source.repo()
                     })
                 {
                     pr_branch_map.insert(pull_request, branch.name);
@@ -343,7 +363,7 @@ impl GitHub {
         });
 
         let GraphQlResponse { data, errors } =
-            self.0.post(GRAPHQL_URL).run_graphql(operation).await?;
+            self.client.post(GRAPHQL_URL).run_graphql(operation).await?;
 
         data.and_then(|data| data.create_pull_request?.pull_request)
             .map(|pull_request| pull_request.url)
@@ -362,7 +382,7 @@ impl GitHub {
         T: Into<String>,
     {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(UpdateRefs::build(UpdateRefsInput::new(
                 RefUpdate::delete_branches(branch_names),
@@ -406,7 +426,7 @@ impl GitHub {
         #[builder(into)] tag_name: Cow<'a, str>,
     ) -> Result<GitHubValues, GitHubError> {
         let GraphQlResponse { data, errors } = self
-            .0
+            .client
             .post(GRAPHQL_URL)
             .run_graphql(GetAllValues::build(GetAllValuesVariables {
                 name: &repo,
@@ -564,8 +584,8 @@ impl GitHub {
         created_with_url: Option<&DecodedUrl>,
     ) -> Result<Url, GitHubError> {
         let (current_user, winget_pkgs) =
-            tokio::try_join!(self.get_username(), self.get_winget_pkgs().send())?;
-        let fork = self.get_winget_pkgs().owner(&current_user).send().await?;
+            tokio::try_join!(self.get_username(), self.winget_pkgs().get())?;
+        let fork = self.winget_pkgs().owner(&current_user).get().await?;
         let branch_name = branch_name(identifier, version);
         let pull_request_branch = self
             .create_branch(&fork.id, &branch_name, winget_pkgs.default_branch_oid)

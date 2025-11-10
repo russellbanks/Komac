@@ -38,7 +38,7 @@ pub struct Ref {
     pub target: Option<TargetGitObject>,
 }
 
-#[derive(cynic::QueryFragment)]
+#[derive(cynic::QueryFragment, Hash, PartialEq, Eq)]
 pub struct RepositoryOwner {
     pub login: String,
 }
