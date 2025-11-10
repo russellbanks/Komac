@@ -1,4 +1,5 @@
 pub mod environment;
+mod rate_limit;
 mod submit_option;
 
 use std::time::Duration;
@@ -10,6 +11,7 @@ use color_eyre::Result;
 use futures_util::{StreamExt, TryStreamExt, stream};
 use inquire::error::InquireResult;
 use owo_colors::OwoColorize;
+pub use rate_limit::RateLimit;
 pub use submit_option::SubmitOption;
 use tokio::{fs, fs::File, io::AsyncWriteExt};
 use winget_types::{PackageIdentifier, PackageVersion};
