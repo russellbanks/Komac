@@ -2496,9 +2496,9 @@ dependencies = [
 
 [[package]]
 name = "inno"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60226624939e7476d16464d3c45528102b6c1f48ecd252625c0f8f16a70bf668"
+checksum = "22d42139ed134090fc77c99a870849fa9b787082e068f8ae8745cf07e7cfb087"
 dependencies = [
  "bitflags",
  "codepage",
