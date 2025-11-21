@@ -15,13 +15,11 @@ use std::{
     io::{Read, Seek, SeekFrom},
 };
 
-use byteorder::{LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
 use flate2::{Decompress, read::ZlibDecoder};
 use liblzma::read::XzDecoder;
 use msi::Language;
-use protobuf::Enum;
 use registry::Registry;
 use state::NsisState;
 use strsim::levenshtein;
@@ -35,11 +33,11 @@ use winget_types::{
         Installer, InstallerType, Scope,
     },
 };
-use yara_x::mods::{PE, pe::Machine};
-use zerocopy::FromBytes;
+use zerocopy::{FromBytes, LE};
 
 use super::{
     super::extensions::EXE,
+    PE,
     nsis::{
         entry::{Entry, EntryError},
         file_system::Item,
@@ -51,7 +49,14 @@ use super::{
     },
     utils::{LzmaStreamHeader, RELATIVE_PROGRAM_FILES_64},
 };
-use crate::{analysis::Installers, traits::FromMachine};
+use crate::{
+    analysis::{
+        Installers,
+        installers::pe::{CoffHeader, DosHeader, OptionalHeader, SectionTable, Signature},
+    },
+    read::ReadBytesExt,
+    traits::FromMachine,
+};
 
 #[derive(Error, Debug)]
 pub enum NsisError {
@@ -76,8 +81,19 @@ pub struct Nsis {
 }
 
 impl Nsis {
-    pub fn new<R: Read + Seek>(mut reader: R, pe: &PE) -> Result<Self, NsisError> {
-        let first_header_offset = pe.overlay.offset.ok_or(NsisError::NotNsisFile)?;
+    pub fn new<R: Read + Seek>(mut reader: R) -> Result<Self, NsisError> {
+        let pe = PE::read_from(&mut reader)?;
+
+        // Get the PE overlay offset
+        let first_header_offset = pe
+            .section_table
+            .sections()
+            .iter()
+            .map(|section| {
+                u64::from(section.pointer_to_raw_data()) + u64::from(section.size_of_raw_data())
+            })
+            .max()
+            .ok_or(NsisError::NotNsisFile)?;
 
         // Seek to the first header
         reader
@@ -112,7 +128,7 @@ impl Nsis {
 
         debug!(?header);
 
-        let mut state = NsisState::new(pe, &decompressed_data, header, &blocks)?;
+        let mut state = NsisState::new(&decompressed_data, header, &blocks)?;
 
         for (index, section) in blocks.sections(&decompressed_data).enumerate() {
             debug!(
@@ -215,9 +231,8 @@ impl Nsis {
                         .ok()?;
 
                         let machine = decoder.read_u16::<LE>().ok()?;
-                        Machine::from_i32(machine.into())
+                        Some(Architecture::from_machine(machine))
                     })
-                    .map(Architecture::from_machine)
             });
 
         Ok(Self {

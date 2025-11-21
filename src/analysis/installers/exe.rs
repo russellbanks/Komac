@@ -3,7 +3,6 @@ use std::io::{Read, Seek};
 use color_eyre::Result;
 use inno::{Inno, error::InnoError};
 use winget_types::installer::{Architecture, Installer, InstallerType};
-use yara_x::mods::PE;
 
 use super::{super::Installers, Burn, Nsis};
 use crate::{
@@ -23,8 +22,8 @@ pub enum Exe {
 }
 
 impl Exe {
-    pub fn new<R: Read + Seek>(mut reader: R, pe: &PE) -> Result<Self> {
-        match Burn::new(&mut reader, pe) {
+    pub fn new<R: Read + Seek>(mut reader: R) -> Result<Self> {
+        match Burn::new(&mut reader) {
             Ok(burn) => return Ok(Self::Burn(Box::new(burn))),
             Err(BurnError::NotBurnFile) => {}
             Err(error) => return Err(error.into()),
@@ -36,28 +35,28 @@ impl Exe {
             Err(error) => return Err(error.into()),
         }
 
-        match Nsis::new(&mut reader, pe) {
+        match Nsis::new(&mut reader) {
             Ok(nsis) => return Ok(Self::Nsis(nsis)),
             Err(NsisError::NotNsisFile) => {}
             Err(error) => return Err(error.into()),
         }
 
         Ok(Self::Generic(Box::new(Installer {
-            architecture: Architecture::from_machine(pe.machine()),
-            r#type: if pe
-                .version_info_list
-                .iter()
-                .filter(|key_value| matches!(key_value.key(), FILE_DESCRIPTION | ORIGINAL_FILENAME))
-                .filter_map(|key_value| key_value.value.as_deref().map(str::to_ascii_lowercase))
-                .any(|value| {
-                    BASIC_INSTALLER_KEYWORDS
-                        .iter()
-                        .any(|keyword| value.contains(keyword))
-                }) {
-                Some(InstallerType::Exe)
-            } else {
-                Some(InstallerType::Portable)
-            },
+            architecture: Architecture::from_machine(todo!()),
+            r#type: Some(InstallerType::Exe), /*if pe
+                                                  .version_info_list
+                                                  .iter()
+                                                  .filter(|key_value| matches!(key_value.key(), FILE_DESCRIPTION | ORIGINAL_FILENAME))
+                                                  .filter_map(|key_value| key_value.value.as_deref().map(str::to_ascii_lowercase))
+                                                  .any(|value| {
+                                                      BASIC_INSTALLER_KEYWORDS
+                                                          .iter()
+                                                          .any(|keyword| value.contains(keyword))
+                                                  }) {
+                                                  Some(InstallerType::Exe)
+                                              } else {
+                                                  Some(InstallerType::Portable)
+                                              }*/
             ..Installer::default()
         })))
     }

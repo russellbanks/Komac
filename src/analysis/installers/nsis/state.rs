@@ -3,7 +3,6 @@ use std::borrow::Cow;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
 use tracing::debug;
-use yara_x::mods::{PE, pe::ResourceType::RESOURCE_TYPE_MANIFEST};
 use zerocopy::{FromBytes, I32, LE, TryFromBytes, U16};
 
 use super::{
@@ -39,7 +38,6 @@ pub struct NsisState<'data> {
 
 impl<'data> NsisState<'data> {
     pub fn new(
-        pe: &PE,
         data: &'data [u8],
         header: &Header,
         blocks: &BlockHeaders,
@@ -65,17 +63,18 @@ impl<'data> NsisState<'data> {
             state.variables.insert_install_dir(install_dir);
         }
 
-        let manifest = pe
-            .resources
-            .iter()
-            .find(|resource| resource.type_() == RESOURCE_TYPE_MANIFEST)
-            .and_then(|manifest| {
-                let offset = manifest.offset() as usize;
-                data.get(offset..offset + manifest.length() as usize)
-            })
-            .and_then(|manifest_bytes| std::str::from_utf8(manifest_bytes).ok());
+        let manifest: Option<String> = todo!(); /*pe
+        .resources
+        .iter()
+        .find(|resource| resource.type_() == RESOURCE_TYPE_MANIFEST)
+        .and_then(|manifest| {
+        let offset = manifest.offset() as usize;
+        data.get(offset..offset + manifest.length() as usize)
+        })
+        .and_then(|manifest_bytes| std::str::from_utf8(manifest_bytes).ok());*/
 
         state.version = manifest
+            .as_deref()
             .and_then(NsisVersion::from_manifest)
             .or_else(|| NsisVersion::from_branding_text(&state))
             .unwrap_or_else(|| NsisVersion::detect(state.str_block));

@@ -3,23 +3,18 @@ use std::{io::Cursor, mem};
 use camino::Utf8Path;
 use color_eyre::eyre::{Result, bail};
 use memmap2::Mmap;
-use tracing::debug;
 use winget_types::{
     installer::Installer,
     locale::{Copyright, PackageName, Publisher},
 };
-use yara_x::mods::PE;
 
-use super::extensions::{APPX, APPX_BUNDLE, EXE, MSI, MSIX, MSIX_BUNDLE, ZIP};
-use crate::{
-    analysis::{
-        Installers,
-        installers::{
-            Exe, Msi, Zip,
-            msix_family::{Msix, bundle::MsixBundle},
-        },
+use super::extensions::{APPX, APPX_BUNDLE, MSI, MSIX, MSIX_BUNDLE, ZIP};
+use crate::analysis::{
+    Installers,
+    installers::{
+        Exe, Msi, Zip,
+        msix_family::{Msix, bundle::MsixBundle},
     },
-    traits::FromVSVersionInfo,
 };
 
 pub struct Analyzer<'data> {
@@ -49,14 +44,7 @@ impl<'data> Analyzer<'data> {
                 zip = Some(scoped_zip);
                 installers
             }
-            EXE => {
-                let pe = yara_x::mods::invoke::<PE>(data.as_ref()).unwrap();
-                debug!(?pe.version_info);
-                copyright = Copyright::from_version_info(&pe.version_info);
-                package_name = PackageName::from_version_info(&pe.version_info);
-                publisher = Publisher::from_version_info(&pe.version_info);
-                Exe::new(Cursor::new(data.as_ref()), &pe)?.installers()
-            }
+            EXE => Exe::new(Cursor::new(data.as_ref()))?.installers(),
             _ => bail!(r#"Unsupported file extension: "{extension}""#),
         };
         Ok(Self {
