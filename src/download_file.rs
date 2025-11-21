@@ -1,4 +1,8 @@
-use std::{collections::HashMap, mem};
+use std::{
+    collections::HashMap,
+    io::{Read, Seek},
+    mem,
+};
 
 use color_eyre::eyre::Result;
 use futures_util::{StreamExt, TryStreamExt, stream};
@@ -9,17 +13,17 @@ use crate::{analysis::Analyzer, download::DownloadedFile};
 
 pub async fn process_files(
     files: &mut [DownloadedFile],
-) -> Result<HashMap<DecodedUrl, Analyzer<'_>>> {
+) -> Result<HashMap<DecodedUrl, Analyzer<'_, impl Read + Seek>>> {
     stream::iter(files.iter_mut().map(
         |DownloadedFile {
+             file,
              url,
-             mmap,
              sha_256,
              file_name,
              last_modified,
              ..
          }| async move {
-            let mut file_analyser = Analyzer::new(mmap, file_name)?;
+            let mut file_analyser = Analyzer::new(file, file_name)?;
             let architecture = url
                 .override_architecture()
                 .or_else(|| Architecture::from_url(url.as_str()));
