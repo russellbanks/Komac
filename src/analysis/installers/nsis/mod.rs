@@ -15,13 +15,11 @@ use std::{
     io::{Read, Seek, SeekFrom},
 };
 
-use byteorder::{LE, ReadBytesExt};
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
 use flate2::{Decompress, read::ZlibDecoder};
 use liblzma::read::XzDecoder;
 use msi::Language;
-use protobuf::Enum;
 use registry::Registry;
 use state::NsisState;
 use strsim::levenshtein;
@@ -35,8 +33,7 @@ use winget_types::{
         Installer, InstallerType, Scope,
     },
 };
-use yara_x::mods::{PE, pe::Machine};
-use zerocopy::FromBytes;
+use zerocopy::{FromBytes, LE};
 
 use super::{
     super::extensions::EXE,
@@ -49,9 +46,14 @@ use super::{
             flags::CommonHeaderFlags,
         },
     },
+    pe::PE,
     utils::{LzmaStreamHeader, RELATIVE_PROGRAM_FILES_64},
 };
-use crate::{analysis::Installers, traits::FromMachine};
+use crate::{
+    analysis::Installers,
+    read::ReadBytesExt,
+    traits::{FromMachine, IntoWingetArchitecture},
+};
 
 #[derive(Error, Debug)]
 pub enum NsisError {
@@ -77,7 +79,10 @@ pub struct Nsis {
 
 impl Nsis {
     pub fn new<R: Read + Seek>(mut reader: R, pe: &PE) -> Result<Self, NsisError> {
-        let first_header_offset = pe.overlay.offset.ok_or(NsisError::NotNsisFile)?;
+        // Get the PE overlay offset
+        let first_header_offset = pe.overlay_offset().ok_or(NsisError::NotNsisFile)?;
+
+        let manifest = pe.manifest(&mut reader).ok();
 
         // Seek to the first header
         reader
@@ -103,16 +108,17 @@ impl Nsis {
         let (_flags, rest) = CommonHeaderFlags::ref_from_prefix(&decompressed_data)
             .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
-        let architecture = Architecture::from_machine(pe.machine());
+        let architecture = pe.winget_architecture();
 
-        let (blocks, rest) = BlockHeaders::read_dynamic_from_prefix(rest, architecture)?;
+        let (blocks, rest) =
+            BlockHeaders::read_dynamic_from_prefix(rest, architecture.is_64_bit())?;
 
         let (header, _) = Header::ref_from_prefix(rest)
             .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 
         debug!(?header);
 
-        let mut state = NsisState::new(pe, &decompressed_data, header, &blocks)?;
+        let mut state = NsisState::new(&decompressed_data, header, &blocks, manifest.as_deref())?;
 
         // https://nsis.sourceforge.io/Reference/.onInit
         if header.code_on_init() != -1 {
@@ -231,9 +237,8 @@ impl Nsis {
                         .ok()?;
 
                         let machine = decoder.read_u16::<LE>().ok()?;
-                        Machine::from_i32(machine.into())
+                        Some(Architecture::from_machine(machine))
                     })
-                    .map(Architecture::from_machine)
             });
 
         Ok(Self {

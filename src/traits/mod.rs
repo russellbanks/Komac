@@ -1,7 +1,7 @@
 mod ascii_ext;
 pub mod name;
 pub mod path;
-use std::{collections::HashMap, mem, sync::LazyLock};
+use std::{mem, sync::LazyLock};
 
 pub use ascii_ext::AsciiExt;
 use html2text::render::{TaggedLine, TextDecorator};
@@ -10,39 +10,62 @@ use regex::Regex;
 use winget_types::{
     Manifest, ManifestVersion, PackageVersion,
     installer::Architecture,
-    locale::{
-        Copyright, DefaultLocaleManifest, LocaleManifest, PackageName, Publisher, ReleaseNotes,
-    },
+    locale::{DefaultLocaleManifest, LocaleManifest, ReleaseNotes},
     url::ReleaseNotesUrl,
 };
-use yara_x::mods::pe::Machine;
 
-use crate::github::{client::GitHubValues, graphql::types::Html};
+use super::{
+    analysis::installers::pe::{
+        IMAGE_FILE_MACHINE_AM33, IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_ARM,
+        IMAGE_FILE_MACHINE_ARM64, IMAGE_FILE_MACHINE_ARM64EC, IMAGE_FILE_MACHINE_ARM64X,
+        IMAGE_FILE_MACHINE_ARMNT, IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_IA64,
+        IMAGE_FILE_MACHINE_M32R, IMAGE_FILE_MACHINE_POWERPC, IMAGE_FILE_MACHINE_POWERPCFP,
+        IMAGE_FILE_MACHINE_R4000, IMAGE_FILE_MACHINE_SH3, IMAGE_FILE_MACHINE_SH3DSP,
+        IMAGE_FILE_MACHINE_SH4, IMAGE_FILE_MACHINE_SH5, IMAGE_FILE_MACHINE_THUMB,
+        IMAGE_FILE_MACHINE_UNKNOWN,
+    },
+    github::{client::GitHubValues, graphql::types::Html},
+};
+use crate::analysis::installers::pe::PE;
 
 pub trait FromMachine {
-    fn from_machine(machine: Machine) -> Self;
+    fn from_machine(machine: u16) -> Self;
 }
 
 impl FromMachine for Architecture {
-    fn from_machine(machine: Machine) -> Self {
+    fn from_machine(machine: u16) -> Self {
         match machine {
-            Machine::MACHINE_AMD64
-            | Machine::MACHINE_IA64
-            | Machine::MACHINE_POWERPC
-            | Machine::MACHINE_POWERPCFP
-            | Machine::MACHINE_R4000
-            | Machine::MACHINE_SH5 => Self::X64,
-            Machine::MACHINE_AM33
-            | Machine::MACHINE_I386
-            | Machine::MACHINE_M32R
-            | Machine::MACHINE_SH3
-            | Machine::MACHINE_SH3DSP
-            | Machine::MACHINE_SH4 => Self::X86,
-            Machine::MACHINE_ARM64 => Self::Arm64,
-            Machine::MACHINE_ARM | Machine::MACHINE_ARMNT | Machine::MACHINE_THUMB => Self::Arm,
-            Machine::MACHINE_UNKNOWN => Self::Neutral,
-            machine => panic!("Unexpected architecture: {machine:?}"),
+            IMAGE_FILE_MACHINE_AMD64
+            | IMAGE_FILE_MACHINE_IA64
+            | IMAGE_FILE_MACHINE_POWERPC
+            | IMAGE_FILE_MACHINE_POWERPCFP
+            | IMAGE_FILE_MACHINE_R4000
+            | IMAGE_FILE_MACHINE_SH5 => Self::X64,
+            IMAGE_FILE_MACHINE_AM33
+            | IMAGE_FILE_MACHINE_I386
+            | IMAGE_FILE_MACHINE_M32R
+            | IMAGE_FILE_MACHINE_SH3
+            | IMAGE_FILE_MACHINE_SH3DSP
+            | IMAGE_FILE_MACHINE_SH4 => Self::X86,
+            IMAGE_FILE_MACHINE_ARM64 | IMAGE_FILE_MACHINE_ARM64EC | IMAGE_FILE_MACHINE_ARM64X => {
+                Self::Arm64
+            }
+            IMAGE_FILE_MACHINE_ARM | IMAGE_FILE_MACHINE_ARMNT | IMAGE_FILE_MACHINE_THUMB => {
+                Self::Arm
+            }
+            IMAGE_FILE_MACHINE_UNKNOWN => Self::Neutral,
+            _ => panic!("Unexpected architecture: {machine:?}"),
         }
+    }
+}
+
+pub trait IntoWingetArchitecture {
+    fn winget_architecture(&self) -> Architecture;
+}
+
+impl IntoWingetArchitecture for PE {
+    fn winget_architecture(&self) -> Architecture {
+        Architecture::from_machine(self.machine())
     }
 }
 
@@ -139,36 +162,6 @@ impl FromHtml for ReleaseNotes {
         html2text::from_read_with_decorator(html.as_bytes(), usize::MAX, GitHubHtmlDecorator)
             .ok()
             .and_then(|text| Self::new(NEWLINE_REGEX.replace_all(&text, "\n")).ok())
-    }
-}
-
-pub trait FromVSVersionInfo {
-    fn from_version_info(version_info: &HashMap<String, String>) -> Option<Self>
-    where
-        Self: Sized;
-}
-
-impl FromVSVersionInfo for Copyright {
-    fn from_version_info(version_info: &HashMap<String, String>) -> Option<Self> {
-        version_info
-            .get("LegalCopyright")
-            .and_then(|product_name| Self::new(product_name.trim()).ok())
-    }
-}
-
-impl FromVSVersionInfo for PackageName {
-    fn from_version_info(version_info: &HashMap<String, String>) -> Option<Self> {
-        version_info
-            .get("ProductName")
-            .and_then(|product_name| Self::new(product_name.trim()).ok())
-    }
-}
-
-impl FromVSVersionInfo for Publisher {
-    fn from_version_info(version_info: &HashMap<String, String>) -> Option<Self> {
-        version_info
-            .get("CompanyName")
-            .and_then(|product_name| Self::new(product_name.trim()).ok())
     }
 }
 

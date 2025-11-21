@@ -31,6 +31,7 @@ mod github;
 mod manifests;
 mod match_installers;
 mod prompts;
+mod read;
 mod terminal;
 mod token;
 mod traits;
