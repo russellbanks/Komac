@@ -15,34 +15,59 @@ use winget_types::{
     },
     url::ReleaseNotesUrl,
 };
-use yara_x::mods::pe::Machine;
 
-use crate::github::{client::GitHubValues, graphql::types::Html};
+use super::{
+    analysis::installers::pe::{
+        IMAGE_FILE_MACHINE_AM33, IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_ARM,
+        IMAGE_FILE_MACHINE_ARM64, IMAGE_FILE_MACHINE_ARM64EC, IMAGE_FILE_MACHINE_ARM64X,
+        IMAGE_FILE_MACHINE_ARMNT, IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_IA64,
+        IMAGE_FILE_MACHINE_M32R, IMAGE_FILE_MACHINE_POWERPC, IMAGE_FILE_MACHINE_POWERPCFP,
+        IMAGE_FILE_MACHINE_R4000, IMAGE_FILE_MACHINE_SH3, IMAGE_FILE_MACHINE_SH3DSP,
+        IMAGE_FILE_MACHINE_SH4, IMAGE_FILE_MACHINE_SH5, IMAGE_FILE_MACHINE_THUMB,
+        IMAGE_FILE_MACHINE_UNKNOWN,
+    },
+    github::{client::GitHubValues, graphql::types::Html},
+};
+use crate::analysis::installers::pe::PE;
 
 pub trait FromMachine {
-    fn from_machine(machine: Machine) -> Self;
+    fn from_machine(machine: u16) -> Self;
 }
 
 impl FromMachine for Architecture {
-    fn from_machine(machine: Machine) -> Self {
+    fn from_machine(machine: u16) -> Self {
         match machine {
-            Machine::MACHINE_AMD64
-            | Machine::MACHINE_IA64
-            | Machine::MACHINE_POWERPC
-            | Machine::MACHINE_POWERPCFP
-            | Machine::MACHINE_R4000
-            | Machine::MACHINE_SH5 => Self::X64,
-            Machine::MACHINE_AM33
-            | Machine::MACHINE_I386
-            | Machine::MACHINE_M32R
-            | Machine::MACHINE_SH3
-            | Machine::MACHINE_SH3DSP
-            | Machine::MACHINE_SH4 => Self::X86,
-            Machine::MACHINE_ARM64 => Self::Arm64,
-            Machine::MACHINE_ARM | Machine::MACHINE_ARMNT | Machine::MACHINE_THUMB => Self::Arm,
-            Machine::MACHINE_UNKNOWN => Self::Neutral,
-            machine => panic!("Unexpected architecture: {machine:?}"),
+            IMAGE_FILE_MACHINE_AMD64
+            | IMAGE_FILE_MACHINE_IA64
+            | IMAGE_FILE_MACHINE_POWERPC
+            | IMAGE_FILE_MACHINE_POWERPCFP
+            | IMAGE_FILE_MACHINE_R4000
+            | IMAGE_FILE_MACHINE_SH5 => Self::X64,
+            IMAGE_FILE_MACHINE_AM33
+            | IMAGE_FILE_MACHINE_I386
+            | IMAGE_FILE_MACHINE_M32R
+            | IMAGE_FILE_MACHINE_SH3
+            | IMAGE_FILE_MACHINE_SH3DSP
+            | IMAGE_FILE_MACHINE_SH4 => Self::X86,
+            IMAGE_FILE_MACHINE_ARM64 | IMAGE_FILE_MACHINE_ARM64EC | IMAGE_FILE_MACHINE_ARM64X => {
+                Self::Arm64
+            }
+            IMAGE_FILE_MACHINE_ARM | IMAGE_FILE_MACHINE_ARMNT | IMAGE_FILE_MACHINE_THUMB => {
+                Self::Arm
+            }
+            IMAGE_FILE_MACHINE_UNKNOWN => Self::Neutral,
+            _ => panic!("Unexpected architecture: {machine:?}"),
         }
+    }
+}
+
+pub trait IntoWingetArchitecture {
+    fn winget_architecture(&self) -> Architecture;
+}
+
+impl IntoWingetArchitecture for PE {
+    fn winget_architecture(&self) -> Architecture {
+        Architecture::from_machine(self.machine())
     }
 }
 

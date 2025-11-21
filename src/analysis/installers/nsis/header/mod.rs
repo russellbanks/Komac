@@ -5,7 +5,6 @@ pub mod flags;
 
 use std::io::{Error, ErrorKind, Read, Result, Seek};
 
-use byteorder::ReadBytesExt;
 use bzip2::read::BzDecoder;
 pub use compression::Compression;
 pub use decoder::Decoder;
@@ -15,7 +14,7 @@ use tracing::debug;
 use zerocopy::{FromBytes, I32, Immutable, KnownLayout, LE};
 
 use super::FirstHeader;
-use crate::analysis::installers::utils::LzmaStreamHeader;
+use crate::{analysis::installers::utils::LzmaStreamHeader, read::ReadBytesExt};
 
 const NSIS_MAX_INST_TYPES: u8 = 32;
 
@@ -204,7 +203,7 @@ impl Header {
         };
 
         if is_solid {
-            let decompressed_header_size = decoder.read_u32::<byteorder::LE>()?;
+            let decompressed_header_size = decoder.read_u32::<LE>()?;
             let expected_size = first_header.length_of_header();
             if decompressed_header_size != expected_size {
                 return Err(Error::new(

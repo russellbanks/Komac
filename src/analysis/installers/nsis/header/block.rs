@@ -1,13 +1,12 @@
 use std::{borrow::Cow, io::Cursor, ops::Index, slice};
 
 use strum::EnumCount;
-use winget_types::installer::Architecture;
 use zerocopy::{
     FromBytes, Immutable, KnownLayout,
     little_endian::{U32, U64},
 };
 
-use crate::analysis::installers::nsis::{NsisError, section::Section};
+use super::super::{NsisError, section::Section};
 
 #[derive(Clone, Debug, Default, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
@@ -62,9 +61,9 @@ impl BlockHeaders {
     /// be owned if the offsets are u32's.
     pub fn read_dynamic_from_prefix(
         data: &[u8],
-        architecture: Architecture,
+        is_64_bit: bool,
     ) -> Result<(Cow<'_, Self>, &[u8]), NsisError> {
-        if architecture.is_64_bit() {
+        if is_64_bit {
             Self::ref_from_prefix(data)
                 .map(|(headers, rest)| (Cow::Borrowed(headers), rest))
                 .map_err(|error| NsisError::ZeroCopy(error.to_string()))

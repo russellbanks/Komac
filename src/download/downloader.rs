@@ -5,7 +5,6 @@ use color_eyre::{Result, eyre::bail};
 use futures_util::{StreamExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use itertools::{Itertools, Position};
-use memmap2::Mmap;
 use reqwest::{
     Client,
     header::{
@@ -217,7 +216,6 @@ impl Downloader {
 
         Ok(DownloadedFile {
             url: download.into_url(),
-            mmap: unsafe { Mmap::map(&temp_file) }?,
             file: temp_file,
             sha_256: Sha256String::from_digest(&sha_256),
             file_name,

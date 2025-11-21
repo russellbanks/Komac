@@ -21,13 +21,19 @@ use winget_types::installer::{
     InstallerType, Scope,
 };
 use wix_burn_stub::WixBurnStub;
-use yara_x::mods::{
-    PE,
-    pe::{Machine, Resource, ResourceType, Section},
-};
 
 use super::msi::Msi;
-use crate::{analysis::Installers, traits::FromMachine};
+use crate::{
+    analysis::{
+        Installers,
+        installers::pe::{
+            PE,
+            resource::{ImageResourceDataEntry, ResourceDirectory, SectionReader},
+        },
+    },
+    read::ReadBytesExt,
+    traits::FromMachine,
+};
 
 #[derive(Error, Debug)]
 pub enum BurnError {
@@ -39,6 +45,8 @@ pub enum BurnError {
     Io(#[from] io::Error),
 }
 
+const WIXBURN: [u8; 8] = *b".wixburn";
+
 pub struct Burn {
     architecture: Architecture,
     manifest: Option<BurnManifest>,
@@ -47,11 +55,46 @@ pub struct Burn {
 
 impl Burn {
     pub fn new<R: Read + Seek>(mut reader: R, pe: &PE) -> Result<Self, BurnError> {
-        let Some(wixburn_section) = Self::get_wixburn_section(pe) else {
-            return if let Some(msi_resource) = Self::get_msi_resource(pe) {
+        let Some(wixburn) = pe.find_section(WIXBURN) else {
+            // Get the resource table data directory header
+            let resource_table = pe.resource_table().ok_or(BurnError::NotBurnFile)?;
+
+            // Get the actual file offset of the resource directory section
+            let resource_directory_offset = resource_table.file_offset(&pe.section_table)?;
+
+            let section_reader = SectionReader::new(
+                &mut reader,
+                resource_directory_offset.into(),
+                resource_table.size().into(),
+            )?;
+
+            let mut resource_directory = ResourceDirectory::new(section_reader)?;
+
+            let _rc_data = resource_directory
+                .find_rc_data()
+                .map_err(|_| BurnError::NotBurnFile);
+
+            let msi_entry = resource_directory
+                .find_name_entry("MSI")
+                .ok_or(BurnError::NotBurnFile)?;
+
+            let msi_directory_table = msi_entry
+                .data(&mut resource_directory)?
+                .table()
+                .ok_or(BurnError::NotBurnFile)?;
+
+            return if let Some(msi_directory) = msi_directory_table.entries().next() {
+                let msi_data_entry_offset = msi_directory.file_offset(resource_directory_offset);
+                reader.seek(SeekFrom::Start(msi_data_entry_offset.into()))?;
+
+                let msi_data_entry = reader.read_t::<ImageResourceDataEntry>()?;
+                let msi_offset = pe
+                    .section_table
+                    .to_file_offset(msi_data_entry.offset_to_data())?;
+
                 // Installers built with the Java Development Kit embed an MSI resource
-                reader.seek(SeekFrom::Start(msi_resource.offset().into()))?;
-                let msi_reader = reader.take(msi_resource.length().into());
+                reader.seek(SeekFrom::Start(msi_offset.into()))?;
+                let msi_reader = reader.take(msi_data_entry.size().into());
                 let msi = Msi::new(msi_reader)?;
                 Ok(Self {
                     architecture: msi.architecture,
@@ -64,7 +107,7 @@ impl Burn {
         };
 
         // Seek to and read wix burn stub
-        reader.seek(SeekFrom::Start(wixburn_section.raw_data_offset().into()))?;
+        reader.seek(SeekFrom::Start(wixburn.pointer_to_raw_data().into()))?;
         let wix_burn_stub = WixBurnStub::try_read_from_io(&mut reader)?;
 
         debug!(?wix_burn_stub);
@@ -95,23 +138,6 @@ impl Burn {
             manifest: Some(manifest),
             msi: None,
         })
-    }
-
-    fn get_wixburn_section(pe: &PE) -> Option<&Section> {
-        const WIXBURN_HEADER: &[u8] = b".wixburn";
-
-        pe.sections
-            .iter()
-            .find(|section| section.name() == WIXBURN_HEADER)
-    }
-
-    fn get_msi_resource(pe: &PE) -> Option<&Resource> {
-        const MSI: &[u8] = b"M\0S\0I\0";
-
-        pe.resources
-            .iter()
-            .filter(|resource| resource.type_() == ResourceType::RESOURCE_TYPE_RCDATA)
-            .find(|resource| resource.name_string() == MSI)
     }
 }
 
@@ -148,7 +174,7 @@ impl Installers for Burn {
             })
             .chain([
                 ("VersionNT64", Value::Bool(true)),
-                ("NativeMachine", Value::Int(Machine::MACHINE_AMD64 as u32)),
+                ("NativeMachine", Value::Int(0x8664)),
             ])
             .collect::<HashMap<_, _>>();
 
