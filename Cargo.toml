@@ -79,9 +79,9 @@ supports-hyperlinks = "3.1.0"
 tempfile = "3.23.0"
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["rt-multi-thread", "macros", "fs", "parking_lot"] }
-tracing = { version = "0.1.41", features = ["release_max_level_warn"] }
+tracing = { version = "0.1.43", features = ["release_max_level_warn"] }
 tracing-indicatif = "0.3.13"
-tracing-subscriber = "0.3.20"
+tracing-subscriber = "0.3.22"
 tree-sitter-highlight = "0.25.10"
 tree-sitter-yaml = "0.7.2"
 tui-textarea = { version = "0.7.0", features = ["search"] }
