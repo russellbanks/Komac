@@ -53,7 +53,7 @@ jobs:
           echo "LAST_MODIFIED=${last_modified}" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "Update GitHub GraphQL Schema"
           branch: update-github-graphql-schema
