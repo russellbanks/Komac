@@ -168,16 +168,13 @@ impl Header {
             lzma_compression
         } else if signature.get(3) == Some(&0x80) {
             is_solid = false;
-            is_lzma(&signature[NON_SOLID_EXTRA_BYTES..]).map_or_else(
-                || {
-                    if is_bzip2(&signature[NON_SOLID_EXTRA_BYTES..]) {
-                        Compression::BZip2
-                    } else {
-                        Compression::Zlib
-                    }
-                },
-                |lzma_compression| lzma_compression,
-            )
+            is_lzma(&signature[NON_SOLID_EXTRA_BYTES..]).unwrap_or_else(|| {
+                if is_bzip2(&signature[NON_SOLID_EXTRA_BYTES..]) {
+                    Compression::BZip2
+                } else {
+                    Compression::Zlib
+                }
+            })
         } else if is_bzip2(&signature) {
             Compression::BZip2
         } else {
