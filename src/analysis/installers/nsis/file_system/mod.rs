@@ -173,6 +173,11 @@ impl FileSystem {
     {
         let name = name.as_ref();
 
+        // Return false if the path is empty; it cannot be deleted
+        if name.is_empty() {
+            return false;
+        }
+
         if flags.contains(DelFlags::SIMPLE) {
             if let Some(file) = self.current_dir.children(&self.arena).find(|&id| {
                 self.arena
