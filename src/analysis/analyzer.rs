@@ -33,13 +33,16 @@ pub struct Analyzer<'data> {
 
 impl<'data> Analyzer<'data> {
     pub fn new(data: &'data Mmap, file_name: &str) -> Result<Self> {
-        let extension = Utf8Path::new(file_name).extension().unwrap_or_default();
+        let extension = Utf8Path::new(file_name)
+            .extension()
+            .unwrap_or_default()
+            .to_ascii_lowercase();
 
         let mut zip = None;
         let mut copyright = None;
         let mut package_name = None;
         let mut publisher = None;
-        let installers = match extension {
+        let installers = match extension.as_str() {
             MSI => Msi::new(Cursor::new(data.as_ref()))?.installers(),
             MSIX | APPX => Msix::new(Cursor::new(data.as_ref()))?.installers(),
             MSIX_BUNDLE | APPX_BUNDLE => MsixBundle::new(Cursor::new(data.as_ref()))?.installers(),
