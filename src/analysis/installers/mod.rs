@@ -1,3 +1,4 @@
+mod advanced;
 pub mod burn;
 mod exe;
 pub mod inno;
@@ -9,6 +10,7 @@ pub mod squirrel;
 pub mod utils;
 mod zip;
 
+pub use advanced::AdvancedInstaller;
 pub use burn::Burn;
 pub use exe::Exe;
 pub use msi::Msi;

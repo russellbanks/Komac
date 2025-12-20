@@ -4,9 +4,10 @@ use color_eyre::Result;
 use inno::{Inno, error::InnoError};
 use winget_types::installer::{Installer, InstallerType};
 
-use super::{super::Installers, Burn, Nsis, Squirrel};
+use super::{super::Installers, AdvancedInstaller, Burn, Nsis, Squirrel};
 use crate::{
     analysis::installers::{
+        advanced::AdvancedInstallerError,
         burn::BurnError,
         nsis::NsisError,
         pe::{PE, VSVersionInfo},
@@ -27,6 +28,7 @@ pub struct Exe {
 }
 
 pub enum ExeType {
+    AdvancedInstaller(AdvancedInstaller),
     Burn(Box<Burn>),
     Inno(Box<Inno>),
     Nsis(Nsis),
@@ -55,6 +57,19 @@ impl Exe {
             .as_mut()
             .and_then(|table| table.swap_remove("CompanyName"))
             .map(str::to_owned);
+
+        match AdvancedInstaller::new(&mut reader, &pe) {
+            Ok(advanced) => {
+                return Ok(Self {
+                    r#type: ExeType::AdvancedInstaller(advanced),
+                    legal_copyright,
+                    product_name,
+                    company_name,
+                });
+            }
+            Err(AdvancedInstallerError::NotAdvancedInstallerFile) => {}
+            Err(error) => return Err(error.into()),
+        }
 
         match Burn::new(&mut reader, &pe) {
             Ok(burn) => {
@@ -137,6 +152,7 @@ impl Exe {
 impl Installers for Exe {
     fn installers(&self) -> Vec<Installer> {
         match &self.r#type {
+            ExeType::AdvancedInstaller(advanced) => advanced.installers(),
             ExeType::Burn(burn) => burn.installers(),
             ExeType::Inno(inno) => inno.installers(),
             ExeType::Nsis(nsis) => nsis.installers(),
