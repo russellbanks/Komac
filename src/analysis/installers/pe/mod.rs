@@ -10,7 +10,7 @@ pub mod vs_version_info;
 
 use std::{
     io,
-    io::{Error, Read, Seek, SeekFrom},
+    io::{Error, Read, Seek, SeekFrom, Take},
 };
 
 pub use coff::CoffHeader;
@@ -68,6 +68,10 @@ impl PE {
         })
     }
 
+    pub fn sections(&self) -> ! {
+        todo!("Return an iterator of sections")
+    }
+
     pub fn find_section(&self, name: [u8; 8]) -> Option<&SectionHeader> {
         self.section_table
             .sections()
@@ -104,6 +108,55 @@ impl PE {
         self.optional_header.data_directories.resource_table()
     }
 
+    pub fn data<R>(&self, mut reader: R) -> io::Result<Take<R>>
+    where
+        R: Read + Seek,
+    {
+        let resource_table = self
+            .resource_table()
+            .ok_or_else(|| Error::other("No PE resource table found"))?;
+
+        // Get the actual file offset of the resource directory section
+        let resource_directory_offset = resource_table.file_offset(&self.section_table)?;
+
+        let section_reader = SectionReader::new(
+            &mut reader,
+            resource_directory_offset.into(),
+            resource_table.size().into(),
+        )?;
+
+        let mut resource_directory = ResourceDirectory::new(section_reader)?;
+
+        let data_directory_table = resource_directory.find_directory_table_by_name("DATA")?;
+
+        let data_entry = data_directory_table
+            .id_entries()
+            .copied()
+            .next()
+            .ok_or_else(|| Error::other("No data entry found"))?;
+
+        let data_directory_table = data_entry
+            .data(&mut resource_directory)?
+            .table()
+            .ok_or_else(|| Error::other("No data directory found"))?;
+
+        let data_directory = data_directory_table
+            .id_entries()
+            .next()
+            .ok_or_else(|| Error::other("No data directory found"))?;
+
+        let data_data_entry_offset = data_directory.file_offset(resource_directory_offset);
+        reader.seek(SeekFrom::Start(data_data_entry_offset.into()))?;
+
+        let data_data_entry = reader.read_t::<ImageResourceDataEntry>()?;
+        let data_offset = self
+            .section_table
+            .to_file_offset(data_data_entry.offset_to_data())?;
+
+        reader.seek(SeekFrom::Start(data_offset.into()))?;
+        Ok(reader.take(data_data_entry.size().into()))
+    }
+
     pub fn vs_version_info<R>(&self, mut reader: R) -> io::Result<Vec<u8>>
     where
         R: Read + Seek,
@@ -123,11 +176,11 @@ impl PE {
 
         let mut resource_directory = ResourceDirectory::new(section_reader)?;
 
-        let _version_info = resource_directory.find_version_info()?;
+        let directory_table = resource_directory.find_version_info()?;
 
-        let version_entry = resource_directory
-            .current_directory_table()
-            .entries()
+        let version_entry = directory_table
+            .id_entries()
+            .copied()
             .next()
             .ok_or_else(|| Error::other("No manifest entry found"))?;
 
@@ -137,7 +190,7 @@ impl PE {
             .ok_or_else(|| Error::other("No manifest directory table found"))?;
 
         let version_directory = version_directory_table
-            .entries()
+            .id_entries()
             .next()
             .ok_or_else(|| Error::other("No manifest directory found"))?;
 
@@ -177,11 +230,11 @@ impl PE {
 
         let mut resource_directory = ResourceDirectory::new(section_reader)?;
 
-        let _manifest = resource_directory.find_manifest()?;
+        let manifest_directory_table = resource_directory.find_manifest()?;
 
-        let manifest_entry = resource_directory
-            .current_directory_table()
-            .entries()
+        let manifest_entry = manifest_directory_table
+            .id_entries()
+            .copied()
             .next()
             .ok_or_else(|| Error::other("No manifest entry found"))?;
 
@@ -191,7 +244,7 @@ impl PE {
             .ok_or_else(|| Error::other("No manifest directory table found"))?;
 
         let manifest_directory = manifest_directory_table
-            .entries()
+            .id_entries()
             .next()
             .ok_or_else(|| Error::other("No manifest directory found"))?;
 

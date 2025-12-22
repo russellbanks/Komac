@@ -6,7 +6,7 @@ use std::{
 pub struct SectionReader<R> {
     inner: R,
     start: u64,
-    length: u64,
+    length: Option<u64>,
     position: u64, // Position within the section (0-based)
 }
 
@@ -18,7 +18,19 @@ impl<R: Read + Seek> SectionReader<R> {
         Ok(Self {
             inner,
             start,
-            length,
+            length: Some(length),
+            position: 0,
+        })
+    }
+
+    pub fn from_offset(mut inner: R, start: u64) -> io::Result<Self> {
+        // Seek to the start of the section
+        inner.seek(SeekFrom::Start(start))?;
+
+        Ok(Self {
+            inner,
+            start,
+            length: None,
             position: 0,
         })
     }
@@ -31,8 +43,9 @@ impl<R: Read + Seek> SectionReader<R> {
 
     /// Returns the remaining bytes in the section.
     #[inline]
-    pub const fn remaining(&self) -> u64 {
-        self.length.saturating_sub(self.position)
+    pub fn remaining(&self) -> Option<u64> {
+        self.length
+            .map(|length| length.saturating_sub(self.position))
     }
 
     /// Returns the section start offset in the underlying reader.
@@ -43,20 +56,24 @@ impl<R: Read + Seek> SectionReader<R> {
 
     /// Returns the section length.
     #[inline]
-    pub const fn section_length(&self) -> u64 {
+    pub const fn section_length(&self) -> Option<u64> {
         self.length
     }
 }
 
 impl<R: Read + Seek> Read for SectionReader<R> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let remaining = self.remaining();
-        if remaining == 0 {
-            return Ok(0); // EOF
-        }
+        let to_read = if let Some(remaining) = self.remaining() {
+            if remaining == 0 {
+                return Ok(0); // EOF
+            }
 
-        // Limit read to remaining bytes in section
-        let to_read = cmp::min(buf.len() as u64, remaining) as usize;
+            // Limit read to remaining bytes in section
+            cmp::min(buf.len() as u64, remaining) as usize
+        } else {
+            buf.len()
+        };
+
         let bytes_read = self.inner.read(&mut buf[..to_read])?;
 
         self.position += bytes_read as u64;
@@ -68,12 +85,23 @@ impl<R: Read + Seek> Seek for SectionReader<R> {
     fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
         let new_position = match pos {
             SeekFrom::Start(offset) => offset,
-            SeekFrom::End(offset) => self.length.saturating_add_signed(offset),
+            SeekFrom::End(offset) => {
+                if let Some(length) = self.length {
+                    length.saturating_add_signed(offset)
+                } else {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "Unknown end for SectionReader",
+                    ));
+                }
+            }
             SeekFrom::Current(offset) => self.position.saturating_add_signed(offset),
         };
 
         // Clamp to section bounds
-        let clamped_position = cmp::min(new_position, self.length);
+        let clamped_position = self
+            .length
+            .map_or(new_position, |length| cmp::min(new_position, length));
 
         // Seek in the underlying reader to the absolute position
         let absolute_position = self.start + clamped_position;
@@ -197,7 +225,7 @@ mod tests {
         let mut empty_reader = SectionReader::new(Cursor::new(create_test_data()), 50, 0).unwrap();
         let mut buf = [0u8; 10];
         assert_eq!(empty_reader.read(&mut buf).unwrap(), 0);
-        assert_eq!(empty_reader.remaining(), 0);
+        assert_eq!(empty_reader.remaining(), Some(0));
 
         // Single byte section
         let mut single_reader = SectionReader::new(Cursor::new(create_test_data()), 42, 1).unwrap();

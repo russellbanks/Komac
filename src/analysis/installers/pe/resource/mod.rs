@@ -5,10 +5,16 @@ mod name;
 mod resource_types;
 mod section_reader;
 
-use std::io;
+use std::{
+    io,
+    io::{Read, Seek},
+};
 
 pub use directory::ResourceDirectory;
-pub use image::{ImageResourceDataEntry, ImageResourceDirectory, ImageResourceDirectoryEntry};
+pub use image::{
+    ImageResourceDataEntry, ImageResourceDirectory, ImageResourceDirectoryEntry,
+    NamedImageResourceDirectoryEntry,
+};
 pub use resource_types::ResourceType;
 pub use section_reader::SectionReader;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
@@ -16,16 +22,16 @@ use zerocopy::{FromBytes, FromZeros, IntoBytes};
 #[derive(Clone, Debug)]
 pub struct ResourceDirectoryTable {
     pub header: ImageResourceDirectory,
-    name_entries: Vec<ImageResourceDirectoryEntry>,
+    name_entries: Vec<NamedImageResourceDirectoryEntry>,
     id_entries: Vec<ImageResourceDirectoryEntry>,
 }
 
 impl ResourceDirectoryTable {
-    pub fn read_from<R>(mut src: R) -> io::Result<Self>
+    pub fn read_from<R>(src: &mut SectionReader<R>) -> io::Result<Self>
     where
-        R: io::Read,
+        R: Read + Seek,
     {
-        let header = ImageResourceDirectory::read_from_io(&mut src)?;
+        let header = ImageResourceDirectory::read_from_io(&mut *src)?;
 
         let mut name_entries =
             vec![ImageResourceDirectoryEntry::new_zeroed(); header.number_of_name_entries().into()];
@@ -43,7 +49,15 @@ impl ResourceDirectoryTable {
 
         Ok(Self {
             header,
-            name_entries,
+            name_entries: name_entries
+                .into_iter()
+                .flat_map(|entry| {
+                    entry
+                        .name()
+                        .to_string_lossy(src)
+                        .map(|name| NamedImageResourceDirectoryEntry::new(name, entry))
+                })
+                .collect(),
             id_entries,
         })
     }
@@ -52,20 +66,8 @@ impl ResourceDirectoryTable {
         self.id_entries().find(|entry| entry.name_or_id() == id)
     }
 
-    pub fn find_name_entry<R>(
-        &self,
-        section_reader: &mut SectionReader<R>,
-        name: &str,
-    ) -> Option<&ImageResourceDirectoryEntry>
-    where
-        R: io::Read + io::Seek,
-    {
-        self.name_entries().find(|entry| {
-            entry
-                .name()
-                .to_string_lossy(section_reader)
-                .is_ok_and(|entry_name| entry_name == name)
-        })
+    pub fn find_name_entry(&self, name: &str) -> Option<&NamedImageResourceDirectoryEntry> {
+        self.name_entries().find(|entry| entry.name() == name)
     }
 
     #[inline]
@@ -74,11 +76,7 @@ impl ResourceDirectoryTable {
     }
 
     #[inline]
-    pub fn name_entries(&self) -> impl Iterator<Item = &ImageResourceDirectoryEntry> {
+    pub fn name_entries(&self) -> impl Iterator<Item = &NamedImageResourceDirectoryEntry> {
         self.name_entries.iter()
-    }
-
-    pub fn entries(&self) -> impl Iterator<Item = &ImageResourceDirectoryEntry> {
-        self.name_entries().chain(self.id_entries())
     }
 }
