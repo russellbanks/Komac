@@ -1,3 +1,5 @@
+use std::fmt;
+
 use zerocopy::{FromBytes, Immutable, KnownLayout, LittleEndian, U32};
 
 // Each resource data entry describes a leaf node in the resource directory tree. It contains an
@@ -6,7 +8,7 @@ use zerocopy::{FromBytes, Immutable, KnownLayout, LittleEndian, U32};
 // decoding code point values within the resource data. Typically, for new applications the code
 // page would be the Unicode code page.
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, Immutable, KnownLayout)]
+#[derive(Copy, Clone, Eq, PartialEq, FromBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct ImageResourceDataEntry {
     /// RVA of the data.
@@ -30,5 +32,21 @@ impl ImageResourceDataEntry {
     #[inline]
     pub const fn codepage(&self) -> u32 {
         self.codepage.get()
+    }
+
+    #[inline]
+    const fn reserved(&self) -> u32 {
+        self.reserved.get()
+    }
+}
+
+impl fmt::Debug for ImageResourceDataEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IMAGE_RESOURCE_DATA_ENTRY")
+            .field("OffsetToData", &self.offset_to_data())
+            .field("Size", &self.size())
+            .field("Codepage", &self.codepage())
+            .field("Reserved", &self.reserved())
+            .finish()
     }
 }

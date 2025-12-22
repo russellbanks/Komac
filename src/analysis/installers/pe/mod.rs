@@ -6,11 +6,12 @@ pub mod optional_header;
 pub mod resource;
 mod section_table;
 mod signature;
+pub mod utils;
 pub mod vs_version_info;
 
 use std::{
     io,
-    io::{Error, Read, Seek, SeekFrom},
+    io::{Error, Read, Seek, SeekFrom, Take},
 };
 
 pub use coff::CoffHeader;
@@ -23,7 +24,7 @@ pub use vs_version_info::VSVersionInfo;
 use crate::{
     analysis::installers::pe::{
         optional_header::DataDirectory,
-        resource::{ImageResourceDataEntry, ResourceDirectory, SectionReader},
+        resource::{ImageResourceDataEntry, ResourceDirectory, ResourceIter, SectionReader},
     },
     read::ReadBytesExt,
 };
@@ -68,6 +69,17 @@ impl PE {
         })
     }
 
+    pub fn resources<R: Read + Seek>(&self, reader: R) -> io::Result<ResourceIter<R>> {
+        let section_reader = self
+            .resource_table()
+            .ok_or_else(|| Error::other("No resource table"))?
+            .section_reader(reader, &self.section_table)?;
+
+        let resource_directory = ResourceDirectory::new(section_reader)?;
+
+        Ok(ResourceIter::new(resource_directory))
+    }
+
     pub fn find_section(&self, name: [u8; 8]) -> Option<&SectionHeader> {
         self.section_table
             .sections()
@@ -104,6 +116,23 @@ impl PE {
         self.optional_header.data_directories.resource_table()
     }
 
+    pub fn find_resource_by_name<R>(&self, mut reader: R, name: &str) -> io::Result<Take<R>>
+    where
+        R: Read + Seek,
+    {
+        let resource = self
+            .resources(&mut reader)?
+            .find(|resource| resource.name() == Some(name))
+            .ok_or_else(|| Error::other(format!("Resource not found: {name}")))?;
+
+        let resource_offset = self
+            .section_table
+            .to_file_offset(resource.offset_to_data())?;
+
+        reader.seek(SeekFrom::Start(resource_offset.into()))?;
+        Ok(reader.take(resource.size().into()))
+    }
+
     pub fn vs_version_info<R>(&self, mut reader: R) -> io::Result<Vec<u8>>
     where
         R: Read + Seek,
@@ -123,11 +152,10 @@ impl PE {
 
         let mut resource_directory = ResourceDirectory::new(section_reader)?;
 
-        let _version_info = resource_directory.find_version_info()?;
+        let directory_table = resource_directory.navigate_to_version_info()?;
 
-        let version_entry = resource_directory
-            .current_directory_table()
-            .entries()
+        let version_entry = directory_table
+            .id_entries()
             .next()
             .ok_or_else(|| Error::other("No manifest entry found"))?;
 
@@ -137,7 +165,7 @@ impl PE {
             .ok_or_else(|| Error::other("No manifest directory table found"))?;
 
         let version_directory = version_directory_table
-            .entries()
+            .id_entries()
             .next()
             .ok_or_else(|| Error::other("No manifest directory found"))?;
 
@@ -177,11 +205,10 @@ impl PE {
 
         let mut resource_directory = ResourceDirectory::new(section_reader)?;
 
-        let _manifest = resource_directory.find_manifest()?;
+        let manifest_directory_table = resource_directory.navigate_to_manifest()?;
 
-        let manifest_entry = resource_directory
-            .current_directory_table()
-            .entries()
+        let manifest_entry = manifest_directory_table
+            .id_entries()
             .next()
             .ok_or_else(|| Error::other("No manifest entry found"))?;
 
@@ -191,7 +218,7 @@ impl PE {
             .ok_or_else(|| Error::other("No manifest directory table found"))?;
 
         let manifest_directory = manifest_directory_table
-            .entries()
+            .id_entries()
             .next()
             .ok_or_else(|| Error::other("No manifest directory found"))?;
 

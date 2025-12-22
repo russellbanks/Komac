@@ -117,7 +117,7 @@ pub struct DosHeader {
     reserved2: [U16<LittleEndian>; 10],
 
     #[doc(alias("e_lfanew"))]
-    pe_pointer: U32<LittleEndian>,
+    pub(crate) pe_pointer: U32<LittleEndian>,
 }
 
 impl DosHeader {

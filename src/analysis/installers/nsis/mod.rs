@@ -33,7 +33,7 @@ use winget_types::{
         Installer, InstallerType, Scope,
     },
 };
-use zerocopy::{FromBytes, LE};
+use zerocopy::FromBytes;
 
 use super::{
     super::extensions::EXE,
@@ -46,12 +46,11 @@ use super::{
             flags::CommonHeaderFlags,
         },
     },
-    pe::PE,
+    pe::{PE, utils::machine_from_exe_reader},
     utils::{LzmaStreamHeader, RELATIVE_PROGRAM_FILES_64},
 };
 use crate::{
     analysis::Installers,
-    read::ReadBytesExt,
     traits::{FromMachine, IntoWingetArchitecture},
 };
 
@@ -215,28 +214,12 @@ impl Nsis {
                             decoder
                         };
 
-                        let mut void = io::sink();
-
                         if is_solid {
                             // Seek to file
-                            io::copy(&mut decoder.by_ref().take(position), &mut void).ok()?;
+                            io::copy(&mut decoder.by_ref().take(position), &mut io::sink()).ok()?;
                         }
 
-                        // Seek to COFF header offset inside exe
-                        io::copy(&mut decoder.by_ref().take(0x3C), &mut void).ok()?;
-
-                        let coff_offset = decoder.read_u32::<LE>().ok()?;
-
-                        // Seek to machine value
-                        io::copy(
-                            &mut decoder
-                                .by_ref()
-                                .take(u64::from(coff_offset.checked_sub(0x3C)?)),
-                            &mut void,
-                        )
-                        .ok()?;
-
-                        let machine = decoder.read_u16::<LE>().ok()?;
+                        let machine = machine_from_exe_reader(decoder).ok()?;
                         Some(Architecture::from_machine(machine))
                     })
             });
