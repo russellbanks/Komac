@@ -2,7 +2,8 @@ use std::io::{Read, Seek};
 
 use color_eyre::Result;
 use inno::{Inno, error::InnoError};
-use winget_types::installer::{Architecture, Installer, InstallerType};
+use tracing::debug;
+use winget_types::installer::{Architecture, Installer, InstallerSwitches, InstallerType};
 use yara_x::mods::PE;
 
 use super::{super::Installers, Burn, Nsis};
@@ -40,6 +41,38 @@ impl Exe {
             Ok(nsis) => return Ok(Self::Nsis(nsis)),
             Err(NsisError::NotNsisFile) => {}
             Err(error) => return Err(error.into()),
+        }
+
+        const INSTALLSHIELD_MAGICS: [&[u8]; 2] = [b"InstallShield", b"ISSetupStream"];
+        if let Some(offset) = pe.overlay.offset {
+            reader.seek(std::io::SeekFrom::Start(offset))?;
+
+            // Check for optional CV_INFO_PDB20 structure before magic
+            // 4 DWORDs: CvSignature, Offset, TimeDateStamp, Age, then null-terminated PdbFileName
+            let mut signature = [0u8; 4];
+            if reader.read_exact(&mut signature).is_ok() && signature == *b"NB10" {
+                reader.seek(std::io::SeekFrom::Current(12))?;
+                let mut byte = [0u8; 1];
+                while reader.read_exact(&mut byte).is_ok() && byte[0] != 0 {}
+            } else {
+                reader.seek(std::io::SeekFrom::Start(offset))?;
+            }
+
+            let mut magic = [0u8; 13];
+            if reader.read_exact(&mut magic).is_ok()
+                && INSTALLSHIELD_MAGICS.iter().any(|m| *m == magic)
+            {
+                debug!("Detected InstallShield exe");
+                return Ok(Self::Generic(Box::new(Installer {
+                    architecture: Architecture::from_machine(pe.machine()),
+                    r#type: Some(InstallerType::Exe),
+                    switches: InstallerSwitches::builder()
+                        .silent("/S /v/qn".parse().unwrap())
+                        .silent_with_progress("/S /v/qn".parse().unwrap())
+                        .build(),
+                    ..Installer::default()
+                })));
+            }
         }
 
         Ok(Self::Generic(Box::new(Installer {
