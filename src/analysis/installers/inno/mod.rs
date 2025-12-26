@@ -55,7 +55,11 @@ impl Installers for Inno {
                 || self.header.app_version().is_some()
             {
                 AppsAndFeaturesEntry::builder()
-                    .maybe_display_name(self.header.uninstall_name())
+                    .maybe_display_name(
+                        self.header
+                            .uninstall_name()
+                            .or(self.header.app_versioned_name()),
+                    )
                     .maybe_publisher(self.header.app_publisher())
                     .maybe_display_version(self.header.app_version())
                     .maybe_product_code(self.header.product_code())
