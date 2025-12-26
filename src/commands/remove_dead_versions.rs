@@ -1,14 +1,7 @@
-use std::{
-    collections::BTreeSet,
-    fmt::Write,
-    num::NonZeroUsize,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{collections::BTreeSet, fmt::Write, num::NonZeroUsize, sync::Arc};
 
 use anstream::println;
 use bon::builder;
-use chrono::TimeDelta;
 use clap::Parser;
 use color_eyre::{Result, eyre::Error};
 use futures_util::{StreamExt, TryFutureExt, TryStreamExt, stream};
@@ -16,38 +9,18 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use reqwest::{Client, StatusCode};
-use tokio::{sync::mpsc, time::sleep, try_join};
+use tokio::{sync::mpsc, try_join};
 use winget_types::{
     ManifestTypeWithLocale, PackageIdentifier, PackageVersion, installer::InstallerManifest,
     url::DecodedUrl,
 };
 
 use crate::{
-    commands::utils::SPINNER_SLOW_TICK_RATE,
+    commands::utils::{RateLimit, SPINNER_SLOW_TICK_RATE},
     github::client::GitHub,
     prompts::text::confirm_prompt,
     token::{TokenManager, default_headers},
 };
-
-/// GitHub has an undocumented limit of 150 pull requests per hour
-///
-/// <https://github.com/cli/cli/issues/4801#issuecomment-1430651377>
-const MAX_PULL_REQUESTS_PER_HOUR: u8 = 150;
-
-/// Minimum delay to not go above 150 pull requests per hour
-const HOURLY_RATE_LIMIT_DELAY: Duration = Duration::from_secs(
-    TimeDelta::hours(1).num_seconds().unsigned_abs() / MAX_PULL_REQUESTS_PER_HOUR as u64,
-);
-
-/// GitHub has an undocumented limit of 20 pull requests per minute
-///
-/// <https://github.com/cli/cli/issues/4801#issuecomment-1430651377>
-const MAX_PULL_REQUESTS_PER_MINUTE: u8 = 20;
-
-/// Minimum delay to not go above 20 pull requests per minute
-const PER_MINUTE_RATE_LIMIT_DELAY: Duration = Duration::from_secs(
-    TimeDelta::minutes(1).num_seconds().unsigned_abs() / MAX_PULL_REQUESTS_PER_MINUTE as u64,
-);
 
 const RESOURCE_MISSING_STATUS_CODES: [StatusCode; 2] = [StatusCode::NOT_FOUND, StatusCode::GONE];
 
@@ -104,15 +77,6 @@ impl RemoveDeadVersions {
             .default_headers(default_headers(None))
             .build()?;
 
-        let rate_limit_delay = if self.fast {
-            PER_MINUTE_RATE_LIMIT_DELAY
-        } else {
-            HOURLY_RATE_LIMIT_DELAY
-        };
-
-        // Set a default last PR time to before the rate limit delay to do the first PR immediately
-        let mut last_pr_time = Instant::now().checked_sub(rate_limit_delay).unwrap();
-
         let versions = versions
             .into_iter()
             .filter(|version| {
@@ -147,6 +111,8 @@ impl RemoveDeadVersions {
 
         let package_identifier = Arc::new(self.package_identifier);
 
+        let rate_limit = RateLimit::new(self.fast);
+
         // Create a 'listener' task that waits to receive a version to prompt the user for removal
         let listener = tokio::spawn({
             let package_identifier = Arc::clone(&package_identifier);
@@ -171,17 +137,7 @@ impl RemoveDeadVersions {
 
                     let deletion_reason = Self::get_deletion_reason(&url_statuses)?;
 
-                    let time_since_last_pr = Instant::now().duration_since(last_pr_time);
-                    if time_since_last_pr < rate_limit_delay {
-                        let wait_time = rate_limit_delay - time_since_last_pr;
-                        let wait_pb = ProgressBar::new_spinner()
-                            .with_message(format!(
-                                "Last pull request was created {time_since_last_pr:?} ago. Waiting for {wait_time:?}",
-                            ));
-                        wait_pb.enable_steady_tick(SPINNER_SLOW_TICK_RATE);
-                        sleep(wait_time).await;
-                        wait_pb.finish_and_clear();
-                    }
+                    rate_limit.wait().await;
 
                     github
                         .remove_version()
@@ -193,7 +149,7 @@ impl RemoveDeadVersions {
                         .send()
                         .await?;
 
-                    last_pr_time = Instant::now();
+                    rate_limit.record().await;
 
                     multi_progress.set_draw_target(ProgressDrawTarget::stderr());
                 }
