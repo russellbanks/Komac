@@ -3,7 +3,7 @@ use indicatif::ProgressBar;
 use std::time::{Duration, Instant};
 use tokio::{sync::Mutex, time::sleep};
 
-use crate::commands::utils::SPINNER_SLOW_TICK_RATE;
+use super::SPINNER_SLOW_TICK_RATE;
 
 pub struct RateLimit {
     last_pr_time: Mutex<Instant>,
@@ -31,14 +31,14 @@ const PER_MINUTE_RATE_LIMIT_DELAY: Duration = Duration::from_secs(
 );
 
 impl RateLimit {
-    pub fn new(fast: bool) -> RateLimit {
+    pub fn new(fast: bool) -> Self {
         let rate_limit_delay = if fast {
             PER_MINUTE_RATE_LIMIT_DELAY
         } else {
             HOURLY_RATE_LIMIT_DELAY
         };
 
-        RateLimit {
+        Self {
             last_pr_time: Mutex::new(Instant::now().checked_sub(rate_limit_delay).unwrap()),
             rate_limit_delay,
         }

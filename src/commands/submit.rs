@@ -139,6 +139,8 @@ impl Submit {
 
         let rate_limit = RateLimit::new(self.fast);
 
+        let github = GitHub::new(&token)?;
+
         for mut manifest in manifests {
             let identifier = &manifest.version.package_identifier;
             let version = &manifest.version.package_version;
@@ -165,7 +167,6 @@ impl Submit {
                 continue;
             }
 
-            let github = GitHub::new(&token)?;
             let versions = github.get_versions(identifier).await.unwrap_or_default();
 
             rate_limit.wait().await;
