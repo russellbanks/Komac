@@ -59,12 +59,6 @@ impl<'data> NsisState<'data> {
             version: NsisVersion::default(),
         };
 
-        if header.has_install_directory() {
-            let install_dir = state.get_string(header.install_directory_ptr());
-            debug!(%install_dir);
-            state.variables.insert_install_dir(install_dir);
-        }
-
         let manifest = pe
             .resources
             .iter()
@@ -81,6 +75,12 @@ impl<'data> NsisState<'data> {
             .unwrap_or_else(|| NsisVersion::detect(state.str_block));
 
         debug!(version = %state.version);
+
+        if header.has_install_directory() {
+            let install_dir = state.get_string(header.install_directory_ptr());
+            debug!(%install_dir);
+            state.variables.insert_install_dir(install_dir);
+        }
 
         Ok(state)
     }
