@@ -1379,6 +1379,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "dos-date-time"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ae8ddcf346819bfc62c8e190be33b46c0756a819fef43f346193d572d7eeb6c"
+dependencies = [
+ "chrono",
+ "jiff",
+ "time",
+]
+
+[[package]]
 name = "dsa"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2507,7 +2518,7 @@ dependencies = [
  "flate2",
  "itertools 0.14.0",
  "liblzma",
- "nt-time",
+ "nt-time 0.12.1",
  "thiserror 2.0.17",
  "zerocopy",
 ]
@@ -2720,7 +2731,7 @@ dependencies = [
  "memchr",
  "memmap2",
  "msi",
- "nt-time",
+ "nt-time 0.13.0",
  "num_cpus",
  "open",
  "ordinal",
@@ -3220,7 +3231,17 @@ version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ad6fee094ffe35b67a67b9057d93492f8a2318edd22e1a731c545b8dbecb64e"
 dependencies = [
+ "time",
+]
+
+[[package]]
+name = "nt-time"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d17ea364f8a89c737ffe3a2a11b3aa26d9ccba53b7ec61c791fd2d2e53f835de"
+dependencies = [
  "chrono",
+ "dos-date-time",
  "jiff",
  "rand 0.9.2",
  "time",
