@@ -76,6 +76,7 @@ impl<'data> NsisState<'data> {
 
         debug!(version = %state.version);
 
+        // The install directory must be read after the version is determined; `get_string` depends on it
         if header.has_install_directory() {
             let install_dir = state.get_string(header.install_directory_ptr());
             debug!(%install_dir);
