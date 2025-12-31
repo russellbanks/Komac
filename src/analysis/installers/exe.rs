@@ -2,13 +2,12 @@ use std::io::{Read, Seek};
 
 use color_eyre::Result;
 use inno::{Inno, error::InnoError};
-use winget_types::installer::{Architecture, Installer, InstallerType};
-use yara_x::mods::PE;
+use winget_types::installer::Installer;
 
 use super::{super::Installers, Burn, Nsis};
 use crate::{
-    analysis::installers::{burn::BurnError, nsis::NsisError},
-    traits::FromMachine,
+    analysis::installers::{burn::BurnError, nsis::NsisError, pe::PE},
+    traits::IntoWingetArchitecture,
 };
 
 const ORIGINAL_FILENAME: &str = "OriginalFilename";
@@ -23,8 +22,10 @@ pub enum Exe {
 }
 
 impl Exe {
-    pub fn new<R: Read + Seek>(mut reader: R, pe: &PE) -> Result<Self> {
-        match Burn::new(&mut reader, pe) {
+    pub fn new<R: Read + Seek>(mut reader: R) -> Result<Self> {
+        let pe = PE::read_from(&mut reader)?;
+
+        match Burn::new(&mut reader, &pe) {
             Ok(burn) => return Ok(Self::Burn(Box::new(burn))),
             Err(BurnError::NotBurnFile) => {}
             Err(error) => return Err(error.into()),
@@ -36,15 +37,16 @@ impl Exe {
             Err(error) => return Err(error.into()),
         }
 
-        match Nsis::new(&mut reader, pe) {
+        match Nsis::new(&mut reader, &pe) {
             Ok(nsis) => return Ok(Self::Nsis(nsis)),
             Err(NsisError::NotNsisFile) => {}
             Err(error) => return Err(error.into()),
         }
 
         Ok(Self::Generic(Box::new(Installer {
-            architecture: Architecture::from_machine(pe.machine()),
-            r#type: if pe
+            architecture: pe.winget_architecture(),
+            r#type: todo!("Parse PE version info to determine if the EXE is portable"),
+            /*if pe
                 .version_info_list
                 .iter()
                 .filter(|key_value| matches!(key_value.key(), FILE_DESCRIPTION | ORIGINAL_FILENAME))
@@ -57,7 +59,7 @@ impl Exe {
                 Some(InstallerType::Exe)
             } else {
                 Some(InstallerType::Portable)
-            },
+            }*/
             ..Installer::default()
         })))
     }
