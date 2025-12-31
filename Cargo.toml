@@ -96,7 +96,7 @@ zip = { version = "7.0.0", default-features = false, features = ["deflate"] }
 [features]
 default = ["openssl"]
 openssl = ["keyring/crypto-openssl", "reqwest/native-tls-vendored"]
-rustls = ["keyring/crypto-rust", "reqwest/rustls-tls"]
+rustls = ["keyring/crypto-rust", "reqwest/rustls"]
 
 [build-dependencies]
 cynic-codegen = { version = "3.12.0", features = ["rkyv"] }
