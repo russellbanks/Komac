@@ -9,6 +9,16 @@ pub trait NormalizePath {
     fn normalize(&self) -> Utf8PathBuf;
 }
 
+pub trait LowercaseExtension {
+    fn lowercase_extension(&self) -> Utf8PathBuf;
+}
+
+impl LowercaseExtension for Utf8PathBuf {
+    fn lowercase_extension(&self) -> Utf8PathBuf {
+        self.with_extension(self.extension().unwrap_or_default().to_ascii_lowercase())
+    }
+}
+
 impl NormalizePath for Utf8Path {
     fn normalize(&self) -> Utf8PathBuf {
         let mut components = self.components().peekable();
