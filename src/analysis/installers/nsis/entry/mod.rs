@@ -504,6 +504,7 @@ impl Entry {
                 // https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L3898
 
                 let value = state.get_int(data.get());
+                let value_str = value.to_string();
                 debug!(
                     "Set{type}Flag {}",
                     match r#type {
@@ -532,7 +533,7 @@ impl Entry {
                                 _ => "",
                             }
                         }
-                        _ => "",
+                        _ => value_str.as_str(),
                     }
                 );
 
@@ -560,7 +561,7 @@ impl Entry {
                 // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L342
                 let exec_flag = &mut state.exec_flags[*r#type];
 
-                let result = if *exec_flag == I32::ZERO {
+                let result = if *exec_flag != I32::ZERO {
                     debug!("If{type}Flag: on -> {on}");
                     on
                 } else {
