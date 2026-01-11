@@ -242,4 +242,9 @@ impl Header {
     pub const fn has_install_directory(&self) -> bool {
         self.install_directory_ptr() != 0
     }
+
+    #[inline]
+    pub const fn code_on_init(&self) -> i32 {
+        self.code_on_init.get()
+    }
 }
