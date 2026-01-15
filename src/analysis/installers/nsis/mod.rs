@@ -114,6 +114,14 @@ impl Nsis {
 
         let mut state = NsisState::new(pe, &decompressed_data, header, &blocks)?;
 
+        // https://nsis.sourceforge.io/Reference/.onInit
+        if header.code_on_init() != -1 {
+            debug!("Simulating code execution for onInit callback");
+            if let Err(invalid_entry) = state.execute_code_segment(header.code_on_init()) {
+                error!(%invalid_entry)
+            }
+        }
+
         for (index, section) in blocks.sections(&decompressed_data).enumerate() {
             debug!(
                 r#"Simulating code execution for section {index} "{}""#,
@@ -123,6 +131,14 @@ impl Nsis {
                 Ok(Entry::Quit) => break,
                 Err(invalid_entry) => error!(%invalid_entry),
                 _ => {}
+            }
+        }
+
+        // https://nsis.sourceforge.io/Reference/.onInstSuccess
+        if header.code_on_inst_success() != -1 {
+            debug!("Simulating code execution for onInstSuccess callback");
+            if let Err(invalid_entry) = state.execute_code_segment(header.code_on_inst_success()) {
+                error!(%invalid_entry)
             }
         }
 
