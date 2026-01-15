@@ -28,7 +28,6 @@ anstream = "0.6.21"
 base64ct = { version = "1.8.1", features = ["std"] }
 bitflags = "2.10.0"
 bon = "3.8.1"
-byteorder = "1.5.0"
 bytes = "1.11.0"
 bzip2 = "0.6.1"
 cab = "0.6.0"
@@ -56,14 +55,12 @@ itoa = "1.0.17"
 keyring = { version = "3.6.3", features = ["apple-native", "sync-secret-service", "vendored", "windows-native"] }
 liblzma = { version = "0.4.5", features = ["static"] }
 memchr = "2.7.6"
-memmap2 = "0.9.9"
 msi = "0.9.0"
 nt-time = { version = "0.13.0", features = ["chrono"] }
 num_cpus = "1.17.0"
 open = "5.3.3"
 ordinal = "0.4.0"
 owo-colors = "4.2.3"
-protobuf = "3.7.2"
 quick-xml = { version = "0.38.4", features = ["serialize"] }
 rand = "0.9.2"
 ratatui = "0.29.0"
@@ -90,7 +87,6 @@ url = { version = "2.5.7", features = ["serde"] }
 uuid = { version = "1.19.0", features = ["v4"] }
 walkdir = "2.5.0"
 winget-types = { version = "0.4.1", features = ["serde", "std", "chrono"] }
-yara-x = { version = "1.8.1", default-features = false, features = ["pe-module"] }
 zerocopy = { version = "0.8.31", features = ["derive", "std"] }
 zip = { version = "7.0.0", default-features = false, features = ["deflate"] }
 

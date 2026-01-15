@@ -4,6 +4,7 @@ pub mod inno;
 mod msi;
 pub mod msix_family;
 pub mod nsis;
+pub mod pe;
 pub mod utils;
 mod zip;
 

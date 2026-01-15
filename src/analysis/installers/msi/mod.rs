@@ -29,6 +29,7 @@ const ALL_USERS: &str = "ALLUSERS";
 const INSTALL_DIR: &str = "INSTALLDIR";
 const TARGET_DIR: &str = "TARGETDIR";
 
+#[derive(Debug)]
 pub struct Msi {
     pub architecture: Architecture,
     pub all_users: Option<Scope>,
