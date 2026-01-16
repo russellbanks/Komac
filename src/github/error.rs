@@ -1,4 +1,4 @@
-use color_eyre::{Report, Section, eyre};
+use color_eyre::{Report, eyre};
 use cynic::http::CynicReqwestError;
 use thiserror::Error;
 use winget_types::{ManifestType, PackageIdentifier};
@@ -39,7 +39,7 @@ impl GitHubError {
                 .into()
                 .unwrap_or_default()
                 .into_iter()
-                .fold(err, Report::error),
+                .fold(err, Report::wrap_err),
         )
     }
 }
