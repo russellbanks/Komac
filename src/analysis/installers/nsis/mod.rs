@@ -155,6 +155,13 @@ impl Nsis {
                 architecture = Some(Architecture::X86);
             }
         }
+        for file in state.file_system.files().map(Item::name) {
+            if file.contains(APP_64) && architecture.is_none() {
+                architecture = Some(Architecture::X64);
+            } else if file.contains(APP_32) {
+                architecture = Some(Architecture::X86);
+            }
+        }
 
         debug!(%state.file_system);
 
