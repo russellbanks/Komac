@@ -370,9 +370,9 @@ checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
 
 [[package]]
 name = "base16ct"
-version = "0.3.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8b59d472eab27ade8d770dcb11da7201c11234bef9f82ce7aa517be028d462b"
+checksum = "fd307490d624467aa6f74b0eabb77633d1f758a7b25f12bceb0b22e08d9726f6"
 
 [[package]]
 name = "base64"
@@ -6322,11 +6322,11 @@ checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
 
 [[package]]
 name = "winget-types"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34ff058126dc4904e6346cf80504dc83a62b5f11deab7d677aa46c91b21eca94"
+checksum = "b9479f49b42e557457b3b15e2656c0bdf7da710ce596291a6ca2b9e7ae428ad6"
 dependencies = [
- "base16ct 0.3.0",
+ "base16ct 1.0.0",
  "bitflags",
  "bon",
  "camino",

@@ -89,7 +89,7 @@ tui-textarea = { version = "0.7.0", features = ["search"] }
 url = { version = "2.5.8", features = ["serde"] }
 uuid = { version = "1.19.0", features = ["v4"] }
 walkdir = "2.5.0"
-winget-types = { version = "0.4.1", features = ["serde", "std", "chrono"] }
+winget-types = { version = "0.4.2", features = ["serde", "std", "chrono"] }
 yara-x = { version = "1.8.1", default-features = false, features = ["pe-module"] }
 zerocopy = { version = "0.8.33", features = ["derive", "std"] }
 zip = { version = "7.0.0", default-features = false, features = ["deflate"] }
