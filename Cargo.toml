@@ -50,7 +50,7 @@ indexmap = "2.13.0"
 indextree = "4.7.4"
 indicatif = "0.18.0"
 inno = { version = "0.4.0", features = ["lzma-static"] }
-inquire = "0.9.1"
+inquire = "0.9.2"
 itertools = "0.14.0"
 itoa = "1.0.17"
 keyring = { version = "3.6.3", features = ["apple-native", "sync-secret-service", "vendored", "windows-native"] }
