@@ -49,7 +49,7 @@ html2text = "0.16.6"
 indexmap = "2.13.0"
 indextree = "4.7.4"
 indicatif = "0.18.0"
-inno = { version = "0.3.1", features = ["lzma-static"] }
+inno = { version = "0.4.0", features = ["lzma-static"] }
 inquire = "0.9.1"
 itertools = "0.14.0"
 itoa = "1.0.17"
