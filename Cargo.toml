@@ -46,7 +46,7 @@ flate2 = "1.1.8"
 futures-util = "0.3.31"
 html-escape = "0.2.13"
 html2text = "0.16.6"
-indexmap = "2.12.1"
+indexmap = "2.13.0"
 indextree = "4.7.4"
 indicatif = "0.18.0"
 inno = { version = "0.3.1", features = ["lzma-static"] }
