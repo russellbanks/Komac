@@ -58,7 +58,22 @@ impl<'data> Analyzer<'data> {
                 copyright = Copyright::from_version_info(&pe.version_info);
                 package_name = PackageName::from_version_info(&pe.version_info);
                 publisher = Publisher::from_version_info(&pe.version_info);
-                Exe::new(Cursor::new(data.as_ref()), &pe)?.installers()
+                Exe::new(Cursor::new(data.as_ref()), &pe)?
+                    .installers()
+                    .into_iter()
+                    .map(|mut installer| {
+                        if installer.architecture.is_x86() {
+                            let file_name_lower = file_name.to_lowercase();
+                            if file_name_lower.contains("arm64") || file_name_lower.contains("aarch64") {
+                                installer.architecture =
+                                    winget_types::installer::Architecture::Arm64;
+                            } else if file_name_lower.contains("amd64") || file_name_lower.contains("x64") {
+                                installer.architecture = winget_types::installer::Architecture::X64;
+                            }
+                        }
+                        installer
+                    })
+                    .collect()
             }
             _ => bail!(r#"Unsupported file extension: "{extension}""#),
         };
