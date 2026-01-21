@@ -123,6 +123,12 @@ Adding to komac:
 komac token add
 ```
 
+The token can be also be obtained using the [GitHub CLI](https://cli.github.com/):
+
+```bash
+komac token add --token=$(gh auth token)
+```
+
 <details>
 
 <summary>Why not fine-grained tokens?</summary>
