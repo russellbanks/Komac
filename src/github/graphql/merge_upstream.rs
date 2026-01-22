@@ -29,9 +29,17 @@ impl<'id> MergeUpstreamVariables<'id> {
 #[derive(cynic::QueryFragment)]
 #[cynic(graphql_type = "Mutation", variables = "MergeUpstreamVariables")]
 pub struct UpdateRef {
-    #[expect(dead_code)]
     #[arguments(input: { oid: $upstream_target_oid, refId: $branch_ref_id, force: $force })]
     pub update_ref: Option<UpdateRefPayload>,
+}
+
+impl UpdateRef {
+    /// Returns `true` if the underlying client mutation ID option is a [`Some`] value.
+    #[must_use]
+    #[inline]
+    pub const fn is_some(&self) -> bool {
+        self.update_ref.is_some()
+    }
 }
 
 #[derive(cynic::QueryFragment)]
@@ -57,7 +65,7 @@ impl GitHub {
             )))
             .await?;
 
-        if data.is_some() {
+        if data.as_ref().is_some_and(UpdateRef::is_some) {
             Ok(())
         } else {
             Err(GitHubError::graphql_errors(
