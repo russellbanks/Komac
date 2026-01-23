@@ -52,11 +52,11 @@ komac update Package.Identifier --version 1.2.3 --urls https://example.com/insta
     - [Nullsoft Scriptable Install System](https://nsis.sourceforge.io)
     - [MSI](https://learn.microsoft.com/windows/win32/msi/windows-installer-portal)
     - [Burn](https://docs.firegiant.com/wix/tools/burn/)
-- 🌍 Cross-platform support (Windows, Linux, macOS)
+- 🌍 Cross-platform support (Windows, Linux, macOS, Android)
 
 ## Installation
 
-Komac is cross-platform and binaries are built for Windows, Linux, and macOS.
+Komac is cross-platform and binaries are built for Windows, Linux, macOS, and Android.
 
 ### All platforms
 
@@ -108,6 +108,20 @@ Portable binaries for macOS are available from the [releases](https://github.com
 ```bash
 brew install komac
 ```
+
+### Android [(Termux App)](https://termux.dev/en/)
+
+#### 1) Install [Termux-User-Repository (TUR)](https://github.com/termux-user-repository/tur) in Termux
+
+```bash
+pkg install tur-repo
+ ```
+
+#### 2) Install Komac in Termux
+
+```bash
+pkg install komac
+ ```
 
 ## GitHub Token Setup
 
@@ -215,7 +229,7 @@ is slower and lacks the deeper installer analysis that komac is capable of.
 | Works without Git                        |   ✅    |      ✅       |                               ❌                                |
 | Full Inno Setup value retrieval          |   ✅    |      ❌       |                               ❌                                |
 | Full MSI value retrieval                 |   ✅    |   Partial    |                            Partial                             |
-| Linux & macOS MSI support                |   ✅    |      ❌       |                               ❌                                |
+| Linux, macOS & Android MSI support                |   ✅    |      ❌       |                               ❌                                |
 | Full MSIX value retrieval                |   ✅    |   Partial    |   Partial - https://github.com/Trenly/winget-pkgs/issues/180   |
 | Get information from GitHub              |   ✅    |      ✅       |                               ❌                                |
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                               ❌                                |
