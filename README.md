@@ -115,13 +115,13 @@ brew install komac
 
 ```bash
 pkg install tur-repo
- ```
+```
 
 #### 2) Install Komac in Termux
 
 ```bash
 pkg install komac
- ```
+```
 
 ## GitHub Token Setup
 
