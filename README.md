@@ -221,16 +221,16 @@ While other manifest creation tools have made a solid foundation for the manifes
 pace
 is slower and lacks the deeper installer analysis that komac is capable of.
 
-|                                          | Komac  | WingetCreate |                           YamlCreate                           |
-|------------------------------------------|:------:|:------------:|:--------------------------------------------------------------:|
+|                                          | Komac   | WingetCreate  |                           YamlCreate                            |
+|------------------------------------------|:-------:|:-------------:|:---------------------------------------------------------------:|
 | Parameters                               |   ✅    |      ✅       |                               ❌                                |
 | Download progress bar & ETA              |   ✅    |      ❌       |                               ❌                                |
-| Fully cross-platform                     |   ✅    |      ❌       |                            Limited                             |
+| Fully cross-platform                     |   ✅    |      ❌       |                            Limited                              |
 | Works without Git                        |   ✅    |      ✅       |                               ❌                                |
 | Full Inno Setup value retrieval          |   ✅    |      ❌       |                               ❌                                |
-| Full MSI value retrieval                 |   ✅    |   Partial    |                            Partial                             |
-| Linux, macOS & Android MSI support                |   ✅    |      ❌       |                               ❌                                |
-| Full MSIX value retrieval                |   ✅    |   Partial    |   Partial - https://github.com/Trenly/winget-pkgs/issues/180   |
+| Full MSI value retrieval                 |   ✅    |   Partial     |                            Partial                              |
+| Linux, macOS & Android MSI support       |   ✅    |      ❌       |                               ❌                                |
+| Full MSIX value retrieval                |   ✅    |   Partial     |   Partial - https://github.com/Trenly/winget-pkgs/issues/180    |
 | Get information from GitHub              |   ✅    |      ✅       |                               ❌                                |
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                               ❌                                |
 | Release date identification              |   ✅    |      ❌       |                               ❌                                |
@@ -238,8 +238,8 @@ is slower and lacks the deeper installer analysis that komac is capable of.
 | Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                               ❌                                |
 | Inno setup detection                     | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
 | Nullsoft detection                       | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
-| Burn installer detection                 | ✅ [^2] |      ✅       | Opt-in feature (not enabled by default due to slow processing) |
-| Programming Language                     |  Rust  |      C#      |                           PowerShell                           |
+| Burn installer detection                 | ✅ [^2] |      ✅       | Opt-in feature (not enabled by default due to slow processing)  |
+| Programming Language                     |  Rust   |      C#       |                           PowerShell                            |
 
 [^1]: Telemetry is enabled by default in WingetCreate. Use `wingetcreate settings` to manually disable telemetry.
 [^2]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
