@@ -87,7 +87,7 @@ tree-sitter-highlight = "0.26.3"
 tree-sitter-yaml = "0.7.2"
 tui-textarea = { version = "0.7.0", features = ["search"] }
 url = { version = "2.5.8", features = ["serde"] }
-uuid = { version = "1.19.0", features = ["v4"] }
+uuid = { version = "1.20.0", features = ["v4"] }
 walkdir = "2.5.0"
 winget-types = { version = "0.4.2", features = ["serde", "std", "chrono"] }
 yara-x = { version = "1.8.1", default-features = false, features = ["pe-module"] }
