@@ -219,7 +219,7 @@ fn tokenize(input: &str) -> Vec<Token> {
             '0'..='9' => {
                 let mut value = 0;
                 while let Some(digit) = chars.peek().and_then(|char| char.to_digit(10)) {
-                    value *= 10 + digit;
+                    value = value * 10 + digit;
                     chars.next();
                 }
                 tokens.push(Token::Number(value));
@@ -232,7 +232,7 @@ fn tokenize(input: &str) -> Vec<Token> {
                     ident.push(char);
                     chars.next();
                 }
-                tokens.push(match ident.as_str() {
+                tokens.push(match ident.to_uppercase().as_str() {
                     AND => Token::And,
                     OR => Token::Or,
                     NOT => Token::Not,
