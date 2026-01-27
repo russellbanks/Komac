@@ -11,6 +11,7 @@ use clap::Parser;
 use color_eyre::eyre::{Error, Result, bail};
 use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
+use itertools::Itertools;
 use owo_colors::OwoColorize;
 use strsim::levenshtein;
 use tokio::try_join;
@@ -156,6 +157,13 @@ impl UpdateVersion {
                 installer
             })
             .collect::<Vec<_>>();
+
+        let duplicate_urls = previous_installers
+            .iter()
+            .map(|installer| installer.url.clone())
+            .duplicates()
+            .collect::<Vec<_>>();
+
         manifests.default_locale.package_version = self.package_version.clone();
         let matched_installers = match_installers(previous_installers, &installer_results);
         let installers = matched_installers
@@ -171,6 +179,8 @@ impl UpdateVersion {
                 };
 
                 let previous_nested_files = previous_installer.nested_installer_files.clone();
+                let previous_url = previous_installer.url.clone();
+                let previous_architecture = previous_installer.architecture;
 
                 let mut installer = new_installer.clone().merge_with(previous_installer);
                 installer.r#type = installer_type;
@@ -188,6 +198,12 @@ impl UpdateVersion {
                 if let Some(nested_files) = nested_files_to_fix {
                     installer.nested_installer_files =
                         fix_relative_paths(nested_files, analyser.zip.as_ref());
+                }
+
+                if installer.nested_installer_type == InstallerType::Portable.try_into().ok()
+                    && duplicate_urls.contains(&previous_url)
+                {
+                    installer.architecture = previous_architecture;
                 }
 
                 for entry in &mut installer.apps_and_features_entries {
