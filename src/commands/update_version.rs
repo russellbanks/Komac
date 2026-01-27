@@ -294,13 +294,17 @@ impl UpdateVersion {
         versions: &'a BTreeSet<PackageVersion>,
         latest_version: &'a PackageVersion,
     ) -> Result<Option<&'a PackageVersion>> {
-        let replace_version = self.replace.as_ref().map(|version| {
-            if version.is_latest() {
-                latest_version
-            } else {
-                version
-            }
-        });
+        let replace_version = self
+            .replace
+            .as_ref()
+            .map(|version| {
+                if version.is_latest() {
+                    latest_version
+                } else {
+                    version
+                }
+            })
+            .filter(|&version| version.as_str() != self.package_version.as_str());
 
         if let Some(version) = replace_version
             && !versions.contains(version)
