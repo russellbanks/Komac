@@ -16,7 +16,10 @@ use crate::{
     github::{
         WINGET_PKGS_FULL_NAME,
         client::GitHub,
-        utils::{PackagePath, pull_request::pr_changes},
+        utils::{
+            PackagePath,
+            pull_request::{pr_changes, print_pull_request_url},
+        },
     },
     manifests::{Manifests, manifest::Manifest},
     prompts::handle_inquire_error,
@@ -191,10 +194,13 @@ impl Submit {
 
             pr_progress.finish_and_clear();
 
-            println!(
-                "{} created a {} to {WINGET_PKGS_FULL_NAME}",
-                "Successfully".green(),
-                "pull request".hyperlink(&pull_request_url)
+            print_pull_request_url(
+                &pull_request_url,
+                format_args!(
+                    "{} created a {} to {WINGET_PKGS_FULL_NAME}",
+                    "Successfully".green(),
+                    "pull request".hyperlink(&pull_request_url)
+                ),
             );
 
             if self.open_pr {

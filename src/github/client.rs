@@ -41,10 +41,11 @@ use crate::{
         },
         utils::{
             CommitTitle, PackagePath, branch_name, commit_title, is_manifest_file,
-            pull_request_body,
+            pull_request::print_pull_request_url, pull_request_body,
         },
     },
     manifests::Manifests,
+    terminal::Hyperlinkable,
     token::default_headers,
     traits::FromHtml,
     update_state::UpdateState,
@@ -543,11 +544,15 @@ impl GitHub {
 
         pr_progress.finish_and_clear();
 
-        println!(
-            "{} created a pull request to remove {identifier} {version}",
-            "Successfully".green(),
+        print_pull_request_url(
+            &pull_request_url,
+            format_args!(
+                "{} created a {} to {WINGET_PKGS_FULL_NAME}",
+                "Successfully".green(),
+                "pull request".hyperlink(&pull_request_url)
+            ),
         );
-        println!("{}", pull_request_url.as_str());
+
         Ok(pull_request_url)
     }
 
