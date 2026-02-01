@@ -18,6 +18,17 @@ include = ["**/*.rs", "assets/github.graphql", "assets/branding/logo.ico"]
 name = "komac"
 path = "src/main.rs"
 
+# https://doc.rust-lang.org/stable/cargo/guide/build-performance.html#reduce-amount-of-generated-debug-information
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.debugging]
+inherits = "dev"
+debug = true
+
 [profile.release]
 codegen-units = 1
 lto = true
