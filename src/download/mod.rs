@@ -6,7 +6,7 @@ use std::{borrow::Cow, fmt};
 use camino::Utf8Path;
 use const_format::formatcp;
 pub use downloader::Downloader;
-pub use file::DownloadedFile;
+pub use file::{DownloadedFile, sha256_digest};
 use reqwest::{Client, ClientBuilder, Response, header::HeaderValue, redirect::Policy};
 use uuid::Uuid;
 use winget_types::installer::VALID_FILE_EXTENSIONS;
