@@ -5,9 +5,10 @@ use std::{
 };
 
 use anstream::println;
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
 use color_eyre::eyre::Result;
+use color_eyre::eyre::ensure;
 use indicatif::ProgressBar;
 use inquire::CustomType;
 use ordinal::Ordinal;
@@ -34,7 +35,7 @@ use crate::{
     commands::utils::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
     },
-    download::Downloader,
+    download::{DownloadedFile, Downloader},
     download_file::process_files,
     github::{
         GITHUB_HOST, WINGET_PKGS_FULL_NAME,
@@ -66,6 +67,10 @@ pub struct NewVersion {
     /// The list of package installers
     #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::Url)]
     urls: Vec<Url>,
+
+    /// The list of files to use instead of downloading urls
+    #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::FilePath, requires = "urls", value_parser = is_valid_file)]
+    files: Vec<Utf8PathBuf>,
 
     #[arg(long)]
     package_locale: Option<LanguageTag>,
@@ -155,6 +160,15 @@ pub struct NewVersion {
 
 impl NewVersion {
     pub async fn run(self) -> Result<()> {
+        if !self.files.is_empty() {
+            ensure!(
+                self.urls.len() == self.files.len(),
+                "Number of URLs ({}) must match number of files ({})",
+                self.urls.len(),
+                self.files.len()
+            );
+        }
+
         let token = TokenManager::handle(self.token).await?;
         let github = GitHub::new(&token)?;
 
@@ -219,8 +233,17 @@ impl NewVersion {
             }
         });
 
-        let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
-        let mut files = downloader.download(urls.iter().cloned()).await?;
+        let mut files = if self.files.is_empty() {
+            let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
+            downloader.download(urls.iter().cloned()).await?
+        } else {
+            self.files
+                .iter()
+                .zip(urls.iter().cloned())
+                .map(|(path, url)| DownloadedFile::from_local(path, url))
+                .collect::<Result<Vec<_>>>()?
+        };
+
         let mut download_results = process_files(&mut files).await?;
 
         let mut installers = Vec::new();
@@ -228,11 +251,9 @@ impl NewVersion {
             let mut silent = None;
             let mut silent_with_progress = None;
             let mut custom = None;
-            if analyser
-                .installers
-                .iter()
-                .any(|installer| installer.r#type == Some(InstallerType::Exe))
-            {
+            if analyser.installers.iter().any(|installer| {
+                installer.r#type == Some(InstallerType::Exe) && installer.switches.is_empty()
+            }) {
                 if confirm_prompt(&format!("Is {} a portable exe?", analyser.file_name))? {
                     for installer in &mut analyser.installers {
                         installer.r#type = Some(InstallerType::Portable);
@@ -479,4 +500,11 @@ impl NewVersion {
 
         Ok(())
     }
+}
+
+fn is_valid_file(path: &str) -> Result<Utf8PathBuf> {
+    let path = Utf8Path::new(path);
+    ensure!(path.exists(), "{path} does not exist");
+    ensure!(path.is_file(), "{path} is not a file");
+    Ok(path.to_path_buf())
 }
