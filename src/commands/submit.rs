@@ -12,7 +12,7 @@ use walkdir::WalkDir;
 use winget_types::{GenericManifest, ManifestType};
 
 use crate::{
-    commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption},
+    commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request},
     github::{
         WINGET_PKGS_FULL_NAME,
         client::GitHub,
@@ -144,6 +144,14 @@ impl Submit {
         for mut manifest in manifests {
             let identifier = &manifest.version.package_identifier;
             let version = &manifest.version.package_version;
+
+            if let Some(pull_request) = github
+                .get_existing_pull_request(&identifier, &version)
+                .await?
+                && !prompt_existing_pull_request(&identifier, &version, &pull_request)?
+            {
+                return Ok(());
+            }
 
             // Reorder the keys in case the manifests weren't created by komac
             manifest.installer.optimize();
