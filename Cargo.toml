@@ -92,7 +92,7 @@ tempfile = "3.24.0"
 thiserror = "2.0.18"
 tokio = { version = "1.49.0", features = ["rt-multi-thread", "macros", "fs", "parking_lot"] }
 tracing = { version = "0.1.44", features = ["release_max_level_warn"] }
-tracing-indicatif = "0.3.13"
+tracing-indicatif = "0.3.14"
 tracing-subscriber = "0.3.22"
 tree-sitter-highlight = "0.26.5"
 tree-sitter-yaml = "0.7.2"
