@@ -53,7 +53,7 @@ pub struct UpdateVersion {
     package_version: PackageVersion,
 
     /// The list of package installers
-    #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
+    #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::Url)]
     urls: Vec<Url>,
 
     /// Number of installers to download at the same time
@@ -127,13 +127,35 @@ impl UpdateVersion {
             return Ok(());
         }
 
+        let mut manifests = github
+            .get_manifests(&self.package_identifier, latest_version)
+            .map_err(Error::new)
+            .await?;
+
+        let mut urls = self.urls.clone();
+        if self.urls.is_empty() {
+            println!(
+                "{}",
+                "Warning: No URLs provided. Using URLs from latest version with updated version number. Verify URLs are correct before submitting.".yellow(),
+            );
+            urls = manifests
+                .installer
+                .installers
+                .iter()
+                .filter_map(|installer| {
+                    let replaced = installer
+                        .url
+                        .as_str()
+                        .replace(latest_version.as_str(), self.package_version.as_str());
+                    replaced.parse().ok()
+                })
+                .collect();
+        }
+
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
-        let (mut manifests, mut github_values, mut files) = try_join!(
-            github
-                .get_manifests(&self.package_identifier, latest_version)
-                .map_err(Error::new),
+        let (mut github_values, mut files) = try_join!(
             self.fetch_github_values(&github).map_err(Error::new),
-            downloader.download(self.urls.iter().cloned()),
+            downloader.download(urls.iter().cloned()),
         )?;
 
         let mut download_results = process_files(&mut files).await?;
