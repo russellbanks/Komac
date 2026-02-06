@@ -52,11 +52,11 @@ komac update Package.Identifier --version 1.2.3 --urls https://example.com/insta
     - [Nullsoft Scriptable Install System](https://nsis.sourceforge.io)
     - [MSI](https://learn.microsoft.com/windows/win32/msi/windows-installer-portal)
     - [Burn](https://docs.firegiant.com/wix/tools/burn/)
-- 🌍 Cross-platform support (Windows, Linux, macOS)
+- 🌍 Cross-platform support (Windows, Linux, macOS, Android)
 
 ## Installation
 
-Komac is cross-platform and binaries are built for Windows, Linux, and macOS.
+Komac is cross-platform and binaries are built for Windows, Linux, macOS, and Android.
 
 ### All platforms
 
@@ -107,6 +107,20 @@ Portable binaries for macOS are available from the [releases](https://github.com
 
 ```bash
 brew install komac
+```
+
+### Android [(Termux App)](https://termux.dev/en/)
+
+#### 1) Install [Termux-User-Repository (TUR)](https://github.com/termux-user-repository/tur) in Termux
+
+```bash
+pkg install tur-repo
+```
+
+#### 2) Install Komac in Termux
+
+```bash
+pkg install komac
 ```
 
 ## GitHub Token Setup
@@ -207,16 +221,16 @@ While other manifest creation tools have made a solid foundation for the manifes
 pace
 is slower and lacks the deeper installer analysis that komac is capable of.
 
-|                                          | Komac  | WingetCreate |                           YamlCreate                           |
-|------------------------------------------|:------:|:------------:|:--------------------------------------------------------------:|
+|                                          | Komac   | WingetCreate  |                           YamlCreate                            |
+|------------------------------------------|:-------:|:-------------:|:---------------------------------------------------------------:|
 | Parameters                               |   ✅    |      ✅       |                               ❌                                |
 | Download progress bar & ETA              |   ✅    |      ❌       |                               ❌                                |
-| Fully cross-platform                     |   ✅    |      ❌       |                            Limited                             |
+| Fully cross-platform                     |   ✅    |      ❌       |                            Limited                              |
 | Works without Git                        |   ✅    |      ✅       |                               ❌                                |
 | Full Inno Setup value retrieval          |   ✅    |      ❌       |                               ❌                                |
-| Full MSI value retrieval                 |   ✅    |   Partial    |                            Partial                             |
-| Linux & macOS MSI support                |   ✅    |      ❌       |                               ❌                                |
-| Full MSIX value retrieval                |   ✅    |   Partial    |   Partial - https://github.com/Trenly/winget-pkgs/issues/180   |
+| Full MSI value retrieval                 |   ✅    |   Partial     |                            Partial                              |
+| Linux, macOS & Android MSI support       |   ✅    |      ❌       |                               ❌                                |
+| Full MSIX value retrieval                |   ✅    |   Partial     |   Partial - https://github.com/Trenly/winget-pkgs/issues/180    |
 | Get information from GitHub              |   ✅    |      ✅       |                               ❌                                |
 | Formatted GitHub release notes retrieval |   ✅    |      ❌       |                               ❌                                |
 | Release date identification              |   ✅    |      ❌       |                               ❌                                |
@@ -224,8 +238,8 @@ is slower and lacks the deeper installer analysis that komac is capable of.
 | Fully standalone (w/o winget-pkgs clone) |   ✅    |      ✅       |                               ❌                                |
 | Inno setup detection                     | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
 | Nullsoft detection                       | ✅ [^2] |      ✅       |                             ✅ [^3]                             |
-| Burn installer detection                 | ✅ [^2] |      ✅       | Opt-in feature (not enabled by default due to slow processing) |
-| Programming Language                     |  Rust  |      C#      |                           PowerShell                           |
+| Burn installer detection                 | ✅ [^2] |      ✅       | Opt-in feature (not enabled by default due to slow processing)  |
+| Programming Language                     |  Rust   |      C#       |                           PowerShell                            |
 
 [^1]: Telemetry is enabled by default in WingetCreate. Use `wingetcreate settings` to manually disable telemetry.
 [^2]: There is much more accurate detection for Inno, Nullsoft, and Burn installers since Komac v2.
