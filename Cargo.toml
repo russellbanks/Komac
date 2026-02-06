@@ -102,7 +102,7 @@ uuid = { version = "1.20.0", features = ["v4"] }
 walkdir = "2.5.0"
 winget-types = { version = "0.4.2", features = ["serde", "std", "chrono"] }
 yara-x = { version = "1.8.1", default-features = false, features = ["pe-module"] }
-zerocopy = { version = "0.8.38", features = ["derive", "std"] }
+zerocopy = { version = "0.8.39", features = ["derive", "std"] }
 zip = { version = "7.3.0", default-features = false, features = ["deflate"] }
 
 [features]
