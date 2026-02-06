@@ -6,9 +6,9 @@ use std::{
 };
 
 use anstream::println;
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
-use color_eyre::eyre::{Error, Result, bail};
+use color_eyre::eyre::{Error, Result, bail, ensure};
 use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
@@ -25,7 +25,7 @@ use crate::{
     commands::utils::{
         SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
     },
-    download::Downloader,
+    download::{DownloadedFile, Downloader},
     download_file::process_files,
     github::{
         GITHUB_HOST, GitHubError, WINGET_PKGS_FULL_NAME,
@@ -55,6 +55,10 @@ pub struct UpdateVersion {
     /// The list of package installers
     #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
     urls: Vec<Url>,
+
+    /// The list of files to use instead of downloading urls
+    #[arg(short, long, num_args = 1.., requires = "urls", value_parser = is_valid_file, value_hint = clap::ValueHint::FilePath)]
+    files: Vec<Utf8PathBuf>,
 
     /// Number of installers to download at the same time
     #[arg(long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
@@ -107,6 +111,15 @@ pub struct UpdateVersion {
 
 impl UpdateVersion {
     pub async fn run(self) -> Result<()> {
+        if !self.files.is_empty() {
+            ensure!(
+                self.urls.len() == self.files.len(),
+                "Number of URLs ({}) must match number of files ({})",
+                self.urls.len(),
+                self.files.len()
+            );
+        }
+
         let token = TokenManager::handle(self.token.as_deref()).await?;
         let github = GitHub::new(&token)?;
 
@@ -127,13 +140,23 @@ impl UpdateVersion {
             return Ok(());
         }
 
-        let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
         let (mut manifests, mut github_values, mut files) = try_join!(
             github
                 .get_manifests(&self.package_identifier, latest_version)
                 .map_err(Error::new),
             self.fetch_github_values(&github).map_err(Error::new),
-            downloader.download(self.urls.iter().cloned()),
+            async {
+                if self.files.is_empty() {
+                    let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
+                    downloader.download(self.urls.iter().cloned()).await
+                } else {
+                    self.files
+                        .iter()
+                        .zip(self.urls.iter().cloned())
+                        .map(|(path, url)| DownloadedFile::from_local(path, url))
+                        .collect::<Result<Vec<_>>>()
+                }
+            },
         )?;
 
         let mut download_results = process_files(&mut files).await?;
@@ -388,4 +411,11 @@ fn fix_relative_paths<R: Read + Seek>(
             }
         })
         .collect::<BTreeSet<_>>()
+}
+
+fn is_valid_file(path: &str) -> Result<Utf8PathBuf> {
+    let path = Utf8Path::new(path);
+    ensure!(path.exists(), "{path} does not exist");
+    ensure!(path.is_file(), "{path} is not a file");
+    Ok(path.to_path_buf())
 }
