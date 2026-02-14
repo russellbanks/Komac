@@ -59,7 +59,7 @@ html-escape = "0.2.13"
 html2text = "0.16.7"
 indexmap = "2.13.0"
 indextree = "4.7.4"
-indicatif = "0.18.0"
+indicatif = "0.18.4"
 inno = { version = "0.4.0", features = ["lzma-static"] }
 inquire = "0.9.3"
 itertools = "0.14.0"
