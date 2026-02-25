@@ -136,7 +136,7 @@ pub enum RegType {
     ExpandedString = 2u32.to_le(),
     Binary = 3u32.to_le(),
     DWord = 4u32.to_le(),
-    MultiString = 5u32.to_le(),
+    MultiString = 7u32.to_le(),
 }
 
 impl RegType {
