@@ -9,7 +9,7 @@ use clap::{crate_name, crate_version};
 pub use commit_title::CommitTitle;
 use itertools::Itertools;
 pub use package_path::PackagePath;
-use rand::Rng;
+use rand::RngExt;
 use uuid::Uuid;
 use winget_types::{
     LanguageTag, Manifest, ManifestType, PackageIdentifier, PackageVersion, url::DecodedUrl,
