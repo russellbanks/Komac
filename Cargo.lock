@@ -1992,9 +1992,9 @@ dependencies = [
 
 [[package]]
 name = "inno"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e3e1763f66993ae34031ca1ce86c7d9aec7e1b343c3fe1cb38034d0a6f87d70"
+checksum = "24827731bc99b88fa18104b1704ff2f9c0d5f6dfb8db2d12eb512fd9f6296e13"
 dependencies = [
  "bitflags",
  "codepage",
@@ -3999,7 +3999,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82a72c767771b47409d2345987fda8628641887d5466101319899796367354a0"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.1",
  "once_cell",
  "rustix 1.1.4",
  "windows-sys 0.61.2",
