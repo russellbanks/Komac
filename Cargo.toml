@@ -75,7 +75,7 @@ ordinal = "0.4.0"
 owo-colors = "4.2.3"
 quick-xml = { version = "0.39.2", features = ["serialize"] }
 rand = "0.10.0"
-ratatui = "0.29.0"
+ratatui = "0.30.0"
 regex = "1.12.3"
 reqwest = { version = "0.12.26", default-features = false, features = ["charset", "http2", "stream", "system-proxy"] }
 serde = { version = "1.0.228", features = ["derive"] }
