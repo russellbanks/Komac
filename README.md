@@ -261,6 +261,7 @@ jobs:
 
 - Run Komac manually: [michidk/run-komac](https://github.com/michidk/run-komac)
 - Automate releases for external repositories: [michidk/winget-updater](https://github.com/michidk/winget-updater)
+- Install and run Komac: [UnownPlain/install-komac](https://github.com/UnownPlain/install-komac)
 
 ## How can I support Komac? ❤️
 
