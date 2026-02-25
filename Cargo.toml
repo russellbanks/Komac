@@ -43,7 +43,7 @@ bytes = "1.11.1"
 bzip2 = "0.6.1"
 cab = "0.6.0"
 camino = { version = "1.2.2", features = ["serde1"] }
-chrono = { version = "0.4.43", features = ["serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4.5.60", features = ["derive", "cargo", "env"] }
 clap_complete = "4.5.66"
 codepage = "0.1.2"
