@@ -72,7 +72,7 @@ nt-time = { version = "0.13.1", features = ["chrono"] }
 num_cpus = "1.17.0"
 open = "5.3.3"
 ordinal = "0.4.0"
-owo-colors = "4.2.3"
+owo-colors = "4.3.0"
 quick-xml = { version = "0.39.2", features = ["serialize"] }
 rand = "0.10.0"
 ratatui = "0.29.0"
