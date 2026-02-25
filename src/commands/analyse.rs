@@ -1,11 +1,14 @@
-use std::fs::File;
+use std::{
+    fs::File,
+    io,
+    io::{Read, Seek, SeekFrom},
+};
 
 use anstream::stdout;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::Parser;
 use color_eyre::{Result, eyre::ensure};
-use memmap2::Mmap;
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha256, digest::Output};
 use winget_types::Sha256String;
 
 use crate::{analysis::Analyzer, manifests::print_manifest};
@@ -40,20 +43,20 @@ pub struct Analyse {
 
 impl Analyse {
     pub fn run(self) -> Result<()> {
-        let file = File::open(&self.file_path)?;
-        let mmap = unsafe { Mmap::map(&file) }?;
+        let mut file = File::open(&self.file_path)?;
         let file_name = self
             .file_path
             .file_name()
             .unwrap_or_else(|| self.file_path.as_str());
-        let mut analyser = Analyzer::new(&mmap, file_name)?;
+        let mut installers = Analyzer::new(&mut file, file_name)?.installers;
         if self.hash {
-            let sha_256 = Sha256String::from_digest(&Sha256::digest(&mmap));
-            for installer in &mut analyser.installers {
+            file.seek(SeekFrom::Start(0))?;
+            let sha_256 = Sha256String::from_digest(&sha256_digest(file)?);
+            for installer in &mut installers {
                 installer.sha_256 = sha_256.clone();
             }
         }
-        let yaml = match analyser.installers.as_slice() {
+        let yaml = match installers.as_slice() {
             [installer] => serde_yaml::to_string(installer)?,
             installers => serde_yaml::to_string(installers)?,
         };
@@ -61,6 +64,21 @@ impl Analyse {
         print_manifest(&mut lock, &yaml);
         Ok(())
     }
+}
+
+fn sha256_digest<R: Read>(mut reader: R) -> io::Result<Output<Sha256>> {
+    let mut digest = Sha256::new();
+    let mut buffer = [0; 1 << 13];
+
+    loop {
+        let count = reader.read(&mut buffer)?;
+        if count == 0 {
+            break;
+        }
+        digest.update(&buffer[..count]);
+    }
+
+    Ok(digest.finalize())
 }
 
 fn is_valid_file(path: &str) -> Result<Utf8PathBuf> {
