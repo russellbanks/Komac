@@ -29,8 +29,8 @@ pub trait TextPrompt: Name {
 
 impl TextPrompt for PackageIdentifier {
     const HELP_MESSAGE: Option<&'static str> =
-        Some("Package Identifiers are in the format of Package.Identifier");
-    const PLACEHOLDER: Option<&'static str> = Some("Package.Identifier");
+        Some("Package Identifiers are in the format of Publisher.package");
+    const PLACEHOLDER: Option<&'static str> = Some("Publisher.package");
 }
 
 impl TextPrompt for PackageVersion {
