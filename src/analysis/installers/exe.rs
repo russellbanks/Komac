@@ -36,12 +36,23 @@ impl Exe {
     pub fn new<R: Read + Seek>(mut reader: R) -> Result<Self> {
         let pe = PE::read_from(&mut reader)?;
 
-        let vs_version_info_bytes = pe.vs_version_info(&mut reader)?;
-        let vs_version_info = VSVersionInfo::read_from(&vs_version_info_bytes)?;
-        let mut string_table = vs_version_info.string_table();
-        let legal_copyright = string_table.remove("LegalCopyright").map(str::to_owned);
-        let product_name = string_table.remove("ProductName").map(str::to_owned);
-        let company_name = string_table.remove("CompanyName").map(str::to_owned);
+        let vs_version_info_bytes = pe.vs_version_info(&mut reader).ok();
+        let vs_version_info = vs_version_info_bytes
+            .as_deref()
+            .and_then(|version_info_bytes| VSVersionInfo::read_from(version_info_bytes).ok());
+        let mut string_table = vs_version_info.as_ref().map(VSVersionInfo::string_table);
+        let legal_copyright = string_table
+            .as_mut()
+            .and_then(|table| table.remove("LegalCopyright"))
+            .map(str::to_owned);
+        let product_name = string_table
+            .as_mut()
+            .and_then(|table| table.remove("ProductName"))
+            .map(str::to_owned);
+        let company_name = string_table
+            .as_mut()
+            .and_then(|table| table.remove("CompanyName"))
+            .map(str::to_owned);
 
         match Burn::new(&mut reader, &pe) {
             Ok(burn) => {
@@ -85,15 +96,16 @@ impl Exe {
         Ok(Self {
             r#type: ExeType::Generic(Box::new(Installer {
                 architecture: pe.winget_architecture(),
-                r#type: if vs_version_info
-                    .string_entries()
-                    .filter(|&(key, _value)| matches!(key, FILE_DESCRIPTION | ORIGINAL_FILENAME))
-                    .map(|(_key, value)| value.to_ascii_lowercase())
-                    .any(|value| {
-                        BASIC_INSTALLER_KEYWORDS
-                            .iter()
-                            .any(|keyword| value.contains(keyword))
-                    }) {
+                r#type: if string_table.is_some_and(|mut table| {
+                    let original_filename = table.remove(ORIGINAL_FILENAME);
+                    let file_description = table.remove(FILE_DESCRIPTION);
+
+                    BASIC_INSTALLER_KEYWORDS.iter().any(|keyword| {
+                        original_filename.is_some_and(|filename| filename.contains(keyword))
+                            || file_description
+                                .is_some_and(|description| description.contains(keyword))
+                    })
+                }) {
                     Some(InstallerType::Exe)
                 } else {
                     Some(InstallerType::Portable)
