@@ -99,7 +99,7 @@ url = { version = "2.5.8", features = ["serde"] }
 uuid = { version = "1.21.0", features = ["v4"] }
 walkdir = "2.5.0"
 winget-types = { version = "0.4.2", features = ["serde", "std", "chrono"] }
-zerocopy = { version = "0.8.39", features = ["derive", "std"] }
+zerocopy = { version = "0.8.40", features = ["derive", "std"] }
 zip = { version = "8.1.0", default-features = false, features = ["deflate"] }
 
 [features]
