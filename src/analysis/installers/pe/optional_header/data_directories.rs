@@ -47,79 +47,87 @@ impl DataDirectories {
         self.0.as_mut_slice()
     }
 
+    /// Returns a reference to a [`DataDirectory`] at the given index if it is present and does not
+    /// have a virtual address and size of 0.
+    fn get(&self, index: usize) -> Option<&DataDirectory> {
+        self.inner()
+            .get(index)
+            .filter(|&&data_directory| data_directory != DataDirectory::new_zeroed())
+    }
+
     #[inline]
-    pub const fn export_table(&self) -> Option<&DataDirectory> {
-        self.inner().first()
+    pub fn export_table(&self) -> Option<&DataDirectory> {
+        self.get(0)
     }
 
     #[inline]
     pub fn import_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(1)
+        self.get(1)
     }
 
     #[inline]
     pub fn resource_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(2)
+        self.get(2)
     }
 
     #[inline]
     pub fn exception_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(3)
+        self.get(3)
     }
 
     #[inline]
     pub fn certificate_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(4)
+        self.get(4)
     }
 
     #[inline]
     pub fn base_relocation_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(5)
+        self.get(5)
     }
 
     #[inline]
     pub fn debug_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(6)
+        self.get(6)
     }
 
     #[inline]
     pub fn architecture(&self) -> Option<&DataDirectory> {
-        self.inner().get(7)
+        self.get(7)
     }
 
     #[inline]
     pub fn global_ptr(&self) -> Option<&DataDirectory> {
-        self.inner().get(8)
+        self.get(8)
     }
 
     #[inline]
     pub fn tls_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(9)
+        self.get(9)
     }
 
     #[inline]
     pub fn load_config_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(10)
+        self.get(10)
     }
 
     #[inline]
     pub fn bound_import_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(11)
+        self.get(11)
     }
 
     #[inline]
     pub fn import_address_table(&self) -> Option<&DataDirectory> {
-        self.inner().get(12)
+        self.get(12)
     }
 
     #[inline]
     pub fn delay_import_descriptor(&self) -> Option<&DataDirectory> {
-        self.inner().get(13)
+        self.get(13)
     }
 
     #[inline]
     pub fn clr_runtime_header(&self) -> Option<&DataDirectory> {
-        self.inner().get(14)
+        self.get(14)
     }
 
     #[inline]
@@ -147,5 +155,28 @@ impl<'a> IntoIterator for &'a DataDirectories {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DataDirectories, DataDirectory};
+
+    #[test]
+    fn read_data_directories() {
+        let data: [u8; _] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 80, 170, 5, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+
+        let data_directories =
+            DataDirectories::read_from(data.as_slice(), data.len() / size_of::<DataDirectory>())
+                .unwrap();
+
+        assert_eq!(data_directories.export_table(), None);
+        assert_eq!(
+            data_directories.import_table(),
+            Some(&DataDirectory::new(371280, 60))
+        );
+        assert_eq!(data_directories.resource_table(), None);
     }
 }
