@@ -14,22 +14,20 @@ pub struct VSString<'a> {
 
 impl<'a> VSString<'a> {
     pub fn read_from(data: &'a [u8]) -> io::Result<Self> {
-        Self::read_from_with_encoding(data, UTF_16LE)
-    }
-
-    pub fn read_from_with_encoding(
-        data: &'a [u8],
-        encoding: &'static Encoding,
-    ) -> io::Result<Self> {
         let header = VSHeader::read_from(data)?;
 
         let data = &data[header.end_offset..];
 
-        let string_bytes = &data[..header.value_byte_length().saturating_sub(size_of::<u16>())];
+        let value_len = data
+            .chunks_exact(size_of::<u16>())
+            .position(|chunk| chunk == b"\0\0")
+            .map_or(data.len(), |index| index * size_of::<u16>());
+
+        let string_bytes = &data[..value_len];
 
         Ok(Self {
             header,
-            value: encoding.decode_with_bom_removal(string_bytes).0,
+            value: UTF_16LE.decode_without_bom_handling(string_bytes).0,
         })
     }
 
@@ -40,7 +38,14 @@ impl<'a> VSString<'a> {
         self.header.length()
     }
 
-    /// The size, in words, of the Value member.
+    /// The size of the Value member.
+    ///
+    /// This field is not reliable in practice: some produces store a WORD count, others a byte
+    /// count, and Windows does not enforce either interpretation. String values are always UTF-16
+    /// and NUL-terminated; Windows determines their length by scanning for the UTF-16 terminator
+    /// and relies on [`wLength`] for traversal.
+    ///
+    /// [`wLength`]: Self::length
     pub const fn value_length(&self) -> u16 {
         self.header.value_length()
     }

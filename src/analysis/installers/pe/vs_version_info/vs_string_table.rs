@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt, io};
 
-use encoding_rs::{Encoding, UTF_16LE};
+use encoding_rs::Encoding;
 use zerocopy::FromBytes;
 
 use super::{VSHeader, VSString};
@@ -20,8 +20,7 @@ impl<'a> VSStringTable<'a> {
         let mut offset = header.end_offset;
 
         while offset < usize::from(header.length()) {
-            let child =
-                VSString::read_from_with_encoding(&data[offset..], header.string_table_codepage())?;
+            let child = VSString::read_from(&data[offset..])?;
 
             offset += usize::from(child.length());
             offset = offset.next_multiple_of(size_of::<u32>());

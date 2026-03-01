@@ -67,11 +67,6 @@ impl<'a> VSHeader<'a> {
     }
 
     #[must_use]
-    pub const fn value_byte_length(&self) -> usize {
-        self.value_length() as usize * size_of::<u16>()
-    }
-
-    #[must_use]
     #[inline]
     pub const fn r#type(&self) -> VSType {
         self.r#type
