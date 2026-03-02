@@ -1,6 +1,7 @@
-use std::{collections::HashMap, fmt, io};
+use std::{fmt, io};
 
 use encoding_rs::Encoding;
+use indexmap::IndexMap;
 use zerocopy::FromBytes;
 
 use super::{VSHeader, VSString};
@@ -71,8 +72,8 @@ impl<'a> VSStringTable<'a> {
             .map(|vs_string| (vs_string.key(), vs_string.value()))
     }
 
-    pub fn table(&'a self) -> HashMap<&'a str, &'a str> {
-        self.entries().collect::<HashMap<_, _>>()
+    pub fn table(&'a self) -> IndexMap<&'a str, &'a str> {
+        self.entries().collect::<IndexMap<_, _>>()
     }
 }
 

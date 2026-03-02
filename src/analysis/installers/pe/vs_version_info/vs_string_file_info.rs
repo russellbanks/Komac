@@ -1,5 +1,6 @@
-use std::{collections::HashMap, fmt, io};
+use std::{fmt, io};
 
+use indexmap::IndexMap;
 use zerocopy::FromBytes;
 
 use super::{VSHeader, VSStringTable, VSType};
@@ -80,7 +81,7 @@ impl<'a> VSStringFileInfo<'a> {
         self.children.first().map(VSStringTable::entries).unwrap()
     }
 
-    pub fn table(&'a self) -> HashMap<&'a str, &'a str> {
+    pub fn table(&'a self) -> IndexMap<&'a str, &'a str> {
         self.children.first().map(VSStringTable::table).unwrap()
     }
 }

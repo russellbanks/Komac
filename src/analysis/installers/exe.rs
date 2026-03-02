@@ -43,15 +43,15 @@ impl Exe {
         let mut string_table = vs_version_info.as_ref().map(VSVersionInfo::string_table);
         let legal_copyright = string_table
             .as_mut()
-            .and_then(|table| table.remove("LegalCopyright"))
+            .and_then(|table| table.swap_remove("LegalCopyright"))
             .map(str::to_owned);
         let product_name = string_table
             .as_mut()
-            .and_then(|table| table.remove("ProductName"))
+            .and_then(|table| table.swap_remove("ProductName"))
             .map(str::to_owned);
         let company_name = string_table
             .as_mut()
-            .and_then(|table| table.remove("CompanyName"))
+            .and_then(|table| table.swap_remove("CompanyName"))
             .map(str::to_owned);
 
         match Burn::new(&mut reader, &pe) {
@@ -97,8 +97,8 @@ impl Exe {
             r#type: ExeType::Generic(Box::new(Installer {
                 architecture: pe.winget_architecture(),
                 r#type: if string_table.is_some_and(|mut table| {
-                    let original_filename = table.remove(ORIGINAL_FILENAME);
-                    let file_description = table.remove(FILE_DESCRIPTION);
+                    let original_filename = table.swap_remove(ORIGINAL_FILENAME);
+                    let file_description = table.swap_remove(FILE_DESCRIPTION);
 
                     BASIC_INSTALLER_KEYWORDS.iter().any(|keyword| {
                         original_filename.is_some_and(|filename| filename.contains(keyword))

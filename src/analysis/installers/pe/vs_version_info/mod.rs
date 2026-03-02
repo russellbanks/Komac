@@ -9,8 +9,9 @@ mod vs_type;
 mod vs_var;
 mod vs_var_file_info;
 
-use std::{collections::HashMap, io};
+use std::io;
 
+use indexmap::IndexMap;
 use var_dword::VarDword;
 use vs_file_flags::VSFileFlags;
 use vs_fixed_file_info::VSFixedFileInfo;
@@ -89,7 +90,7 @@ impl<'a> VSVersionInfo<'a> {
             .flatten()
     }
 
-    pub fn string_table(&self) -> HashMap<&str, &str> {
+    pub fn string_table(&self) -> IndexMap<&str, &str> {
         self.string_file_info()
             .map(VSStringFileInfo::table)
             .unwrap_or_default()
