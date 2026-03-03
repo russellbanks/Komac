@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use compact_str::CompactString;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Item {
+pub enum FsEntry {
     File {
         name: CompactString,
         modified_at: Option<DateTime<Utc>>,
@@ -13,7 +13,7 @@ pub enum Item {
     Directory(CompactString),
 }
 
-impl Item {
+impl FsEntry {
     #[inline]
     pub const fn new_root() -> Self {
         Self::Directory(CompactString::const_new("/"))
@@ -70,7 +70,7 @@ impl Item {
     }
 }
 
-impl fmt::Debug for Item {
+impl fmt::Debug for FsEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::File {
@@ -93,7 +93,7 @@ impl fmt::Debug for Item {
     }
 }
 
-impl fmt::Display for Item {
+impl fmt::Display for FsEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.name().fmt(f)
     }

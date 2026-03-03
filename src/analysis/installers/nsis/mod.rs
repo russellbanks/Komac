@@ -39,7 +39,7 @@ use super::{
     super::extensions::EXE,
     nsis::{
         entry::{Entry, EntryError},
-        file_system::Item,
+        file_system::FsEntry,
         first_header::FirstHeader,
         header::{
             Compression, Decoder, Decompressed, Header, block::BlockHeaders,
@@ -151,13 +151,13 @@ impl Nsis {
         let mut architecture =
             Option::from(architecture).filter(|&architecture| architecture != Architecture::X86);
 
-        for directory in state.file_system.directories().map(Item::name) {
-            // If there is an app-64 file, the app is x64.
-            // If there is an app-32 file or both files are present, the app is x86
+        for entry in state.file_system.entries().map(FsEntry::name) {
+            // If there is an app-64 entry, the app is x64.
+            // If there is an app-32 entry or both entries are present, the app is x86.
             // (x86 apps can still install on x64 systems)
-            if directory == APP_64 && architecture.is_none() {
+            if entry.contains(APP_64) && architecture.is_none() {
                 architecture = Some(Architecture::X64);
-            } else if directory == APP_32 {
+            } else if entry.contains(APP_32) {
                 architecture = Some(Architecture::X86);
             }
         }
