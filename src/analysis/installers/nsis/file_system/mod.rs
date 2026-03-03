@@ -1,4 +1,4 @@
-mod item;
+mod entry;
 
 use std::{
     fmt,
@@ -8,14 +8,14 @@ use std::{
 
 use camino::{Utf8Component, Utf8Path};
 use chrono::{DateTime, Utc};
+pub use entry::FsEntry;
 use indextree::{Arena, Node, NodeId};
-pub use item::Item;
 use itertools::{Either, Itertools, Position};
 
 use super::{entry::DelFlags, strings::PredefinedVar};
 
 pub struct FileSystem {
-    arena: Arena<Item>,
+    arena: Arena<FsEntry>,
     root: NodeId,
     current_dir: NodeId,
 }
@@ -29,7 +29,7 @@ pub enum RelativeLocation {
 impl FileSystem {
     pub fn new() -> Self {
         let mut arena = Arena::new();
-        let root = arena.new_node(Item::new_root());
+        let root = arena.new_node(FsEntry::new_root());
         Self {
             arena,
             root,
@@ -87,7 +87,8 @@ impl FileSystem {
                     }) {
                         current = directory;
                     } else {
-                        current = current.append_value(Item::new_directory(part), &mut self.arena);
+                        current =
+                            current.append_value(FsEntry::new_directory(part), &mut self.arena);
                     }
                 }
                 _ => {}
@@ -127,7 +128,7 @@ impl FileSystem {
         }) {
             Some(file)
         } else {
-            let file = Item::new_file(file_name, created_at, position);
+            let file = FsEntry::new_file(file_name, created_at, position);
             Some(directory.append_value(file, &mut self.arena))
         }
     }
@@ -235,22 +236,40 @@ impl FileSystem {
         false
     }
 
-    pub fn directories(&self) -> impl Iterator<Item = &Item> {
+    /// Returns an iterator over all entries in the filesystem.
+    ///
+    /// The iteration order is identical to [`NodeId::descendants`], but with node IDs resolved to
+    /// [filesystem entries].
+    ///
+    /// [filesystem entries]: FsEntry
+    pub fn entries(&self) -> impl Iterator<Item = &FsEntry> {
         self.root
             .descendants(&self.arena)
             .filter_map(|id| self.arena.get(id).map(Node::get))
-            .filter(|item| item.is_directory())
     }
 
-    pub fn files(&self) -> impl Iterator<Item = &Item> {
-        self.root
-            .descendants(&self.arena)
-            .filter_map(|id| self.arena.get(id).map(Node::get))
-            .filter(|item| item.is_file())
+    /// Returns an iterator over all directories in the filesystem.
+    ///
+    /// The iteration order is identical to [`NodeId::descendants`], but with node IDs resolved to
+    /// [filesystem entries].
+    ///
+    /// [filesystem entries]: FsEntry
+    pub fn directories(&self) -> impl Iterator<Item = &FsEntry> {
+        self.entries().filter(|item| item.is_directory())
+    }
+
+    /// Returns an iterator over all files in the filesystem.
+    ///
+    /// The iteration order is identical to [`NodeId::descendants`], but with node IDs resolved to
+    /// [filesystem entries].
+    ///
+    /// [filesystem entries]: FsEntry
+    pub fn files(&self) -> impl Iterator<Item = &FsEntry> {
+        self.entries().filter(|item| item.is_file())
     }
 
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &Item> {
+    pub fn iter(&self) -> impl Iterator<Item = &FsEntry> {
         self.into_iter()
     }
 }
@@ -275,9 +294,10 @@ impl Default for FileSystem {
 }
 
 impl<'a> IntoIterator for &'a FileSystem {
-    type Item = &'a Item;
+    type Item = &'a FsEntry;
 
-    type IntoIter = FilterMap<Iter<'a, Node<Item>>, fn(&'a Node<Item>) -> Option<&'a Item>>;
+    type IntoIter =
+        FilterMap<Iter<'a, Node<FsEntry>>, fn(&'a Node<FsEntry>) -> Option<&'a FsEntry>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.arena
