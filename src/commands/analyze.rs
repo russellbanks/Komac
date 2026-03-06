@@ -13,10 +13,10 @@ use winget_types::Sha256String;
 
 use crate::{analysis::Analyzer, manifests::print_manifest};
 
-/// Analyses a file and outputs information about it
+/// Analyzes a file and outputs information about it
 #[derive(Parser)]
-#[clap(visible_alias = "analyze")]
-pub struct Analyse {
+#[clap(visible_alias = "analyse")]
+pub struct Analyze {
     #[arg(value_parser = is_valid_file, value_hint = clap::ValueHint::FilePath)]
     file_path: Utf8PathBuf,
 
@@ -41,7 +41,7 @@ pub struct Analyse {
     _no_hash: bool,
 }
 
-impl Analyse {
+impl Analyze {
     pub fn run(self) -> Result<()> {
         let mut file = File::open(&self.file_path)?;
         let file_name = self

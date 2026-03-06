@@ -139,7 +139,7 @@ impl UpdateVersion {
         let mut download_results = process_files(&mut files).await?;
         let installer_results = download_results
             .iter_mut()
-            .flat_map(|(_url, analyser)| mem::take(&mut analyser.installers))
+            .flat_map(|(_url, analyzer)| mem::take(&mut analyzer.installers))
             .collect::<Vec<_>>();
         let previous_installers = mem::take(&mut manifests.installer.installers)
             .into_iter()
@@ -161,7 +161,7 @@ impl UpdateVersion {
         let installers = matched_installers
             .into_iter()
             .map(|(previous_installer, new_installer)| {
-                let analyser = &download_results[&new_installer.url];
+                let analyzer = &download_results[&new_installer.url];
                 let installer_type = match previous_installer.r#type {
                     Some(InstallerType::Portable) => previous_installer.r#type,
                     _ => match new_installer.r#type {
@@ -187,7 +187,7 @@ impl UpdateVersion {
 
                 if let Some(nested_files) = nested_files_to_fix {
                     installer.nested_installer_files =
-                        fix_relative_paths(nested_files, analyser.zip.as_ref());
+                        fix_relative_paths(nested_files, analyzer.zip.as_ref());
                 }
 
                 for entry in &mut installer.apps_and_features_entries {

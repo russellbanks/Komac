@@ -23,11 +23,11 @@ pub async fn process_files(
              last_modified,
              ..
          }| async move {
-            let mut file_analyser = Analyzer::new(file, file_name)?;
+            let mut file_analyzer = Analyzer::new(file, file_name)?;
             let architecture = url
                 .override_architecture()
                 .or_else(|| Architecture::from_url(url.as_str()));
-            for installer in &mut file_analyser.installers {
+            for installer in &mut file_analyzer.installers {
                 if let Some(architecture) = architecture {
                     installer.architecture = architecture;
                 }
@@ -36,8 +36,8 @@ pub async fn process_files(
                 installer.sha_256 = sha_256.clone();
                 installer.release_date = *last_modified;
             }
-            file_analyser.file_name = mem::take(file_name);
-            Ok((mem::take(url.inner_mut()), file_analyser))
+            file_analyzer.file_name = mem::take(file_name);
+            Ok((mem::take(url.inner_mut()), file_analyzer))
         },
     ))
     .buffer_unordered(num_cpus::get())

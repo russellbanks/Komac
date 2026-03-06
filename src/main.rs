@@ -8,7 +8,7 @@ use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::commands::{
-    analyse::Analyse,
+    analyze::Analyze,
     cleanup::Cleanup,
     complete::Complete,
     list_versions::ListVersions,
@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
         Commands::Show(show_version) => show_version.run().await,
         Commands::Sync(sync_fork) => sync_fork.run().await,
         Commands::Complete(complete) => complete.run(),
-        Commands::Analyse(analyse) => analyse.run(),
+        Commands::Analyze(analyse) => analyse.run(),
         Commands::RemoveDeadVersions(remove_dead_versions) => remove_dead_versions.run().await,
         Commands::Submit(submit) => submit.run().await,
     }
@@ -103,7 +103,7 @@ enum Commands {
     Show(ShowVersion),
     Sync(SyncFork),
     Complete(Complete),
-    Analyse(Analyse),
+    Analyze(Analyze),
     RemoveDeadVersions(RemoveDeadVersions),
     Submit(Submit),
 }
