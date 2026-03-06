@@ -23,6 +23,8 @@ use super::utils::{
 };
 use crate::analysis::Installers;
 
+const CODE: &str = "{code:";
+
 impl Installers for Inno {
     fn installers(&self) -> Vec<Installer> {
         let install_dir = self
@@ -31,6 +33,27 @@ impl Installers for Inno {
             .map(str::to_owned)
             .map(to_relative_install_dir)
             .filter(|dir| !dir.contains(['{', '}']));
+
+        let product_code = self
+            .header
+            .product_code()
+            .filter(|code| !code.starts_with(CODE));
+
+        let display_name = self
+            .header
+            .uninstall_name()
+            .or_else(|| self.header.app_versioned_name())
+            .filter(|name| !name.starts_with(CODE));
+
+        let publisher = self
+            .header
+            .app_publisher()
+            .filter(|publisher| !publisher.starts_with(CODE));
+
+        let display_version = self
+            .header
+            .app_version()
+            .filter(|version| !version.starts_with(CODE));
 
         let mut installer = Installer {
             locale: self.primary_language().and_then(|language_entry| {
@@ -46,28 +69,24 @@ impl Installers for Inno {
                 .and_then(Scope::from_install_directory),
             url: DecodedUrl::default(),
             sha_256: Sha256String::default(),
-            product_code: self.header.product_code(),
             unsupported_os_architectures: UnsupportedOSArchitecture::from_inno(
                 self.header.architectures_disallowed(),
             ),
-            apps_and_features_entries: if self.header.uninstall_name().is_some()
-                || self.header.app_publisher().is_some()
-                || self.header.app_version().is_some()
+            apps_and_features_entries: if [display_name, publisher, display_version]
+                .iter()
+                .any(Option::is_some)
             {
                 AppsAndFeaturesEntry::builder()
-                    .maybe_display_name(
-                        self.header
-                            .uninstall_name()
-                            .or(self.header.app_versioned_name()),
-                    )
-                    .maybe_publisher(self.header.app_publisher())
-                    .maybe_display_version(self.header.app_version())
-                    .maybe_product_code(self.header.product_code())
+                    .maybe_display_name(display_name)
+                    .maybe_publisher(publisher)
+                    .maybe_display_version(display_version)
+                    .maybe_product_code(product_code.clone())
                     .build()
                     .into()
             } else {
                 AppsAndFeaturesEntries::new()
             },
+            product_code,
             elevation_requirement: self
                 .header
                 .privileges_required()
