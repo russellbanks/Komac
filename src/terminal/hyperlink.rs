@@ -1,7 +1,9 @@
 use std::{fmt, sync::LazyLock};
 
-static SUPPORTS_HYPERLINKS: LazyLock<bool> =
-    LazyLock::new(supports_hyperlinks::supports_hyperlinks);
+use supports_hyperlinks::Stream;
+
+pub static SUPPORTS_HYPERLINKS: LazyLock<bool> =
+    LazyLock::new(|| supports_hyperlinks::on(Stream::Stdout));
 
 pub struct Hyperlink<'text, D: fmt::Display, U: fmt::Display> {
     text: &'text D,

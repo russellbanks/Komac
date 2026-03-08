@@ -7,7 +7,6 @@ use futures_util::future::OptionFuture;
 use indexmap::IndexMap;
 use indicatif::ProgressBar;
 use itertools::Itertools;
-use owo_colors::OwoColorize;
 use reqwest::Client;
 use serde::de::DeserializeOwned;
 use url::Url;
@@ -19,7 +18,7 @@ use winget_types::{
     version::VersionManifest,
 };
 
-use super::GitHubError;
+use super::{GitHubError, graphql::create_pull_request};
 use crate::{
     commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
     github::{
@@ -27,9 +26,6 @@ use crate::{
         graphql::{
             GRAPHQL_URL,
             create_commit::{FileAddition, FileDeletion},
-            create_pull_request::{
-                CreatePullRequest, CreatePullRequestInput, CreatePullRequestVariables,
-            },
             create_ref::{CreateRef, CreateRefVariables, Ref as CreateBranchRef},
             get_all_values::{GetAllValues, GetAllValuesGitObject, GetAllValuesVariables, Tree},
             get_branches::{GetBranches, GetBranchesVariables, PullRequest, RefConnection},
@@ -322,36 +318,6 @@ impl GitHub {
         }
     }
 
-    pub async fn create_pull_request(
-        &self,
-        repository_id: &Id,
-        fork_id: &Id,
-        fork_ref_name: &str,
-        branch_name: &str,
-        title: &str,
-        body: &str,
-    ) -> Result<Url, GitHubError> {
-        let operation = CreatePullRequest::build(CreatePullRequestVariables {
-            input: CreatePullRequestInput::builder()
-                .base_ref_name(branch_name)
-                .body(body)
-                .head_ref_name(fork_ref_name)
-                .head_repository_id(fork_id)
-                .repository_id(repository_id)
-                .title(title)
-                .build(),
-        });
-
-        let GraphQlResponse { data, errors } =
-            self.0.post(GRAPHQL_URL).run_graphql(operation).await?;
-
-        data.and_then(|data| data.create_pull_request?.pull_request)
-            .map(|pull_request| pull_request.url)
-            .ok_or_else(|| {
-                GitHubError::graphql_errors(eyre!("failed to create pull request"), errors)
-            })
-    }
-
     pub async fn delete_branches<I, T>(
         &self,
         repository_id: &Id,
@@ -494,7 +460,7 @@ impl GitHub {
         fork: &RepositoryData,
         winget_pkgs: &RepositoryData,
         #[builder(default)] issue_resolves: &[NonZeroU32],
-    ) -> Result<Url, GitHubError> {
+    ) -> Result<create_pull_request::PullRequest, GitHubError> {
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
             "Creating a pull request to remove {identifier} {version}",
@@ -527,7 +493,7 @@ impl GitHub {
             .deletions(deletions)
             .create()
             .await?;
-        let pull_request_url = self
+        let pull_request = self
             .create_pull_request(
                 &winget_pkgs.id,
                 &fork.id,
@@ -543,12 +509,9 @@ impl GitHub {
 
         pr_progress.finish_and_clear();
 
-        println!(
-            "{} created a pull request to remove {identifier} {version}",
-            "Successfully".green(),
-        );
-        println!("{}", pull_request_url.as_str());
-        Ok(pull_request_url)
+        pull_request.print_success();
+
+        Ok(pull_request)
     }
 
     #[builder(finish_fn = send)]
@@ -562,7 +525,7 @@ impl GitHub {
         issue_resolves: &[NonZeroU32],
         created_with: Option<&str>,
         created_with_url: Option<&DecodedUrl>,
-    ) -> Result<Url, GitHubError> {
+    ) -> Result<create_pull_request::PullRequest, GitHubError> {
         let (current_user, winget_pkgs) =
             tokio::try_join!(self.get_username(), self.get_winget_pkgs().send())?;
         let fork = self.get_winget_pkgs().owner(&current_user).send().await?;
