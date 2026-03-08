@@ -4,24 +4,21 @@ mod submit_option;
 
 use std::time::Duration;
 
+use anstream::println;
 use camino::Utf8Path;
 use chrono::Local;
 use color_eyre::Result;
 use futures_util::{StreamExt, TryStreamExt, stream};
 use inquire::error::InquireResult;
+use owo_colors::OwoColorize;
 pub use rate_limit::RateLimit;
 pub use submit_option::SubmitOption;
 use tokio::{fs, fs::File, io::AsyncWriteExt};
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
-    commands::utils::environment::CI,
-    github::{
-        graphql::get_existing_pull_request::PullRequest,
-        utils::pull_request::print_pull_request_url,
-    },
+    commands::utils::environment::CI, github::graphql::get_existing_pull_request::PullRequest,
     prompts::text::confirm_prompt,
-    terminal::Hyperlinkable,
 };
 
 pub const SPINNER_TICK_RATE: Duration = Duration::from_millis(50);
@@ -34,16 +31,13 @@ pub fn prompt_existing_pull_request(
     pull_request: &PullRequest,
 ) -> InquireResult<bool> {
     let created_at = pull_request.created_at.with_timezone(&Local);
-    print_pull_request_url(
-        &pull_request.url,
-        format!(
-            "There is already {} {} for {identifier} {version} that was created on {} at {}",
-            pull_request.state,
-            "pull request".hyperlink(&pull_request.url),
-            created_at.date_naive(),
-            created_at.time()
-        ),
+    println!(
+        "There is already {} pull request for {identifier} {version} that was created on {} at {}",
+        pull_request.state,
+        created_at.date_naive(),
+        created_at.time()
     );
+    println!("{}", pull_request.url.blue());
     if *CI {
         // Exit instead of proceeding in CI environments
         Ok(false)

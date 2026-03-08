@@ -37,12 +37,9 @@ use crate::{
     download::Downloader,
     download_file::process_files,
     github::{
-        GITHUB_HOST, WINGET_PKGS_FULL_NAME,
+        GITHUB_HOST,
         client::GitHub,
-        utils::{
-            PackagePath,
-            pull_request::{pr_changes, print_pull_request_url},
-        },
+        utils::{PackagePath, pull_request::pr_changes},
     },
     manifests::{Manifests, Url},
     prompts::{
@@ -51,7 +48,6 @@ use crate::{
         radio_prompt,
         text::{confirm_prompt, optional_prompt, required_prompt},
     },
-    terminal::Hyperlinkable,
     token::TokenManager,
 };
 
@@ -456,7 +452,7 @@ impl NewVersion {
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
-        let pull_request_url = github
+        let pull_request = github
             .add_version()
             .identifier(&package_identifier)
             .version(&package_version)
@@ -470,17 +466,10 @@ impl NewVersion {
 
         pr_progress.finish_and_clear();
 
-        print_pull_request_url(
-            &pull_request_url,
-            format_args!(
-                "{} created a {} to {WINGET_PKGS_FULL_NAME}",
-                "Successfully".green(),
-                "pull request".hyperlink(&pull_request_url)
-            ),
-        );
+        pull_request.print_success();
 
         if self.open_pr {
-            open::that(pull_request_url.as_str())?;
+            open::that(pull_request.url().as_str())?;
         }
 
         Ok(())

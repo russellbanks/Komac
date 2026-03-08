@@ -14,16 +14,11 @@ use winget_types::{GenericManifest, ManifestType};
 use crate::{
     commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption},
     github::{
-        WINGET_PKGS_FULL_NAME,
         client::GitHub,
-        utils::{
-            PackagePath,
-            pull_request::{pr_changes, print_pull_request_url},
-        },
+        utils::{PackagePath, pull_request::pr_changes},
     },
     manifests::{Manifests, manifest::Manifest},
     prompts::handle_inquire_error,
-    terminal::Hyperlinkable,
     token::TokenManager,
 };
 #[derive(Parser)]
@@ -180,7 +175,7 @@ impl Submit {
             ));
             pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
-            let pull_request_url = github
+            let pull_request = github
                 .add_version()
                 .identifier(identifier)
                 .version(version)
@@ -194,17 +189,10 @@ impl Submit {
 
             pr_progress.finish_and_clear();
 
-            print_pull_request_url(
-                &pull_request_url,
-                format_args!(
-                    "{} created a {} to {WINGET_PKGS_FULL_NAME}",
-                    "Successfully".green(),
-                    "pull request".hyperlink(&pull_request_url)
-                ),
-            );
+            pull_request.print_success();
 
             if self.open_pr {
-                open::that(pull_request_url.as_str())?;
+                open::that(pull_request.url().as_str())?;
             }
         }
 
