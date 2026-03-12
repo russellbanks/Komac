@@ -7,7 +7,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
-use tui_textarea::{CursorMove, Input, Key, TextArea};
+use ratatui_textarea::{CursorMove, Input, Key, TextArea};
 
 struct SearchBox<'a> {
     textarea: TextArea<'a>,
