@@ -1,11 +1,12 @@
 name: Security audit
 
 on:
-  push:
-    paths:
-      - '.github/workflows/audit.yml'
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  issues: none
+  checks: write
 
 jobs:
   security_audit:
@@ -23,4 +24,3 @@ jobs:
       - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          ignore: RUSTSEC-2026-0001
