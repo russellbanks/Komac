@@ -7,13 +7,15 @@ use std::{
 
 use camino::{Utf8Path, Utf8PathBuf};
 use color_eyre::eyre::Result;
-use inquire::{MultiSelect, min_length};
+use inquire::{CustomType, MultiSelect, min_length};
 use tracing::debug;
-use winget_types::installer::{Installer, InstallerType, NestedInstallerFiles};
+use winget_types::installer::{
+    Installer, InstallerType, NestedInstallerFiles, PortableCommandAlias,
+};
 use zip::ZipArchive;
 
 use super::super::Analyzer;
-use crate::prompts::{handle_inquire_error, text::required_prompt};
+use crate::prompts::handle_inquire_error;
 
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
     ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];
@@ -144,7 +146,12 @@ impl<R: Read + Seek> Zip<R> {
                         portable_command_alias: if file_analyzer.installers[0].r#type
                             == Some(InstallerType::Portable)
                         {
-                            Some(required_prompt(None, None::<&str>)?)
+                            CustomType::<PortableCommandAlias>::new(&format!(
+                                "Portable command alias for {}:",
+                                path
+                            ))
+                            .prompt_skippable()
+                            .map_err(handle_inquire_error)?
                         } else {
                             None
                         },
