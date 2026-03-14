@@ -13,6 +13,7 @@ use tokio::try_join;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
+    commands::utils::prompt_existing_pull_request,
     github::{WINGET_PKGS_FULL_NAME, client::GitHub},
     prompts::{handle_inquire_error, text::confirm_prompt},
     token::TokenManager,
@@ -84,6 +85,18 @@ impl RemoveVersion {
                 self.package_identifier,
                 self.package_version,
             );
+        }
+
+        if let Some(pull_request) = github
+            .get_existing_pull_request(&self.package_identifier, &self.package_version)
+            .await?
+            && !prompt_existing_pull_request(
+                &self.package_identifier,
+                &self.package_version,
+                &pull_request,
+            )?
+        {
+            return Ok(());
         }
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
