@@ -30,6 +30,7 @@ use crate::{
         utils::{PackagePath, pull_request::Change},
     },
     manifests::{Url, print_changes},
+    prompts::text::optional_prompt,
     token::TokenManager,
     traits::path::NormalizePath,
 };
@@ -168,10 +169,25 @@ impl UpdateVersion {
 
         manifests.installer.optimize();
 
+        let release_notes_url = if manifests.default_locale.release_notes.is_some()
+            || manifests.default_locale.release_notes_url.is_some()
+        {
+            optional_prompt(
+                self.release_notes_url.clone(),
+                manifests
+                    .default_locale
+                    .release_notes_url
+                    .as_ref()
+                    .map(ReleaseNotesUrl::as_str),
+            )?
+        } else {
+            self.release_notes_url.clone()
+        };
+
         manifests.update(
             &self.version,
             &mut github_values,
-            self.release_notes_url.as_ref(),
+            release_notes_url.as_ref(),
         );
 
         let mut changes = manifests.create(
