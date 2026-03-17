@@ -35,6 +35,7 @@ use crate::{
     },
     manifests::Url,
     match_installers::match_installers,
+    prompts::text::optional_prompt,
     token::TokenManager,
     traits::{LocaleExt, path::NormalizePath},
 };
@@ -204,17 +205,32 @@ impl UpdateVersion {
         manifests.installer.installers = installers;
         manifests.installer.optimize();
 
+        let release_notes_url = if manifests.default_locale.release_notes.is_some()
+            || manifests.default_locale.release_notes_url.is_some()
+        {
+            optional_prompt(
+                self.release_notes_url.clone(),
+                manifests
+                    .default_locale
+                    .release_notes_url
+                    .as_ref()
+                    .map(ReleaseNotesUrl::as_str),
+            )?
+        } else {
+            self.release_notes_url.clone()
+        };
+
         manifests.default_locale.update(
             &self.package_version,
             &mut github_values,
-            self.release_notes_url.as_ref(),
+            release_notes_url.as_ref(),
         );
 
         manifests.locales.iter_mut().for_each(|locale| {
             locale.update(
                 &self.package_version,
                 &mut github_values,
-                self.release_notes_url.as_ref(),
+                release_notes_url.as_ref(),
             );
         });
 
