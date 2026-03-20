@@ -70,40 +70,33 @@ impl Burn {
 
             let mut resource_directory = ResourceDirectory::new(section_reader)?;
 
-            let _rc_data = resource_directory
+            let rc_data = resource_directory
                 .find_rc_data()
-                .map_err(|_| BurnError::NotBurnFile);
+                .map_err(|_| BurnError::NotBurnFile)?;
 
-            let msi_entry = resource_directory
-                .find_name_entry("MSI")
-                .ok_or(BurnError::NotBurnFile)?;
+            let msi_directory_table = resource_directory.find_directory_table_by_name("MSI")?;
 
-            let msi_directory_table = msi_entry
-                .data(&mut resource_directory)?
-                .table()
-                .ok_or(BurnError::NotBurnFile)?;
-
-            return if let Some(msi_directory) = msi_directory_table.entries().next() {
-                let msi_data_entry_offset = msi_directory.file_offset(resource_directory_offset);
-                reader.seek(SeekFrom::Start(msi_data_entry_offset.into()))?;
-
-                let msi_data_entry = reader.read_t::<ImageResourceDataEntry>()?;
-                let msi_offset = pe
-                    .section_table
-                    .to_file_offset(msi_data_entry.offset_to_data())?;
-
-                // Installers built with the Java Development Kit embed an MSI resource
-                reader.seek(SeekFrom::Start(msi_offset.into()))?;
-                let msi_reader = reader.take(msi_data_entry.size().into());
-                let msi = Msi::new(msi_reader)?;
-                Ok(Self {
-                    architecture: msi.architecture,
-                    manifest: None,
-                    msi: Some(msi),
-                })
-            } else {
-                Err(BurnError::NotBurnFile)
+            let Some(&msi_directory) = msi_directory_table.id_entries().next() else {
+                return Err(BurnError::NotBurnFile);
             };
+
+            let msi_data_entry_offset = msi_directory.file_offset(resource_directory_offset);
+            reader.seek(SeekFrom::Start(msi_data_entry_offset.into()))?;
+
+            let msi_data_entry = reader.read_t::<ImageResourceDataEntry>()?;
+            let msi_offset = pe
+                .section_table
+                .to_file_offset(msi_data_entry.offset_to_data())?;
+
+            // Installers built with the Java Development Kit embed an MSI resource
+            reader.seek(SeekFrom::Start(msi_offset.into()))?;
+            let msi_reader = reader.take(msi_data_entry.size().into());
+            let msi = Msi::new(msi_reader)?;
+            return Ok(Self {
+                architecture: msi.architecture,
+                manifest: None,
+                msi: Some(msi),
+            });
         };
 
         // Seek to and read wix burn stub

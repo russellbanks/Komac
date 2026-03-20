@@ -1,5 +1,5 @@
 use std::{
-    io,
+    fmt, io,
     io::{Read, Seek},
 };
 
@@ -16,11 +16,11 @@ use crate::{
 
 pub const IMAGE_RESOURCE_NAME_IS_STRING: u32 = 0x8000_0000;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, IntoBytes, Immutable, KnownLayout)]
+#[derive(Copy, Clone, Eq, PartialEq, FromBytes, IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct ImageResourceDirectoryEntry {
     name_or_id: U32<LittleEndian>,
-    offset_to_data_or_directory: U32<LittleEndian>,
+    pub(crate) offset_to_data_or_directory: U32<LittleEndian>,
 }
 
 impl ImageResourceDirectoryEntry {
@@ -60,7 +60,7 @@ impl ImageResourceDirectoryEntry {
 
     /// Returns the data associated to this directory entry.
     pub fn data<R>(
-        self,
+        &self,
         section: &mut ResourceDirectory<R>,
     ) -> io::Result<ResourceDirectoryEntryData>
     where
@@ -79,5 +79,17 @@ impl ImageResourceDirectoryEntry {
 
     pub const fn file_offset(self, resource_offset: u32) -> u32 {
         self.data_offset() + resource_offset
+    }
+}
+
+impl fmt::Debug for ImageResourceDirectoryEntry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ImageResourceDirectoryEntry")
+            .field("NameOrID", &self.name_or_id())
+            .field(
+                "OffsetToDataOrDirectory",
+                &self.offset_to_data_or_directory(),
+            )
+            .finish()
     }
 }
