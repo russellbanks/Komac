@@ -83,7 +83,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 serde_with = "3.18.0"
 serde_yaml = "0.9.34"
-sha2 = "0.10.9"
+sha2 = "0.11.0"
 strsim = "0.11.1"
 strum = { version = "0.28.0", features = ["derive"] }
 supports-hyperlinks = "3.2.0"
@@ -98,7 +98,7 @@ tree-sitter-yaml = "0.7.2"
 url = { version = "2.5.8", features = ["serde"] }
 uuid = { version = "1.22.0", features = ["v4"] }
 walkdir = "2.5.0"
-winget-types = { version = "0.4.2", features = ["serde", "std", "chrono"] }
+winget-types = { version = "0.4.3", features = ["serde", "std", "chrono"] }
 zerocopy = { version = "0.8.47", features = ["derive", "std"] }
 zip = { version = "8.4.0", default-features = false, features = ["deflate"] }
 
