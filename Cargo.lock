@@ -1923,9 +1923,9 @@ dependencies = [
 
 [[package]]
 name = "indextree"
-version = "4.7.4"
+version = "4.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb9e21e48c85fa6643a38caca564645a3bbc9211edf506fc8ed690c7e7b4d3c7"
+checksum = "3f80a9409db2176ff13877276660f5149fee32592698d2100afe8b52043d4405"
 dependencies = [
  "indextree-macros",
 ]
