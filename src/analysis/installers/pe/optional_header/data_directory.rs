@@ -1,9 +1,12 @@
-use std::{fmt, io};
+use std::{
+    fmt, io,
+    io::{Read, Seek},
+};
 
 use itertools::Itertools;
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, LittleEndian, U32};
 
-use super::super::SectionTable;
+use super::super::{SectionReader, SectionTable};
 
 /// Represents a PE data directory.
 ///
@@ -46,6 +49,16 @@ impl DataDirectory {
     #[inline]
     pub fn file_offset(self, section_table: &SectionTable) -> io::Result<u32> {
         section_table.to_file_offset(self.virtual_address())
+    }
+
+    pub fn section_reader<R: Read + Seek>(
+        self,
+        mut reader: R,
+        section_table: &SectionTable,
+    ) -> io::Result<SectionReader<R>> {
+        let mut directory_offset = self.file_offset(section_table)?;
+
+        SectionReader::new(reader, directory_offset.into(), self.size().into())
     }
 }
 

@@ -3,6 +3,9 @@ use std::{
     io::{self, Read, Seek, SeekFrom},
 };
 
+/// A [`Reader`] that restricts the reads and seeks given section of the underlying reader.
+///
+/// [`Reader`]: Read
 pub struct SectionReader<R> {
     inner: R,
     start: u64,
@@ -11,7 +14,37 @@ pub struct SectionReader<R> {
 }
 
 impl<R: Read + Seek> SectionReader<R> {
+    /// Creates a new [`SectionReader`] from a [`Reader`], a section start, and a section length.
+    ///
+    /// Seeks on the [`SectionReader`] will be relative to the section.
+    ///
+    /// [`Reader`]: Read
     pub fn new(mut inner: R, start: u64, length: u64) -> io::Result<Self> {
+        // Seek to the start of the section
+        inner.seek(SeekFrom::Start(start))?;
+
+        Ok(Self {
+            inner,
+            start,
+            length,
+            position: 0,
+        })
+    }
+
+    /// Creates a new [`SectionReader`] from a [`Reader`] and a section start.
+    ///
+    /// The length of the section will be the bytes remaining after start, determined by
+    /// `SeekFrom::End(0)`.
+    ///
+    /// Seeks on the [`SectionReader`] will be relative to the section.
+    ///
+    /// [`Reader`]: Read
+    pub fn from_offset(mut inner: R, start: u64) -> io::Result<Self> {
+        let length = inner
+            .seek(SeekFrom::End(0))?
+            .checked_sub(start)
+            .ok_or_else(|| io::Error::other("SectionReader end is before start"))?;
+
         // Seek to the start of the section
         inner.seek(SeekFrom::Start(start))?;
 
@@ -51,12 +84,14 @@ impl<R: Read + Seek> SectionReader<R> {
 impl<R: Read + Seek> Read for SectionReader<R> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let remaining = self.remaining();
+
         if remaining == 0 {
             return Ok(0); // EOF
         }
 
         // Limit read to remaining bytes in section
         let to_read = cmp::min(buf.len() as u64, remaining) as usize;
+
         let bytes_read = self.inner.read(&mut buf[..to_read])?;
 
         self.position += bytes_read as u64;

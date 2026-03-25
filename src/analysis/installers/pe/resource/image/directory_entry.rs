@@ -1,6 +1,6 @@
 use std::{
-    io,
-    io::{Read, Seek},
+    fmt, io,
+    io::{Read, Seek, SeekFrom},
 };
 
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, LittleEndian, U32};
@@ -16,7 +16,7 @@ use crate::{
 
 pub const IMAGE_RESOURCE_NAME_IS_STRING: u32 = 0x8000_0000;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, IntoBytes, Immutable, KnownLayout)]
+#[derive(Copy, Clone, Eq, PartialEq, FromBytes, IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct ImageResourceDirectoryEntry {
     name_or_id: U32<LittleEndian>,
@@ -24,8 +24,9 @@ pub struct ImageResourceDirectoryEntry {
 }
 
 impl ImageResourceDirectoryEntry {
-    const IS_DIRECTORY_MASK: u32 = 1 << 31;
+    pub const IS_DIRECTORY_MASK: u32 = 1 << 31;
 
+    /// Returns `true` if this directory entry has a name.
     pub const fn has_name(self) -> bool {
         self.name_or_id() & IMAGE_RESOURCE_NAME_IS_STRING != 0
     }
@@ -43,6 +44,7 @@ impl ImageResourceDirectoryEntry {
         self.name_or_id.get()
     }
 
+    /// Returns the offset to the data or directory.
     #[inline]
     const fn offset_to_data_or_directory(self) -> u32 {
         self.offset_to_data_or_directory.get()
@@ -67,7 +69,7 @@ impl ImageResourceDirectoryEntry {
         R: Read + Seek,
     {
         let section_reader = section.reader_mut();
-        section_reader.seek(io::SeekFrom::Start(self.data_offset().into()))?;
+        section_reader.seek(SeekFrom::Start(self.data_offset().into()))?;
         if self.is_table() {
             ResourceDirectoryTable::read_from(section_reader).map(ResourceDirectoryEntryData::Table)
         } else {
@@ -79,5 +81,17 @@ impl ImageResourceDirectoryEntry {
 
     pub const fn file_offset(self, resource_offset: u32) -> u32 {
         self.data_offset() + resource_offset
+    }
+}
+
+impl fmt::Debug for ImageResourceDirectoryEntry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("ImageResourceDirectoryEntry")
+            .field("NameOrID", &self.name_or_id())
+            .field(
+                "OffsetToDataOrDirectory",
+                &self.offset_to_data_or_directory(),
+            )
+            .finish()
     }
 }

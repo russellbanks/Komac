@@ -4,12 +4,13 @@ use color_eyre::Result;
 use inno::{Inno, error::InnoError};
 use winget_types::installer::{Installer, InstallerType};
 
-use super::{super::Installers, Burn, Nsis};
+use super::{super::Installers, Burn, Nsis, Squirrel};
 use crate::{
     analysis::installers::{
         burn::BurnError,
         nsis::NsisError,
         pe::{PE, VSVersionInfo},
+        squirrel::SquirrelError,
     },
     traits::IntoWingetArchitecture,
 };
@@ -29,6 +30,7 @@ pub enum ExeType {
     Burn(Box<Burn>),
     Inno(Box<Inno>),
     Nsis(Nsis),
+    Squirrel(Squirrel),
     Generic(Box<Installer>),
 }
 
@@ -93,6 +95,19 @@ impl Exe {
             Err(error) => return Err(error.into()),
         }
 
+        match Squirrel::new(&mut reader, &pe) {
+            Ok(squirrel) => {
+                return Ok(Self {
+                    r#type: ExeType::Squirrel(squirrel),
+                    legal_copyright,
+                    product_name,
+                    company_name,
+                });
+            }
+            Err(SquirrelError::NotSquirrelFile) => {}
+            Err(error) => return Err(error.into()),
+        }
+
         Ok(Self {
             r#type: ExeType::Generic(Box::new(Installer {
                 architecture: pe.winget_architecture(),
@@ -125,6 +140,7 @@ impl Installers for Exe {
             ExeType::Burn(burn) => burn.installers(),
             ExeType::Inno(inno) => inno.installers(),
             ExeType::Nsis(nsis) => nsis.installers(),
+            ExeType::Squirrel(squirrel) => squirrel.installers(),
             ExeType::Generic(installer) => vec![*installer.clone()],
         }
     }

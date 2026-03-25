@@ -1,84 +1,76 @@
 mod directory;
 mod directory_entry_data;
+mod directory_table;
 mod image;
+mod iterator;
 mod name;
 mod resource_types;
 mod section_reader;
 
-use std::io;
+use std::{
+    fmt,
+    io::{Read, Seek},
+};
 
 pub use directory::ResourceDirectory;
-pub use image::{ImageResourceDataEntry, ImageResourceDirectory, ImageResourceDirectoryEntry};
+pub use directory_entry_data::ResourceDirectoryEntryData;
+pub use directory_table::ResourceDirectoryTable;
+pub use image::{
+    IdImageResourceDirectoryEntry, IdOrName, IdOrNamedImageResourceDirectoryEntry,
+    ImageResourceDataEntry, ImageResourceDirectory, ImageResourceDirectoryEntry,
+    NamedImageResourceDirectoryEntry,
+};
+pub use iterator::ResourceIter;
 pub use resource_types::ResourceType;
 pub use section_reader::SectionReader;
 use zerocopy::{FromBytes, FromZeros, IntoBytes};
 
-#[derive(Clone, Debug)]
-pub struct ResourceDirectoryTable {
-    pub header: ImageResourceDirectory,
-    name_entries: Vec<ImageResourceDirectoryEntry>,
-    id_entries: Vec<ImageResourceDirectoryEntry>,
+pub struct Resource {
+    r#type: IdOrName,
+    name_id: u32,
+    language_id: u32,
+    entry: ImageResourceDataEntry,
 }
 
-impl ResourceDirectoryTable {
-    pub fn read_from<R>(mut src: R) -> io::Result<Self>
-    where
-        R: io::Read,
-    {
-        let header = ImageResourceDirectory::read_from_io(&mut src)?;
-
-        let mut name_entries =
-            vec![ImageResourceDirectoryEntry::new_zeroed(); header.number_of_name_entries().into()];
-
-        for name_entry in &mut name_entries {
-            src.read_exact(name_entry.as_mut_bytes())?;
-        }
-
-        let mut id_entries =
-            vec![ImageResourceDirectoryEntry::new_zeroed(); header.number_of_id_entries().into()];
-
-        for id_entry in &mut id_entries {
-            src.read_exact(id_entry.as_mut_bytes())?;
-        }
-
-        Ok(Self {
-            header,
-            name_entries,
-            id_entries,
-        })
+impl Resource {
+    pub const fn id_or_name(&self) -> &IdOrName {
+        &self.r#type
     }
-
-    pub fn find_id_entry(&self, id: u32) -> Option<&ImageResourceDirectoryEntry> {
-        self.id_entries().find(|entry| entry.name_or_id() == id)
-    }
-
-    pub fn find_name_entry<R>(
-        &self,
-        section_reader: &mut SectionReader<R>,
-        name: &str,
-    ) -> Option<&ImageResourceDirectoryEntry>
-    where
-        R: io::Read + io::Seek,
-    {
-        self.name_entries().find(|entry| {
-            entry
-                .name()
-                .to_string_lossy(section_reader)
-                .is_ok_and(|entry_name| entry_name == name)
-        })
+    pub const fn name(&self) -> Option<&str> {
+        match self.r#type {
+            IdOrName::Name(ref name) => Some(name.as_str()),
+            IdOrName::Id(_) => None,
+        }
     }
 
     #[inline]
-    pub fn id_entries(&self) -> impl Iterator<Item = &ImageResourceDirectoryEntry> {
-        self.id_entries.iter()
+    pub const fn offset_to_data(&self) -> u32 {
+        self.entry.offset_to_data()
     }
 
     #[inline]
-    pub fn name_entries(&self) -> impl Iterator<Item = &ImageResourceDirectoryEntry> {
-        self.name_entries.iter()
+    pub const fn size(&self) -> u32 {
+        self.entry.size()
     }
+}
 
-    pub fn entries(&self) -> impl Iterator<Item = &ImageResourceDirectoryEntry> {
-        self.name_entries().chain(self.id_entries())
+impl fmt::Debug for Resource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut buffer = itoa::Buffer::new();
+
+        f.debug_struct("Resource")
+            .field(
+                "TypeID",
+                &match self.r#type {
+                    IdOrName::Id(id) => ResourceType::try_from(id)
+                        .map(ResourceType::as_str)
+                        .unwrap_or_else(|_| buffer.format(id)),
+                    IdOrName::Name(ref name) => name,
+                },
+            )
+            .field("NameID", &self.name_id)
+            .field("LanguageID", &self.language_id)
+            .field("Entry", &self.entry)
+            .finish()
     }
 }

@@ -21,8 +21,8 @@ impl ResourceName {
         Self { offset }
     }
 
-    /// Converts to a `String`, replacing
-    /// invalid data with [the replacement character (`U+FFFD`)][U+FFFD].
+    /// Converts to a `String`, replacing invalid data with
+    /// [the replacement character (`U+FFFD`)][U+FFFD].
     ///
     /// [U+FFFD]: core::char::REPLACEMENT_CHARACTER
     pub fn to_string_lossy<R: Read + Seek>(
@@ -35,7 +35,7 @@ impl ResourceName {
         let mut buf = vec![0; usize::from(length) * size_of::<u16>()];
         reader.read_exact(buf.as_mut_bytes())?;
 
-        /// Could be replaced with [String::from_utf16le_lossy]
+        /// Could be replaced with [`String::from_utf16le_lossy`]
         Ok(UTF_16LE.decode_without_bom_handling(&buf).0.into_owned())
     }
 }
