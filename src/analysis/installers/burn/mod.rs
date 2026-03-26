@@ -74,8 +74,9 @@ impl Burn {
                 .navigate_to_rc_data()
                 .map_err(|_| BurnError::NotBurnFile)?;
 
-            let msi_directory_table =
-                resource_directory.navigate_to_directory_table_by_name("MSI")?;
+            let msi_directory_table = resource_directory
+                .navigate_to_directory_table_by_name("MSI")
+                .map_err(|_| BurnError::NotBurnFile)?;
 
             let Some(msi_directory) = msi_directory_table.id_entries().next() else {
                 return Err(BurnError::NotBurnFile);
