@@ -252,7 +252,11 @@ impl Installers for Msi {
             } else {
                 InstallerType::Msi
             }),
-            scope: self.all_users,
+            scope: self
+                .find_install_directory()
+                .as_deref()
+                .and_then(Scope::from_install_directory)
+                .or(self.all_users),
             product_code: product_code.map(str::to_owned),
             apps_and_features_entries: if product_name.is_some()
                 || manufacturer.is_some()
