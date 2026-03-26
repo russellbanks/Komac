@@ -1,4 +1,5 @@
 mod entry;
+mod relative_location;
 
 use std::{
     fmt,
@@ -11,6 +12,7 @@ use chrono::{DateTime, Utc};
 pub use entry::FsEntry;
 use indextree::{Arena, Node, NodeId};
 use itertools::{Either, Itertools, Position};
+pub use relative_location::RelativeLocation;
 
 use super::{entry::DelFlags, strings::PredefinedVar};
 
@@ -20,13 +22,8 @@ pub struct FileSystem {
     current_dir: NodeId,
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum RelativeLocation {
-    Root,
-    Current,
-}
-
 impl FileSystem {
+    /// Creates a new mock filesystem.
     pub fn new() -> Self {
         let mut arena = Arena::new();
         let root = arena.new_node(FsEntry::new_root());
@@ -60,25 +57,29 @@ impl FileSystem {
         }
     }
 
+    /// Creates a new directory from a path relative to a [location].
+    /// The current directory is not changed. To both create and change the current directory, see
+    /// [set_directory].
+    ///
+    /// [location]: RelativeLocation
+    /// [set_directory]: Self::set_directory
     pub fn create_directory<T>(&mut self, name: T, location: RelativeLocation) -> NodeId
     where
         T: AsRef<Utf8Path>,
     {
-        let current = match location {
+        let mut current = match location {
             RelativeLocation::Root => self.root,
             RelativeLocation::Current => self.current_dir,
         };
 
-        let mut current = current;
-
         for component in Self::parse_path(&name) {
             match component {
+                Utf8Component::RootDir => current = self.root,
                 Utf8Component::ParentDir => {
-                    if let Some(parent) = self.arena.get(current).and_then(Node::parent) {
+                    if let Some(parent) = current.parent(&self.arena) {
                         current = parent;
                     }
                 }
-                Utf8Component::RootDir => current = self.root,
                 Utf8Component::Normal(part) => {
                     if let Some(directory) = current.children(&self.arena).find(|&id| {
                         self.arena
@@ -98,6 +99,10 @@ impl FileSystem {
         current
     }
 
+    /// Sets the current directory from a path, relative to a [location], creating it and all
+    /// necessary parent directories if they do not already exist.
+    ///
+    /// [location]: RelativeLocation
     pub fn set_directory<T>(&mut self, path: T, location: RelativeLocation)
     where
         T: AsRef<Utf8Path>,
@@ -105,7 +110,11 @@ impl FileSystem {
         self.current_dir = self.create_directory(path, location);
     }
 
-    pub fn create_file<T, D, P>(&mut self, path: T, created_at: D, position: P) -> Option<NodeId>
+    /// Creates a file from a path relative to the current directory, an optional modified at
+    /// [datetime], and a position.
+    ///
+    /// [datetime]: DateTime<Utc>
+    pub fn create_file<T, D, P>(&mut self, path: T, modified_at: D, position: P) -> Option<NodeId>
     where
         T: AsRef<Utf8Path>,
         D: Into<Option<DateTime<Utc>>>,
@@ -128,25 +137,31 @@ impl FileSystem {
         }) {
             Some(file)
         } else {
-            let file = FsEntry::new_file(file_name, created_at, position);
+            let file = FsEntry::new_file(file_name, modified_at, position);
             Some(directory.append_value(file, &mut self.arena))
         }
     }
 
-    pub fn file_exists<T>(&self, name: T) -> bool
+    /// Returns true if the given path exists relative to a [location].
+    ///
+    /// [location]: RelativeLocation
+    pub fn exists<T>(&self, path: T, location: RelativeLocation) -> bool
     where
         T: AsRef<Utf8Path>,
     {
-        let mut current = self.current_dir;
+        let mut current = match location {
+            RelativeLocation::Root => self.root,
+            RelativeLocation::Current => self.current_dir,
+        };
 
-        for (position, component) in Self::parse_path(&name).with_position() {
+        for (position, component) in Self::parse_path(&path).with_position() {
             match component {
+                Utf8Component::RootDir => current = self.root,
                 Utf8Component::ParentDir => {
-                    if let Some(parent) = self.arena.get(current).and_then(Node::parent) {
+                    if let Some(parent) = current.parent(&self.arena) {
                         current = parent;
                     }
                 }
-                Utf8Component::RootDir => current = self.root,
                 Utf8Component::Normal(part) => {
                     if let Some(directory) = current.children(&self.arena).find(|&id| {
                         self.arena
@@ -168,14 +183,21 @@ impl FileSystem {
         false
     }
 
-    pub fn delete<T>(&mut self, name: T, flags: DelFlags) -> bool
+    /// Deletes a path.
+    ///
+    /// If `flags` contains [`SIMPLE`], the file is deleted relative to the current directory.
+    /// If `flags` contains [`DIRECTORY`], the directory is deleted relative to the filesystem root.
+    ///
+    /// [`SIMPLE`]: DelFlags::SIMPLE
+    /// [`DIRECTORY`]: DelFlags::DIRECTORY
+    pub fn delete<T>(&mut self, path: T, flags: DelFlags) -> bool
     where
         T: AsRef<str> + Sized,
     {
-        let name = name.as_ref();
+        let path = path.as_ref();
 
         // Return false if the path is empty; it cannot be deleted
-        if name.is_empty() {
+        if path.is_empty() {
             return false;
         }
 
@@ -184,7 +206,7 @@ impl FileSystem {
                 self.arena
                     .get(id)
                     .map(Node::get)
-                    .is_some_and(|item| item.is_file() && item.name() == name)
+                    .is_some_and(|item| item.is_file() && item.name() == path)
             }) {
                 file.remove(&mut self.arena);
                 return true;
@@ -192,11 +214,11 @@ impl FileSystem {
         } else if flags.contains(DelFlags::DIRECTORY) {
             let mut current = self.root;
 
-            for component in Self::parse_path(&name) {
+            for component in Self::parse_path(&path) {
                 match component {
                     Utf8Component::RootDir => current = self.root,
                     Utf8Component::ParentDir => {
-                        if let Some(parent) = self.arena.get(current).and_then(Node::parent) {
+                        if let Some(parent) = current.parent(&self.arena) {
                             current = parent;
                         }
                     }
@@ -215,21 +237,44 @@ impl FileSystem {
                 }
             }
 
-            if let Some(node) = self.arena.get(current)
-                && node.get().is_directory()
-            {
-                return if flags.contains(DelFlags::RECURSE) {
-                    current.remove_subtree(&mut self.arena);
-                    true
-                } else {
-                    // Only delete the directory if its empty
-                    if current.children(&self.arena).next().is_some() {
-                        current.remove(&mut self.arena);
+            if let Some(node) = self.arena.get(current) {
+                let parent_node_id = node.parent();
+
+                let mut removed = false;
+
+                if node.get().is_directory() {
+                    removed = if flags.contains(DelFlags::RECURSE) {
+                        current.remove_subtree(&mut self.arena);
                         true
                     } else {
-                        false
+                        // Only delete the directory if it's empty
+                        if node.first_child().is_none() {
+                            current.remove(&mut self.arena);
+                            true
+                        } else {
+                            false
+                        }
+                    };
+                }
+
+                // Delete the parent directory if it:
+                //   1. No longer has any children
+                //   2. Is a Windows environment variable (e.g. %Temp%)
+                if removed
+                    && let Some(parent_node_id) = parent_node_id
+                    && let Some(parent_node) = self.arena.get(parent_node_id)
+                {
+                    let parent_name = parent_node.get().name();
+
+                    if parent_node.first_child().is_none()
+                        && parent_name.starts_with('%')
+                        && parent_name.ends_with('%')
+                    {
+                        parent_node_id.remove(&mut self.arena);
                     }
-                };
+                }
+
+                return removed;
             }
         }
 
@@ -268,6 +313,7 @@ impl FileSystem {
         self.entries().filter(|item| item.is_file())
     }
 
+    /// Returns an iterator of all filesystem entries in storage-order.
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = &FsEntry> {
         self.into_iter()
@@ -299,6 +345,7 @@ impl<'a> IntoIterator for &'a FileSystem {
     type IntoIter =
         FilterMap<Iter<'a, Node<FsEntry>>, fn(&'a Node<FsEntry>) -> Option<&'a FsEntry>>;
 
+    /// Returns an iterator of all filesystem entries in storage-order.
     fn into_iter(self) -> Self::IntoIter {
         self.arena
             .iter()

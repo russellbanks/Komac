@@ -481,7 +481,10 @@ impl Entry {
             } => {
                 let file_name = state.get_string(file_name.get());
 
-                return if state.file_system.file_exists(&*file_name) {
+                return if state
+                    .file_system
+                    .exists(&*file_name, RelativeLocation::Current)
+                {
                     debug!(
                         r#"IfFileExists: jumping to {if_exists} as "{file_name}" exists"#,
                         if_exists = state.resolve_address(jump_amount_if_exists.get()),
