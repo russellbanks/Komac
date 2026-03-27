@@ -16,7 +16,7 @@ use std::{
 };
 
 use bzip2::read::BzDecoder;
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use flate2::{Decompress, read::ZlibDecoder};
 use liblzma::read::XzDecoder;
 use msi::Language;
@@ -47,7 +47,7 @@ use super::{
         },
     },
     pe::{PE, utils::machine_from_exe_reader},
-    utils::{LzmaStreamHeader, RELATIVE_PROGRAM_FILES_64},
+    utils::{LzmaStreamHeader, RELATIVE_PROGRAM_FILES_64, RELATIVE_TEMP_FOLDER},
 };
 use crate::{
     analysis::Installers,
@@ -273,7 +273,18 @@ impl Installers for Nsis {
                 AppsAndFeaturesEntries::new()
             },
             installation_metadata: InstallationMetadata {
-                default_install_location: self.install_directory.as_deref().map(Utf8PathBuf::from),
+                default_install_location: self
+                    .install_directory
+                    .as_deref()
+                    .map(Utf8Path::new)
+                    .filter(|path| {
+                        !path.components().next().is_none_or(|component| {
+                            component
+                                .as_str()
+                                .eq_ignore_ascii_case(RELATIVE_TEMP_FOLDER)
+                        })
+                    })
+                    .map(Utf8Path::to_path_buf),
                 ..InstallationMetadata::default()
             },
             ..Installer::default()
