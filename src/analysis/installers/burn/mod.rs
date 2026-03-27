@@ -139,7 +139,11 @@ impl Burn {
 impl Installers for Burn {
     fn installers(&self) -> Vec<Installer> {
         if let Some(ref msi) = self.msi {
-            return msi.installers();
+            let mut installers = msi.installers();
+            for installer in &mut installers {
+                installer.r#type = Some(InstallerType::Burn);
+            }
+            return installers;
         }
 
         let manifest = self.manifest.as_ref().unwrap_or_else(|| unreachable!());
