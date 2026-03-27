@@ -33,8 +33,6 @@ pub enum SquirrelError {
     NotSquirrelFile,
     #[error("No nupkg found in Squirrel zip")]
     NoNupkgFound,
-    #[error("No nuspec found in nupkg")]
-    NoNuspecFound,
     #[error(transparent)]
     NuspecDeserialization(#[from] quick_xml::DeError),
     #[error(transparent)]
@@ -86,13 +84,14 @@ impl Squirrel {
                 .map_err(|_| SquirrelError::NotSquirrelFile)?
         };
 
-        debug!(is_velopack);
-
         let nuspec_filename = nupkg
             .file_names()
             .find(|name| name.ends_with(".nuspec"))
-            .ok_or(SquirrelError::NoNuspecFound)?
+            .ok_or(SquirrelError::NotSquirrelFile)?
             .to_owned();
+
+        debug!(is_velopack);
+
         let nuspec_data = io::read_to_string(nupkg.by_name(&nuspec_filename)?)?;
         debug!(%nuspec_data);
         let nuspec: NuSpec = from_str(&nuspec_data)?;
