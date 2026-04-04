@@ -2,6 +2,7 @@ mod creation_disposition;
 mod del_flags;
 mod exec_flag;
 mod generic_access_rights;
+mod message_box;
 mod push_pop;
 mod seek_from;
 mod show_window;
@@ -20,6 +21,7 @@ use creation_disposition::CreationDisposition;
 pub use del_flags::DelFlags;
 pub use exec_flag::{ExecFlag, ExecFlags};
 use generic_access_rights::GenericAccessRights;
+use message_box::MessageBoxFlags;
 use nt_time::FileTime;
 use push_pop::PushPop;
 use seek_from::SeekFrom;
@@ -133,7 +135,7 @@ pub enum Entry {
         flags: DelFlags,
     } = 21u32.to_le(),
     MessageBox {
-        mb_flags: I32<LE>,
+        mb_flags: MessageBoxFlags,
         text: I32<LE>,
     } = 22u32.to_le(),
     RemoveDir {
