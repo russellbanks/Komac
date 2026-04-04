@@ -316,7 +316,12 @@ impl NewVersion {
                 download_results
                     .values()
                     .find(|analyzer| analyzer.publisher.is_some())
-                    .and_then(|analyzer| analyzer.publisher.as_ref()),
+                    .and_then(|analyzer| analyzer.publisher.as_ref())
+                    .or_else(|| {
+                        github_values
+                            .as_ref()
+                            .and_then(|values| values.publisher.as_ref())
+                    }),
             )?,
             publisher_url: optional_prompt(
                 self.publisher_url,
