@@ -9,7 +9,7 @@ use crate::Cli;
 /// Bash: echo "source <(komac complete bash)" >> ~/.bashrc
 /// Elvish: echo "eval (komac complete elvish | slurp)" >> ~/.elvish/rc.elv
 /// Fish: echo "source (komac complete fish | psub)" >> ~/.config/fish/config.fish
-/// Powershell: echo "komac complete powershell | Out-String | Invoke-Expression" >> $PROFILE
+/// PowerShell: echo "komac complete powershell | Out-String | Invoke-Expression" >> $PROFILE
 /// Zsh: echo "source <(komac complete zsh)" >> ~/.zshrc
 #[derive(Parser)]
 #[clap(visible_alias = "autocomplete", verbatim_doc_comment)]

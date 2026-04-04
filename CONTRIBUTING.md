@@ -12,7 +12,7 @@ Contributions are what make the open source community such an amazing place to l
 
 ### Testing your changes
 
-Using Docker is the easiest way to to test your code before submitting a pull request. 
+Using Docker is the easiest way to test your code before submitting a pull request.
 
 > [!NOTE]
 > When using the Docker container on Windows, the WSL engine does not support the default collection for keys or tokens. This means that when testing inside the container GitHub tokens will not be stored, even when `komac token update` is used.

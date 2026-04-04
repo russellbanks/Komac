@@ -35,7 +35,7 @@ impl Download {
     /// Content-Disposition header.
     ///
     /// This works by getting the filename from the Content-Disposition header. It aims to mimic
-    /// Firefox's functionality whereby the `filename*` parameter is prioritised over `filename`
+    /// Firefox's functionality whereby the `filename*` parameter is prioritized over `filename`
     /// even if both are provided. See [Content-Disposition].
     ///
     /// If there is no Content-Disposition header or no filenames in the Content-Disposition, it falls

@@ -3,10 +3,7 @@ use std::{
     io::{Read, Seek},
 };
 
-use super::{
-    ImageResourceDirectoryEntry, NamedImageResourceDirectoryEntry, ResourceDirectoryTable,
-    ResourceType, SectionReader,
-};
+use super::{ResourceDirectoryTable, ResourceType, SectionReader};
 
 pub struct ResourceDirectory<R: Read + Seek> {
     reader: SectionReader<R>,

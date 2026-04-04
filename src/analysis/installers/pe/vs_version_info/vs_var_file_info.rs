@@ -1,8 +1,4 @@
-use std::{
-    fmt,
-    fmt::{Formatter, Pointer},
-    io,
-};
+use std::{fmt, fmt::Formatter, io};
 
 use super::{VSHeader, VSType, VSVar};
 

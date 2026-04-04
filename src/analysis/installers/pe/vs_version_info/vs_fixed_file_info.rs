@@ -2,7 +2,7 @@ use std::fmt;
 
 use itertools::Itertools;
 use nt_time::FileTime;
-use zerocopy::{Immutable, KnownLayout, LE, TryFromBytes, U32, transmute};
+use zerocopy::{Immutable, KnownLayout, LE, TryFromBytes, U32};
 
 use super::VSFileFlags;
 

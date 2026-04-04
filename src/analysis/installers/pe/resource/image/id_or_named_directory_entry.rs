@@ -18,7 +18,7 @@ impl IdOrNamedImageResourceDirectoryEntry {
     pub fn into_id(self) -> Option<IdImageResourceDirectoryEntry> {
         match self {
             Self::Id(id) => Some(id),
-            Self::Named(named) => None,
+            Self::Named(_) => None,
         }
     }
 

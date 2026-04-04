@@ -156,7 +156,7 @@ pub trait FromHtml {
 impl FromHtml for ReleaseNotes {
     fn from_html(html: &Html) -> Option<Self> {
         // Strings that have whitespace before newlines get escaped and treated as literal strings
-        // in yaml so this regex identifies any amount of whitespace and duplicate newlines
+        // in YAML so this regex identifies any amount of whitespace and duplicate newlines
         static NEWLINE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+\n").unwrap());
 
         html2text::from_read_with_decorator(html.as_bytes(), usize::MAX, GitHubHtmlDecorator)

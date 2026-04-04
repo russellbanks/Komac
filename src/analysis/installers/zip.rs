@@ -73,7 +73,7 @@ impl<R: Read + Seek> Zip<R> {
         let mut nested_installer_files = BTreeSet::new();
         let mut installers = None;
 
-        // If there's only one valid file in the zip, extract and analyse it
+        // If there's only one valid file in the zip, extract and analyze it
         if installer_type_counts
             .values()
             .filter(|&&count| count == 1)

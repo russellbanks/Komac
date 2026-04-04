@@ -205,7 +205,7 @@ impl DosHeader {
     /// within the executable file. The size of the load module could have been deduced by
     /// substructing this value (converted to bytes) from the overall size that could have been
     /// derived from combining the value of `pages_in_file` (aka `e_cp`) and the value of
-    /// `bytes_on_last_page` (aka `e_cblp)`. The header used to always span an even number of
+    /// `bytes_on_last_page` (aka `e_cblp`). The header used to always span an even number of
     /// paragraphs. [Source](https://stixproject.github.io/data-model/1.2/WinExecutableFileObj/DOSHeaderType/).
     ///
     /// The "executable header" in this context refers to the DOS header itself.

@@ -3,11 +3,11 @@ use std::{
     io::{Read, Seek},
 };
 
-use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, LittleEndian, U32};
+use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
-use crate::analysis::installers::pe::resource::{
-    ImageResourceDataEntry, ImageResourceDirectoryEntry, ResourceDirectory, ResourceDirectoryTable,
-    ResourceType, directory_entry_data::ResourceDirectoryEntryData,
+use super::{
+    super::{ResourceDirectory, ResourceDirectoryEntryData, ResourceType},
+    ImageResourceDirectoryEntry,
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, FromBytes, IntoBytes, Immutable, KnownLayout)]

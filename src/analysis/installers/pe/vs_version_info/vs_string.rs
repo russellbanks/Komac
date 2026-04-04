@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fmt, io};
 
-use encoding_rs::{Encoding, UTF_16LE};
+use encoding_rs::UTF_16LE;
 
 use super::VSHeader;
 use crate::analysis::installers::pe::vs_version_info::vs_type::VSType;

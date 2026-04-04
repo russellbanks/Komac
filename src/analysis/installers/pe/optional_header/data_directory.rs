@@ -53,7 +53,7 @@ impl DataDirectory {
 
     pub fn section_reader<R: Read + Seek>(
         self,
-        mut reader: R,
+        reader: R,
         section_table: &SectionTable,
     ) -> io::Result<SectionReader<R>> {
         let mut directory_offset = self.file_offset(section_table)?;
