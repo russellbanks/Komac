@@ -57,7 +57,7 @@ impl Call for Kernel32 {
             "SetEnvironmentVariable" => {
                 self.set_environment_variable(
                     call.arguments()[0],
-                    call.arguments().get(1).map(|value| *value),
+                    call.arguments().get(1).copied(),
                 );
                 true
             }

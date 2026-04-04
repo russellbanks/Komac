@@ -3,7 +3,10 @@ mod compression;
 mod decoder;
 pub mod flags;
 
-use std::io::{Error, ErrorKind, Read, Result, Seek};
+use std::{
+    fmt,
+    io::{Error, ErrorKind, Read, Result, Seek},
+};
 
 use bzip2::read::BzDecoder;
 pub use compression::Compression;
@@ -18,7 +21,8 @@ use crate::{analysis::installers::utils::LzmaStreamHeader, read::ReadBytesExt};
 
 const NSIS_MAX_INST_TYPES: u8 = 32;
 
-#[derive(Clone, Debug, FromBytes, KnownLayout, Immutable)]
+/// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/fileform.h#L295>
+#[derive(Clone, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct Header {
     #[doc(alias = "install_reg_rootkey")]
@@ -228,18 +232,22 @@ impl Header {
     }
 
     #[inline]
+    pub const fn install_registry_root_key(&self) -> i32 {
+        self.install_registry_root_key.get()
+    }
+
+    #[inline]
     pub const fn language_table_size(&self) -> i32 {
         self.language_table_size.get()
     }
 
     #[inline]
-    pub const fn install_directory_ptr(&self) -> i32 {
-        self.install_directory_ptr.get()
-    }
-
-    #[inline]
-    pub const fn has_install_directory(&self) -> bool {
-        self.install_directory_ptr() != 0
+    pub fn install_directory(&self) -> Option<i32> {
+        if self.install_directory_ptr == I32::ZERO {
+            None
+        } else {
+            Some(self.install_directory_ptr.get())
+        }
     }
 
     #[inline]
@@ -250,5 +258,60 @@ impl Header {
     #[inline]
     pub const fn code_on_inst_success(&self) -> i32 {
         self.code_on_inst_success.get()
+    }
+
+    #[inline]
+    pub const fn code_on_inst_failed(&self) -> i32 {
+        self.code_on_inst_failed.get()
+    }
+
+    #[inline]
+    pub const fn code_on_user_abort(&self) -> i32 {
+        self.code_on_user_abort.get()
+    }
+}
+
+impl fmt::Debug for Header {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Header")
+            .field("install_reg_rootkey", &self.install_registry_root_key())
+            .field("install_reg_key_ptr", &self.install_registry_key_ptr.get())
+            .field(
+                "install_reg_value_ptr",
+                &self.install_registry_value_ptr.get(),
+            )
+            .field("bg_color1", &self.background_color_1.get())
+            .field("bg_color2", &self.background_color_2.get())
+            .field("bg_textcolor1", &self.background_text_color.get())
+            .field("lb_bg", &self.log_window_background_color.get())
+            .field("lb_fg", &self.log_window_foreground_color.get())
+            .field("langtable_size", &self.language_table_size())
+            .field("license_bg", &self.license_background_color.get())
+            .field("code_onInit", &self.code_on_init())
+            .field("code_onInstSuccess", &self.code_on_inst_success())
+            .field("code_onInstFailed", &self.code_on_inst_failed())
+            .field("code_onUserAbort", &self.code_on_user_abort())
+            .field("code_onGUIInit", &self.code_on_gui_init.get())
+            .field("code_onGUIEnd", &self.code_on_gui_end.get())
+            .field(
+                "code_onMouseOverSection",
+                &self.code_on_mouse_over_section.get(),
+            )
+            .field(
+                "code_onVerifyInstDir",
+                &self.code_on_verify_install_dir.get(),
+            )
+            .field("code_onSelChange", &self.code_on_sel_change.get())
+            .field("code_onRebootFailed", &self.code_on_reboot_failed)
+            .field("install_types", &self.install_types)
+            .field("install_directory_ptr", &self.install_directory())
+            .field(
+                "install_directory_auto_append",
+                &self.install_directory_auto_append.get(),
+            )
+            .field("str_uninstchild", &self.str_uninstall_child.get())
+            .field("str_uninstcmd", &self.str_uninstall_command.get())
+            .field("str_wininit", &self.str_win_init.get())
+            .finish()
     }
 }

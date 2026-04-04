@@ -415,7 +415,11 @@ impl Entry {
                 debug!("Return");
             }
             Self::Jump { address } => {
-                debug!("Jump: {address}");
+                if *address == I32::ZERO {
+                    debug!("Nop");
+                } else {
+                    debug!("Goto {address}");
+                }
                 return Ok(address.get());
             }
             Self::Abort { status } => {
@@ -430,7 +434,7 @@ impl Entry {
             }
             Self::Call { address } => {
                 let resolved_address = state.resolve_address(address.get()) - 1;
-                debug!("Call: {resolved_address}");
+                debug!("Call {resolved_address}");
                 state.execute_code_segment(resolved_address)?;
             }
             Self::UpdateText { update_str, .. } => {
@@ -512,7 +516,7 @@ impl Entry {
 
                 let mut buffer = itoa::Buffer::new();
                 debug!(
-                    "Set{type}Flag {}",
+                    "Set{type} {}",
                     match r#type {
                         ExecFlag::AutoClose | ExecFlag::Reboot => {
                             if value == 0 { "false" } else { "true" }
@@ -567,12 +571,12 @@ impl Entry {
                 // https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L342
                 let exec_flag = &mut state.exec_flags[*r#type];
 
-                let result = if *exec_flag != I32::ZERO {
-                    debug!("If{type}Flag: on -> {on}");
-                    on
-                } else {
-                    debug!("If{type}Flag: off -> {off}");
+                let result = if *exec_flag == I32::ZERO {
+                    debug!("If{type}: off -> {off}");
                     off
+                } else {
+                    debug!("If{type}: on -> {on}");
+                    on
                 };
 
                 *exec_flag &= *new_value_mask;
@@ -644,7 +648,7 @@ impl Entry {
             } => {
                 let name = state.get_string(name.get());
                 let date = if *datetime == U64::MAX_VALUE {
-                    debug!(r#"ExtractFile: "{name}"#);
+                    debug!(r#"ExtractFile: "{name}""#);
                     None
                 } else {
                     let date = DateTime::from(FileTime::new(datetime.get()));
@@ -662,7 +666,7 @@ impl Entry {
             }
             Self::MessageBox { mb_flags, text } => {
                 let text = state.get_string(text.get());
-                debug!(r#"MessageBox: {}, "{text}""#, mb_flags);
+                debug!(r#"MessageBox {mb_flags} "{text}""#);
             }
             Self::RemoveDir { path, flags } => {
                 let path = state.get_string(path.get());
@@ -781,8 +785,10 @@ impl Entry {
                 let comparison = match (signed, is_64_bit) {
                     (true, true) => i64::from(val_1).cmp(&i64::from(val_2)),
                     (true, false) => val_1.cmp(&val_2),
-                    (false, true) => (val_1 as u64).cmp(&(val_2 as u64)),
-                    (false, false) => (val_1 as u32).cmp(&(val_2 as u32)),
+                    (false, true) => {
+                        u64::from(val_1.cast_unsigned()).cmp(&u64::from(val_2.cast_unsigned()))
+                    }
+                    (false, false) => val_1.cast_unsigned().cmp(&val_2.cast_unsigned()),
                 };
 
                 debug!(

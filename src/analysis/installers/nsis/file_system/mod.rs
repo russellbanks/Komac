@@ -59,10 +59,10 @@ impl FileSystem {
 
     /// Creates a new directory from a path relative to a [location].
     /// The current directory is not changed. To both create and change the current directory, see
-    /// [set_directory].
+    /// [`set_directory`].
     ///
     /// [location]: RelativeLocation
-    /// [set_directory]: Self::set_directory
+    /// [`set_directory`]: Self::set_directory
     pub fn create_directory<T>(&mut self, name: T, location: RelativeLocation) -> NodeId
     where
         T: AsRef<Utf8Path>,
@@ -240,10 +240,8 @@ impl FileSystem {
             if let Some(node) = self.arena.get(current) {
                 let parent_node_id = node.parent();
 
-                let mut removed = false;
-
-                if node.get().is_directory() {
-                    removed = if flags.contains(DelFlags::RECURSE) {
+                let removed = if node.get().is_directory() {
+                    if flags.contains(DelFlags::DIRECTORY) {
                         current.remove_subtree(&mut self.arena);
                         true
                     } else {
@@ -254,8 +252,10 @@ impl FileSystem {
                         } else {
                             false
                         }
-                    };
-                }
+                    }
+                } else {
+                    false
+                };
 
                 // Delete the parent directory if it:
                 //   1. No longer has any children

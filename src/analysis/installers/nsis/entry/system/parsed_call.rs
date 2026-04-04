@@ -15,9 +15,9 @@ impl<'a> ParsedCall<'a> {
     pub fn parse(input: &'a str) -> Option<Self> {
         let (module, rest) = input.split_once("::")?;
 
-        let (function, rest) = rest.split_once("(")?;
+        let (function, rest) = rest.split_once('(')?;
 
-        let (raw_types, rest) = rest.split_once(")")?;
+        let (raw_types, rest) = rest.split_once(')')?;
 
         let param_types = raw_types
             .split(',')

@@ -22,7 +22,7 @@ impl MockCaller {
 
     /// Returns the mock [`Kernel32`].
     #[inline]
-    pub fn kernel32(&self) -> &Kernel32 {
+    pub const fn kernel32(&self) -> &Kernel32 {
         &self.kernel32
     }
 
