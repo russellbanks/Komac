@@ -666,7 +666,14 @@ impl Entry {
             }
             Self::RemoveDir { path, flags } => {
                 let path = state.get_string(path.get());
-                debug!(r#"RMDir: "{path}""#);
+                debug!(
+                    r#"RMDir {recursive}"{path}""#,
+                    recursive = if flags.contains(DelFlags::RECURSE) {
+                        "/r "
+                    } else {
+                        ""
+                    },
+                );
                 state.file_system.delete(path, *flags);
             }
             Self::StrLen { output, input } => {
