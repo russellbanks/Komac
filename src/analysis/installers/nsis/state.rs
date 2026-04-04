@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
-use tracing::debug;
+use tracing::{debug, debug_span};
 use zerocopy::{FromBytes, I32, LE, TryFromBytes, U16};
 
 use super::{
@@ -219,6 +219,9 @@ impl<'data> NsisState<'data> {
         i32::from_str_radix(value, radix).unwrap_or_default()
     }
 
+    /// Execute a NSIS code section.
+    ///
+    /// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L79>
     pub fn execute_code_segment(&mut self, mut position: i32) -> Result<Entry, EntryError> {
         // Create a watchdog counter to detect infinite loops
         let mut watchdog_counter = 0;
@@ -228,6 +231,9 @@ impl<'data> NsisState<'data> {
         let infinite_loop_threshold = self.entries.len();
 
         while let Ok(index) = usize::try_from(position) {
+            let span = debug_span!("", "{}", index + 1);
+            let _enter = span.enter();
+
             let entry = self.entries[index];
             let address = entry.execute(self)?;
 
