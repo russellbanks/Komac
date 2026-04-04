@@ -5,6 +5,7 @@ mod generic_access_rights;
 mod push_pop;
 mod seek_from;
 mod show_window;
+pub mod system;
 mod window_message;
 
 use std::{
@@ -43,6 +44,7 @@ pub enum EntryError {
     InfiniteLoop,
 }
 
+/// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/fileform.h#L50>
 #[expect(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
@@ -259,7 +261,7 @@ pub enum Entry {
     } = 43u32.to_le(),
     RegisterDLL {
         dll_file_name: I32<LE>,
-        function_str_ptr: I32<LE>,
+        function: I32<LE>,
         display_text: I32<LE>,
         no_unload: I32<LE>,
     } = 44u32.to_le(),
@@ -1020,23 +1022,40 @@ impl Entry {
             }
             Self::RegisterDLL {
                 dll_file_name,
-                function_str_ptr,
+                function,
                 display_text,
                 no_unload,
             } => {
                 // https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L4398
 
                 let dll_file_name = state.get_string(dll_file_name.get());
-                let function_str_ptr = state.get_string(function_str_ptr.get());
-                let display_text = state.get_string(display_text.get());
-                debug!(
-                    "RegisterDLL: {dll_file_name} {function_str_ptr} {display_text}{}",
-                    if no_unload.get() == 1 {
-                        " /NOUNLOAD"
-                    } else {
-                        ""
+                let function = state.get_string(function.get());
+
+                if *display_text == I32::ZERO {
+                    if dll_file_name.ends_with("System.dll")
+                        && function == "Call"
+                        && let Some(call) = state.stack.pop()
+                    {
+                        state.mock_caller.call(&call);
                     }
-                );
+                    debug!(
+                        "CallInstDLL: {dll_file_name} {function}{}",
+                        if no_unload.get() == 1 {
+                            " /NOUNLOAD"
+                        } else {
+                            ""
+                        }
+                    );
+                } else {
+                    debug!(
+                        "{}RegisterDLL: {dll_file_name}",
+                        if function == "DllUnregisterServer" {
+                            "Un"
+                        } else {
+                            ""
+                        }
+                    );
+                }
             }
             Self::CreateShortcut {
                 link_file,

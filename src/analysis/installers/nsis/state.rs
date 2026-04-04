@@ -7,7 +7,7 @@ use zerocopy::{FromBytes, I32, LE, TryFromBytes, U16};
 
 use super::{
     Variables,
-    entry::{Entry, EntryError, ExecFlags},
+    entry::{Entry, EntryError, ExecFlags, system::MockCaller},
 };
 use crate::analysis::installers::nsis::{
     NsisError,
@@ -33,6 +33,7 @@ pub struct NsisState<'data> {
     pub exec_flags: ExecFlags,
     pub last_used_exec_flags: ExecFlags,
     pub status_up_hack: I32<LE>,
+    pub mock_caller: MockCaller,
     version: NsisVersion,
 }
 
@@ -55,6 +56,7 @@ impl<'data> NsisState<'data> {
             exec_flags: ExecFlags::new(),
             last_used_exec_flags: ExecFlags::new(),
             status_up_hack: I32::ZERO,
+            mock_caller: MockCaller::new(),
             version: NsisVersion::default(),
         };
 
@@ -73,6 +75,26 @@ impl<'data> NsisState<'data> {
         }
 
         Ok(state)
+    }
+
+    /// Returns `true` if the NSIS executable is portable.
+    ///
+    /// <https://www.electron.build/nsis.html#portable>
+    pub fn is_portable(&self) -> bool {
+        const PORTABLE_EXECUTABLE_DIR: &str = "PORTABLE_EXECUTABLE_DIR";
+        const PORTABLE_EXECUTABLE_FILE: &str = "PORTABLE_EXECUTABLE_FILE";
+        const PORTABLE_EXECUTABLE_APP_FILENAME: &str = "PORTABLE_EXECUTABLE_APP_FILENAME";
+        const PORTABLE_ENVIRONMENT_VARIABLES: [&str; 3] = [
+            PORTABLE_EXECUTABLE_DIR,
+            PORTABLE_EXECUTABLE_FILE,
+            PORTABLE_EXECUTABLE_APP_FILENAME,
+        ];
+
+        self.mock_caller
+            .kernel32()
+            .environment_variables()
+            .keys()
+            .any(|key| PORTABLE_ENVIRONMENT_VARIABLES.contains(&&**key))
     }
 
     #[expect(

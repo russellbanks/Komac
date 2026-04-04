@@ -71,6 +71,7 @@ const APP_64: &str = "app-64";
 
 pub struct Nsis {
     pub architecture: Architecture,
+    pub is_portable: bool,
     pub registry: Registry,
     pub primary_language_id: u16,
     pub install_directory: Option<String>,
@@ -226,6 +227,7 @@ impl Nsis {
 
         Ok(Self {
             architecture: architecture.unwrap_or(Architecture::X86),
+            is_portable: state.is_portable(),
             registry: state.registry,
             install_directory: state.variables.install_dir().map(str::to_owned),
             primary_language_id: state.language_table.id(),
@@ -252,7 +254,11 @@ impl Installers for Nsis {
                 .parse::<LanguageTag>()
                 .ok(),
             architecture: self.architecture,
-            r#type: Some(InstallerType::Nullsoft),
+            r#type: if self.is_portable {
+                Some(InstallerType::Portable)
+            } else {
+                Some(InstallerType::Nullsoft)
+            },
             scope: self
                 .install_directory
                 .as_deref()
