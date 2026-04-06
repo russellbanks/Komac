@@ -72,6 +72,7 @@ impl FileSystem {
             RelativeLocation::Current => self.current_dir,
         };
 
+        let name = name.as_ref().as_str().replace('\\', "/");
         for component in Self::parse_path(&name) {
             match component {
                 Utf8Component::RootDir => current = self.root,
@@ -120,7 +121,8 @@ impl FileSystem {
         D: Into<Option<DateTime<Utc>>>,
         P: Into<u64>,
     {
-        let path = path.as_ref();
+        let normalized = path.as_ref().as_str().replace('\\', "/");
+        let path = Utf8Path::new(&normalized);
 
         let file_name = path.file_name()?;
 
@@ -154,6 +156,7 @@ impl FileSystem {
             RelativeLocation::Current => self.current_dir,
         };
 
+        let path = path.as_ref().as_str().replace('\\', "/");
         for (position, component) in Self::parse_path(&path).with_position() {
             match component {
                 Utf8Component::RootDir => current = self.root,
@@ -194,7 +197,7 @@ impl FileSystem {
     where
         T: AsRef<str> + Sized,
     {
-        let path = path.as_ref();
+        let path = path.as_ref().replace('\\', "/");
 
         // Return false if the path is empty; it cannot be deleted
         if path.is_empty() {
