@@ -13,7 +13,7 @@ use url::Url;
 use winget_types::{
     Manifest, ManifestType, ManifestTypeWithLocale, PackageIdentifier, PackageVersion,
     installer::InstallerManifest,
-    locale::{DefaultLocaleManifest, License, LocaleManifest, ReleaseNotes, Tag},
+    locale::{DefaultLocaleManifest, License, LocaleManifest, Publisher, ReleaseNotes, Tag},
     url::{DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl, ReleaseNotesUrl},
     version::VersionManifest,
 };
@@ -432,6 +432,7 @@ impl GitHub {
 
         Ok(GitHubValues {
             description: repository.description,
+            publisher: Publisher::from_str(repository.owner.login.as_str()).ok(),
             publisher_url: PublisherUrl::from_str(repository.owner.url.as_str())?,
             issues_url,
             license: repository
@@ -577,6 +578,7 @@ impl GitHub {
 
 pub struct GitHubValues {
     pub description: Option<String>,
+    pub publisher: Option<Publisher>,
     pub publisher_url: PublisherUrl,
     pub issues_url: Option<PublisherSupportUrl>,
     pub license: Option<License>,

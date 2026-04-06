@@ -77,6 +77,7 @@ pub struct Release {
 /// <https://docs.github.com/graphql/reference/interfaces#repositoryowner>
 #[derive(cynic::QueryFragment)]
 pub struct RepositoryOwner {
+    pub login: String,
     pub url: Url,
 }
 
@@ -120,6 +121,7 @@ mod tests {
                   spdxId
                 }
                 owner {
+                  login
                   url
                 }
                 object(expression: "HEAD:") {
