@@ -657,9 +657,12 @@ impl Entry {
                     debug!(r#"ExtractFile: "{name}" {date}"#);
                     Some(date)
                 };
-                state
-                    .file_system
-                    .create_file(&*name, date, position.get().unsigned_abs());
+                state.file_system.create_file(
+                    &*name,
+                    date,
+                    position.get().unsigned_abs(),
+                    RelativeLocation::Current,
+                );
             }
             Self::DeleteFile { filename, flags } => {
                 let filename = state.get_string(filename.get());
@@ -1095,6 +1098,9 @@ impl Entry {
                         ""
                     },
                 );
+                state
+                    .file_system
+                    .create_file(&*link_file, None, 0u64, RelativeLocation::Root);
             }
             Self::CopyFiles {
                 source_mask,
@@ -1369,9 +1375,12 @@ impl Entry {
                     state.get_string(alternative_path.get())
                 };
                 debug!(r#"WriteUninstaller: "{name}""#);
-                state
-                    .file_system
-                    .create_file(&*name, None, offset.get().unsigned_abs());
+                state.file_system.create_file(
+                    &*name,
+                    None,
+                    offset.get().unsigned_abs(),
+                    RelativeLocation::Current,
+                );
             }
             Self::SectionSet {
                 index,
