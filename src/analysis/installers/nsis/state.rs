@@ -11,7 +11,7 @@ use super::{
 };
 use crate::analysis::installers::nsis::{
     NsisError,
-    file_system::FileSystem,
+    file_system::{FileSystem, RelativeLocation},
     header::{
         Header,
         block::{BlockHeaders, BlockType},
@@ -223,6 +223,9 @@ impl<'data> NsisState<'data> {
     ///
     /// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L79>
     pub fn execute_code_segment(&mut self, mut position: i32) -> Result<Entry, EntryError> {
+        // Reset file system directory to root
+        self.file_system.set_directory("", RelativeLocation::Root);
+
         // Create a watchdog counter to detect infinite loops
         let mut watchdog_counter = 0;
 
