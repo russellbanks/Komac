@@ -1363,7 +1363,7 @@ impl Entry {
                 }
 
                 let name = state.get_string(name.get());
-                let name = if is_path_absolute(&*name) {
+                let name = if *alternative_path == I32::ZERO || is_path_absolute(&*name) {
                     name
                 } else {
                     state.get_string(alternative_path.get())
