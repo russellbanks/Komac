@@ -7,7 +7,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
-use ratatui_textarea::{CursorMove, Input, Key, TextArea};
+use ratatui_textarea::{CursorMove, DataCursor, Input, Key, TextArea};
 
 struct SearchBox<'a> {
     textarea: TextArea<'a>,
@@ -154,7 +154,7 @@ impl<'a> Editor<'a> {
                 let modified = if buffer.modified { " [modified]" } else { "" };
                 let slot = format!("[{}/{}]", self.current + 1, self.buffers.len());
                 let path = format!(" {}{} ", buffer.path, modified);
-                let (row, col) = textarea.cursor();
+                let DataCursor(row, col) = textarea.cursor();
                 let cursor = format!("({},{})", row + 1, col + 1);
                 let status_chunks = Layout::default()
                     .direction(Direction::Horizontal)

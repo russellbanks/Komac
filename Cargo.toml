@@ -76,7 +76,7 @@ owo-colors = "4.3.0"
 quick-xml = { version = "0.39.2", features = ["serialize"] }
 rand = "0.10.0"
 ratatui = "0.30.0"
-ratatui-textarea = { version = "0.8.0", features = ["search"] }
+ratatui-textarea = { version = "0.9.0", features = ["search"] }
 regex = "1.12.3"
 reqwest = { version = "0.13.2", default-features = false, features = ["charset", "http2", "stream", "system-proxy"] }
 serde = { version = "1.0.228", features = ["derive"] }
