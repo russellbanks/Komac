@@ -99,6 +99,12 @@ impl FileSystem {
         current
     }
 
+    /// Sets the current directory to the root.
+    #[inline]
+    pub const fn set_root(&mut self) {
+        self.current_dir = self.root;
+    }
+
     /// Sets the current directory from a path, relative to a [location], creating it and all
     /// necessary parent directories if they do not already exist.
     ///

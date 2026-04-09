@@ -1357,7 +1357,7 @@ impl Entry {
                     if let Some((&first, &second)) = path.first().zip(path.get(1)) {
                         (first == b'\\' && second == b'\\')
                             || (first.is_ascii_alphabetic() && second == b':')
-                            || (first == b'%')
+                            || first == b'%'
                     } else {
                         false
                     }
