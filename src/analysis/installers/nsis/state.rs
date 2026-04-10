@@ -223,6 +223,9 @@ impl<'data> NsisState<'data> {
     ///
     /// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L79>
     pub fn execute_code_segment(&mut self, mut position: i32) -> Result<Entry, EntryError> {
+        // Reset file system directory to root
+        self.file_system.set_root();
+
         // Create a watchdog counter to detect infinite loops
         let mut watchdog_counter = 0;
 
