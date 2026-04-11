@@ -51,7 +51,7 @@ color-eyre = { version = "0.6.5", default-features = false }
 compact_str = "0.9.0"
 const_format = { version = "0.2.35", features = ["derive"] }
 crossbeam-channel = "0.5.15"
-cynic = { version = "3.13.1", features = ["http-reqwest"] }
+cynic = { version = "3.13.2", features = ["http-reqwest"] }
 encoding_rs = "0.8.35"
 flate2 = "1.1.9"
 futures-util = "0.3.32"
@@ -109,7 +109,7 @@ openssl = ["keyring/crypto-openssl", "reqwest/native-tls-vendored"]
 rustls = ["keyring/crypto-rust", "reqwest/rustls"]
 
 [build-dependencies]
-cynic-codegen = { version = "3.13.1", features = ["rkyv"] }
+cynic-codegen = { version = "3.13.2", features = ["rkyv"] }
 windows_exe_info = { version = "0.5.2", features = ["manifest"] }
 
 [dev-dependencies]
