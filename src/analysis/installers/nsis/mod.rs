@@ -16,7 +16,7 @@ use std::{
 };
 
 use bzip2::read::BzDecoder;
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use flate2::{Decompress, read::ZlibDecoder};
 use liblzma::read::XzDecoder;
 use msi::Language;
@@ -25,6 +25,7 @@ use state::NsisState;
 use strsim::levenshtein;
 use thiserror::Error;
 use tracing::{debug, error};
+use typed_path::{Utf8Component, Utf8WindowsPath, Utf8WindowsPathBuf};
 use variables::Variables;
 use winget_types::{
     LanguageTag,
@@ -74,7 +75,7 @@ pub struct Nsis {
     pub is_portable: bool,
     pub registry: Registry,
     pub primary_language_id: u16,
-    pub install_directory: Option<String>,
+    pub install_directory: Option<Utf8WindowsPathBuf>,
 }
 
 impl Nsis {
@@ -169,7 +170,7 @@ impl Nsis {
                 state
                     .variables
                     .install_dir()
-                    .is_some_and(|dir| dir.contains(RELATIVE_PROGRAM_FILES_64))
+                    .is_some_and(|dir| dir.as_str().contains(RELATIVE_PROGRAM_FILES_64))
                     .then_some(Architecture::X64)
             })
             .or_else(|| {
@@ -229,7 +230,10 @@ impl Nsis {
             architecture: architecture.unwrap_or(Architecture::X86),
             is_portable: state.is_portable(),
             registry: state.registry,
-            install_directory: state.variables.install_dir().map(str::to_owned),
+            install_directory: state
+                .variables
+                .install_dir()
+                .map(Utf8WindowsPath::to_path_buf),
             primary_language_id: state.language_table.id(),
         })
     }
@@ -282,7 +286,6 @@ impl Installers for Nsis {
                 default_install_location: self
                     .install_directory
                     .as_deref()
-                    .map(Utf8Path::new)
                     .filter(|path| {
                         !path.components().next().is_none_or(|component| {
                             component
@@ -290,7 +293,7 @@ impl Installers for Nsis {
                                 .eq_ignore_ascii_case(RELATIVE_TEMP_FOLDER)
                         })
                     })
-                    .map(Utf8Path::to_path_buf),
+                    .map(|path| Utf8PathBuf::from(path.as_str())),
                 ..InstallationMetadata::default()
             },
             ..Installer::default()

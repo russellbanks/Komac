@@ -2305,6 +2305,7 @@ dependencies = [
  "tracing-subscriber",
  "tree-sitter-highlight",
  "tree-sitter-yaml",
+ "typed-path",
  "url",
  "uuid",
  "walkdir",

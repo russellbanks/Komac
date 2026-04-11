@@ -5,6 +5,8 @@ use std::{
     hash::Hash,
 };
 
+use typed_path::Utf8WindowsPath;
+
 use super::strings::PredefinedVar;
 
 #[derive(Clone)]
@@ -46,9 +48,10 @@ impl<'data> Variables<'data> {
         self.0.remove(index)
     }
 
-    pub fn install_dir(&self) -> Option<&str> {
+    pub fn install_dir(&self) -> Option<&Utf8WindowsPath> {
         self.get(&Self::INSTALL_DIR_INDEX)
             .filter(|&dir| !dir.is_empty())
+            .map(Utf8WindowsPath::new)
     }
 
     pub fn insert_install_dir<T>(&mut self, install_dir: T) -> Option<Cow<'_, str>>
