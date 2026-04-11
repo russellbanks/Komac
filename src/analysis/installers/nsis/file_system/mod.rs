@@ -7,12 +7,12 @@ use std::{
     slice::Iter,
 };
 
-use camino::{Utf8Component, Utf8Path};
 use chrono::{DateTime, Utc};
 pub use entry::FsEntry;
 use indextree::{Arena, Node, NodeId};
 use itertools::{Either, Itertools, Position};
 pub use relative_location::RelativeLocation;
+use typed_path::{Utf8Component, Utf8WindowsComponent, Utf8WindowsPath};
 
 use super::{entry::DelFlags, strings::PredefinedVar};
 
@@ -34,9 +34,9 @@ impl FileSystem {
         }
     }
 
-    fn parse_path<'path, T>(path: &'path T) -> impl Iterator<Item = Utf8Component<'path>>
+    fn parse_path<'path, T>(path: &'path T) -> impl Iterator<Item = Utf8WindowsComponent<'path>>
     where
-        T: AsRef<Utf8Path> + 'path,
+        T: AsRef<Utf8WindowsPath> + 'path,
     {
         let path = path.as_ref();
 
@@ -51,7 +51,7 @@ impl FileSystem {
             .next()
             .is_some_and(|component| PredefinedVar::all().iter().contains(component.as_str()))
         {
-            Either::Left(once(Utf8Component::RootDir).chain(components))
+            Either::Left(once(Utf8WindowsComponent::RootDir).chain(components))
         } else {
             Either::Right(components)
         }
@@ -65,7 +65,7 @@ impl FileSystem {
     /// [`set_directory`]: Self::set_directory
     pub fn create_directory<T>(&mut self, name: T, location: RelativeLocation) -> NodeId
     where
-        T: AsRef<Utf8Path>,
+        T: AsRef<Utf8WindowsPath>,
     {
         let mut current = match location {
             RelativeLocation::Root => self.root,
@@ -74,13 +74,13 @@ impl FileSystem {
 
         for component in Self::parse_path(&name) {
             match component {
-                Utf8Component::RootDir => current = self.root,
-                Utf8Component::ParentDir => {
+                Utf8WindowsComponent::RootDir => current = self.root,
+                Utf8WindowsComponent::ParentDir => {
                     if let Some(parent) = current.parent(&self.arena) {
                         current = parent;
                     }
                 }
-                Utf8Component::Normal(part) => {
+                Utf8WindowsComponent::Normal(part) => {
                     if let Some(directory) = current.children(&self.arena).find(|&id| {
                         self.arena
                             .get(id)
@@ -111,7 +111,7 @@ impl FileSystem {
     /// [location]: RelativeLocation
     pub fn set_directory<T>(&mut self, path: T, location: RelativeLocation)
     where
-        T: AsRef<Utf8Path>,
+        T: AsRef<Utf8WindowsPath>,
     {
         self.current_dir = self.create_directory(path, location);
     }
@@ -122,7 +122,7 @@ impl FileSystem {
     /// [datetime]: DateTime<Utc>
     pub fn create_file<T, D, P>(&mut self, path: T, modified_at: D, position: P) -> Option<NodeId>
     where
-        T: AsRef<Utf8Path>,
+        T: AsRef<Utf8WindowsPath>,
         D: Into<Option<DateTime<Utc>>>,
         P: Into<u64>,
     {
@@ -153,7 +153,7 @@ impl FileSystem {
     /// [location]: RelativeLocation
     pub fn exists<T>(&self, path: T, location: RelativeLocation) -> bool
     where
-        T: AsRef<Utf8Path>,
+        T: AsRef<Utf8WindowsPath>,
     {
         let mut current = match location {
             RelativeLocation::Root => self.root,
@@ -162,13 +162,13 @@ impl FileSystem {
 
         for (position, component) in Self::parse_path(&path).with_position() {
             match component {
-                Utf8Component::RootDir => current = self.root,
-                Utf8Component::ParentDir => {
+                Utf8WindowsComponent::RootDir => current = self.root,
+                Utf8WindowsComponent::ParentDir => {
                     if let Some(parent) = current.parent(&self.arena) {
                         current = parent;
                     }
                 }
-                Utf8Component::Normal(part) => {
+                Utf8WindowsComponent::Normal(part) => {
                     if let Some(directory) = current.children(&self.arena).find(|&id| {
                         self.arena
                             .get(id)
@@ -222,13 +222,13 @@ impl FileSystem {
 
             for component in Self::parse_path(&path) {
                 match component {
-                    Utf8Component::RootDir => current = self.root,
-                    Utf8Component::ParentDir => {
+                    Utf8WindowsComponent::RootDir => current = self.root,
+                    Utf8WindowsComponent::ParentDir => {
                         if let Some(parent) = current.parent(&self.arena) {
                             current = parent;
                         }
                     }
-                    Utf8Component::Normal(part) => {
+                    Utf8WindowsComponent::Normal(part) => {
                         if let Some(child) = current.children(&self.arena).find(|&id| {
                             self.arena
                                 .get(id)
