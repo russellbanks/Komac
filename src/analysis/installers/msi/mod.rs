@@ -19,7 +19,7 @@ use winget_types::{
 
 use crate::{
     analysis::{installers::msi::directory_table::DirectoryTable, r#trait::Installers},
-    traits::AsciiExt,
+    traits::{AsciiExt, path::NormalizePath},
 };
 
 const PROPERTY: &str = "Property";
@@ -154,6 +154,7 @@ impl Msi {
                 }
                 Option::from(path).filter(|path| !path.as_str().is_empty())
             })
+            .map(|directory| directory.normalize())
     }
 
     /// Returns the actual `ProductVersion` for Google Chrome.
