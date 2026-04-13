@@ -32,7 +32,7 @@ const TARGET_DIR: &str = "TARGETDIR";
 #[derive(Debug)]
 pub struct Msi {
     pub architecture: Architecture,
-    pub all_users: Option<Scope>,
+    pub may_mutate_all_users: bool,
     pub property_table: PropertyTable,
     pub directory_table: DirectoryTable,
     pub creating_application: Option<String>,
@@ -58,31 +58,16 @@ impl Msi {
 
         let property_table = PropertyTable::new(&mut msi)?;
 
-        // https://learn.microsoft.com/windows/win32/msi/allusers
-        let all_users = match property_table.get(ALL_USERS) {
-            Some("1") => Some(Scope::Machine),
-            Some("2") => None, // Installs depending on installation context and user privileges
-            Some("") => Some(Scope::User), // An empty string specifies per-user context
-            _ => {
-                if msi
-                    .select_rows(Select::table(CONTROL).columns(&[PROPERTY]))
-                    .is_ok_and(|mut rows| rows.any(|row| row[0].as_str() == Some(ALL_USERS)))
-                {
-                    // ALLUSERS could be changed at runtime
-                    None
-                } else {
-                    // No value or control specifies per-user context
-                    Some(Scope::User)
-                }
-            }
-        };
+        let may_mutate_all_users = msi
+            .select_rows(Select::table(CONTROL).columns(&[PROPERTY]))
+            .is_ok_and(|mut rows| rows.any(|row| row[0].as_str() == Some(ALL_USERS)));
 
         let directory_table = DirectoryTable::new(&mut msi)?;
         let summary_info = msi.summary_info();
 
         Ok(Self {
             architecture,
-            all_users,
+            may_mutate_all_users,
             property_table,
             directory_table,
             creating_application: summary_info.creating_application().map(str::to_owned),
@@ -94,6 +79,27 @@ impl Msi {
     fn build_directory(&self, current_dir: &str, target_dir: &str) -> Option<Utf8PathBuf> {
         self.directory_table
             .build_directory(current_dir, target_dir)
+    }
+
+    pub fn find_scope(&self) -> Option<Scope> {
+        // https://learn.microsoft.com/windows/win32/msi/allusers
+        match self.property_table.get(ALL_USERS) {
+            Some("1") => Some(Scope::Machine),
+            Some("2") => None, // Installs depending on installation context and user privileges
+            Some("") => Some(Scope::User), // An empty string specifies per-user context
+            _ => {
+                if self.may_mutate_all_users {
+                    // ALLUSERS could be changed at runtime
+                    None
+                } else {
+                    // No value or control specifies per-user context
+                    self.find_install_directory()
+                        .as_deref()
+                        .and_then(Scope::from_install_directory)
+                        .or(Some(Scope::User))
+                }
+            }
+        }
     }
 
     pub fn find_install_directory(&self) -> Option<Utf8PathBuf> {
@@ -253,7 +259,7 @@ impl Installers for Msi {
             } else {
                 InstallerType::Msi
             }),
-            scope: self.all_users,
+            scope: self.find_scope(),
             product_code: product_code.map(str::to_owned),
             apps_and_features_entries: if product_name.is_some()
                 || manufacturer.is_some()
