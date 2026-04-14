@@ -243,6 +243,14 @@ impl UpdateVersion {
             .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
+        let submit_option = SubmitOption::prompt(
+            &mut changes,
+            &self.package_identifier,
+            &self.package_version,
+            self.submit,
+            self.dry_run,
+        )?;
+
         if let Some(output) = self
             .output
             .as_ref()
@@ -254,14 +262,6 @@ impl UpdateVersion {
                 "Successfully".green()
             );
         }
-
-        let submit_option = SubmitOption::prompt(
-            &mut changes,
-            &self.package_identifier,
-            &self.package_version,
-            self.submit,
-            self.dry_run,
-        )?;
 
         if submit_option.is_exit() {
             return Ok(());
