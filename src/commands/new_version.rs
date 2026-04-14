@@ -431,14 +431,6 @@ impl NewVersion {
             .maybe_created_with(self.created_with.as_deref())
             .create()?;
 
-        if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
-            write_changes_to_dir(&changes, output.as_path()).await?;
-            println!(
-                "{} written all manifest files to {output}",
-                "Successfully".green()
-            );
-        }
-
         let submit_option = SubmitOption::prompt(
             &mut changes,
             &package_identifier,
@@ -446,6 +438,14 @@ impl NewVersion {
             self.submit,
             self.dry_run,
         )?;
+
+        if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
+            write_changes_to_dir(&changes, output.as_path()).await?;
+            println!(
+                "{} written all manifest files to {output}",
+                "Successfully".green()
+            );
+        }
 
         if submit_option.is_exit() {
             return Ok(());
