@@ -120,7 +120,13 @@ impl FileSystem {
     /// [datetime], and a position.
     ///
     /// [datetime]: DateTime<Utc>
-    pub fn create_file<T, D, P>(&mut self, path: T, modified_at: D, position: P) -> Option<NodeId>
+    pub fn create_file<T, D, P>(
+        &mut self,
+        path: T,
+        modified_at: D,
+        position: P,
+        location: RelativeLocation,
+    ) -> Option<NodeId>
     where
         T: AsRef<Utf8WindowsPath>,
         D: Into<Option<DateTime<Utc>>>,
@@ -131,9 +137,12 @@ impl FileSystem {
         let file_name = path.file_name()?;
 
         let directory = if let Some(parent) = path.parent() {
-            self.create_directory(parent, RelativeLocation::Current)
+            self.create_directory(parent, location)
         } else {
-            self.current_dir
+            match location {
+                RelativeLocation::Root => self.root,
+                RelativeLocation::Current => self.current_dir,
+            }
         };
 
         if let Some(file) = directory.children(&self.arena).find(|&id| {
