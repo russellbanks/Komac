@@ -8,6 +8,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
+use compact_str::CompactString;
 pub use entry::FsEntry;
 use indextree::{Arena, Node, NodeId};
 use itertools::{Either, Itertools, Position};
@@ -116,10 +117,11 @@ impl FileSystem {
         self.current_dir = self.create_directory(path, location);
     }
 
-    /// Creates a file from a path relative to the current directory, an optional modified at
+    /// Creates a file from a path relative to a [`location`], an optional modified at
     /// [datetime], and a position.
     ///
     /// [datetime]: DateTime<Utc>
+    /// [location]: RelativeLocation
     pub fn create_file<T, D, P>(
         &mut self,
         path: T,
@@ -153,6 +155,34 @@ impl FileSystem {
             Some(file)
         } else {
             let file = FsEntry::new_file(file_name, modified_at, position);
+            Some(directory.append_value(file, &mut self.arena))
+        }
+    }
+
+    /// Creates a link from a path relative to the root.
+    pub fn create_link<T, U>(&mut self, path: T, target_path: U) -> Option<NodeId>
+    where
+        T: AsRef<Utf8WindowsPath>,
+        U: Into<CompactString>,
+    {
+        let path = path.as_ref();
+
+        let link_name = path.file_name()?;
+
+        let directory = if let Some(parent) = path.parent() {
+            self.create_directory(parent, RelativeLocation::Root)
+        } else {
+            self.root
+        };
+
+        if let Some(file) = directory.children(&self.arena).find(|&id| {
+            self.arena
+                .get(id)
+                .is_some_and(|node| node.get().name() == link_name)
+        }) {
+            Some(file)
+        } else {
+            let file = FsEntry::new_link(link_name, target_path);
             Some(directory.append_value(file, &mut self.arena))
         }
     }

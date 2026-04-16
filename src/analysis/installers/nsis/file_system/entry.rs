@@ -10,6 +10,10 @@ pub enum FsEntry {
         modified_at: Option<DateTime<Utc>>,
         position: u64,
     },
+    Link {
+        name: CompactString,
+        target: CompactString,
+    },
     Directory(CompactString),
 }
 
@@ -22,14 +26,6 @@ impl FsEntry {
     #[inline]
     pub const fn new_root() -> Self {
         Self::Directory(CompactString::const_new("/"))
-    }
-
-    /// Creates a new directory [`FsEntry`] from a name.
-    pub fn new_directory<T>(name: T) -> Self
-    where
-        T: Into<CompactString>,
-    {
-        Self::Directory(name.into())
     }
 
     /// Creates a new file [`FsEntry`] from a name, an optional modified at [datetime], and a
@@ -49,10 +45,32 @@ impl FsEntry {
         }
     }
 
+    /// Creates a new link [`FsEntry`] from a name and target.
+    pub fn new_link<T, U>(name: T, target: U) -> Self
+    where
+        T: Into<CompactString>,
+        U: Into<CompactString>,
+    {
+        Self::Link {
+            name: name.into(),
+            target: target.into(),
+        }
+    }
+
+    /// Creates a new directory [`FsEntry`] from a name.
+    pub fn new_directory<T>(name: T) -> Self
+    where
+        T: Into<CompactString>,
+    {
+        Self::Directory(name.into())
+    }
+
     /// Returns the entry's name as a string slice.
     pub fn name(&self) -> &str {
         match self {
-            Self::File { name, .. } | Self::Directory(name) => name.as_str(),
+            Self::File { name, .. } | Self::Link { name, .. } | Self::Directory(name) => {
+                name.as_str()
+            }
         }
     }
 
@@ -62,7 +80,7 @@ impl FsEntry {
     pub const fn modified_at(&self) -> Option<&DateTime<Utc>> {
         match self {
             Self::File { modified_at, .. } => modified_at.as_ref(),
-            Self::Directory(_) => None,
+            Self::Link { .. } | Self::Directory(_) => None,
         }
     }
 
@@ -70,7 +88,7 @@ impl FsEntry {
     pub const fn position(&self) -> Option<u64> {
         match self {
             Self::File { position, .. } => Some(*position + size_of::<u32>() as u64),
-            Self::Directory(_) => None,
+            Self::Link { .. } | Self::Directory(_) => None,
         }
     }
 
@@ -79,6 +97,13 @@ impl FsEntry {
     #[inline]
     pub const fn is_file(&self) -> bool {
         matches!(self, Self::File { .. })
+    }
+
+    /// Returns `true` if this entry is a link.
+    #[must_use]
+    #[inline]
+    pub const fn is_link(&self) -> bool {
+        matches!(self, Self::Link { .. })
     }
 
     /// Returns `true` if this entry is a directory.
@@ -107,6 +132,11 @@ impl fmt::Debug for FsEntry {
                     f.debug_tuple("File").field(name).finish()
                 }
             }
+            Self::Link { name, target } => f
+                .debug_struct("Link")
+                .field("Name", name)
+                .field("Target", target)
+                .finish(),
             Self::Directory(name) => f.debug_tuple("Directory").field(name).finish(),
         }
     }

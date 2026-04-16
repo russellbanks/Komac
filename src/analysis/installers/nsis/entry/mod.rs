@@ -1098,9 +1098,7 @@ impl Entry {
                         ""
                     },
                 );
-                state
-                    .file_system
-                    .create_file(&*link_file, None, 0u64, RelativeLocation::Root);
+                state.file_system.create_link(&*link_file, &*target_file);
             }
             Self::CopyFiles {
                 source_mask,
