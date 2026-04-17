@@ -10,7 +10,7 @@ use itertools::Itertools;
 use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use walkdir::WalkDir;
-use winget_types::{GenericManifest, ManifestType};
+use winget_types::{GenericManifest, ManifestType, ManifestVersion};
 
 use crate::{
     commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption},
@@ -148,6 +148,12 @@ impl Submit {
 
             // Reorder the keys in case the manifests weren't created by komac
             manifest.installer.optimize();
+
+            manifest.default_locale.manifest_version = ManifestVersion::default();
+            manifest.version.manifest_version = ManifestVersion::default();
+            for locale_manifest in &mut manifest.locales {
+                locale_manifest.manifest_version = ManifestVersion::default();
+            }
 
             let package_path = PackagePath::new(identifier, Some(version), None);
             let mut changes = pr_changes()
