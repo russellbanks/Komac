@@ -70,7 +70,7 @@ memchr = "2.8.0"
 msi = "0.10.0"
 nt-time = { version = "0.13.1", features = ["chrono"] }
 num_cpus = "1.17.0"
-open = "5.3.3"
+open = "5.3.4"
 ordinal = "0.4.0"
 owo-colors = "4.3.0"
 quick-xml = { version = "0.39.2", features = ["serialize"] }
