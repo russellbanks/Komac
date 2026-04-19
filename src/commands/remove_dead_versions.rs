@@ -9,6 +9,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use reqwest::{Client, StatusCode};
+use secrecy::SecretString;
 use tokio::{sync::mpsc, try_join};
 use winget_types::{
     ManifestTypeWithLocale, PackageIdentifier, PackageVersion, installer::InstallerManifest,
@@ -57,13 +58,13 @@ pub struct RemoveDeadVersions {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 impl RemoveDeadVersions {
     pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(token)?;
+        let token_manager = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(token_manager)?;
 
         let (fork, winget_pkgs, versions) = try_join!(
             github

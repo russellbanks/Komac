@@ -8,6 +8,7 @@ use indexmap::IndexMap;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use reqwest::Client;
+use secrecy::SecretString;
 use serde::de::DeserializeOwned;
 use url::Url;
 use winget_types::{
@@ -52,7 +53,10 @@ pub struct GitHub(pub(super) Client);
 
 #[bon]
 impl GitHub {
-    pub fn new<T: AsRef<str>>(token: T) -> Result<Self, GitHubError> {
+    pub fn new<T>(token: T) -> Result<Self, GitHubError>
+    where
+        T: AsRef<SecretString>,
+    {
         Ok(Self(
             Client::builder()
                 .default_headers(default_headers(Some(token.as_ref())))

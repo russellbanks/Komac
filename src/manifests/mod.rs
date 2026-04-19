@@ -88,13 +88,12 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
                     match HIGHLIGHT_NAMES[highlight.0] {
                         COMMENT => style = style.fg::<SlateGrey>(),
                         PROPERTY => style = style.green(),
-                        STRING => {
-                            if source
-                                .chars()
-                                .all(|char| char.is_ascii_digit() || char.is_ascii_punctuation())
-                            {
-                                style = style.blue();
-                            }
+                        STRING
+                            if source.chars().all(|char| {
+                                char.is_ascii_digit() || char.is_ascii_punctuation()
+                            }) =>
+                        {
+                            style = style.blue()
                         }
                         _ => {}
                     }

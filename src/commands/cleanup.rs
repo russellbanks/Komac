@@ -8,6 +8,7 @@ use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use inquire::MultiSelect;
 use owo_colors::OwoColorize;
+use secrecy::SecretString;
 
 use crate::{
     commands::utils::SPINNER_TICK_RATE, github::client::GitHub, prompts::handle_inquire_error,
@@ -33,13 +34,13 @@ pub struct Cleanup {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 impl Cleanup {
     pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(&token)?;
+        let token_manager = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(token_manager)?;
 
         let merge_state = MergeState::from((self.only_merged, self.only_closed));
 

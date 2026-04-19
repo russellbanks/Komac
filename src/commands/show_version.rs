@@ -1,5 +1,6 @@
 use clap::Parser;
 use color_eyre::Result;
+use secrecy::SecretString;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{github::client::GitHub, manifests::print_changes, token::TokenManager};
@@ -34,13 +35,13 @@ pub struct ShowVersion {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 impl ShowVersion {
     pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(&token)?;
+        let token_manager = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(&token_manager)?;
 
         // Get a list of all versions for the given package
         let mut versions = github.get_versions(&self.package_identifier).await?;

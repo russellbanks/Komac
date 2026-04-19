@@ -82,11 +82,9 @@ impl Msix {
                             }
                         }
                     }
-                    b"DisplayName" => {
-                        if event.name().prefix().is_none() {
-                            manifest.properties.display_name =
-                                reader.read_text(event.to_end().name())?.into_owned();
-                        }
+                    b"DisplayName" if event.name().prefix().is_none() => {
+                        manifest.properties.display_name =
+                            reader.read_text(event.to_end().name())?.into_owned();
                     }
                     b"PublisherDisplayName" => {
                         manifest.properties.publisher_display_name =

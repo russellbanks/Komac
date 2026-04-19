@@ -7,6 +7,7 @@ use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use rand::random_range;
+use secrecy::SecretString;
 use tokio::{time::sleep, try_join};
 
 use crate::{
@@ -28,7 +29,7 @@ pub struct SyncFork {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 impl SyncFork {
@@ -37,8 +38,8 @@ impl SyncFork {
             return Self::vhs().await;
         }
 
-        let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(token)?;
+        let token_manager = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(token_manager)?;
 
         // Fetch repository data from both upstream and fork repositories asynchronously
         let (winget_pkgs, fork) = try_join!(

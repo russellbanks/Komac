@@ -13,6 +13,7 @@ use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
+use secrecy::SecretString;
 use strsim::levenshtein;
 use tokio::try_join;
 use winget_types::{
@@ -102,13 +103,13 @@ pub struct UpdateVersion {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 impl UpdateVersion {
-    pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token.as_deref()).await?;
-        let github = GitHub::new(&token)?;
+    pub async fn run(mut self) -> Result<()> {
+        let token_manager = TokenManager::handle(self.token.take()).await?;
+        let github = GitHub::new(&token_manager)?;
 
         let (versions, existing_pr) = try_join!(
             github.get_versions(&self.package_identifier),

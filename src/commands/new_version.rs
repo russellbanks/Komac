@@ -12,6 +12,7 @@ use indicatif::ProgressBar;
 use inquire::CustomType;
 use ordinal::Ordinal;
 use owo_colors::OwoColorize;
+use secrecy::SecretString;
 use winget_types::{
     LanguageTag, ManifestType, ManifestVersion, PackageIdentifier, PackageVersion,
     installer::{
@@ -149,13 +150,13 @@ pub struct NewVersion {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 impl NewVersion {
     pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(&token)?;
+        let token_manager = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(token_manager)?;
 
         let package_identifier = required_prompt(self.package_identifier, None::<&str>)?;
 

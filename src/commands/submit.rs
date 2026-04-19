@@ -8,6 +8,7 @@ use indicatif::ProgressBar;
 use inquire::MultiSelect;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
+use secrecy::SecretString;
 use walkdir::WalkDir;
 use winget_types::{GenericManifest, ManifestType};
 
@@ -52,12 +53,12 @@ pub struct Submit {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 impl Submit {
-    pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token.as_deref()).await?;
+    pub async fn run(mut self) -> Result<()> {
+        let token_manager = TokenManager::handle(self.token.take()).await?;
 
         let yaml_entries = self.get_yaml_file_paths()?;
 
@@ -137,7 +138,7 @@ impl Submit {
 
         let rate_limit = RateLimit::new(self.fast);
 
-        let github = GitHub::new(&token)?;
+        let github = GitHub::new(token_manager)?;
 
         for mut manifest in manifests {
             let identifier = &manifest.version.package_identifier;

@@ -3,6 +3,7 @@ use std::io::Write;
 use clap::{Args, Parser};
 use color_eyre::Result;
 use owo_colors::OwoColorize;
+use secrecy::SecretString;
 use winget_types::PackageIdentifier;
 
 use crate::{github::client::GitHub, token::TokenManager};
@@ -23,7 +24,7 @@ pub struct ListVersions {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 #[derive(Args)]
@@ -44,8 +45,8 @@ struct OutputType {
 
 impl ListVersions {
     pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(&token)?;
+        let token_manager = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(token_manager)?;
 
         let versions = github.get_versions(&self.package_identifier).await?;
 

@@ -1,21 +1,22 @@
-use std::borrow::Cow;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use bon::bon;
 use color_eyre::eyre::Result;
 use inquire::{InquireError, Password, error::InquireResult, validator::Validation};
-use keyring::Entry;
+use keyring_core::Entry;
 use reqwest::{
     Client, StatusCode,
     header::{AUTHORIZATION, DNT, HeaderMap, HeaderValue, USER_AGENT},
 };
+use secrecy::{ExposeSecret, SecretString};
 use thiserror::Error;
 use tokio::runtime::Handle;
 
 use crate::{commands::utils::environment::CI, prompts::handle_inquire_error};
 
-const SERVICE: &str = "komac";
-const USERNAME: &str = "github-access-token";
 const GITHUB_API_ENDPOINT: &str = "https://api.github.com/octocat";
+
+static DEFAULT_STORE_SET: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Error)]
 pub enum TokenError {
@@ -28,23 +29,20 @@ pub enum TokenError {
     #[error("Failed to connect to GitHub. Please check your internet connection.")]
     FailedToConnect,
     #[error(transparent)]
-    Keyring(#[from] keyring::Error),
+    Keyring(#[from] keyring_core::Error),
     #[error(transparent)]
     Request(#[from] reqwest::Error),
     #[error(transparent)]
     Inquire(#[from] InquireError),
 }
 
-pub struct TokenManager<'a> {
-    token: Cow<'a, str>,
+pub struct TokenManager {
+    token: SecretString,
 }
 
 #[bon]
-impl<'a> TokenManager<'a> {
-    pub async fn handle<T>(token: Option<T>) -> Result<Self, TokenError>
-    where
-        T: Into<Cow<'a, str>>,
-    {
+impl TokenManager {
+    pub async fn handle(token: Option<SecretString>) -> Result<Self, TokenError> {
         // Token rules:
         // - If caller passed `--token`: validate it and fail if invalid.
         // - Otherwise try keyring:
@@ -59,19 +57,19 @@ impl<'a> TokenManager<'a> {
 
         let token_passed = token.is_some();
 
-        let token = if let Some(token) = token.map(T::into) {
+        let token = if let Some(token) = token {
             Some(token)
         } else {
             match credential.get_password() {
-                Ok(token) => Some(Cow::Owned(token)),
-                Err(keyring::Error::NoEntry) if *CI => return Err(TokenError::NoTokenInCI),
-                Err(keyring::Error::NoEntry) => None, // No stored token, must prompt
+                Ok(token) => Some(SecretString::new(token.into_boxed_str())),
+                Err(keyring_core::Error::NoEntry) if *CI => return Err(TokenError::NoTokenInCI),
+                Err(keyring_core::Error::NoEntry) => None, // No stored token, must prompt
                 Err(error) => return Err(TokenError::Keyring(error)),
             }
         };
 
         if let Some(token) = token {
-            match Self::validate(&client, &token).await {
+            match Self::validate(&client, token.expose_secret()).await {
                 Ok(()) => return Ok(Self { token }),
                 Err(TokenError::InvalidToken) if token_passed || *CI => {
                     return Err(TokenError::InvalidToken);
@@ -83,12 +81,15 @@ impl<'a> TokenManager<'a> {
 
         let validated_token = Self::prompt().client(&client).call()?;
 
-        if credential.set_password(&validated_token).is_ok() {
+        if credential
+            .set_password(validated_token.expose_secret())
+            .is_ok()
+        {
             println!("Successfully stored token in platform's secure storage");
         }
 
         Ok(Self {
-            token: Cow::Owned(validated_token),
+            token: validated_token,
         })
     }
 
@@ -96,7 +97,7 @@ impl<'a> TokenManager<'a> {
     pub fn prompt(
         client: &Client,
         #[builder(default = "Enter a GitHub token")] message: &str,
-    ) -> InquireResult<String> {
+    ) -> InquireResult<SecretString> {
         tokio::task::block_in_place(|| {
             let rt = Handle::current();
             let client = client.clone();
@@ -111,6 +112,7 @@ impl<'a> TokenManager<'a> {
                 .with_validator(validator)
                 .without_confirmation()
                 .prompt()
+                .map(|token| SecretString::new(token.into_boxed_str()))
                 .map_err(handle_inquire_error)
         })
     }
@@ -136,15 +138,40 @@ impl<'a> TokenManager<'a> {
         }
     }
 
-    #[inline]
-    pub fn credential() -> keyring::Result<Entry> {
+    /// Returns komac's named entry in a credential store.
+    pub fn credential() -> keyring_core::Result<Entry> {
+        const SERVICE: &str = "komac";
+        const USERNAME: &str = "github-access-token";
+
+        if !DEFAULT_STORE_SET.load(Ordering::Relaxed) {
+            keyring_core::set_default_store(cfg_select! {
+                target_os = "windows" => windows_native_keyring_store::Store::new()?,
+                target_os = "linux" => dbus_secret_service_keyring_store::Store::new()?,
+                target_os = "macos" => apple_native_keyring_store::keychain::Store::new()?,
+            });
+
+            DEFAULT_STORE_SET.store(true, Ordering::Relaxed);
+        }
+
         Entry::new(SERVICE, USERNAME)
+    }
+
+    #[inline]
+    pub fn into_token(self) -> SecretString {
+        self.token
     }
 }
 
-impl AsRef<str> for TokenManager<'_> {
-    fn as_ref(&self) -> &str {
-        self.token.as_ref()
+impl AsRef<SecretString> for TokenManager {
+    fn as_ref(&self) -> &SecretString {
+        &self.token
+    }
+}
+
+impl From<TokenManager> for SecretString {
+    #[inline]
+    fn from(token_manager: TokenManager) -> Self {
+        token_manager.into_token()
     }
 }
 
@@ -152,14 +179,16 @@ const MICROSOFT_DELIVERY_OPTIMIZATION: HeaderValue =
     HeaderValue::from_static("Microsoft-Delivery-Optimization/10.1");
 const SEC_GPC: &str = "Sec-GPC";
 
-pub fn default_headers(github_token: Option<&str>) -> HeaderMap {
+pub fn default_headers(github_token: Option<&SecretString>) -> HeaderMap {
     let mut default_headers = HeaderMap::new();
     default_headers.insert(USER_AGENT, MICROSOFT_DELIVERY_OPTIMIZATION);
     default_headers.insert(DNT, HeaderValue::from(1));
     default_headers.insert(SEC_GPC, HeaderValue::from(1));
     if let Some(token) = github_token
-        && let Ok(bearer_auth) = HeaderValue::from_str(&format!("Bearer {token}"))
+        && let Ok(mut bearer_auth) =
+            HeaderValue::from_str(&format!("Bearer {}", token.expose_secret()))
     {
+        bearer_auth.set_sensitive(true);
         default_headers.insert(AUTHORIZATION, bearer_auth);
     }
     default_headers

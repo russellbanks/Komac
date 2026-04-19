@@ -20,7 +20,7 @@ impl RemoveToken {
 
         if matches!(
             credential.get_password().err(),
-            Some(keyring::Error::NoEntry)
+            Some(keyring_core::Error::NoEntry)
         ) {
             println!("No token stored is currently stored in the platform's secure storage");
         }

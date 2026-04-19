@@ -9,6 +9,7 @@ use inquire::{
     validator::{MaxLengthValidator, MinLengthValidator},
 };
 use owo_colors::OwoColorize;
+use secrecy::SecretString;
 use tokio::try_join;
 use winget_types::{PackageIdentifier, PackageVersion};
 
@@ -51,7 +52,7 @@ pub struct RemoveVersion {
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<String>,
+    token: Option<SecretString>,
 }
 
 impl RemoveVersion {
@@ -59,7 +60,7 @@ impl RemoveVersion {
     const MAX_REASON_LENGTH: usize = 1000;
 
     pub async fn run(self) -> Result<()> {
-        let token = TokenManager::handle(self.token).await?;
+        let token_manager = TokenManager::handle(self.token).await?;
 
         if !self.no_warning {
             println!(
@@ -68,7 +69,7 @@ impl RemoveVersion {
             );
         }
 
-        let github = GitHub::new(&token)?;
+        let github = GitHub::new(&token_manager)?;
 
         let (fork, winget_pkgs, versions) = try_join!(
             github
