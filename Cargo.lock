@@ -116,11 +116,11 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "apple-native-keyring-store"
-version = "0.2.3"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9cdab02b2a5e47c080382cb729e8fc53bedf4a498200fc72a4e6c691033a3f7b"
+checksum = "a7be2f067ccd8d4b4d4a66ddafe0f32a5dff31732f32dbff85fefc40929b1f72"
 dependencies = [
- "keyring-core",
+ "keyring-core 1.0.0",
  "log",
  "security-framework",
 ]
@@ -909,7 +909,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fec3a0f31addb56ee6d5c55599068d2093bc737469a448b34e426603ef61f93e"
 dependencies = [
  "dbus-secret-service",
- "keyring-core",
+ "keyring-core 0.7.4",
 ]
 
 [[package]]
@@ -2058,6 +2058,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "keyring-core"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb1e621458ca9c51aa110bd0339d4751a056b9576bf1253aee1aa560dda0fc9d"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "komac"
 version = "2.16.0"
 dependencies = [
@@ -2094,7 +2103,7 @@ dependencies = [
  "inquire",
  "itertools",
  "itoa",
- "keyring-core",
+ "keyring-core 0.7.4",
  "liblzma",
  "memchr",
  "msi",
@@ -5076,7 +5085,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0e26ac29479a4b7f49d46afc9893122fc345430c6307d1fb7ac0d8d066c3f54"
 dependencies = [
  "byteorder",
- "keyring-core",
+ "keyring-core 0.7.4",
  "regex",
  "windows-sys 0.61.2",
  "zeroize",
