@@ -58,7 +58,7 @@ impl Exe {
             .and_then(|table| table.swap_remove("CompanyName"))
             .map(str::to_owned);
 
-        match AdvancedInstaller::new(&mut reader, &pe) {
+        match AdvancedInstaller::new(&mut reader) {
             Ok(advanced) => {
                 return Ok(Self {
                     r#type: ExeType::AdvancedInstaller(advanced),
