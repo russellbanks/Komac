@@ -111,7 +111,7 @@ dbus-secret-service-keyring-store = { version = "0.3.3", features = ["vendored"]
 apple-native-keyring-store = { version = "0.2.3", features = ["keychain"] }
 
 [target.'cfg(windows)'.dependencies]
-windows-native-keyring-store = "0.5.1"
+windows-native-keyring-store = "1.0.0"
 
 [features]
 default = ["openssl"]
