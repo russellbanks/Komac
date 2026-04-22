@@ -1,24 +1,30 @@
+mod file_entry;
+mod footer;
+mod named_file_entry;
+
 use std::{
     collections::BTreeSet,
     io::{self, Cursor, Read, Seek, SeekFrom},
 };
 
 use encoding_rs::UTF_16LE;
+use file_entry::FileEntry;
+use footer::Footer;
+use named_file_entry::NamedFileEntry;
 use sevenz_rust2::{ArchiveReader, Password};
 use thiserror::Error;
-use tracing::debug;
+use tracing::{debug, warn};
 use winget_types::installer::{
     AppsAndFeaturesEntry, ExpectedReturnCodes, Installer, InstallerReturnCode, InstallerSwitches,
     InstallerType, ReturnResponse,
 };
-use zerocopy::little_endian::I32 as LE_I32;
+use zerocopy::IntoBytes;
 
+use super::msi::Msi;
 use crate::{
     analysis::{Installers, installers::pe::PE},
     read::ReadBytesExt,
 };
-
-use super::msi::Msi;
 
 #[derive(Error, Debug)]
 pub enum AdvancedInstallerError {
@@ -35,67 +41,60 @@ pub struct AdvancedInstaller {
 impl AdvancedInstaller {
     pub fn new<R: Read + Seek>(mut reader: R, pe: &PE) -> Result<Self, AdvancedInstallerError> {
         let end_offset = pe
-            .optional_header
-            .data_directories
             .certificate_table()
             .filter(|dir| dir.virtual_address() != 0)
-            .map(|dir| dir.virtual_address() as u64)
+            .map(|dir| dir.virtual_address().into())
             .or_else(|| pe.overlay_offset())
-            .unwrap_or_else(|| reader.seek(SeekFrom::End(0)).unwrap_or(0));
+            .unwrap_or_else(|| reader.seek(SeekFrom::End(0)).unwrap_or_default());
 
-        // 11-byte magic before EOF or cert table, padded with trailing nulls to 8-byte boundary
+        // 11-byte magic before EOF or cert table, padded to a to 4-byte boundary
         let search_start = end_offset.saturating_sub(18);
         reader.seek(SeekFrom::Start(search_start))?;
-        let mut buf = vec![0u8; (end_offset - search_start) as usize];
+
+        let mut buf = vec![0; (end_offset - search_start) as usize];
         reader.read_exact(&mut buf)?;
-        let magic_pos = buf
-            .windows(11)
-            .rposition(|w| w == b"ADVINSTSFX\0")
+
+        let signature_pos = buf
+            .array_windows()
+            .rposition(|window| window == Footer::SIGNATURE)
             .ok_or(AdvancedInstallerError::NotAdvancedInstallerFile)?;
 
-        let footer_offset = search_start + magic_pos as u64 - 60;
-        reader.seek(SeekFrom::Start(footer_offset + 4))?;
-        let num_files = reader.read_t::<LE_I32>()?.get() as usize;
-        reader.seek(SeekFrom::Current(8))?;
-        let files_offset = reader.read_t::<LE_I32>()?.get();
+        let footer_offset = search_start + signature_pos as u64 - Footer::SIGNATURE_OFFSET as u64;
+        reader.seek(SeekFrom::Start(footer_offset))?;
+        let footer = reader.read_t::<Footer>()?;
 
-        reader.seek(SeekFrom::Start(files_offset as u64))?;
-        let mut files = Vec::with_capacity(num_files);
-        for _ in 0..num_files {
-            reader.seek(SeekFrom::Current(8))?;
-            let encoding_flag = reader.read_t::<LE_I32>()?.get() as u32;
-            let size = reader.read_t::<LE_I32>()?.get() as u32;
-            let offset = reader.read_t::<LE_I32>()?.get() as u32;
-            let name_chars = reader.read_t::<LE_I32>()?.get() as usize;
-            let mut name_bytes = vec![0u8; name_chars * 2];
-            reader.read_exact(&mut name_bytes)?;
-            let name = UTF_16LE.decode(&name_bytes).0.trim_matches('\0').to_owned();
-            debug!(file = ?name);
-            files.push(File {
-                name,
-                size,
-                offset,
-                encoding_flag,
-            });
+        debug!(?footer);
+
+        reader.seek(SeekFrom::Start(footer.table_pointer().into()))?;
+
+        let mut files = Vec::with_capacity(footer.num_files() as usize);
+        for _ in 0..footer.num_files() {
+            let file_entry = reader.read_t::<FileEntry>()?;
+
+            let mut name_bytes = vec![0_u16; file_entry.name_size() as usize];
+            reader.read_exact(name_bytes.as_mut_bytes())?;
+            let name = UTF_16LE.decode(name_bytes.as_bytes()).0;
+
+            let named_file_entry = NamedFileEntry::new(file_entry, name);
+            debug!(?named_file_entry);
+            files.push(named_file_entry);
         }
 
         // TODO are there cases where we should parse this ini?
         if let Some(ini_file) = files
             .iter()
-            .rev()
-            .find(|f| f.name.to_ascii_lowercase().ends_with(".ini"))
-            && let Ok(ini_data) = ini_file.read(&mut reader)
+            .rfind(|entry| entry.name().to_ascii_lowercase().ends_with(".ini"))
+            && let Ok(ini_data) = ini_file.read_file(&mut reader)
         {
             debug!(ini = %UTF_16LE.decode(&ini_data).0);
         }
 
         let installers = files
             .iter()
-            .rev()
-            .find(|f| f.name.to_ascii_lowercase().ends_with(".7z"))
-            .and_then(|archive| archive.read(&mut reader).ok())
+            .rfind(|entry| entry.name().to_ascii_lowercase().ends_with(".7z"))
+            .and_then(|archive| archive.read_file(&mut reader).ok())
             .and_then(|seven_z_data| {
-                let mut msis = Vec::new();
+                let mut msi_files = Vec::new();
                 ArchiveReader::new(Cursor::new(&seven_z_data), Password::empty())
                     .ok()?
                     .for_each_entries(|entry, reader| {
@@ -104,26 +103,27 @@ impl AdvancedInstaller {
                         if reader.read_to_end(&mut buf).is_ok()
                             && let Ok(msi) = Msi::new(Cursor::new(buf))
                         {
-                            msis.push(msi);
+                            msi_files.push(msi);
                         }
                         Ok(true)
                     })
                     .ok()?;
-                (!msis.is_empty()).then_some(msis)
+                (!msi_files.is_empty()).then_some(msi_files)
             })
             .unwrap_or_else(|| {
                 files
                     .iter()
-                    .filter(|f| f.name.to_ascii_lowercase().ends_with(".msi"))
-                    .filter_map(|msi_file| msi_file.read(&mut reader).ok())
+                    .filter(|f| f.name().to_ascii_lowercase().ends_with(".msi"))
+                    .filter_map(|msi_file| msi_file.read_file(&mut reader).ok())
                     .filter_map(|msi_data| Msi::new(Cursor::new(msi_data)).ok())
                     .collect()
             });
 
         if installers.is_empty() {
-            tracing::warn!(
+            warn!(
                 "Detected Advanced Installer with no MSI files. Please open an issue: https://github.com/russellbanks/Komac/issues/new?template=bug.yml"
             );
+
             return Err(AdvancedInstallerError::NotAdvancedInstallerFile);
         }
 
@@ -143,16 +143,18 @@ impl Installers for AdvancedInstaller {
                 installer.switches = InstallerSwitches::builder()
                     .silent("/exenoui /quiet".parse().unwrap())
                     .silent_with_progress("/exenoui /passive".parse().unwrap())
-                    .install_location("APPDIR=\"<INSTALLPATH>\"".parse().unwrap())
-                    .log("/log \"<LOGPATH>\"".parse().unwrap())
+                    .install_location(r#"APPDIR="<INSTALLPATH>""#.parse().unwrap())
+                    .log(r#"/log "<LOGPATH>""#.parse().unwrap())
                     .custom(
                         installer
                             .switches
                             .custom()
-                            .map(|s| format!("/norestart {}", s))
-                            .unwrap_or_else(|| "/norestart".to_string())
-                            .parse()
-                            .unwrap(),
+                            .cloned()
+                            .map(|mut custom| {
+                                custom.push("/norestart");
+                                custom
+                            })
+                            .unwrap_or_else(|| "/norestart".parse().unwrap()),
                     )
                     .build();
 
@@ -189,6 +191,7 @@ impl Installers for AdvancedInstaller {
 
 fn expected_return_codes() -> BTreeSet<ExpectedReturnCodes> {
     use ReturnResponse::*;
+
     [
         (-1, CancelledByUser),
         (1, InvalidParameter),
@@ -218,23 +221,4 @@ fn expected_return_codes() -> BTreeSet<ExpectedReturnCodes> {
         return_response_url: None,
     })
     .collect()
-}
-
-struct File {
-    name: String,
-    size: u32,
-    offset: u32,
-    encoding_flag: u32,
-}
-
-impl File {
-    fn read<R: Read + Seek>(&self, reader: &mut R) -> std::io::Result<Vec<u8>> {
-        reader.seek(SeekFrom::Start(self.offset.into()))?;
-        let mut data = vec![0u8; self.size as usize];
-        reader.read_exact(&mut data)?;
-        if self.encoding_flag == 2 {
-            data.iter_mut().take(0x200).for_each(|b| *b ^= 0xFF);
-        }
-        Ok(data)
-    }
 }

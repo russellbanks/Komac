@@ -116,6 +116,11 @@ impl PE {
         self.optional_header.data_directories.resource_table()
     }
 
+    #[inline]
+    pub fn certificate_table(&self) -> Option<&DataDirectory> {
+        self.optional_header.data_directories.certificate_table()
+    }
+
     pub fn find_resource_by_name<R>(&self, mut reader: R, name: &str) -> io::Result<Take<R>>
     where
         R: Read + Seek,
