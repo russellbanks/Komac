@@ -104,14 +104,14 @@ winget-types = { version = "0.4.3", features = ["serde", "std", "chrono"] }
 zerocopy = { version = "0.8.48", features = ["derive", "std"] }
 zip = { version = "8.5.1", default-features = false, features = ["deflate"] }
 
-[target.'cfg(target_os = "linux")'.dependencies]
-dbus-secret-service-keyring-store = { version = "0.3.3", features = ["vendored"] }
+[target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd"))'.dependencies]
+dbus-secret-service-keyring-store = { version = "1.0.0", features = ["vendored"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-apple-native-keyring-store = { version = "0.2.3", features = ["keychain"] }
+apple-native-keyring-store = { version = "1.0.0", features = ["keychain"] }
 
-[target.'cfg(windows)'.dependencies]
-windows-native-keyring-store = "0.5.1"
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-native-keyring-store = "1.0.0"
 
 [features]
 default = ["openssl"]
