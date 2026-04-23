@@ -146,7 +146,9 @@ impl TokenManager {
         if !DEFAULT_STORE_SET.load(Ordering::Relaxed) {
             keyring_core::set_default_store(cfg_select! {
                 target_os = "windows" => windows_native_keyring_store::Store::new()?,
-                target_os = "linux" => dbus_secret_service_keyring_store::Store::new()?,
+                any(target_os = "linux", target_os = "freebsd", target_os = "openbsd") => {
+                    dbus_secret_service_keyring_store::Store::new()?
+                },
                 target_os = "macos" => apple_native_keyring_store::keychain::Store::new()?,
             });
 
