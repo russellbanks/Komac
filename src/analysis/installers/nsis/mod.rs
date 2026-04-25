@@ -114,6 +114,8 @@ impl Nsis {
         let (blocks, rest) =
             BlockHeaders::read_dynamic_from_prefix(rest, architecture.is_64_bit())?;
 
+        debug!(?blocks);
+
         let (header, _) = Header::ref_from_prefix(rest)
             .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
 

@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
 use tracing::{debug, debug_span};
-use zerocopy::{FromBytes, I32, LE, TryFromBytes, U16};
+use zerocopy::{FromBytes, I32, LE, U16};
 
 use super::{
     Variables,
@@ -12,10 +12,7 @@ use super::{
 use crate::analysis::installers::nsis::{
     NsisError,
     file_system::FileSystem,
-    header::{
-        Header,
-        block::{BlockHeaders, BlockType},
-    },
+    header::{Header, block::BlockHeaders},
     language::table::LanguageTable,
     registry::Registry,
     strings::{code::NsCode, shell::Shell, var::NsVar},
@@ -45,10 +42,9 @@ impl<'data> NsisState<'data> {
         manifest: Option<&str>,
     ) -> Result<Self, NsisError> {
         let mut state = Self {
-            str_block: BlockType::Strings.get(data, blocks),
-            entries: <[Entry]>::try_ref_from_bytes(BlockType::Entries.get(data, blocks))
-                .map_err(|error| NsisError::ZeroCopy(error.to_string()))?,
-            language_table: LanguageTable::primary_language(data, header, blocks)?,
+            str_block: blocks.strings_block(data),
+            entries: blocks.entries(data)?,
+            language_table: LanguageTable::primary_language(data, blocks)?,
             stack: Vec::new(),
             variables: Variables::new(),
             registry: Registry::new(),

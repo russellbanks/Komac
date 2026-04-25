@@ -112,7 +112,6 @@ impl Registry {
 
     /// Removes the first occurrence of a value with the specified name across all registry roots
     /// and keys.
-    #[expect(unused)]
     pub fn remove_value_by_name<N>(&mut self, name: &N) -> Option<Value>
     where
         ValueName: Borrow<N>,
@@ -126,7 +125,6 @@ impl Registry {
 }
 
 /// <https://github.com/NSIS-Dev/nsis/blob/HEAD/Source/Platform.h#L672>
-#[expect(dead_code)]
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum RegType {
@@ -140,7 +138,6 @@ pub enum RegType {
 }
 
 impl RegType {
-    #[expect(unused)]
     #[inline]
     pub const fn is_none(self) -> bool {
         matches!(self, Self::None)
@@ -151,7 +148,6 @@ impl RegType {
         matches!(self, Self::String)
     }
 
-    #[expect(unused)]
     #[inline]
     pub const fn is_expanded_string(self) -> bool {
         matches!(self, Self::ExpandedString)
@@ -167,7 +163,6 @@ impl RegType {
         matches!(self, Self::DWord)
     }
 
-    #[expect(unused)]
     #[inline]
     pub const fn is_multi_string(self) -> bool {
         matches!(self, Self::MultiString)

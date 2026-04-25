@@ -1,6 +1,5 @@
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
-#[expect(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum PushPop {

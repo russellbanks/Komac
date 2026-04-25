@@ -236,9 +236,17 @@ impl Header {
         self.install_registry_root_key.get()
     }
 
-    #[inline]
-    pub const fn language_table_size(&self) -> i32 {
-        self.language_table_size.get()
+    /// Returns the language table's size, or `None` if the size was negative.
+    ///
+    /// In NSIS v2, if a language table was not set, the default one is generated, but its defined
+    /// length will be -1. In this case, this function returns `None`. The caller should fall back
+    /// to the actual length of the language table data block.
+    pub fn language_table_size(&self) -> Option<usize> {
+        if self.language_table_size == I32::ZERO {
+            None
+        } else {
+            usize::try_from(self.language_table_size.get()).ok()
+        }
     }
 
     #[inline]
@@ -285,7 +293,7 @@ impl fmt::Debug for Header {
             .field("bg_textcolor1", &self.background_text_color.get())
             .field("lb_bg", &self.log_window_background_color.get())
             .field("lb_fg", &self.log_window_foreground_color.get())
-            .field("langtable_size", &self.language_table_size())
+            .field("langtable_size", &self.language_table_size.get())
             .field("license_bg", &self.license_background_color.get())
             .field("code_onInit", &self.code_on_init())
             .field("code_onInstSuccess", &self.code_on_inst_success())
@@ -302,9 +310,9 @@ impl fmt::Debug for Header {
                 &self.code_on_verify_install_dir.get(),
             )
             .field("code_onSelChange", &self.code_on_sel_change.get())
-            .field("code_onRebootFailed", &self.code_on_reboot_failed)
-            .field("install_types", &self.install_types)
-            .field("install_directory_ptr", &self.install_directory())
+            .field("code_onRebootFailed", &self.code_on_reboot_failed.get())
+            .field("install_types", &self.install_types.map(I32::get))
+            .field("install_directory_ptr", &self.install_directory_ptr.get())
             .field(
                 "install_directory_auto_append",
                 &self.install_directory_auto_append.get(),

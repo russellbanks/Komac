@@ -47,7 +47,6 @@ pub enum EntryError {
 }
 
 /// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/fileform.h#L50>
-#[expect(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
 #[repr(u32)]
 pub enum Entry {
@@ -1459,14 +1458,12 @@ impl Entry {
     }
 
     /// Returns `true` if this entry is a return.
-    #[expect(unused)]
     #[inline]
     pub const fn is_return(&self) -> bool {
         matches!(self, Self::Return)
     }
 
     /// Returns `true` if this is a quit entry.
-    #[expect(unused)]
     #[inline]
     pub const fn is_quit(&self) -> bool {
         matches!(self, Self::Quit)

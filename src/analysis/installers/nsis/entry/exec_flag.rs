@@ -7,7 +7,6 @@ use strum::EnumCount;
 use zerocopy::{FromBytes, FromZeros, I32, Immutable, KnownLayout, LE, TryFromBytes};
 
 /// <https://github.com/NSIS-Dev/nsis/blob/v311/Contrib/ExDLL/nsis.pas#L82>
-#[expect(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable, EnumCount)]
 #[repr(u32)]
 pub enum ExecFlag {

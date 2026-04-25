@@ -2,7 +2,6 @@ use std::{fmt, fmt::Formatter};
 
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
 
-#[expect(dead_code)]
 #[derive(
     Copy, Clone, Debug, Default, Hash, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable,
 )]

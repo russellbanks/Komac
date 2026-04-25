@@ -24,13 +24,10 @@ const EN_US_LANG_CODE: U16<LE> = U16::new(1033);
 impl LanguageTable {
     pub fn primary_language<'data>(
         data: &'data [u8],
-        header: &Header,
         blocks: &BlockHeaders,
     ) -> Result<&'data Self> {
-        BlockType::LangTables
-            .get(data, blocks)
-            .chunks_exact(header.language_table_size().unsigned_abs() as usize)
-            .flat_map(Self::ref_from_bytes)
+        blocks
+            .language_tables(data)
             .find_or_first(|lang_table| lang_table.id == EN_US_LANG_CODE)
             .ok_or_else(|| Error::new(ErrorKind::NotFound, "No NSIS language table found"))
     }
