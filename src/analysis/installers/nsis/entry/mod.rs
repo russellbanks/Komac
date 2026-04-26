@@ -12,7 +12,6 @@ mod window_message;
 use std::{
     borrow::Cow,
     cmp::{Ordering, max},
-    ops::Not,
 };
 
 use chrono::DateTime;
@@ -819,32 +818,37 @@ impl Entry {
                     "+", "-", "*", "/", "|", "&", "^", "!", "||", "&&", "%", "<<", ">>",
                 ];
 
+                // <https://github.com/NSIS-Dev/nsis/blob/v312/Source/exehead/exec.c#L740>
+
                 let input1 = state.get_int(input1.get());
                 let input2 = state.get_int(input2.get());
 
-                debug!(
-                    "IntOp: {input1} {} {input2}",
-                    SIGNS.get(operation.get() as usize).map_or("@", |sign| sign),
-                );
-
-                #[expect(clippy::cast_sign_loss)]
                 let result = match operation.get() {
-                    0 => input1 + input2,
-                    1 => input1 - input2,
-                    2 => input1 * input2,
-                    3 => input1 / input2,
+                    0 => input1.wrapping_add(input2),
+                    1 => input1.wrapping_sub(input2),
+                    2 => input1.wrapping_mul(input2),
+                    3 => input1.checked_div(input2).unwrap_or_default(),
                     4 => input1 | input2,
                     5 => input1 & input2,
                     6 => input1 ^ input2,
-                    7 => input1.not(),
+                    7 => !input1,
                     8 => i32::from(input1 != 0 || input2 != 0),
                     9 => i32::from(input1 != 0 && input2 != 0),
-                    10 => input1 % input2,
-                    11 => input1 << input2 as u32,
-                    12 => input1 >> input2 as u32,
-                    13 => ((input1 as u32) >> (input2 as u32)) as i32,
+                    10 => input1.checked_rem(input2).unwrap_or_default(),
+                    11 => input1.wrapping_shl(input2.cast_unsigned()),
+                    12 => input1.wrapping_shr(input2.cast_unsigned()),
+                    13 => input1
+                        .cast_unsigned()
+                        .wrapping_shr(input2.cast_unsigned())
+                        .cast_signed(),
                     _ => input1,
                 };
+
+                debug!(
+                    "IntOp: {input1} {sign} {input2} = {result}",
+                    sign = SIGNS.get(operation.get() as usize).unwrap_or(&"@"),
+                );
+
                 state.variables.insert(
                     output.get().unsigned_abs() as usize,
                     Cow::Owned(result.to_string()),

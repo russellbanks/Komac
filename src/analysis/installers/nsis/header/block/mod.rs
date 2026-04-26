@@ -155,7 +155,7 @@ impl fmt::Debug for BlockHeaders {
 
         impl fmt::Debug for NamedBlockHeader {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_struct(&self.r#type.as_str())
+                f.debug_struct(self.r#type.as_str())
                     .field("offset", &self.block_header.offset())
                     .field("num", &self.block_header.num())
                     .finish()
