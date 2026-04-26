@@ -1,9 +1,11 @@
 use std::{
+    borrow::Cow,
     io,
     io::{BufReader, Read, Seek},
 };
 
 use color_eyre::Result;
+use percent_encoding::percent_decode_str;
 use quick_xml::de::from_str;
 use serde::Deserialize;
 use winget_types::{
@@ -48,7 +50,17 @@ impl MsixBundle {
                 .iter()
                 .filter(|package| package.is_application())
                 .map(|package| {
-                    let mut embedded_msix = zip.by_name(package.file_name())?;
+                    // Find file by package file name, comparing by decoded file names
+                    let file_name = zip
+                        .file_names()
+                        .find(|file_name| {
+                            percent_decode_str(file_name)
+                                .eq(percent_decode_str(package.file_name()))
+                        })
+                        .map(|file_name| Cow::Owned(file_name.to_owned()))
+                        .unwrap_or(Cow::Borrowed(package.file_name()));
+
+                    let mut embedded_msix = zip.by_name(&file_name)?;
                     let mut temp_file = tempfile::tempfile()?;
                     io::copy(&mut embedded_msix, &mut temp_file)?;
                     Msix::new(BufReader::new(temp_file))

@@ -2103,6 +2103,7 @@ dependencies = [
  "open",
  "ordinal",
  "owo-colors",
+ "percent-encoding",
  "quick-xml",
  "rand 0.10.1",
  "ratatui",
