@@ -103,7 +103,7 @@ uuid = { version = "1.23.1", features = ["v4"] }
 walkdir = "2.5.0"
 winget-types = { version = "0.4.3", features = ["serde", "std", "chrono"] }
 zerocopy = { version = "0.8.48", features = ["derive", "std"] }
-zip = { version = "8.5.1", default-features = false, features = ["deflate"] }
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd"))'.dependencies]
 dbus-secret-service-keyring-store = { version = "1.0.0", features = ["vendored"] }
