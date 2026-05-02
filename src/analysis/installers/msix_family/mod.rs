@@ -31,7 +31,6 @@ pub struct Msix {
 }
 
 const APPX_MANIFEST_XML: &str = "AppxManifest.xml";
-pub const APPX_SIGNATURE_P7X: &str = "AppxSignature.p7x";
 
 const MSIX_MIN_VERSION: MinimumOSVersion = MinimumOSVersion::new(10, 0, 17763, 0);
 

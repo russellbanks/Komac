@@ -1,3 +1,5 @@
+mod manifest;
+
 use std::{
     borrow::Cow,
     io,
@@ -5,9 +7,9 @@ use std::{
 };
 
 use color_eyre::Result;
+use manifest::{Bundle, Identity, Package};
 use percent_encoding::percent_decode_str;
-use quick_xml::de::from_str;
-use serde::Deserialize;
+use quick_xml::{Reader, events::Event};
 use winget_types::{
     Sha256String,
     installer::{Installer, PackageFamilyName},
@@ -36,19 +38,37 @@ impl MsixBundle {
 
         let signature_sha_256 = hash_signature(&mut zip)?;
 
-        let bundle_manifest = from_str::<Bundle>(&appx_bundle_manifest)?;
+        let mut bundle = Bundle::default();
+
+        let mut reader = Reader::from_str(&appx_bundle_manifest);
+        let config = reader.config_mut();
+        config.expand_empty_elements = true;
+        config.trim_text(true);
+
+        loop {
+            match reader.read_event()? {
+                Event::Start(event) => match event.local_name().as_ref() {
+                    b"Identity" => bundle.identity = Identity::from_event(event, &mut reader)?,
+                    b"Package" => bundle
+                        .packages
+                        .push(Package::from_event(event, &mut reader)?),
+                    _ => {}
+                },
+                Event::Eof => break,
+                _ => {}
+            }
+        }
 
         let package_family_name = PackageFamilyName::new(
-            bundle_manifest.identity.name.clone(),
-            &bundle_manifest.identity.publisher,
+            bundle.identity.name().to_owned(),
+            bundle.identity.publisher(),
         );
 
         Ok(Self {
-            msix_files: bundle_manifest
+            msix_files: bundle
                 .packages
-                .package
                 .iter()
-                .filter(|package| package.is_application())
+                .filter(|package| package.is_application() && !package.is_stub())
                 .map(|package| {
                     // Find file by package file name, comparing by decoded file names
                     let file_name = zip
@@ -82,77 +102,5 @@ impl Installers for MsixBundle {
                 ..msix.installers().swap_remove(0)
             })
             .collect::<Vec<_>>()
-    }
-}
-
-/// <https://learn.microsoft.com/uwp/schemas/bundlemanifestschema/element-bundle>
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct Bundle {
-    identity: Identity,
-    packages: Packages,
-}
-
-/// <https://learn.microsoft.com/uwp/schemas/bundlemanifestschema/element-identity>
-#[derive(Deserialize)]
-struct Identity {
-    #[serde(rename = "@Name")]
-    name: String,
-    #[serde(rename = "@Publisher")]
-    publisher: String,
-}
-
-/// <https://learn.microsoft.com/uwp/schemas/bundlemanifestschema/element-packages>
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct Packages {
-    package: Vec<Package>,
-}
-
-/// <https://learn.microsoft.com/uwp/schemas/bundlemanifestschema/element-package>
-#[derive(Deserialize)]
-struct Package {
-    #[serde(default, rename = "@Type")]
-    r#type: PackageType,
-    #[serde(rename = "@FileName")]
-    file_name: String,
-}
-
-impl Package {
-    #[inline]
-    pub const fn is_application(&self) -> bool {
-        self.r#type.is_application()
-    }
-
-    #[expect(unused)]
-    #[inline]
-    pub const fn is_resource(&self) -> bool {
-        self.r#type.is_resource()
-    }
-
-    #[inline]
-    pub const fn file_name(&self) -> &str {
-        self.file_name.as_str()
-    }
-}
-
-/// <https://learn.microsoft.com/en-gb/uwp/schemas/bundlemanifestschema/element-package#attributes>
-#[derive(Default, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-enum PackageType {
-    Application,
-    #[default]
-    Resource,
-}
-
-impl PackageType {
-    #[inline]
-    pub const fn is_application(&self) -> bool {
-        matches!(self, Self::Application)
-    }
-
-    #[inline]
-    pub const fn is_resource(&self) -> bool {
-        matches!(self, Self::Resource)
     }
 }

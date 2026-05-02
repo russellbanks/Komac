@@ -8,9 +8,7 @@ use color_eyre::eyre::Result;
 use winget_types::{Sha256String, package_family_name::PublisherId};
 use zip::ZipArchive;
 
-use crate::analysis::installers::{
-    msix_family::APPX_SIGNATURE_P7X, utils::RELATIVE_PROGRAM_FILES_64,
-};
+use crate::analysis::installers::utils::RELATIVE_PROGRAM_FILES_64;
 
 pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Result<String> {
     let mut appx_manifest_file = zip.by_name(path)?;
@@ -20,6 +18,8 @@ pub fn read_manifest<R: Read + Seek>(zip: &mut ZipArchive<R>, path: &str) -> Res
 }
 
 pub fn hash_signature<R: Read + Seek>(zip: &mut ZipArchive<R>) -> io::Result<Sha256String> {
+    const APPX_SIGNATURE_P7X: &str = "AppxSignature.p7x";
+
     let signature_file = zip.by_name(APPX_SIGNATURE_P7X)?;
     Sha256String::hash_from_reader(signature_file)
 }
