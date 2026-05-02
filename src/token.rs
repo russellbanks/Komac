@@ -63,7 +63,7 @@ impl TokenManager {
 
         let token = if let Some(token) = token {
             Some(token)
-        } else if let Some(credential) = credential.as_ref() {
+        } else if let Some(ref credential) = credential {
             match credential.get_password() {
                 Ok(token) => Some(SecretString::new(token.into_boxed_str())),
                 Err(keyring_core::Error::NoEntry) if *CI => return Err(TokenError::NoTokenInCI),
