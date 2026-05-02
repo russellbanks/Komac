@@ -53,19 +53,25 @@ impl TokenManager {
             .default_headers(default_headers(None))
             .build()?;
 
-        let credential = Self::credential()?;
-
         let token_passed = token.is_some();
+
+        let credential = if token_passed {
+            None
+        } else {
+            Some(Self::credential()?)
+        };
 
         let token = if let Some(token) = token {
             Some(token)
-        } else {
+        } else if let Some(ref credential) = credential {
             match credential.get_password() {
                 Ok(token) => Some(SecretString::new(token.into_boxed_str())),
                 Err(keyring_core::Error::NoEntry) if *CI => return Err(TokenError::NoTokenInCI),
                 Err(keyring_core::Error::NoEntry) => None, // No stored token, must prompt
                 Err(error) => return Err(TokenError::Keyring(error)),
             }
+        } else {
+            None
         };
 
         if let Some(token) = token {
@@ -81,9 +87,10 @@ impl TokenManager {
 
         let validated_token = Self::prompt().client(&client).call()?;
 
-        if credential
-            .set_password(validated_token.expose_secret())
-            .is_ok()
+        if let Some(credential) = credential
+            && credential
+                .set_password(validated_token.expose_secret())
+                .is_ok()
         {
             println!("Successfully stored token in platform's secure storage");
         }
