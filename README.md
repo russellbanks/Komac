@@ -19,6 +19,14 @@
 [![Crates.io Total Downloads](https://img.shields.io/crates/d/komac?label=Downloads%20from%20crates.io)](https://crates.io/crates/komac)
 [![MSRV](https://img.shields.io/crates/msrv/komac?label=MSRV)](https://github.com/russellbanks/Komac/blob/main/Cargo.toml)
 
+<a href="https://notbyai.fyi">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/Developed-By-Humans-Not-By-AI-Badge-black.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="assets/readme/Developed-By-Humans-Not-By-AI-Badge-white.svg" />
+    <img alt="Star History Chart" src="assets/readme/Developed-By-Humans-Not-By-AI-Badge-white.svg" />
+  </picture>
+</a>
+
 </div>
 
 <p align="center">
