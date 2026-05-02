@@ -77,7 +77,8 @@ impl Squirrel {
         } else {
             // Velopack (Squirrel fork)
             let header_offset = pe.overlay_offset().ok_or(SquirrelError::NotSquirrelFile)?;
-            let section_reader = SectionReader::from_offset(reader, header_offset)?;
+            let section_reader = SectionReader::from_offset(reader, header_offset)
+                .map_err(|_| SquirrelError::NotSquirrelFile)?;
             is_velopack = true;
 
             ZipArchive::new(NupkgReader::Section(section_reader))
