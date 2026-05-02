@@ -7,19 +7,22 @@ use tracing::{Level, metadata::LevelFilter};
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::commands::{
-    analyze::Analyze,
-    cleanup::Cleanup,
-    complete::Complete,
-    list_versions::ListVersions,
-    new_version::NewVersion,
-    remove_dead_versions::RemoveDeadVersions,
-    remove_version::RemoveVersion,
-    show_version::ShowVersion,
-    submit::Submit,
-    sync_fork::SyncFork,
-    token::commands::{TokenArgs, TokenCommands},
-    update_version::UpdateVersion,
+use crate::{
+    commands::{
+        analyze::Analyze,
+        cleanup::Cleanup,
+        complete::Complete,
+        list_versions::ListVersions,
+        new_version::NewVersion,
+        remove_dead_versions::RemoveDeadVersions,
+        remove_version::RemoveVersion,
+        show_version::ShowVersion,
+        submit::Submit,
+        sync_fork::SyncFork,
+        token::commands::{TokenArgs, TokenCommands},
+        update_version::UpdateVersion,
+    },
+    token::TokenManager,
 };
 
 mod analysis;
@@ -61,7 +64,11 @@ async fn main() -> Result<()> {
         Commands::Analyze(analyse) => analyse.run(),
         Commands::RemoveDeadVersions(remove_dead_versions) => remove_dead_versions.run().await,
         Commands::Submit(submit) => submit.run().await,
-    }
+    }?;
+
+    TokenManager::unset_default_store();
+
+    Ok(())
 }
 
 fn setup_logging() {

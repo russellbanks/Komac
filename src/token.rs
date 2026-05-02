@@ -158,6 +158,12 @@ impl TokenManager {
         Entry::new(SERVICE, USERNAME)
     }
 
+    pub fn unset_default_store() {
+        if DEFAULT_STORE_SET.load(Ordering::Relaxed) {
+            keyring_core::unset_default_store();
+        }
+    }
+
     #[inline]
     pub fn into_token(self) -> SecretString {
         self.token
