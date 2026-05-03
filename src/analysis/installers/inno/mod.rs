@@ -27,11 +27,13 @@ const CODE: &str = "{code:";
 
 impl Installers for Inno {
     fn installers(&self) -> Vec<Installer> {
+        let scope = self.header.privileges_required().to_scope();
+
         let install_dir = self
             .header
             .default_dir_name()
             .map(str::to_owned)
-            .map(to_relative_install_dir)
+            .map(|install_dir| to_relative_install_dir(install_dir, scope))
             .filter(|dir| !dir.contains(['{', '}']));
 
         let product_code = self
@@ -64,9 +66,7 @@ impl Installers for Inno {
             }),
             architecture: WingetArchitecture::from_inno(self.header.architectures_allowed()),
             r#type: Some(InstallerType::Inno),
-            scope: install_dir
-                .as_deref()
-                .and_then(Scope::from_install_directory),
+            scope: Some(scope),
             url: DecodedUrl::default(),
             sha_256: Sha256String::default(),
             unsupported_os_architectures: UnsupportedOSArchitecture::from_inno(
@@ -105,25 +105,45 @@ impl Installers for Inno {
         {
             vec![installer]
         } else {
-            installer.scope = Some(Scope::Machine);
             let has_scope_switch = self
                 .header
                 .privileges_required_overrides_allowed()
                 .contains(PrivilegesRequiredOverrides::COMMAND_LINE);
-            if has_scope_switch {
-                installer.switches = InstallerSwitches::builder()
-                    .custom(CustomSwitch::all_users())
-                    .build();
-            }
-            let user_installer = Installer {
-                scope: Some(Scope::User),
+
+            let override_scope = match scope {
+                Scope::Machine => Scope::User,
+                Scope::User => Scope::Machine,
+            };
+
+            let (override_switch, default_switch) = match override_scope {
+                Scope::Machine => (CustomSwitch::all_users(), CustomSwitch::current_user()),
+                Scope::User => (CustomSwitch::current_user(), CustomSwitch::all_users()),
+            };
+
+            installer.switches = InstallerSwitches::builder()
+                .maybe_custom(has_scope_switch.then_some(default_switch))
+                .build();
+
+            let override_installer = Installer {
+                scope: Some(override_scope),
                 switches: InstallerSwitches::builder()
-                    .maybe_custom(has_scope_switch.then(CustomSwitch::current_user))
+                    .maybe_custom(has_scope_switch.then_some(override_switch))
                     .build(),
-                installation_metadata: InstallationMetadata::default(),
+                installation_metadata: InstallationMetadata {
+                    default_install_location: self
+                        .header
+                        .default_dir_name()
+                        .map(|install_dir| {
+                            to_relative_install_dir(install_dir.to_owned(), override_scope)
+                        })
+                        .filter(|dir| !dir.contains(['{', '}']))
+                        .map(Utf8PathBuf::from),
+                    ..InstallationMetadata::default()
+                },
                 ..installer.clone()
             };
-            vec![installer, user_installer]
+
+            vec![installer, override_installer]
         }
     }
 }
@@ -133,6 +153,8 @@ trait PrivilegeLevelExt {
         &self,
         overrides: PrivilegesRequiredOverrides,
     ) -> Option<ElevationRequirement>;
+
+    fn to_scope(&self) -> Scope;
 }
 
 impl PrivilegeLevelExt for inno::header::PrivilegeLevel {
@@ -144,6 +166,13 @@ impl PrivilegeLevelExt for inno::header::PrivilegeLevel {
             Self::Admin | Self::PowerUser => Some(ElevationRequirement::ElevatesSelf),
             _ if !overrides.is_empty() => Some(ElevationRequirement::ElevatesSelf),
             _ => None,
+        }
+    }
+
+    fn to_scope(&self) -> Scope {
+        match self {
+            Self::Lowest => Scope::User,
+            _ => Scope::Machine,
         }
     }
 }
@@ -185,7 +214,7 @@ impl FromInnoArch for UnsupportedOSArchitecture {
     }
 }
 
-pub fn to_relative_install_dir(mut install_dir: String) -> String {
+pub fn to_relative_install_dir(mut install_dir: String, scope: Scope) -> String {
     const WINDOWS: &str = "{win}";
     const SYSTEM: &str = "{sys}";
     const SYSTEM_NATIVE: &str = "{sysnative}";
@@ -221,8 +250,39 @@ pub fn to_relative_install_dir(mut install_dir: String) -> String {
     const USER_COMMON_FILES: &str = "{usercf}";
 
     const RELATIVE_USER_PROGRAM_FILES: &str = formatcp!(r"{RELATIVE_LOCAL_APP_DATA}\Programs");
+    const RELATIVE_USER_COMMON_FILES: &str = formatcp!(r"{RELATIVE_USER_PROGRAM_FILES}\Common");
 
-    const DIRECTORIES: [(&str, &str); 28] = [
+    let (
+        auto_program_files,
+        auto_program_files_32,
+        auto_program_files_64,
+        auto_common_files,
+        auto_common_files_32,
+        auto_common_files_64,
+        auto_app_data,
+    ) = if matches!(scope, Scope::User) {
+        (
+            RELATIVE_USER_PROGRAM_FILES,
+            RELATIVE_USER_PROGRAM_FILES,
+            RELATIVE_USER_PROGRAM_FILES,
+            RELATIVE_USER_COMMON_FILES,
+            RELATIVE_USER_COMMON_FILES,
+            RELATIVE_USER_COMMON_FILES,
+            RELATIVE_APP_DATA,
+        )
+    } else {
+        (
+            RELATIVE_PROGRAM_FILES_64,
+            RELATIVE_PROGRAM_FILES_32,
+            RELATIVE_PROGRAM_FILES_64,
+            RELATIVE_COMMON_FILES_64,
+            RELATIVE_COMMON_FILES_32,
+            RELATIVE_COMMON_FILES_64,
+            RELATIVE_PROGRAM_DATA,
+        )
+    };
+
+    let directories: [(&str, &str); 28] = [
         (WINDOWS, RELATIVE_WINDOWS_DIR),
         (SYSTEM, RELATIVE_SYSTEM_ROOT),
         (SYSTEM_NATIVE, RELATIVE_SYSTEM_ROOT),
@@ -239,24 +299,21 @@ pub fn to_relative_install_dir(mut install_dir: String) -> String {
         (COMMON_FILES_OLD, RELATIVE_COMMON_FILES_64),
         (COMMON_FILES_32_OLD, RELATIVE_COMMON_FILES_32),
         (COMMON_FILES_64_OLD, RELATIVE_COMMON_FILES_64),
-        (AUTO_PROGRAM_FILES, RELATIVE_PROGRAM_FILES_64),
-        (AUTO_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_32),
-        (AUTO_PROGRAM_FILES_64, RELATIVE_PROGRAM_FILES_64),
-        (AUTO_COMMON_FILES, RELATIVE_COMMON_FILES_64),
-        (AUTO_COMMON_FILES_32, RELATIVE_COMMON_FILES_32),
-        (AUTO_COMMON_FILES_64, RELATIVE_COMMON_FILES_64),
-        (AUTO_APP_DATA, RELATIVE_APP_DATA),
+        (AUTO_PROGRAM_FILES, auto_program_files),
+        (AUTO_PROGRAM_FILES_32, auto_program_files_32),
+        (AUTO_PROGRAM_FILES_64, auto_program_files_64),
+        (AUTO_COMMON_FILES, auto_common_files),
+        (AUTO_COMMON_FILES_32, auto_common_files_32),
+        (AUTO_COMMON_FILES_64, auto_common_files_64),
+        (AUTO_APP_DATA, auto_app_data),
         (LOCAL_APP_DATA, RELATIVE_LOCAL_APP_DATA),
         (USER_APP_DATA, RELATIVE_APP_DATA),
         (COMMON_APP_DATA, RELATIVE_PROGRAM_DATA),
         (USER_PROGRAM_FILES, RELATIVE_USER_PROGRAM_FILES),
-        (
-            USER_COMMON_FILES,
-            formatcp!(r"{RELATIVE_USER_PROGRAM_FILES}\Common"),
-        ),
+        (USER_COMMON_FILES, RELATIVE_USER_COMMON_FILES),
     ];
 
-    for (inno_directory, relative_directory) in DIRECTORIES {
+    for (inno_directory, relative_directory) in directories {
         if let Some(index) = install_dir.find(inno_directory) {
             install_dir.replace_range(index..index + inno_directory.len(), relative_directory);
             break;
