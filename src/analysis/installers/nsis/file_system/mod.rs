@@ -150,6 +150,7 @@ impl FileSystem {
         if let Some(file) = directory.children(&self.arena).find(|&id| {
             self.arena
                 .get(id)
+                .filter(|node| !node.is_removed())
                 .is_some_and(|node| node.get().name() == file_name)
         }) {
             Some(file)
