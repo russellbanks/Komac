@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anstream::println;
 use clap::Parser;
-use color_eyre::Result;
+use color_eyre::{Result, eyre::Context};
 use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
@@ -26,6 +26,12 @@ pub struct SyncFork {
     /// upstream default branch
     #[arg(short, long)]
     force: bool,
+
+    /// Uses GitHub's `merge-upstream` REST endpoint instead of directly
+    /// updating the branch ref. This matches GitHub's "Sync fork" behavior in
+    /// the web UI. Note that this method doesn't support the `force` flag.
+    #[arg(long, conflicts_with = "force")]
+    use_merge_upstream_api: bool,
 
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN")]
@@ -75,18 +81,32 @@ impl SyncFork {
         ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
-        github
-            .merge_upstream(
-                &fork.default_branch_ref_id,
-                winget_pkgs.default_branch_oid,
-                self.force,
+        let sync_type = if self.use_merge_upstream_api {
+            github
+                .sync_fork(&fork.full_name, &fork.default_branch_name)
+                .await
+                .map(|response| response.merge_type)
+        } else {
+            github
+                .merge_upstream(
+                    &fork.default_branch_ref_id,
+                    winget_pkgs.default_branch_oid,
+                    self.force,
+                )
+                .await
+                .map(|_| String::from("update-ref"))
+        }
+        .with_context(|| {
+            format!(
+                "while merging {new_commits_count} upstream {commit_label} from {} into {}",
+                winget_pkgs.full_name, fork.full_name,
             )
-            .await?;
+        })?;
 
         pb.finish_and_clear();
 
         println!(
-            "{} merged {new_commits_count} upstream {commit_label} from {} into {}",
+            "{} merged {new_commits_count} upstream {commit_label} from {} into {} ({sync_type})",
             "Successfully".green(),
             winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
             fork.full_name.hyperlink(fork.url).blue()
