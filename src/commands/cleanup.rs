@@ -8,11 +8,11 @@ use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use inquire::MultiSelect;
 use owo_colors::OwoColorize;
-use secrecy::SecretString;
 
 use crate::{
-    commands::utils::SPINNER_TICK_RATE, github::client::GitHub, prompts::handle_inquire_error,
-    token::TokenManager,
+    commands::utils::{GitHubTokenArg, SPINNER_TICK_RATE},
+    github::client::GitHub,
+    prompts::handle_inquire_error,
 };
 
 /// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to
@@ -32,15 +32,13 @@ pub struct Cleanup {
     #[arg(short, long, env = "CI")]
     all: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<SecretString>,
+    #[command(flatten)]
+    token: GitHubTokenArg,
 }
 
 impl Cleanup {
     pub async fn run(self) -> Result<()> {
-        let token_manager = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(token_manager)?;
+        let github = GitHub::new(self.token.resolve().await?)?;
 
         let merge_state = MergeState::from((self.only_merged, self.only_closed));
 
