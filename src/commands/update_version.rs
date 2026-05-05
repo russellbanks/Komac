@@ -13,7 +13,6 @@ use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
-use secrecy::SecretString;
 use strsim::levenshtein;
 use tokio::try_join;
 use winget_types::{
@@ -25,7 +24,8 @@ use winget_types::{
 use crate::{
     analysis::installers::Zip,
     commands::utils::{
-        SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
+        GitHubTokenArg, SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request,
+        write_changes_to_dir,
     },
     download::Downloader,
     download_file::process_files,
@@ -37,7 +37,6 @@ use crate::{
     },
     manifests::Url,
     match_installers::match_installers,
-    token::TokenManager,
     traits::{LocaleExt, path::NormalizePath},
 };
 
@@ -101,15 +100,13 @@ pub struct UpdateVersion {
     #[arg(long, env)]
     skip_pr_check: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<SecretString>,
+    #[command(flatten)]
+    token: GitHubTokenArg,
 }
 
 impl UpdateVersion {
-    pub async fn run(mut self) -> Result<()> {
-        let token_manager = TokenManager::handle(self.token.take()).await?;
-        let github = GitHub::new(&token_manager)?;
+    pub async fn run(self) -> Result<()> {
+        let github = GitHub::new(self.token.resolve().await?)?;
 
         let (versions, existing_pr) = try_join!(
             github.get_versions(&self.package_identifier),

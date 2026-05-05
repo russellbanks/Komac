@@ -1,4 +1,5 @@
 pub mod environment;
+mod github_token_arg;
 mod rate_limit;
 mod submit_option;
 
@@ -9,6 +10,7 @@ use camino::Utf8Path;
 use chrono::Local;
 use color_eyre::Result;
 use futures_util::{StreamExt, TryStreamExt, stream};
+pub(super) use github_token_arg::GitHubTokenArg;
 use inquire::error::InquireResult;
 use owo_colors::OwoColorize;
 pub use rate_limit::RateLimit;

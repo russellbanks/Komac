@@ -9,14 +9,13 @@ use inquire::{
     validator::{MaxLengthValidator, MinLengthValidator},
 };
 use owo_colors::OwoColorize;
-use secrecy::SecretString;
 use tokio::try_join;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
+    commands::utils::GitHubTokenArg,
     github::{WINGET_PKGS_FULL_NAME, client::GitHub},
     prompts::{handle_inquire_error, text::confirm_prompt},
-    token::TokenManager,
 };
 
 /// Remove a version from winget-pkgs
@@ -50,9 +49,8 @@ pub struct RemoveVersion {
     #[arg(long, env = "OPEN_PR")]
     open_pr: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<SecretString>,
+    #[command(flatten)]
+    token: GitHubTokenArg,
 }
 
 impl RemoveVersion {
@@ -60,7 +58,7 @@ impl RemoveVersion {
     const MAX_REASON_LENGTH: usize = 1000;
 
     pub async fn run(self) -> Result<()> {
-        let token_manager = TokenManager::handle(self.token).await?;
+        let github = GitHub::new(self.token.resolve().await?)?;
 
         if !self.no_warning {
             println!(
@@ -68,8 +66,6 @@ impl RemoveVersion {
                 "Packages should only be removed when necessary".yellow()
             );
         }
-
-        let github = GitHub::new(&token_manager)?;
 
         let (fork, winget_pkgs, versions) = try_join!(
             github

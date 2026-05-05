@@ -1,9 +1,8 @@
 use clap::Parser;
 use color_eyre::Result;
-use secrecy::SecretString;
 use winget_types::{PackageIdentifier, PackageVersion};
 
-use crate::{github::client::GitHub, manifests::print_changes, token::TokenManager};
+use crate::{commands::utils::GitHubTokenArg, github::client::GitHub, manifests::print_changes};
 
 /// Output the manifests for a given package and version
 #[expect(clippy::struct_excessive_bools)]
@@ -33,15 +32,13 @@ pub struct ShowVersion {
     #[arg(long)]
     version_manifest: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<SecretString>,
+    #[command(flatten)]
+    token: GitHubTokenArg,
 }
 
 impl ShowVersion {
     pub async fn run(self) -> Result<()> {
-        let token_manager = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(&token_manager)?;
+        let github = GitHub::new(self.token.resolve().await?)?;
 
         // Get a list of all versions for the given package
         let mut versions = github.get_versions(&self.package_identifier).await?;

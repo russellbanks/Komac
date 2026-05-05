@@ -1,4 +1,7 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::{
+    borrow::Cow,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use bon::bon;
 use color_eyre::eyre::Result;
@@ -36,13 +39,13 @@ pub enum TokenError {
     Inquire(#[from] InquireError),
 }
 
-pub struct TokenManager {
-    token: SecretString,
-}
+pub struct TokenManager;
 
 #[bon]
 impl TokenManager {
-    pub async fn handle(token: Option<SecretString>) -> Result<Self, TokenError> {
+    pub async fn handle(
+        token: &'_ Option<SecretString>,
+    ) -> Result<Cow<'_, SecretString>, TokenError> {
         // Token rules:
         // - If caller passed `--token`: validate it and fail if invalid.
         // - Otherwise try keyring:
@@ -62,10 +65,10 @@ impl TokenManager {
         };
 
         let token = if let Some(token) = token {
-            Some(token)
+            Some(Cow::Borrowed(token))
         } else if let Some(ref credential) = credential {
             match credential.get_password() {
-                Ok(token) => Some(SecretString::new(token.into_boxed_str())),
+                Ok(token) => Some(Cow::Owned(SecretString::new(token.into_boxed_str()))),
                 Err(keyring_core::Error::NoEntry) if *CI => return Err(TokenError::NoTokenInCI),
                 Err(keyring_core::Error::NoEntry) => None, // No stored token, must prompt
                 Err(error) => return Err(TokenError::Keyring(error)),
@@ -76,7 +79,7 @@ impl TokenManager {
 
         if let Some(token) = token {
             match Self::validate(&client, token.expose_secret()).await {
-                Ok(()) => return Ok(Self { token }),
+                Ok(()) => return Ok(token),
                 Err(TokenError::InvalidToken) if token_passed || *CI => {
                     return Err(TokenError::InvalidToken);
                 }
@@ -95,9 +98,7 @@ impl TokenManager {
             println!("Successfully stored token in platform's secure storage");
         }
 
-        Ok(Self {
-            token: validated_token,
-        })
+        Ok(Cow::Owned(validated_token))
     }
 
     #[builder]
@@ -169,24 +170,6 @@ impl TokenManager {
         if DEFAULT_STORE_SET.load(Ordering::Relaxed) {
             keyring_core::unset_default_store();
         }
-    }
-
-    #[inline]
-    pub fn into_token(self) -> SecretString {
-        self.token
-    }
-}
-
-impl AsRef<SecretString> for TokenManager {
-    fn as_ref(&self) -> &SecretString {
-        &self.token
-    }
-}
-
-impl From<TokenManager> for SecretString {
-    #[inline]
-    fn from(token_manager: TokenManager) -> Self {
-        token_manager.into_token()
     }
 }
 

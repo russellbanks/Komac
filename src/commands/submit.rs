@@ -8,19 +8,17 @@ use indicatif::ProgressBar;
 use inquire::MultiSelect;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
-use secrecy::SecretString;
 use walkdir::WalkDir;
 use winget_types::{GenericManifest, ManifestType};
 
 use crate::{
-    commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption},
+    commands::utils::{GitHubTokenArg, RateLimit, SPINNER_TICK_RATE, SubmitOption},
     github::{
         client::GitHub,
         utils::{PackagePath, pull_request::pr_changes},
     },
     manifests::{Manifests, manifest::Manifest},
     prompts::handle_inquire_error,
-    token::TokenManager,
 };
 #[derive(Parser)]
 pub struct Submit {
@@ -51,16 +49,14 @@ pub struct Submit {
     #[arg(long, env = "DRY_RUN")]
     dry_run: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<SecretString>,
+    #[command(flatten)]
+    token: GitHubTokenArg,
 }
 
 impl Submit {
-    pub async fn run(mut self) -> Result<()> {
-        let token_manager = TokenManager::handle(self.token.take()).await?;
-
+    pub async fn run(self) -> Result<()> {
         let yaml_entries = self.get_yaml_file_paths()?;
+        let github = GitHub::new(self.token.resolve().await?)?;
 
         let packages = yaml_entries
             .iter()
@@ -137,8 +133,6 @@ impl Submit {
         };
 
         let rate_limit = RateLimit::new(self.fast);
-
-        let github = GitHub::new(token_manager)?;
 
         for mut manifest in manifests {
             let identifier = &manifest.version.package_identifier;

@@ -3,10 +3,9 @@ use std::io::Write;
 use clap::{Args, Parser};
 use color_eyre::Result;
 use owo_colors::OwoColorize;
-use secrecy::SecretString;
 use winget_types::PackageIdentifier;
 
-use crate::{github::client::GitHub, token::TokenManager};
+use crate::{commands::utils::GitHubTokenArg, github::client::GitHub};
 
 /// Lists all versions for a given package
 #[derive(Parser)]
@@ -22,9 +21,8 @@ pub struct ListVersions {
     #[arg(long)]
     count: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<SecretString>,
+    #[command(flatten)]
+    token: GitHubTokenArg,
 }
 
 #[derive(Args)]
@@ -45,8 +43,7 @@ struct OutputType {
 
 impl ListVersions {
     pub async fn run(self) -> Result<()> {
-        let token_manager = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(token_manager)?;
+        let github = GitHub::new(self.token.resolve().await?)?;
 
         let versions = github.get_versions(&self.package_identifier).await?;
 

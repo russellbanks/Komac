@@ -12,7 +12,6 @@ use indicatif::ProgressBar;
 use inquire::CustomType;
 use ordinal::Ordinal;
 use owo_colors::OwoColorize;
-use secrecy::SecretString;
 use winget_types::{
     LanguageTag, ManifestType, ManifestVersion, PackageIdentifier, PackageVersion,
     installer::{
@@ -33,7 +32,8 @@ use winget_types::{
 
 use crate::{
     commands::utils::{
-        SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
+        GitHubTokenArg, SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request,
+        write_changes_to_dir,
     },
     download::Downloader,
     download_file::process_files,
@@ -49,7 +49,6 @@ use crate::{
         radio_prompt,
         text::{confirm_prompt, optional_prompt, required_prompt},
     },
-    token::TokenManager,
 };
 
 /// Create a new package from scratch
@@ -148,15 +147,13 @@ pub struct NewVersion {
     #[arg(long, env)]
     skip_pr_check: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<SecretString>,
+    #[command(flatten)]
+    token: GitHubTokenArg,
 }
 
 impl NewVersion {
     pub async fn run(self) -> Result<()> {
-        let token_manager = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(token_manager)?;
+        let github = GitHub::new(self.token.resolve().await?)?;
 
         let package_identifier = required_prompt(self.package_identifier, None::<&str>)?;
 

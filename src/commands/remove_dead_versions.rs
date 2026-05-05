@@ -9,7 +9,6 @@ use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use reqwest::{Client, StatusCode};
-use secrecy::SecretString;
 use tokio::{sync::mpsc, try_join};
 use winget_types::{
     ManifestTypeWithLocale, PackageIdentifier, PackageVersion, installer::InstallerManifest,
@@ -17,10 +16,10 @@ use winget_types::{
 };
 
 use crate::{
-    commands::utils::{RateLimit, SPINNER_SLOW_TICK_RATE},
+    commands::utils::{GitHubTokenArg, RateLimit, SPINNER_SLOW_TICK_RATE},
     github::client::GitHub,
     prompts::text::confirm_prompt,
-    token::{TokenManager, default_headers},
+    token::default_headers,
 };
 
 const RESOURCE_MISSING_STATUS_CODES: [StatusCode; 2] = [StatusCode::NOT_FOUND, StatusCode::GONE];
@@ -56,15 +55,13 @@ pub struct RemoveDeadVersions {
     #[arg(short, long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
     concurrent: NonZeroUsize,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
-    token: Option<SecretString>,
+    #[command(flatten)]
+    token: GitHubTokenArg,
 }
 
 impl RemoveDeadVersions {
     pub async fn run(self) -> Result<()> {
-        let token_manager = TokenManager::handle(self.token).await?;
-        let github = GitHub::new(token_manager)?;
+        let github = GitHub::new(self.token.resolve().await?)?;
 
         let (fork, winget_pkgs, versions) = try_join!(
             github
