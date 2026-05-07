@@ -51,7 +51,7 @@ pub struct RemoveVersion {
     open_pr: bool,
 
     /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN")]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
     token: Option<SecretString>,
 }
 
