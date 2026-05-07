@@ -114,3 +114,33 @@ enum Commands {
     RemoveDeadVersions(RemoveDeadVersions),
     Submit(Submit),
 }
+
+#[cfg(test)]
+mod tests {
+    use clap::CommandFactory;
+
+    use super::Cli;
+
+    #[test]
+    fn github_token_env_values_are_hidden_in_help() {
+        fn assert_github_token_env_is_hidden(command: &clap::Command) {
+            for arg in command.get_arguments() {
+                if arg.get_env() == Some(std::ffi::OsStr::new("GITHUB_TOKEN")) {
+                    assert!(
+                        arg.is_hide_env_values_set(),
+                        "command `{}` arg `{:?}` exposes GITHUB_TOKEN values in help",
+                        command.get_name(),
+                        arg.get_id()
+                    );
+                }
+            }
+
+            for subcommand in command.get_subcommands() {
+                assert_github_token_env_is_hidden(subcommand);
+            }
+        }
+
+        let command = Cli::command();
+        assert_github_token_env_is_hidden(&command);
+    }
+}
