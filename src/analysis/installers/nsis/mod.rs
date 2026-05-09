@@ -165,7 +165,7 @@ impl Nsis {
             }
         }
 
-        debug!(%state.file_system);
+        debug!(%state.registry, %state.file_system);
 
         architecture = architecture
             .or_else(|| {
