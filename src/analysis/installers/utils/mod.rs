@@ -1,6 +1,4 @@
 mod lzma_stream_header;
-pub mod registry;
-
 pub use lzma_stream_header::LzmaStreamHeader;
 
 pub const RELATIVE_PROGRAM_FILES_64: &str = "%ProgramFiles%";

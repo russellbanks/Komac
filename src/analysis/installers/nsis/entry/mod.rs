@@ -30,8 +30,11 @@ use tracing::debug;
 use window_message::WindowMessage;
 use zerocopy::{I32, Immutable, KnownLayout, LE, TryFromBytes, U16, U64, transmute};
 
-use super::{file_system::RelativeLocation, registry::RegType, state::NsisState};
-use crate::analysis::installers::utils::registry::RegRoot;
+use super::{
+    file_system::RelativeLocation,
+    registry::{RegRoot, RegType},
+    state::NsisState,
+};
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum EntryError {
@@ -1175,7 +1178,11 @@ impl Entry {
                 if *flags == I32::ZERO {
                     let value_name = state.get_string(value_name.get());
 
-                    debug!(r#"DeleteRegValue: "{root}\{key_name}" "{value_name}""#);
+                    if value_name.is_empty() {
+                        debug!(r#"DeleteRegValue: "{root}\{key_name}""#);
+                    } else {
+                        debug!(r#"DeleteRegValue: "{root}\{key_name}" "{value_name}""#);
+                    }
 
                     state
                         .registry

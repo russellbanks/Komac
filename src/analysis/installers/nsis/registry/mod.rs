@@ -1,9 +1,12 @@
+mod root;
+mod r#type;
+
 use std::{borrow::Borrow, hash::Hash};
 
 use indexmap::IndexMap;
+pub use root::RegRoot;
+pub use r#type::RegType;
 use zerocopy::{Immutable, KnownLayout, TryFromBytes};
-
-use crate::analysis::installers::utils::registry::RegRoot;
 
 type Key = String;
 
@@ -121,50 +124,5 @@ impl Registry {
             keys.values_mut()
                 .find_map(|values| values.shift_remove(name))
         })
-    }
-}
-
-/// <https://github.com/NSIS-Dev/nsis/blob/HEAD/Source/Platform.h#L672>
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, TryFromBytes, KnownLayout, Immutable)]
-#[repr(u32)]
-pub enum RegType {
-    #[default]
-    None = 0u32.to_le(),
-    String = 1u32.to_le(),
-    ExpandedString = 2u32.to_le(),
-    Binary = 3u32.to_le(),
-    DWord = 4u32.to_le(),
-    MultiString = 7u32.to_le(),
-}
-
-impl RegType {
-    #[inline]
-    pub const fn is_none(self) -> bool {
-        matches!(self, Self::None)
-    }
-
-    #[inline]
-    pub const fn is_string(self) -> bool {
-        matches!(self, Self::String)
-    }
-
-    #[inline]
-    pub const fn is_expanded_string(self) -> bool {
-        matches!(self, Self::ExpandedString)
-    }
-
-    #[inline]
-    pub const fn is_binary(self) -> bool {
-        matches!(self, Self::Binary)
-    }
-
-    #[inline]
-    pub const fn is_dword(self) -> bool {
-        matches!(self, Self::DWord)
-    }
-
-    #[inline]
-    pub const fn is_multi_string(self) -> bool {
-        matches!(self, Self::MultiString)
     }
 }
