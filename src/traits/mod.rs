@@ -219,17 +219,10 @@ impl LocaleExt for DefaultLocaleManifest {
                 .as_ref()
                 .map(|values| values.package_url.clone());
         }
-        if let Some(github_license) = github_values
-            .as_mut()
-            .and_then(|values| values.license.take())
-        {
-            self.license = github_license;
-        }
-        if let Some(github_license_url) = github_values
-            .as_mut()
-            .and_then(|values| values.license_url.take())
-        {
-            self.license_url = Some(github_license_url);
+        if self.license_url.is_none() {
+            self.license_url = github_values
+                .as_mut()
+                .and_then(|values| values.license_url.take())
         }
         if self.tags.is_empty() {
             self.tags = github_values
