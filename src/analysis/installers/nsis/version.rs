@@ -12,13 +12,18 @@ use super::{state::NsisState, strings::code::NsCode};
 pub struct NsisVersion {
     major: u8,
     minor: u8,
+    park: bool,
 }
 
 impl NsisVersion {
     /// Creates a new NSIS version from a major and minor part.
     #[inline]
     pub const fn new(major: u8, minor: u8) -> Self {
-        Self { major, minor }
+        Self {
+            major,
+            minor,
+            park: false,
+        }
     }
 
     #[inline]
@@ -39,6 +44,11 @@ impl NsisVersion {
     #[inline]
     pub const fn is_v2(self) -> bool {
         !self.is_v3()
+    }
+
+    #[inline]
+    pub const fn is_park(self) -> bool {
+        self.park
     }
 
     pub fn from_manifest(manifest: &str) -> Option<Self> {
@@ -76,12 +86,21 @@ impl NsisVersion {
             return None;
         }
 
+        let (version, unicode) = version.rsplit_once('-').unwrap_or((version, ""));
+
         let mut parts = version
             .trim_start_matches('v')
             .split('.')
             .flat_map(str::parse::<u8>);
 
-        Some(Self::new(parts.next()?, parts.next()?))
+        let major = parts.next()?;
+        let minor = parts.next()?;
+
+        Some(Self {
+            major,
+            minor,
+            park: major == 2 && (45..=46).contains(&minor) && unicode == "Unicode",
+        })
     }
 
     pub fn detect(strings_block: &[u8]) -> Self {
@@ -101,7 +120,7 @@ impl NsisVersion {
             Either::Left(
                 <[U16<LE>]>::ref_from_bytes(strings_block)
                     .unwrap_or_else(|cast_error| unreachable!("{cast_error}"))
-                    .windows(2)
+                    .array_windows::<2>()
                     .filter_map(|window| {
                         (window[0] == U16::ZERO).then(|| window[1].get().try_into().ok())?
                     }),
@@ -109,7 +128,7 @@ impl NsisVersion {
         } else {
             Either::Right(
                 strings_block
-                    .windows(2)
+                    .array_windows::<2>()
                     .filter_map(|window| (window[0] == 0).then_some(window[1])),
             )
         };

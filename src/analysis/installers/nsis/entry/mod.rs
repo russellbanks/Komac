@@ -28,7 +28,7 @@ use show_window::ShowWindow;
 use thiserror::Error;
 use tracing::debug;
 use window_message::WindowMessage;
-use zerocopy::{I32, Immutable, KnownLayout, LE, TryFromBytes, U16, U64, transmute};
+use zerocopy::{I32, Immutable, KnownLayout, LE, TryFromBytes, U64};
 
 use super::{
     file_system::RelativeLocation,
@@ -46,6 +46,14 @@ pub enum EntryError {
     Execute,
     #[error("Ran into infinite loop")]
     InfiniteLoop,
+}
+
+impl EntryError {
+    /// Returns `true` if the entry error is abort.
+    #[inline]
+    pub const fn is_abort(&self) -> bool {
+        matches!(self, EntryError::Abort { .. })
+    }
 }
 
 /// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/fileform.h#L50>
@@ -688,14 +696,13 @@ impl Entry {
             }
             Self::StrLen { output, input } => {
                 let input = state.get_string(input.get());
-                debug!(
-                    r#"StrLen: "{input}".len() = {} (inserted into {})"#,
-                    input.len(),
-                    output.get()
-                );
+                let length = input.chars().count();
+
+                debug!(r#"StrLen ${output} "{input}" # = {length}"#);
+
                 state.variables.insert(
                     output.get().unsigned_abs() as usize,
-                    Cow::Owned(input.len().to_string()),
+                    Cow::Owned(length.to_string()),
                 );
             }
             Self::AssignVar {
@@ -704,38 +711,87 @@ impl Entry {
                 max_length,
                 start_position,
             } => {
-                let mut result = state.get_string(string_offset.get());
-                let mut start = start_position.get();
-                let [low, high]: [U16<LE>; 2] = transmute!(*max_length);
-                let new_length = if high == U16::ZERO {
-                    result.len()
-                } else {
-                    usize::from(low.get())
-                };
-                if new_length > 0 {
-                    if start < 0 {
-                        start += result.len() as i32;
-                    }
+                // https://nsis.sourceforge.io/Reference/StrCpy
+                // https://github.com/NSIS-Dev/nsis/blob/v312/Source/exehead/exec.c#L658
 
-                    let start = u32::try_from(start).unwrap_or_default();
-                    if start < result.len() as u32 {
-                        let index = variable.get().unsigned_abs() as usize;
+                // StrCpy $0 "a string" # = "a string"
+                // StrCpy $0 "a string" 3 # = "a s"
+                // StrCpy $0 "a string" -1 # = "a strin"
+                // StrCpy $0 "a string" "" 2 # = "string"
+                // StrCpy $0 "a string" "" -3 # = "ing"
+                // StrCpy $0 "a string" 3 -4 # = "rin"
+
+                let index = variable.get().unsigned_abs() as usize;
+                let source = state.get_string(string_offset.get());
+
+                // Maximum length of the string in characters
+                let max_length = state.get_int(max_length.get());
+
+                let start_position = state.get_int(start_position.get());
+                let char_count = source.chars().count();
+
+                let mut result = source.clone();
+
+                if !source.is_empty() {
+                    // Get the start position as a usize, or add char_count to it to turn a
+                    // negative offset into a positive one.
+                    if let Ok(start_char) = usize::try_from(start_position)
+                        .or_else(|_| usize::try_from((start_position) + char_count as i32))
+                        .map(|start| start.min(char_count))
+                    {
+                        let start_byte = source
+                            .char_indices()
+                            .nth(start_char)
+                            .map_or(source.len(), |(i, _)| i);
+                        let sliced_source = &source[start_byte..];
+                        let sliced_source_char_count = sliced_source.chars().count();
+
+                        let new_length = if max_length == 0 {
+                            sliced_source_char_count
+                        } else if max_length.is_negative() {
+                            usize::try_from(sliced_source_char_count as i32 + max_length)
+                                .unwrap_or(sliced_source_char_count)
+                        } else {
+                            usize::try_from(max_length).unwrap_or(sliced_source_char_count)
+                        };
+
+                        let end_byte = sliced_source
+                            .char_indices()
+                            .nth(new_length)
+                            .map_or(sliced_source.len(), |(i, _)| i);
+
+                        let range = start_byte..(start_byte + end_byte);
+
                         result = match result {
-                            Cow::Borrowed(borrowed) => Cow::Borrowed(&borrowed[start as usize..]),
-                            Cow::Owned(mut owned) => {
-                                owned.drain(..start as usize);
-                                Cow::Owned(owned)
+                            Cow::Borrowed(b) => Cow::Borrowed(&b[range]),
+                            Cow::Owned(mut o) => {
+                                o.truncate(range.end);
+                                o.drain(..range.start);
+                                Cow::Owned(o)
                             }
                         };
-                        debug!(r#"AssignVar: {index} "{result}""#);
-                        state
-                            .variables
-                            .insert(variable.get().unsigned_abs() as usize, result);
                     }
-                } else {
+                }
+
+                match (max_length, start_position) {
+                    (0, 0) => debug!(r#"StrCpy ${index} "{source}" # = "{result}""#),
+                    (max_length, 0) => {
+                        debug!(r#"StrCpy ${index} "{source}" {max_length} # = "{result}""#);
+                    }
+                    (0, start_position) => {
+                        debug!(r#"StrCpy ${index} "{source}" "" {start_position} # = "{result}""#);
+                    }
+                    (max_length, start_position) => {
+                        debug!(
+                            r#"StrCpy ${index} "{source}" {max_length} {start_position} # = "{result}""#,
+                        );
+                    }
+                }
+
+                if !source.is_empty() {
                     state
                         .variables
-                        .remove(&(variable.get().unsigned_abs() as usize));
+                        .insert(variable.get().unsigned_abs() as usize, result);
                 }
             }
             Self::StrCmp {

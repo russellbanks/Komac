@@ -4,8 +4,8 @@ mod decoder;
 pub mod flags;
 
 use std::{
-    fmt,
-    io::{Error, ErrorKind, Read, Result, Seek},
+    fmt, io,
+    io::{Error, ErrorKind, Read, Seek},
 };
 
 use bzip2::read::BzDecoder;
@@ -14,17 +14,29 @@ pub use decoder::Decoder;
 use flate2::{Decompress, read::ZlibDecoder};
 use liblzma::read::XzDecoder;
 use tracing::debug;
-use zerocopy::{FromBytes, I32, Immutable, KnownLayout, LE};
+use zerocopy::{FromBytes, I32, LE};
 
-use super::FirstHeader;
-use crate::{analysis::installers::utils::LzmaStreamHeader, read::ReadBytesExt};
+use super::{FirstHeader, NsisError};
+use crate::{
+    analysis::installers::{
+        nsis::header::{
+            block::{BlockHeaders, BlockType},
+            flags::CommonHeaderFlags,
+        },
+        utils::LzmaStreamHeader,
+    },
+    read::ReadBytesExt,
+};
 
 const NSIS_MAX_INST_TYPES: u8 = 32;
 
 /// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/fileform.h#L295>
-#[derive(Clone, FromBytes, KnownLayout, Immutable)]
+#[derive(Clone)]
 #[repr(C)]
 pub struct Header {
+    common_header_flags: CommonHeaderFlags,
+    blocks: BlockHeaders,
+
     #[doc(alias = "install_reg_rootkey")]
     install_registry_root_key: I32<LE>,
 
@@ -134,11 +146,53 @@ const NON_SOLID_EXTRA_BYTES: usize = size_of::<u32>();
 const IS_COMPRESSED_MASK: u32 = 1 << 31;
 
 impl Header {
+    pub fn read_from(data: &[u8], is_64_bit: bool) -> Result<Self, NsisError> {
+        let (common_header_flags, rest) = CommonHeaderFlags::read_from_prefix(&data)?;
+
+        let (blocks, mut rest) = BlockHeaders::read_dynamic_from_prefix(rest, is_64_bit)?;
+
+        Ok(Self {
+            common_header_flags,
+            blocks,
+            install_registry_root_key: rest.read_t()?,
+            install_registry_key_ptr: rest.read_t()?,
+            install_registry_value_ptr: rest.read_t()?,
+            background_color_1: rest.read_t()?,
+            background_color_2: rest.read_t()?,
+            background_text_color: rest.read_t()?,
+            log_window_background_color: rest.read_t()?,
+            log_window_foreground_color: rest.read_t()?,
+            language_table_size: rest.read_t()?,
+            license_background_color: rest.read_t()?,
+            code_on_init: rest.read_t()?,
+            code_on_inst_success: rest.read_t()?,
+            code_on_inst_failed: rest.read_t()?,
+            code_on_user_abort: rest.read_t()?,
+            code_on_gui_init: rest.read_t()?,
+            code_on_gui_end: rest.read_t()?,
+            code_on_mouse_over_section: rest.read_t()?,
+            code_on_verify_install_dir: rest.read_t()?,
+            code_on_sel_change: rest.read_t()?,
+            code_on_reboot_failed: if blocks[BlockType::Pages].offset() == 276 {
+                // NSIS v2 does not have `code_on_reboot_failed`
+                I32::ZERO
+            } else {
+                rest.read_t()?
+            },
+            install_types: rest.read_t()?,
+            install_directory_ptr: rest.read_t()?,
+            install_directory_auto_append: rest.read_t()?,
+            str_uninstall_child: rest.read_t()?,
+            str_uninstall_command: rest.read_t()?,
+            str_win_init: rest.read_t()?,
+        })
+    }
+
     /// <https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L5753>
     pub fn decompress<R: Read + Seek>(
         mut reader: R,
         first_header: &FirstHeader,
-    ) -> Result<Decompressed<R>> {
+    ) -> io::Result<Decompressed<R>> {
         /*
           XX XX XX XX             XX XX XX XX == FirstHeader.HeaderSize, nonsolid, uncompressed
           5D 00 00 dd dd 00       solid LZMA
@@ -231,6 +285,10 @@ impl Header {
         })
     }
 
+    pub const fn blocks(&self) -> &BlockHeaders {
+        &self.blocks
+    }
+
     #[inline]
     pub const fn install_registry_root_key(&self) -> i32 {
         self.install_registry_root_key.get()
@@ -282,6 +340,8 @@ impl Header {
 impl fmt::Debug for Header {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Header")
+            .field("flags", &self.common_header_flags)
+            .field("blocks", &self.blocks())
             .field("install_reg_rootkey", &self.install_registry_root_key())
             .field("install_reg_key_ptr", &self.install_registry_key_ptr.get())
             .field(

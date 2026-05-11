@@ -12,7 +12,7 @@ use super::{
 use crate::analysis::installers::nsis::{
     NsisError,
     file_system::FileSystem,
-    header::{Header, block::BlockHeaders},
+    header::Header,
     language::table::LanguageTable,
     registry::Registry,
     strings::{code::NsCode, shell::Shell, var::NsVar},
@@ -20,7 +20,7 @@ use crate::analysis::installers::nsis::{
 };
 
 pub struct NsisState<'data> {
-    str_block: &'data [u8],
+    pub str_block: &'data [u8],
     entries: &'data [Entry],
     pub language_table: &'data LanguageTable,
     pub stack: Vec<Cow<'data, str>>,
@@ -38,13 +38,12 @@ impl<'data> NsisState<'data> {
     pub fn new(
         data: &'data [u8],
         header: &Header,
-        blocks: &BlockHeaders,
         manifest: Option<&str>,
     ) -> Result<Self, NsisError> {
         let mut state = Self {
-            str_block: blocks.strings_block(data),
-            entries: blocks.entries(data)?,
-            language_table: LanguageTable::primary_language(data, blocks)?,
+            str_block: header.blocks().strings_block(data),
+            entries: header.blocks().entries(data)?,
+            language_table: LanguageTable::primary_language(data, header.blocks())?,
             stack: Vec::new(),
             variables: Variables::new(),
             registry: Registry::new(),
@@ -71,6 +70,11 @@ impl<'data> NsisState<'data> {
         }
 
         Ok(state)
+    }
+
+    #[inline]
+    pub const fn is_park(&self) -> bool {
+        self.version.is_park()
     }
 
     /// Returns `true` if the NSIS executable is portable.
@@ -108,7 +112,7 @@ impl<'data> NsisState<'data> {
                 .language_table
                 .string_offset((relative_offset + 1).unsigned_abs() as usize)
             else {
-                return Cow::default();
+                return Cow::Borrowed("$ERROR");
             };
 
             offset.unsigned_abs() as usize
@@ -116,14 +120,18 @@ impl<'data> NsisState<'data> {
             relative_offset.unsigned_abs() as usize
         } * (usize::from(unicode) + 1);
 
+        let Some(offset_slice) = self.str_block.get(offset..) else {
+            return Cow::Borrowed("$ERROR");
+        };
+
         // Get the index of the null byte at the end of the string
         let string_end_index = if unicode {
-            self.str_block[offset..]
+            offset_slice
                 .chunks_exact(size_of::<u16>())
                 .position(|chunk| chunk == b"\0\0")
                 .map(|index| index * size_of::<u16>())
         } else {
-            memchr::memchr(0, &self.str_block[offset..])
+            memchr::memchr(0, offset_slice)
         }
         .unwrap_or(self.str_block.len());
 
@@ -135,6 +143,10 @@ impl<'data> NsisState<'data> {
         } else {
             Either::Right(string_bytes)
         };
+
+        if self.is_park() {
+            todo!("NSIS Park support");
+        }
 
         // Check whether the string contains any special characters that need to be decoded
         let contains_code = match string_chars {

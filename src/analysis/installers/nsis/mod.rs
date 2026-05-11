@@ -1,4 +1,5 @@
 mod entry;
+mod error;
 mod file_system;
 mod first_header;
 mod header;
@@ -17,13 +18,13 @@ use std::{
 
 use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
+pub use error::NsisError;
 use flate2::{Decompress, read::ZlibDecoder};
 use liblzma::read::XzDecoder;
 use msi::Language;
 use registry::Registry;
 use state::NsisState;
 use strsim::levenshtein;
-use thiserror::Error;
 use tracing::{debug, error};
 use typed_path::{Utf8Component, Utf8WindowsPath, Utf8WindowsPathBuf};
 use variables::Variables;
@@ -34,7 +35,6 @@ use winget_types::{
         Installer, InstallerType, Scope,
     },
 };
-use zerocopy::FromBytes;
 
 use super::{
     super::extensions::EXE,
@@ -42,10 +42,7 @@ use super::{
         entry::{Entry, EntryError},
         file_system::FsEntry,
         first_header::FirstHeader,
-        header::{
-            Compression, Decoder, Decompressed, Header, block::BlockHeaders,
-            flags::CommonHeaderFlags,
-        },
+        header::{Compression, Decoder, Decompressed, Header},
     },
     pe::{PE, utils::machine_from_exe_reader},
     utils::{LzmaStreamHeader, RELATIVE_PROGRAM_FILES_64, RELATIVE_TEMP_FOLDER},
@@ -54,18 +51,6 @@ use crate::{
     analysis::Installers,
     traits::{FromMachine, IntoWingetArchitecture},
 };
-
-#[derive(Error, Debug)]
-pub enum NsisError {
-    #[error("File is not a NSIS installer")]
-    NotNsisFile,
-    #[error(transparent)]
-    InvalidEntry(#[from] EntryError),
-    #[error("{0}")]
-    ZeroCopy(String),
-    #[error(transparent)]
-    Io(#[from] io::Error),
-}
 
 const APP_32: &str = "app-32";
 const APP_64: &str = "app-64";
@@ -106,22 +91,13 @@ impl Nsis {
             decoder,
         } = Header::decompress(&mut reader, &first_header)?;
 
-        let (_flags, rest) = CommonHeaderFlags::ref_from_prefix(&decompressed_data)
-            .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
-
         let architecture = pe.winget_architecture();
 
-        let (blocks, rest) =
-            BlockHeaders::read_dynamic_from_prefix(rest, architecture.is_64_bit())?;
-
-        debug!(?blocks);
-
-        let (header, _) = Header::ref_from_prefix(rest)
-            .map_err(|error| NsisError::ZeroCopy(error.to_string()))?;
+        let header = Header::read_from(&decompressed_data, architecture.is_64_bit())?;
 
         debug!(?header);
 
-        let mut state = NsisState::new(&decompressed_data, header, &blocks, manifest.as_deref())?;
+        let mut state = NsisState::new(&decompressed_data, &header, manifest.as_deref())?;
 
         // https://nsis.sourceforge.io/Reference/.onInit
         if header.code_on_init() != -1 {
@@ -131,7 +107,7 @@ impl Nsis {
             }
         }
 
-        for (index, section) in blocks.sections(&decompressed_data).enumerate() {
+        for (index, section) in header.blocks().sections(&decompressed_data).enumerate() {
             debug!(
                 r#"Simulating code execution for section {index} "{}""#,
                 state.get_string(section.name_offset())
@@ -146,8 +122,9 @@ impl Nsis {
         // https://nsis.sourceforge.io/Reference/.onInstSuccess
         if header.code_on_inst_success() != -1 {
             debug!("Simulating code execution for .onInstSuccess callback");
-            if let Err(invalid_entry) = state.execute_code_segment(header.code_on_inst_success()) {
-                error!(%invalid_entry);
+            match state.execute_code_segment(header.code_on_inst_success()) {
+                Err(EntryError::Abort { .. }) | Ok(..) => {}
+                Err(invalid_entry) => error!(%invalid_entry),
             }
         }
 

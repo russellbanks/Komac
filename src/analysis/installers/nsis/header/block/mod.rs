@@ -1,21 +1,19 @@
 mod r#type;
 
-use std::{borrow::Cow, fmt, io::Cursor, ops::Index, slice};
+use std::{fmt, io::Cursor, ops::Index, slice};
 
 use strum::{EnumCount, IntoEnumIterator};
 pub use r#type::BlockType;
-use zerocopy::{
-    FromBytes, Immutable, KnownLayout, TryFromBytes,
-    little_endian::{U32, U64},
-};
+use zerocopy::{FromBytes, Immutable, KnownLayout, LE, TryFromBytes, U32, U64};
 
 use super::super::{Entry, NsisError, language::table::LanguageTable, section::Section};
+use crate::read::ReadBytesExt;
 
 #[derive(Clone, Copy, Default, FromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct BlockHeader {
-    pub offset: U64,
-    num: U32,
+    pub offset: U64<LE>,
+    num: U32<LE>,
 }
 
 impl BlockHeader {
@@ -39,34 +37,35 @@ impl fmt::Debug for BlockHeader {
     }
 }
 
-#[derive(Clone, Default, FromBytes, KnownLayout, Immutable)]
+#[derive(Copy, Clone, Default, FromBytes, KnownLayout, Immutable)]
 #[repr(transparent)]
 pub struct BlockHeaders([BlockHeader; BlockType::COUNT]);
 
 impl BlockHeaders {
     /// If the NSIS installer is 64-bit, the offset value in the `BlockHeader` is a u64 rather than
-    /// a u32. This aims to still use zerocopy as much as possible, although the data will need to
-    /// be owned if the offsets are u32's.
+    /// a u32.
     pub fn read_dynamic_from_prefix(
         data: &[u8],
         is_64_bit: bool,
-    ) -> Result<(Cow<'_, Self>, &[u8]), NsisError> {
+    ) -> Result<(Self, &[u8]), NsisError> {
         if is_64_bit {
-            Self::ref_from_prefix(data)
-                .map(|(headers, rest)| (Cow::Borrowed(headers), rest))
-                .map_err(|error| NsisError::ZeroCopy(error.to_string()))
+            Self::read_from_prefix(data).map_err(NsisError::from)
         } else {
             let mut reader = Cursor::new(data);
             let mut block_headers = Self::default();
             for header in &mut block_headers {
                 *header = BlockHeader {
-                    offset: U32::read_from_io(&mut reader)?.into(),
-                    num: U32::read_from_io(&mut reader)?,
+                    offset: reader.read_t::<U32<LE>>()?.into(),
+                    num: reader.read_t::<U32<LE>>()?,
                 }
             }
+            let mut reader_position = reader.position();
+            if block_headers[BlockType::Pages].offset() == 276 {
+                reader_position -= size_of::<u32>() as u64;
+            }
             Ok((
-                Cow::Owned(block_headers),
-                &data[usize::try_from(reader.position()).unwrap_or_default()..],
+                block_headers,
+                &data[usize::try_from(reader_position).unwrap_or_default()..],
             ))
         }
     }
@@ -80,6 +79,11 @@ impl BlockHeaders {
             .find(|block_header| block_header.offset > U64::ZERO)
             .map_or(start, |block| usize::try_from(block.offset()).unwrap());
         &data[start..end]
+    }
+
+    /// Returns the pages block.
+    pub fn pages_block<'data>(&self, data: &'data [u8]) -> &'data [u8] {
+        self.get(data, BlockType::Pages)
     }
 
     /// Returns the sections block.
