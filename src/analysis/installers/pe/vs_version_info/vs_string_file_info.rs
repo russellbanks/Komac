@@ -33,8 +33,10 @@ impl<'a> VSStringFileInfo<'a> {
         Ok(Self { header, children })
     }
 
-    /// The length, in bytes, of the entire StringFileInfo block, including all structures indicated
-    /// by the Children member.
+    /// The length, in bytes, of the entire [`StringFileInfo]` block, including all structures
+    /// indicated by the Children member.
+    ///
+    /// [`StringFileInfo`]: Self
     #[must_use]
     #[inline]
     pub const fn length(&self) -> u16 {
@@ -58,7 +60,7 @@ impl<'a> VSStringFileInfo<'a> {
         self.header.r#type()
     }
 
-    /// The Unicode string "StringFileInfo".
+    /// The Unicode string "`StringFileInfo`".
     #[must_use]
     #[inline]
     pub fn key(&self) -> &str {
@@ -67,8 +69,8 @@ impl<'a> VSStringFileInfo<'a> {
 
     /// An array of one or more [`StringTable`] structures.
     ///
-    /// Each **StringTable** structure's **szKey** member indicates the appropriate language and
-    /// code page for displaying the text in that **StringTable** structure.
+    /// Each **[`StringTable`]** structure's **szKey** member indicates the appropriate language and
+    /// code page for displaying the text in that **[`StringTable`]** structure.
     ///
     /// [`StringTable`]: VSStringTable
     #[must_use]

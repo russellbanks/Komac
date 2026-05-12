@@ -261,9 +261,9 @@ pub enum Expr {
     Ge(String, Literal),
     Lt(String, Literal),
     Le(String, Literal),
-    Not(Box<Expr>),
-    And(Box<Expr>, Box<Expr>),
-    Or(Box<Expr>, Box<Expr>),
+    Not(Box<Self>),
+    And(Box<Self>, Box<Self>),
+    Or(Box<Self>, Box<Self>),
 }
 
 impl Expr {

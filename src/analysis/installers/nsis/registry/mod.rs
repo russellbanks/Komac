@@ -143,7 +143,7 @@ impl fmt::Display for Registry {
                 let max_name_len = values.keys().map(ValueName::len).max().unwrap_or_default();
 
                 for (name, value) in values {
-                    writeln!(f, "    {name:<width$} = {value}", width = max_name_len)?;
+                    writeln!(f, "    {name:<max_name_len$} = {value}")?;
                 }
             }
         }

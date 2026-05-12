@@ -246,7 +246,7 @@ impl PE {
 }
 
 pub const IMAGE_FILE_MACHINE_UNKNOWN: u16 = 0;
-/// Useful for indicating we want to interact with the host and not a WoW guest.
+/// Useful for indicating we want to interact with the host and not a `WoW` guest.
 pub const IMAGE_FILE_MACHINE_TARGET_HOST: u16 = 0x0001;
 /// Intel 386.
 pub const IMAGE_FILE_MACHINE_I386: u16 = 0x014c;
@@ -258,7 +258,7 @@ pub const IMAGE_FILE_MACHINE_R4000: u16 = 0x0166;
 pub const IMAGE_FILE_MACHINE_R10000: u16 = 0x0168;
 /// MIPS little-endian WCE v2
 pub const IMAGE_FILE_MACHINE_WCEMIPSV2: u16 = 0x0169;
-/// Alpha_AXP
+/// `Alpha_AXP`
 pub const IMAGE_FILE_MACHINE_ALPHA: u16 = 0x0184;
 /// SH3 little-endian
 pub const IMAGE_FILE_MACHINE_SH3: u16 = 0x01a2;

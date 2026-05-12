@@ -222,7 +222,7 @@ impl LocaleExt for DefaultLocaleManifest {
         if self.license_url.is_none() {
             self.license_url = github_values
                 .as_mut()
-                .and_then(|values| values.license_url.take())
+                .and_then(|values| values.license_url.take());
         }
         if self.tags.is_empty() {
             self.tags = github_values

@@ -10,47 +10,45 @@ impl RegRoot {
     const REG_ROOT_VIEW_64: u32 = 0x2000_0000;
     const REG_ROOT_VIEW_ANY: u32 = Self::REG_ROOT_VIEW_32 | Self::REG_ROOT_VIEW_64;
 
-    pub const SHELL_CONTEXT: RegRoot = Self(U32::ZERO);
+    pub const SHELL_CONTEXT: Self = Self(U32::ZERO);
 
     // Native Windows predefined roots
-    pub const HKEY_CLASSES_ROOT: RegRoot = Self::new(0x8000_0000);
-    pub const HKEY_CURRENT_USER: RegRoot = Self::new(0x8000_0001);
-    pub const HKEY_LOCAL_MACHINE: RegRoot = Self::new(0x8000_0002);
-    pub const HKEY_USERS: RegRoot = Self::new(0x8000_0003);
-    pub const HKEY_PERFORMANCE_DATA: RegRoot = Self::new(0x8000_0004);
-    pub const HKEY_CURRENT_CONFIG: RegRoot = Self::new(0x8000_0005);
-    pub const HKEY_DYNAMIC_DATA: RegRoot = Self::new(0x8000_0006);
-    pub const HKEY_PERFORMANCE_TEXT: RegRoot = Self::new(0x8000_0050);
-    pub const HKEY_PERFORMANCE_NLSTEXT: RegRoot = Self::new(0x8000_0060);
+    pub const HKEY_CLASSES_ROOT: Self = Self::new(0x8000_0000);
+    pub const HKEY_CURRENT_USER: Self = Self::new(0x8000_0001);
+    pub const HKEY_LOCAL_MACHINE: Self = Self::new(0x8000_0002);
+    pub const HKEY_USERS: Self = Self::new(0x8000_0003);
+    pub const HKEY_PERFORMANCE_DATA: Self = Self::new(0x8000_0004);
+    pub const HKEY_CURRENT_CONFIG: Self = Self::new(0x8000_0005);
+    pub const HKEY_DYNAMIC_DATA: Self = Self::new(0x8000_0006);
+    pub const HKEY_PERFORMANCE_TEXT: Self = Self::new(0x8000_0050);
+    pub const HKEY_PERFORMANCE_NLSTEXT: Self = Self::new(0x8000_0060);
 
     // Force 32-bit view
-    pub const SHELL_CONTEXT32: RegRoot =
-        Self::new(Self::SHELL_CONTEXT.get() | Self::REG_ROOT_VIEW_32);
-    pub const HKEY_CLASSES_ROOT32: RegRoot =
+    pub const SHELL_CONTEXT32: Self = Self::new(Self::SHELL_CONTEXT.get() | Self::REG_ROOT_VIEW_32);
+    pub const HKEY_CLASSES_ROOT32: Self =
         Self::new(Self::HKEY_CLASSES_ROOT.get() | Self::REG_ROOT_VIEW_32);
-    pub const HKEY_CURRENT_USER32: RegRoot =
+    pub const HKEY_CURRENT_USER32: Self =
         Self::new(Self::HKEY_CURRENT_USER.get() | Self::REG_ROOT_VIEW_32);
-    pub const HKEY_LOCAL_MACHINE32: RegRoot =
+    pub const HKEY_LOCAL_MACHINE32: Self =
         Self::new(Self::HKEY_LOCAL_MACHINE.get() | Self::REG_ROOT_VIEW_32);
 
     // Force 64-bit view
-    pub const SHELL_CONTEXT64: RegRoot =
-        Self::new(Self::SHELL_CONTEXT.get() | Self::REG_ROOT_VIEW_64);
-    pub const HKEY_CLASSES_ROOT64: RegRoot =
+    pub const SHELL_CONTEXT64: Self = Self::new(Self::SHELL_CONTEXT.get() | Self::REG_ROOT_VIEW_64);
+    pub const HKEY_CLASSES_ROOT64: Self =
         Self::new(Self::HKEY_CLASSES_ROOT.get() | Self::REG_ROOT_VIEW_64);
-    pub const HKEY_CURRENT_USER64: RegRoot =
+    pub const HKEY_CURRENT_USER64: Self =
         Self::new(Self::HKEY_CURRENT_USER.get() | Self::REG_ROOT_VIEW_64);
-    pub const HKEY_LOCAL_MACHINE64: RegRoot =
+    pub const HKEY_LOCAL_MACHINE64: Self =
         Self::new(Self::HKEY_LOCAL_MACHINE.get() | Self::REG_ROOT_VIEW_64);
 
     // Either view allowed
-    pub const SHELL_CONTEXT_ANY: RegRoot =
+    pub const SHELL_CONTEXT_ANY: Self =
         Self::new(Self::SHELL_CONTEXT.get() | Self::REG_ROOT_VIEW_ANY);
-    pub const HKEY_CLASSES_ROOT_ANY: RegRoot =
+    pub const HKEY_CLASSES_ROOT_ANY: Self =
         Self::new(Self::HKEY_CLASSES_ROOT.get() | Self::REG_ROOT_VIEW_ANY);
-    pub const HKEY_CURRENT_USER_ANY: RegRoot =
+    pub const HKEY_CURRENT_USER_ANY: Self =
         Self::new(Self::HKEY_CURRENT_USER.get() | Self::REG_ROOT_VIEW_ANY);
-    pub const HKEY_LOCAL_MACHINE_ANY: RegRoot =
+    pub const HKEY_LOCAL_MACHINE_ANY: Self =
         Self::new(Self::HKEY_LOCAL_MACHINE.get() | Self::REG_ROOT_VIEW_ANY);
 
     #[inline]

@@ -23,10 +23,10 @@ impl<A: Display, S: Display, V: Display> From<ConvertError<A, S, V>> for NsisErr
     }
 }
 
-impl<Src, Dst: ?Sized> From<SizeError<Src, Dst>> for NsisError
+impl<Src, Dst> From<SizeError<Src, Dst>> for NsisError
 where
     Src: Deref,
-    Dst: KnownLayout,
+    Dst: KnownLayout + ?Sized,
 {
     fn from(err: SizeError<Src, Dst>) -> Self {
         Self::ZeroCopy(err.to_string())

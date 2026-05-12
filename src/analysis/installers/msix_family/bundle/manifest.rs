@@ -18,10 +18,10 @@ pub struct Identity {
 }
 
 impl Identity {
-    pub fn from_event(event: BytesStart, reader: &mut Reader<&[u8]>) -> quick_xml::Result<Self> {
+    pub fn from_event(event: &BytesStart, reader: &mut Reader<&[u8]>) -> quick_xml::Result<Self> {
         debug_assert_eq!(event.local_name().into_inner(), b"Identity");
 
-        let mut identity = Identity::default();
+        let mut identity = Self::default();
 
         for attribute in event.attributes() {
             let attribute = attribute?;
@@ -29,10 +29,10 @@ impl Identity {
             match attribute.key.into_inner() {
                 b"Name" => identity.name = String::from_utf8_lossy(&attribute.value).into_owned(),
                 b"Publisher" => {
-                    identity.publisher = String::from_utf8_lossy(&attribute.value).into_owned()
+                    identity.publisher = String::from_utf8_lossy(&attribute.value).into_owned();
                 }
                 b"Version" => {
-                    identity.version = String::from_utf8_lossy(&attribute.value).into_owned()
+                    identity.version = String::from_utf8_lossy(&attribute.value).into_owned();
                 }
                 _ => {}
             }
@@ -83,7 +83,7 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn from_event(event: BytesStart, reader: &mut Reader<&[u8]>) -> quick_xml::Result<Self> {
+    pub fn from_event(event: &BytesStart, reader: &mut Reader<&[u8]>) -> quick_xml::Result<Self> {
         debug_assert_eq!(event.local_name().into_inner(), b"Package");
 
         let mut package = Self::default();
@@ -99,7 +99,7 @@ impl Package {
                     package.r#type = r#type;
                 }
                 b"FileName" => {
-                    package.file_name = String::from_utf8_lossy(&attribute.value).into_owned()
+                    package.file_name = String::from_utf8_lossy(&attribute.value).into_owned();
                 }
                 b"Offset"
                     if let Ok(offset) = str::from_utf8(&attribute.value)
@@ -151,7 +151,7 @@ impl Package {
 }
 
 /// <https://learn.microsoft.com/en-gb/uwp/schemas/bundlemanifestschema/element-package#attributes>
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub enum PackageType {
     Application,
     #[default]

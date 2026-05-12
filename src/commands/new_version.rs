@@ -256,8 +256,9 @@ impl NewVersion {
                     analyzer.installers.iter_mut().zip(zip.installers.iter())
                 {
                     analyzer_installer.nested_installer_type = zip_installer.nested_installer_type;
-                    analyzer_installer.nested_installer_files =
-                        zip_installer.nested_installer_files.clone();
+                    analyzer_installer
+                        .nested_installer_files
+                        .clone_from(&zip_installer.nested_installer_files);
                 }
             }
             let switches = InstallerSwitches::builder()

@@ -52,7 +52,7 @@ impl EntryError {
     /// Returns `true` if the entry error is abort.
     #[inline]
     pub const fn is_abort(&self) -> bool {
-        matches!(self, EntryError::Abort { .. })
+        matches!(self, Self::Abort { .. })
     }
 }
 

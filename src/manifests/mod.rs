@@ -93,7 +93,7 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
                                 char.is_ascii_digit() || char.is_ascii_punctuation()
                             }) =>
                         {
-                            style = style.blue()
+                            style = style.blue();
                         }
                         _ => {}
                     }

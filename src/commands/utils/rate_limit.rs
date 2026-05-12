@@ -1,6 +1,7 @@
+use std::time::{Duration, Instant};
+
 use chrono::TimeDelta;
 use indicatif::ProgressBar;
-use std::time::{Duration, Instant};
 use tokio::{sync::Mutex, time::sleep};
 
 use super::SPINNER_SLOW_TICK_RATE;
@@ -45,8 +46,7 @@ impl RateLimit {
     }
 
     pub async fn wait(&self) {
-        let last_pr_time = self.last_pr_time.lock().await;
-        let time_since_last_pr = Instant::now().duration_since(*last_pr_time);
+        let time_since_last_pr = Instant::now().duration_since(*self.last_pr_time.lock().await);
 
         if time_since_last_pr < self.rate_limit_delay {
             let wait_time = self.rate_limit_delay - time_since_last_pr;

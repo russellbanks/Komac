@@ -48,10 +48,10 @@ impl MsixBundle {
         loop {
             match reader.read_event()? {
                 Event::Start(event) => match event.local_name().as_ref() {
-                    b"Identity" => bundle.identity = Identity::from_event(event, &mut reader)?,
+                    b"Identity" => bundle.identity = Identity::from_event(&event, &mut reader)?,
                     b"Package" => bundle
                         .packages
-                        .push(Package::from_event(event, &mut reader)?),
+                        .push(Package::from_event(&event, &mut reader)?),
                     _ => {}
                 },
                 Event::Eof => break,
@@ -77,8 +77,10 @@ impl MsixBundle {
                             percent_decode_str(file_name)
                                 .eq(percent_decode_str(package.file_name()))
                         })
-                        .map(|file_name| Cow::Owned(file_name.to_owned()))
-                        .unwrap_or(Cow::Borrowed(package.file_name()));
+                        .map_or_else(
+                            || Cow::Borrowed(package.file_name()),
+                            |file_name| Cow::Owned(file_name.to_owned()),
+                        );
 
                     let mut embedded_msix = zip.by_name(&file_name)?;
                     let mut temp_file = tempfile::tempfile()?;

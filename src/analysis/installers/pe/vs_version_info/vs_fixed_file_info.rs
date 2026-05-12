@@ -11,9 +11,10 @@ use super::VSFileFlags;
 #[derive(Copy, Clone, TryFromBytes, Immutable, KnownLayout)]
 pub struct VSFixedFileInfo {
     /// Contains the value `0xFEEF04BD`. This is used with the szKey member of the
-    /// [`VS_VERSIONINFO`] structure when searching a file for the VS_FIXEDFILEINFO structure.
+    /// [`VS_VERSIONINFO`] structure when searching a file for the [`VS_FIXEDFILEINFO`] structure.
     ///
     /// [`VS_VERSIONINFO`]: super::VSVersionInfo
+    /// [`VS_FIXEDFILEINFO`]: Self
     #[doc(alias = "dwSignature")]
     signature: VSFixedFileInfoSignature,
 

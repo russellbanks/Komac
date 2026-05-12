@@ -147,7 +147,7 @@ const IS_COMPRESSED_MASK: u32 = 1 << 31;
 
 impl Header {
     pub fn read_from(data: &[u8], is_64_bit: bool) -> Result<Self, NsisError> {
-        let (common_header_flags, rest) = CommonHeaderFlags::read_from_prefix(&data)?;
+        let (common_header_flags, rest) = CommonHeaderFlags::read_from_prefix(data)?;
 
         let (blocks, mut rest) = BlockHeaders::read_dynamic_from_prefix(rest, is_64_bit)?;
 
