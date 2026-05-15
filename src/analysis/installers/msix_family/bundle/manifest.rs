@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use quick_xml::{Reader, events::BytesStart};
+use quick_xml::{Reader, XmlVersion, events::BytesStart};
 
 /// <https://learn.microsoft.com/uwp/schemas/bundlemanifestschema/element-bundle>
 #[derive(Debug, Default)]
@@ -27,12 +27,20 @@ impl Identity {
             let attribute = attribute?;
 
             match attribute.key.into_inner() {
-                b"Name" => identity.name = String::from_utf8_lossy(&attribute.value).into_owned(),
+                b"Name" => {
+                    identity.name = attribute
+                        .normalized_value(XmlVersion::Implicit1_0)?
+                        .into_owned();
+                }
                 b"Publisher" => {
-                    identity.publisher = String::from_utf8_lossy(&attribute.value).into_owned();
+                    identity.publisher = attribute
+                        .normalized_value(XmlVersion::Implicit1_0)?
+                        .into_owned();
                 }
                 b"Version" => {
-                    identity.version = String::from_utf8_lossy(&attribute.value).into_owned();
+                    identity.version = attribute
+                        .normalized_value(XmlVersion::Implicit1_0)?
+                        .into_owned();
                 }
                 _ => {}
             }
@@ -93,28 +101,30 @@ impl Package {
 
             match attribute.key.into_inner() {
                 b"Type"
-                    if let Ok(r#type) = str::from_utf8(&attribute.value)
+                    if let Ok(r#type) = attribute.normalized_value(XmlVersion::Implicit1_0)
                         && let Ok(r#type) = r#type.parse() =>
                 {
                     package.r#type = r#type;
                 }
                 b"FileName" => {
-                    package.file_name = String::from_utf8_lossy(&attribute.value).into_owned();
+                    package.file_name = attribute
+                        .normalized_value(XmlVersion::Implicit1_0)?
+                        .into_owned();
                 }
                 b"Offset"
-                    if let Ok(offset) = str::from_utf8(&attribute.value)
+                    if let Ok(offset) = attribute.normalized_value(XmlVersion::Implicit1_0)
                         && let Ok(offset) = offset.parse() =>
                 {
                     package.offset = offset;
                 }
                 b"Size"
-                    if let Ok(size) = str::from_utf8(&attribute.value)
+                    if let Ok(size) = attribute.normalized_value(XmlVersion::Implicit1_0)
                         && let Ok(size) = size.parse() =>
                 {
                     package.size = size;
                 }
                 b"IsStub"
-                    if let Ok(is_stub) = str::from_utf8(&attribute.value)
+                    if let Ok(is_stub) = attribute.normalized_value(XmlVersion::Implicit1_0)
                         && let Ok(is_stub) = is_stub.parse() =>
                 {
                     package.is_stub = is_stub;

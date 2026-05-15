@@ -7,7 +7,7 @@ use std::{
 };
 
 use color_eyre::eyre::Result;
-use quick_xml::{Reader, events::Event};
+use quick_xml::{Reader, XmlVersion, events::Event};
 use winget_types::{
     Sha256String,
     installer::{
@@ -56,26 +56,29 @@ impl Msix {
                         for attribute in event.attributes().flatten() {
                             match attribute.key.as_ref() {
                                 b"Name" => {
-                                    manifest.identity.name =
-                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                    manifest.identity.name = attribute
+                                        .normalized_value(XmlVersion::Implicit1_0)?
+                                        .into_owned();
                                 }
                                 b"Version" => {
-                                    manifest.identity.version =
-                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                    manifest.identity.version = attribute
+                                        .normalized_value(XmlVersion::Implicit1_0)?
+                                        .into_owned();
                                 }
                                 b"Publisher" => {
-                                    html_escape::decode_html_entities_to_string(
-                                        String::from_utf8_lossy(&attribute.value),
-                                        &mut manifest.identity.publisher,
-                                    );
+                                    manifest.identity.publisher = attribute
+                                        .normalized_value(XmlVersion::Implicit1_0)?
+                                        .into_owned();
                                 }
                                 b"ProcessorArchitecture" => {
-                                    manifest.identity.processor_architecture =
-                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                    manifest.identity.processor_architecture = attribute
+                                        .normalized_value(XmlVersion::Implicit1_0)?
+                                        .into_owned();
                                 }
                                 b"ResourceId" => {
-                                    manifest.identity.resource_id =
-                                        String::from_utf8_lossy(&attribute.value).into_owned();
+                                    manifest.identity.resource_id = attribute
+                                        .normalized_value(XmlVersion::Implicit1_0)?
+                                        .into_owned();
                                 }
                                 _ => {}
                             }
@@ -98,12 +101,14 @@ impl Msix {
                         let mut min_version = None;
                         for attribute in event.attributes().flatten() {
                             if attribute.key.as_ref() == b"Name"
-                                && let Ok(platform) = std::str::from_utf8(&attribute.value)
+                                && let Ok(platform) =
+                                    attribute.normalized_value(XmlVersion::Implicit1_0)
                                 && let Ok(platform) = platform.parse()
                             {
                                 name = Some(platform);
                             } else if attribute.key.as_ref() == b"MinVersion"
-                                && let Ok(version) = std::str::from_utf8(&attribute.value)
+                                && let Ok(version) =
+                                    attribute.normalized_value(XmlVersion::Implicit1_0)
                                 && let Ok(version) = version.parse()
                             {
                                 min_version = Some(version);
