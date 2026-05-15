@@ -82,12 +82,16 @@ impl Msix {
                         }
                     }
                     b"DisplayName" if event.name().prefix().is_none() => {
-                        manifest.properties.display_name =
-                            reader.read_text(event.to_end().name())?.into_owned();
+                        manifest.properties.display_name = reader
+                            .read_text(event.to_end().name())?
+                            .xml10_content()?
+                            .into_owned()
                     }
                     b"PublisherDisplayName" => {
-                        manifest.properties.publisher_display_name =
-                            reader.read_text(event.to_end().name())?.into_owned();
+                        manifest.properties.publisher_display_name = reader
+                            .read_text(event.to_end().name())?
+                            .xml10_content()?
+                            .into_owned();
                     }
                     b"TargetDeviceFamily" => {
                         let mut name = None;
@@ -116,6 +120,7 @@ impl Msix {
                         if let Ok(extension) = FileExtension::new(
                             reader
                                 .read_text(event.to_end().name())?
+                                .xml10_content()?
                                 .trim_start_matches('.'),
                         ) {
                             manifest
