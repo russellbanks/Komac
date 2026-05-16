@@ -3,7 +3,7 @@ name: Update local copy of GraphQL schema
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 9 * * 1'
+    - cron: '0 0 1 * *'
 
 jobs:
   update-schema:
