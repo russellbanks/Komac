@@ -10,12 +10,12 @@ use std::{
 use cab::Cabinet;
 use camino::Utf8PathBuf;
 use manifest::{
-    BurnManifest, Package, RelatedBundle, VariableType, install_condition::Value,
-    package::msi::Provides,
+    BurnManifest, Package, VariableType, install_condition::Value, package::msi::Provides,
 };
 use quick_xml::de::from_str;
 use thiserror::Error;
 use tracing::debug;
+use uuid::Uuid;
 use winget_types::installer::{
     AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer,
     InstallerType, Scope,
@@ -26,9 +26,12 @@ use super::msi::Msi;
 use crate::{
     analysis::{
         Installers,
-        installers::pe::{
-            PE,
-            resource::{ImageResourceDataEntry, ResourceDirectory, SectionReader},
+        installers::{
+            burn::manifest::WixBundleScope,
+            pe::{
+                PE,
+                resource::{ImageResourceDataEntry, ResourceDirectory, SectionReader},
+            },
         },
     },
     read::ReadBytesExt,
@@ -153,8 +156,19 @@ impl Installers for Burn {
                 .display_name(manifest.registration.arp.display_name())
                 .maybe_publisher(manifest.registration.arp.publisher())
                 .display_version(manifest.registration.arp.display_version().clone())
-                .product_code(manifest.registration.id())
-                .maybe_upgrade_code(manifest.related_bundles.first().map(RelatedBundle::code))
+                .product_code(
+                    manifest
+                        .registration
+                        .code()
+                        .encode_upper(&mut Uuid::encode_buffer())
+                        .to_string(),
+                )
+                .maybe_upgrade_code(manifest.related_bundles.first().map(|bundle| {
+                    bundle
+                        .code()
+                        .encode_upper(&mut Uuid::encode_buffer())
+                        .to_string()
+                }))
                 .installer_type(InstallerType::Burn)
                 .build(),
         );
@@ -220,11 +234,11 @@ impl Installers for Burn {
         vec![Installer {
             architecture: self.architecture,
             r#type: Some(InstallerType::Burn),
-            scope: manifest
-                .registration
-                .per_machine
-                .then_some(Scope::Machine)
-                .or(Some(Scope::User)),
+            scope: match manifest.registration.scope() {
+                WixBundleScope::PerMachine => Some(Scope::Machine),
+                WixBundleScope::PerUser => Some(Scope::User),
+                WixBundleScope::PerMachineOrUser | WixBundleScope::PerUserOrMachine => None,
+            },
             apps_and_features_entries,
             installation_metadata: manifest
                 .variables

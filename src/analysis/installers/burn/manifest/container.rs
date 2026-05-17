@@ -14,7 +14,7 @@ pub struct Container {
     #[serde(rename = "@DownloadUrl")]
     pub download_url: Option<String>,
     #[serde(rename = "@FilePath")]
-    pub file_path: String,
+    pub file_path: Option<String>,
     #[serde(rename = "@AttachedIndex")]
     pub attached_index: Option<u32>,
     #[serde(rename = "@Attached", deserialize_with = "bool_from_yes_no", default)]

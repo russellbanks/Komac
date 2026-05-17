@@ -15,6 +15,7 @@ use container::Container;
 pub use package::{Package, install_condition};
 use payload::Payload;
 use registration::Registration;
+pub use registration::WixBundleScope;
 pub use related_bundle::RelatedBundle;
 use serde::Deserialize;
 use variable::Variable;
