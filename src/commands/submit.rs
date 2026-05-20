@@ -166,7 +166,7 @@ impl Submit {
                 continue;
             }
 
-            let versions = github.get_versions(identifier).await.unwrap_or_default();
+            let versions = github.get_versions(identifier).await.ok();
 
             rate_limit.wait().await;
 
@@ -180,7 +180,7 @@ impl Submit {
                 .add_version()
                 .identifier(identifier)
                 .version(version)
-                .versions(&versions)
+                .maybe_versions(versions.as_ref())
                 .changes(changes)
                 .issue_resolves(&self.resolves)
                 .send()
