@@ -297,7 +297,7 @@ impl Header {
     /// Returns the language table's size, or `None` if the size was negative.
     ///
     /// In NSIS v2, if a language table was not set, the default one is generated, but its defined
-    /// length will be -1. In this case, this function returns `None`. The caller should fall back
+    /// length will be `-1`. In this case, this function returns `None`. The caller should fall back
     /// to the actual length of the language table data block.
     pub fn language_table_size(&self) -> Option<usize> {
         if self.language_table_size == I32::ZERO {
@@ -337,6 +337,10 @@ impl Header {
     }
 }
 
+#[expect(
+    clippy::missing_fields_in_debug,
+    reason = "Fields are used through function calls"
+)]
 impl fmt::Debug for Header {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Header")

@@ -49,7 +49,11 @@ impl RateLimit {
         let time_since_last_pr = Instant::now().duration_since(*self.last_pr_time.lock().await);
 
         if time_since_last_pr < self.rate_limit_delay {
-            let wait_time = self.rate_limit_delay - time_since_last_pr;
+            let wait_time = self
+                .rate_limit_delay
+                .checked_sub(time_since_last_pr)
+                .unwrap_or_else(|| unreachable!());
+
             let wait_pb = ProgressBar::new_spinner()
                 .with_message(format!(
                     "Last pull request was created {time_since_last_pr:?} ago. Waiting for {wait_time:?}",

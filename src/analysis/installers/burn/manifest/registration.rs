@@ -3,7 +3,7 @@ use uuid::{Uuid, fmt::Braced};
 
 use super::{arp::Arp, bool_from_yes_no};
 
-/// <https://github.com/wixtoolset/wix/blob/v7.0.0/src/wix/WixToolset.Core.Burn/Bundles/CreateBurnManifestCommand.cs#L217
+/// <https://github.com/wixtoolset/wix/blob/v7.0.0/src/wix/WixToolset.Core.Burn/Bundles/CreateBurnManifestCommand.cs#L217>
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Registration {
@@ -41,32 +41,36 @@ pub enum WixBundleScope {
     /// The package is a per-machine installation and requires elevated privileges to install.
     ///
     /// Sets the `ALLUSERS` property to 1.
-    PerMachine,
+    #[serde(rename = "PerMachine")]
+    Machine,
 
     /// The package is dual-purpose that can install per-machine or per-user and defaults to
     /// installing per-machine.
     ///
     /// Sets the `ALLUSERS` property to 2.
-    PerMachineOrUser,
+    #[serde(rename = "PerMachineOrUser")]
+    MachineOrUser,
 
     /// The package is dual-purpose that can install per-user or per-machine and defaults to
     /// installing per-user.
     ///
     /// Sets the `ALLUSERS` property to 2 and `MSIINSTALLPERUSER` property to 1.
-    PerUserOrMachine,
+    #[serde(rename = "PerUserOrMachine")]
+    UserOrMachine,
 
     /// The package is a per-user installation and does not require elevated privileges to install.
     ///
-    /// Sets the package’s InstallPrivileges attribute to “limited.”
-    PerUser,
+    /// Sets the package’s `InstallPrivileges` attribute to “limited.”
+    #[serde(rename = "PerUser")]
+    User,
 }
 
 impl From<bool> for WixBundleScope {
     fn from(per_machine: bool) -> Self {
         if per_machine {
-            Self::PerMachine
+            Self::Machine
         } else {
-            Self::PerUser
+            Self::User
         }
     }
 }

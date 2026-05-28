@@ -60,7 +60,7 @@ pub struct Arp {
     ///
     /// If the value is “yes” then the “Uninstall” button will not be displayed.
     /// The default is “no” which ensures there is an “Uninstall” button to remove the bundle.
-    /// If the “DisableModify” attribute is also “yes” or “button” then the bundle will not be
+    /// If the “`DisableModify`” attribute is also “yes” or “button” then the bundle will not be
     /// displayed in Programs and Features and another mechanism (such as registering as a related
     /// bundle addon) must be used to ensure the bundle can be removed.
     #[serde(

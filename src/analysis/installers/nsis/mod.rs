@@ -177,7 +177,9 @@ impl Nsis {
                             match compression {
                                 Compression::Lzma(filter_flag) => {
                                     decoder
-                                        .seek_relative(position as i64 + i64::from(filter_flag))
+                                        .seek_relative(
+                                            i64::try_from(position).ok()? + i64::from(filter_flag),
+                                        )
                                         .ok()?;
                                     let stream = LzmaStreamHeader::from_reader(decoder).ok()?;
                                     Decoder::Lzma(XzDecoder::new_stream(decoder, stream))

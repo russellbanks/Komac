@@ -235,9 +235,9 @@ impl Installers for Burn {
             architecture: self.architecture,
             r#type: Some(InstallerType::Burn),
             scope: match manifest.registration.scope() {
-                WixBundleScope::PerMachine => Some(Scope::Machine),
-                WixBundleScope::PerUser => Some(Scope::User),
-                WixBundleScope::PerMachineOrUser | WixBundleScope::PerUserOrMachine => None,
+                WixBundleScope::Machine => Some(Scope::Machine),
+                WixBundleScope::User => Some(Scope::User),
+                WixBundleScope::MachineOrUser | WixBundleScope::UserOrMachine => None,
             },
             apps_and_features_entries,
             installation_metadata: manifest

@@ -27,9 +27,9 @@ use zerocopy::{FromBytes, TryFromBytes, Unaligned};
 /// Represents a [`VS_VERSIONINFO`](https://docs.microsoft.com/windows/win32/menurc/vs-versioninfo) structure.
 #[derive(Debug)]
 pub struct VSVersionInfo<'a> {
-    pub fixed_file_info: &'a VSFixedFileInfo,
-    string_file_info: Option<VSStringFileInfo<'a>>,
-    var_file_info: Option<VSVarFileInfo<'a>>,
+    pub fixed: &'a VSFixedFileInfo,
+    string: Option<VSStringFileInfo<'a>>,
+    var: Option<VSVarFileInfo<'a>>,
 }
 
 impl<'a> VSVersionInfo<'a> {
@@ -69,18 +69,18 @@ impl<'a> VSVersionInfo<'a> {
         }
 
         Ok(VSVersionInfo {
-            fixed_file_info,
-            string_file_info,
-            var_file_info,
+            fixed: fixed_file_info,
+            string: string_file_info,
+            var: var_file_info,
         })
     }
 
     pub const fn string_file_info(&self) -> Option<&VSStringFileInfo<'a>> {
-        self.string_file_info.as_ref()
+        self.string.as_ref()
     }
 
     pub const fn var_file_info(&self) -> Option<&VSVarFileInfo<'a>> {
-        self.var_file_info.as_ref()
+        self.var.as_ref()
     }
 
     pub fn string_entries(&'a self) -> impl Iterator<Item = (&'a str, &'a str)> {

@@ -123,6 +123,10 @@ impl VSFixedFileInfo {
     }
 }
 
+#[expect(
+    clippy::missing_fields_in_debug,
+    reason = "Fields are used through function calls"
+)]
 impl fmt::Debug for VSFixedFileInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (struct_major, struct_minor) = self.struct_version();

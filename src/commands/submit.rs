@@ -22,6 +22,8 @@ use crate::{
     prompts::handle_inquire_error,
     token::TokenManager,
 };
+
+#[expect(clippy::struct_excessive_bools, reason = "CLI flags")]
 #[derive(Parser)]
 pub struct Submit {
     #[arg(value_hint = clap::ValueHint::DirPath)]

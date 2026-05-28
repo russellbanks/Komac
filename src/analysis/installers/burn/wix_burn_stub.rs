@@ -32,7 +32,7 @@ pub struct WixBurnStub {
     /// 0x00F14300
     magic: WixBurnStubMagic,
 
-    /// <https://github.com/wixtoolset/wix/blob/v7.0.0/src/burn/engine/inc/engine.h#L10
+    /// <https://github.com/wixtoolset/wix/blob/v7.0.0/src/burn/engine/inc/engine.h#L10>
     version: U32,
 
     guid: uuid::Bytes,
@@ -126,6 +126,10 @@ impl WixBurnStub {
     }
 }
 
+#[expect(
+    clippy::missing_fields_in_debug,
+    reason = "Fields are used through function calls"
+)]
 impl fmt::Debug for WixBurnStub {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("WixBurnStub")

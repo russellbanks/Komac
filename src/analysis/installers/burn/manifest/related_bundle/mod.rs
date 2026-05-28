@@ -8,7 +8,7 @@ use uuid::{Uuid, fmt::Braced};
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct RelatedBundle {
-    /// The identifier of the RelatedBundle group.
+    /// The identifier of the `RelatedBundle` group.
     #[serde(rename = "@Code", alias = "@Id")]
     code: Uuid,
 

@@ -45,7 +45,7 @@ pub struct Footer {
 impl Footer {
     pub const SIGNATURE: &[u8; 10] = b"ADVINSTSFX";
 
-    pub const SIGNATURE_OFFSET: usize = offset_of!(Footer, signature);
+    pub const SIGNATURE_OFFSET: usize = offset_of!(Self, signature);
 
     pub fn find<R: Read + Seek>(reader: &mut R) -> Result<Self, AdvancedInstallerError> {
         const SEARCH_BLOCK_SIZE: usize = 16 * 1024;
@@ -59,10 +59,10 @@ impl Footer {
 
         let signature_pos = buf
             .array_windows()
-            .rposition(|window| window == Footer::SIGNATURE)
+            .rposition(|window| window == Self::SIGNATURE)
             .ok_or(AdvancedInstallerError::NotAdvancedInstallerFile)?;
 
-        let footer_offset = search_start + signature_pos as u64 - Footer::SIGNATURE_OFFSET as u64;
+        let footer_offset = search_start + signature_pos as u64 - Self::SIGNATURE_OFFSET as u64;
         reader.seek(SeekFrom::Start(footer_offset))?;
 
         reader.read_t::<Self>().map_err(AdvancedInstallerError::Io)

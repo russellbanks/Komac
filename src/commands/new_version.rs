@@ -53,6 +53,7 @@ use crate::{
 };
 
 /// Create a new package from scratch
+#[expect(clippy::struct_excessive_bools, reason = "CLI flags")]
 #[derive(Parser)]
 pub struct NewVersion {
     /// The package's unique identifier

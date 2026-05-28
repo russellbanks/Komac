@@ -16,8 +16,8 @@ pub struct FileEntry {
     /// * [3, 7] = 7Z
     /// * [8, 6] = FILES.7z
     /// * [1, 13] = AIUI
-    /// * [100, 8] = vc_redist.x64.exe
-    /// * [101, 8] = vc_redist.x86.exe
+    /// * [100, 8] = `vc_redist.x64.exe`
+    /// * [101, 8] = `vc_redist.x86.exe`
     /// * [102, 8] = ndp48-web.exe
     /// * [103, 8] = MicrosoftEdgeWebview2Setup.exe
     r#type: [U32<LE>; 2],

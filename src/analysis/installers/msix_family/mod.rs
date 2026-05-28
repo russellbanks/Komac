@@ -88,7 +88,7 @@ impl Msix {
                         manifest.properties.display_name = reader
                             .read_text(event.to_end().name())?
                             .xml10_content()?
-                            .into_owned()
+                            .into_owned();
                     }
                     b"PublisherDisplayName" => {
                         manifest.properties.publisher_display_name = reader

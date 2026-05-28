@@ -118,17 +118,13 @@ impl Installers for AdvancedInstaller {
                     .silent_with_progress("/exenoui /passive".parse().unwrap())
                     .install_location(r#"APPDIR="<INSTALLPATH>""#.parse().unwrap())
                     .log(r#"/log "<LOGPATH>""#.parse().unwrap())
-                    .custom(
-                        installer
-                            .switches
-                            .custom()
-                            .cloned()
-                            .map(|mut custom| {
-                                custom.push("/norestart");
-                                custom
-                            })
-                            .unwrap_or_else(|| "/norestart".parse().unwrap()),
-                    )
+                    .custom(installer.switches.custom().cloned().map_or_else(
+                        || "/norestart".parse().unwrap(),
+                        |mut custom| {
+                            custom.push("/norestart");
+                            custom
+                        },
+                    ))
                     .build();
 
                 // https://www.advancedinstaller.com/user-guide/exe-setup-file.html#return-code
@@ -153,7 +149,7 @@ impl Installers for AdvancedInstaller {
                         .maybe_publisher(template.publisher())
                         .maybe_product_code(Some(product_code))
                         .build()
-                        .into()
+                        .into();
                 }
 
                 installer
@@ -163,7 +159,10 @@ impl Installers for AdvancedInstaller {
 }
 
 fn expected_return_codes() -> BTreeSet<ExpectedReturnCodes> {
-    use ReturnResponse::*;
+    use ReturnResponse::{
+        AlreadyInstalled, BlockedByPolicy, CancelledByUser, ContactSupport, InstallInProgress,
+        InvalidParameter, RebootInitiated, RebootRequiredToFinish, SystemNotSupported,
+    };
 
     [
         (-1, CancelledByUser),
