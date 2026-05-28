@@ -5159,7 +5159,6 @@ checksum = "063426e76fdec7438d56bb777f67e318a84a25c707b07e575cb8b78e10c028f8"
 dependencies = [
  "byteorder",
  "keyring-core",
- "regex",
  "windows-sys 0.61.2",
  "zeroize",
 ]
