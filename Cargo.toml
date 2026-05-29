@@ -102,7 +102,7 @@ url = { version = "2.5.8", features = ["serde"] }
 uuid = { version = "1.23.2", features = ["serde", "v4"] }
 walkdir = "2.5.0"
 winget-types = { version = "0.4.3", features = ["serde", "std", "chrono"] }
-zerocopy = { version = "0.8.48", features = ["derive", "std"] }
+zerocopy = { version = "0.8.50", features = ["derive", "std"] }
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd"))'.dependencies]
