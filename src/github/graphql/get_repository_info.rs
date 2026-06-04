@@ -34,7 +34,6 @@ pub struct Repository {
 #[derive(cynic::QueryFragment)]
 pub struct Ref {
     pub name: String,
-    pub id: cynic::Id,
     pub target: Option<TargetGitObject>,
 }
 
@@ -94,7 +93,6 @@ mod tests {
                 url
                 defaultBranchRef {
                   name
-                  id
                   target {
                     __typename
                     ... on Commit {

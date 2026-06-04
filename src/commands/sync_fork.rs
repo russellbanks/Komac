@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use anstream::println;
 use clap::Parser;
-use color_eyre::Result;
+use color_eyre::{Result, eyre::Context};
 use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
@@ -21,12 +21,6 @@ use crate::{
 #[derive(Parser)]
 #[clap(visible_aliases = ["sync-fork", "merge-upstream"])]
 pub struct SyncFork {
-    /// Merges changes even if the fork's default branch is not fast-forward. This is not
-    /// recommended as you should instead have a clean default branch that has not diverged from the
-    /// upstream default branch
-    #[arg(short, long)]
-    force: bool,
-
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
     token: Option<SecretString>,
@@ -75,18 +69,21 @@ impl SyncFork {
         ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
-        github
-            .merge_upstream(
-                &fork.default_branch_ref_id,
-                winget_pkgs.default_branch_oid,
-                self.force,
-            )
-            .await?;
+        let sync_type = github
+            .sync_fork(&fork.full_name, &fork.default_branch_name)
+            .await
+            .map(|response| response.merge_type)
+            .with_context(|| {
+                format!(
+                    "while merging {new_commits_count} upstream {commit_label} from {} into {}",
+                    winget_pkgs.full_name, fork.full_name,
+                )
+            })?;
 
         pb.finish_and_clear();
 
         println!(
-            "{} merged {new_commits_count} upstream {commit_label} from {} into {}",
+            "{} merged {new_commits_count} upstream {commit_label} from {} into {} ({sync_type})",
             "Successfully".green(),
             winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
             fork.full_name.hyperlink(fork.url).blue()

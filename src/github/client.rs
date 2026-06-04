@@ -222,7 +222,6 @@ impl GitHub {
             url: repository.url,
             default_branch_name: default_branch.name,
             default_branch_oid: commits.oid,
-            default_branch_ref_id: default_branch.id,
             commit_count: commits.history.total_count,
         })
     }
@@ -618,6 +617,5 @@ pub struct RepositoryData {
     pub url: Url,
     pub default_branch_name: String,
     pub default_branch_oid: GitObjectId,
-    pub default_branch_ref_id: Id,
     pub commit_count: i32,
 }
