@@ -13,7 +13,7 @@ use winget_types::{
     LanguageTag,
     installer::{
         AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture, InstallationMetadata,
-        Installer, InstallerType, Scope,
+        Installer, InstallerSwitches, InstallerType, Scope,
     },
 };
 
@@ -106,11 +106,8 @@ impl Msi {
         self.build_directory(INSTALL_DIR, TARGET_DIR)
             .or_else(|| {
                 // Check the value of the `WIXUI_INSTALLDIR` property
-                const WIX_UI_INSTALL_DIR: &str = "WIXUI_INSTALLDIR";
-
-                self.property_table
-                    .get(WIX_UI_INSTALL_DIR)
-                    .and_then(|wix_install_dir| self.build_directory(wix_install_dir, TARGET_DIR))
+                self.wix_ui_install_dir()
+                    .and_then(|install_dir| self.build_directory(install_dir, TARGET_DIR))
             })
             .or_else(|| {
                 // Check for an `INSTALLLOCATION` directory entry
@@ -225,6 +222,27 @@ impl Msi {
             .ok()
     }
 
+    fn wix_ui_install_dir(&self) -> Option<&str> {
+        const WIX_UI_INSTALL_DIR: &str = "WIXUI_INSTALLDIR";
+
+        self.property_table.get(WIX_UI_INSTALL_DIR)
+    }
+
+    fn install_location_switches(&self) -> InstallerSwitches {
+        self.wix_ui_install_dir()
+            .and_then(|install_dir| {
+                format!(r#"{install_dir}="<INSTALLPATH>""#)
+                    .parse()
+                    .map(|switch| {
+                        InstallerSwitches::builder()
+                            .install_location(switch)
+                            .build()
+                    })
+                    .ok()
+            })
+            .unwrap_or_default()
+    }
+
     fn is_wix(&self) -> bool {
         const WIX: &str = "Wix";
         const WINDOWS_INSTALLER_XML: &str = "Windows Installer XML";
@@ -260,6 +278,7 @@ impl Installers for Msi {
                 InstallerType::Msi
             }),
             scope: self.find_scope(),
+            switches: self.install_location_switches(),
             product_code: product_code.map(str::to_owned),
             apps_and_features_entries: if product_name.is_some()
                 || manufacturer.is_some()
