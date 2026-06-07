@@ -229,13 +229,18 @@ impl Msi {
     }
 
     fn install_location_switches(&self) -> InstallerSwitches {
-        if let Some(install_dir) = self.wix_ui_install_dir() {
-            return InstallerSwitches::builder()
-                .install_location(format!(r#"{install_dir}="<INSTALLPATH>""#).parse().unwrap())
-                .build();
-        }
-
-        InstallerSwitches::default()
+        self.wix_ui_install_dir()
+            .and_then(|install_dir| {
+                format!(r#"{install_dir}="<INSTALLPATH>""#)
+                    .parse()
+                    .map(|switch| {
+                        InstallerSwitches::builder()
+                            .install_location(switch)
+                            .build()
+                    })
+                    .ok()
+            })
+            .unwrap_or_default()
     }
 
     fn is_wix(&self) -> bool {
