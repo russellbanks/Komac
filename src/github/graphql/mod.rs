@@ -9,7 +9,6 @@ pub mod get_directory_content_with_text;
 pub mod get_existing_pull_request;
 mod get_file_content;
 pub mod get_repository_info;
-pub mod merge_upstream;
 mod schema;
 pub mod types;
 pub mod update_refs;

@@ -2,8 +2,7 @@ use std::time::Duration;
 
 use anstream::println;
 use clap::Parser;
-use color_eyre::Result;
-use futures_util::TryFutureExt;
+use color_eyre::{Result, eyre::Context};
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use rand::random_range;
@@ -21,12 +20,6 @@ use crate::{
 #[derive(Parser)]
 #[clap(visible_aliases = ["sync-fork", "merge-upstream"])]
 pub struct SyncFork {
-    /// Merges changes even if the fork's default branch is not fast-forward. This is not
-    /// recommended as you should instead have a clean default branch that has not diverged from the
-    /// upstream default branch
-    #[arg(short, long)]
-    force: bool,
-
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
     token: Option<SecretString>,
@@ -41,16 +34,16 @@ impl SyncFork {
         let token_manager = TokenManager::handle(self.token).await?;
         let github = GitHub::new(token_manager)?;
 
+        let username = github.get_username().await?;
+
         // Fetch repository data from both upstream and fork repositories asynchronously
         let (winget_pkgs, fork) = try_join!(
             github.get_winget_pkgs().send(),
-            github
-                .get_username()
-                .and_then(|username| github.get_winget_pkgs().owner(username).send()),
+            github.get_winget_pkgs().owner(&username).send(),
         )?;
 
-        // Check whether the fork is already up-to-date with upstream by their latest commit OID's
-        if winget_pkgs.default_branch_oid == fork.default_branch_oid {
+        let comparison = github.compare_upstream(&username).await?;
+        if comparison.is_identical() {
             println!(
                 "{} is already {} with {}",
                 fork.full_name.hyperlink(&fork.url).blue(),
@@ -60,34 +53,37 @@ impl SyncFork {
             return Ok(());
         }
 
-        // Calculate how many commits upstream is ahead of fork
-        let new_commits_count = winget_pkgs.commit_count - fork.commit_count;
-        let commit_label = match new_commits_count {
+        let commit_label = match comparison.ahead_by {
             1 => "commit",
             _ => "commits",
         };
 
         // Show an indeterminate progress bar while upstream changes are being merged
         let pb = ProgressBar::new_spinner().with_message(format!(
-            "Merging {new_commits_count} upstream {commit_label} from {} into {}",
+            "Merging {} upstream {commit_label} from {} into {}",
+            comparison.ahead_by,
             winget_pkgs.full_name.blue(),
             fork.full_name.blue(),
         ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
-        github
-            .merge_upstream(
-                &fork.default_branch_ref_id,
-                winget_pkgs.default_branch_oid,
-                self.force,
-            )
-            .await?;
+        let sync_type = github
+            .sync_fork(&username, &fork.default_branch_name)
+            .await
+            .with_context(|| {
+                format!(
+                    "while merging {} upstream {commit_label} from {} into {}",
+                    comparison.ahead_by, winget_pkgs.full_name, fork.full_name
+                )
+            })?
+            .merge_type;
 
         pb.finish_and_clear();
 
         println!(
-            "{} merged {new_commits_count} upstream {commit_label} from {} into {}",
+            "{} merged {} upstream {commit_label} from {} into {} ({sync_type})",
             "Successfully".green(),
+            comparison.ahead_by,
             winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
             fork.full_name.hyperlink(fork.url).blue()
         );

@@ -34,7 +34,6 @@ pub struct Repository {
 #[derive(cynic::QueryFragment)]
 pub struct Ref {
     pub name: String,
-    pub id: cynic::Id,
     pub target: Option<TargetGitObject>,
 }
 
@@ -46,12 +45,6 @@ pub struct RepositoryOwner {
 #[derive(cynic::QueryFragment)]
 pub struct Commit {
     pub oid: GitObjectId,
-    pub history: CommitHistoryConnection,
-}
-
-#[derive(cynic::QueryFragment)]
-pub struct CommitHistoryConnection {
-    pub total_count: i32,
 }
 
 #[derive(cynic::InlineFragments)]
@@ -94,14 +87,10 @@ mod tests {
                 url
                 defaultBranchRef {
                   name
-                  id
                   target {
                     __typename
                     ... on Commit {
                       oid
-                      history {
-                        totalCount
-                      }
                     }
                   }
                 }

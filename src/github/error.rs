@@ -8,7 +8,9 @@ use super::{WINGET_PKGS_FULL_NAME, utils::PackagePath};
 #[derive(Debug, Error)]
 pub enum GitHubError {
     #[error(transparent)]
-    GraphQL(#[from] eyre::Error),
+    GraphQL(eyre::Error),
+    #[error(transparent)]
+    Rest(eyre::Error),
     #[error("{0} does not exist in {WINGET_PKGS_FULL_NAME}")]
     PackageNonExistent(PackageIdentifier),
     #[error("No {type} manifest was found in {path}")]
