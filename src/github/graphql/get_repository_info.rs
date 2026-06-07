@@ -45,12 +45,6 @@ pub struct RepositoryOwner {
 #[derive(cynic::QueryFragment)]
 pub struct Commit {
     pub oid: GitObjectId,
-    pub history: CommitHistoryConnection,
-}
-
-#[derive(cynic::QueryFragment)]
-pub struct CommitHistoryConnection {
-    pub total_count: i32,
 }
 
 #[derive(cynic::InlineFragments)]
@@ -97,9 +91,6 @@ mod tests {
                     __typename
                     ... on Commit {
                       oid
-                      history {
-                        totalCount
-                      }
                     }
                   }
                 }

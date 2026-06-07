@@ -2,13 +2,16 @@
 //!
 //! See <https://docs.github.com/en/rest/branches/branches#sync-a-fork-branch-with-the-upstream-repository>.
 
-use color_eyre::eyre::eyre;
+mod merge_type;
+
+pub use merge_type::MergeType;
 use reqwest::header::ACCEPT;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    super::{GitHubError, client::GitHub},
+    super::{GitHubError, WINGET_PKGS, client::GitHub},
     GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION,
+    error::RestError,
 };
 
 #[derive(Serialize)]
@@ -21,38 +24,22 @@ struct Body<'branch> {
 #[derive(Deserialize)]
 pub struct Response {
     /// Human-readable summary of the sync result returned by GitHub.
-    #[allow(dead_code)] // For completeness
+    #[allow(unused)]
     pub message: String,
-    /// The strategy GitHub used to sync the branch, such as `fast-forward`.
-    pub merge_type: String,
+    /// The strategy GitHub used to sync the branch.
+    pub merge_type: MergeType,
     /// The upstream branch GitHub synced from, including its owner.
-    #[allow(dead_code)] // For completeness
+    #[allow(unused)]
     pub base_branch: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct ErrorResponse {
-    status: Option<String>,
-    message: String,
-}
-
-impl From<ErrorResponse> for GitHubError {
-    fn from(value: ErrorResponse) -> Self {
-        let ErrorResponse { status, message } = value;
-        Self::Rest(match status {
-            Some(status) => eyre!("Status {status}: {message}"),
-            None => eyre!("{message}"),
-        })
-    }
 }
 
 impl GitHub {
     /// Syncs a fork branch using the `merge-upstream` endpoint. This matches
     /// GitHub's "Sync fork" behavior in the web UI.
     ///
-    /// See <https://docs.github.com/en/rest/branches/branches#sync-a-fork-branch-with-the-upstream-repository>.
-    pub async fn sync_fork(&self, repository: &str, branch: &str) -> Result<Response, GitHubError> {
-        let endpoint = format!("{REST_API_URL}/repos/{repository}/merge-upstream");
+    /// See <https://docs.github.com/rest/branches/branches#sync-a-fork-branch-with-the-upstream-repository>.
+    pub async fn sync_fork(&self, fork_owner: &str, branch: &str) -> Result<Response, GitHubError> {
+        let endpoint = format!("{REST_API_URL}/repos/{fork_owner}/{WINGET_PKGS}/merge-upstream");
 
         let response = self
             .0
@@ -67,7 +54,7 @@ impl GitHub {
             response.json::<Response>().await.map_err(GitHubError::from)
         } else {
             Err(response
-                .json::<ErrorResponse>()
+                .json::<RestError>()
                 .await
                 .map_err(GitHubError::from)?
                 .into())
@@ -77,6 +64,8 @@ impl GitHub {
 
 #[cfg(test)]
 mod tests {
+    use indoc::indoc;
+
     use super::*;
 
     #[test]
@@ -89,26 +78,27 @@ mod tests {
 
     #[test]
     fn response_deserializes() {
-        let response = serde_json::from_str::<Response>(
-            r#"{
-                "message":"Successfully fetched and fast-forwarded from upstream defunkt:main",
-                "merge_type":"fast-forward",
-                "base_branch":"defunkt:main"
-            }"#,
-        )
-        .unwrap();
+        const RESPONSE: &str = indoc! {r#"
+            {
+              "message": "Successfully fetched and fast-forwarded from upstream defunkt:main",
+              "merge_type": "fast-forward",
+              "base_branch": "defunkt:main"
+            }
+        "#};
+
+        let response = serde_json::from_str::<Response>(RESPONSE).unwrap();
 
         assert_eq!(
             response.message,
             "Successfully fetched and fast-forwarded from upstream defunkt:main"
         );
-        assert_eq!(response.merge_type, "fast-forward");
+        assert_eq!(response.merge_type, MergeType::FastForward);
         assert_eq!(response.base_branch, "defunkt:main");
     }
 
     #[test]
     fn error_response_deserializes() {
-        let error = serde_json::from_str::<ErrorResponse>(
+        let error = serde_json::from_str::<RestError>(
             r#"{
                 "status": "422",
                 "message": "refusing to allow a Personal Access Token to create or update workflow `.github/workflows/foo.yaml` without `workflow` scope"
@@ -124,14 +114,14 @@ mod tests {
 
     #[test]
     fn error_response_without_status_deserializes() {
-        let error = serde_json::from_str::<ErrorResponse>(
+        let error = serde_json::from_str::<RestError>(
             r#"{
                 "message": "Validation Failed"
             }"#,
         )
         .unwrap();
 
-        assert_eq!(error.status, None);
+        assert!(error.status.is_none());
         assert_eq!(error.message, "Validation Failed");
     }
 }

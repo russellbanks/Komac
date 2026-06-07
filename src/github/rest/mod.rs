@@ -1,3 +1,5 @@
+mod compare_commits;
+mod error;
 mod merge_upstream;
 mod tree;
 
