@@ -11,4 +11,4 @@ pub const X_GITHUB_API_VERSION: HeaderName = HeaderName::from_static("x-github-a
 
 pub const REST_API_URL: &str = "https://api.github.com";
 
-pub const REST_API_VERSION: HeaderValue = HeaderValue::from_static("2022-11-28");
+pub const REST_API_VERSION: HeaderValue = HeaderValue::from_static("2026-03-10");
