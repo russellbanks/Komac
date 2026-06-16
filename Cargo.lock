@@ -1886,7 +1886,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f85dac6c239acc85fd61934c572292d93adfd2de459d9c032aa22b553506e915"
 dependencies = [
  "either",
- "itertools",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "strum 0.27.2",
@@ -1928,7 +1928,7 @@ dependencies = [
  "crc32fast",
  "encoding_rs",
  "flate2",
- "itertools",
+ "itertools 0.14.0",
  "liblzma",
  "nt-time 0.13.2",
  "thiserror 2.0.18",
@@ -2018,6 +2018,15 @@ name = "itertools"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
 dependencies = [
  "either",
 ]
@@ -2177,7 +2186,7 @@ dependencies = [
  "indoc",
  "inno",
  "inquire",
- "itertools",
+ "itertools 0.15.0",
  "itoa",
  "keyring-core",
  "liblzma",
@@ -3374,7 +3383,7 @@ dependencies = [
  "critical-section",
  "hashbrown 0.17.1",
  "indoc",
- "itertools",
+ "itertools 0.14.0",
  "kasuari",
  "lru",
  "palette",
@@ -3442,7 +3451,7 @@ dependencies = [
  "hashbrown 0.17.1",
  "indoc",
  "instability",
- "itertools",
+ "itertools 0.14.0",
  "line-clipping",
  "ratatui-core",
  "serde",
@@ -4746,7 +4755,7 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16b380a1238663e5f8a691f9039c73e1cdae598a30e9855f541d29b08b53e9a5"
 dependencies = [
- "itertools",
+ "itertools 0.14.0",
  "unicode-segmentation",
  "unicode-width",
 ]
@@ -5447,7 +5456,7 @@ dependencies = [
  "compact_str",
  "heapless",
  "icu_locale",
- "itertools",
+ "itertools 0.14.0",
  "jiff",
  "package-family-name",
  "percent-encoding",
