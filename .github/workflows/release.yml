@@ -39,7 +39,7 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: mlugg/setup-zig@v2
         if: contains(matrix.platform.bins, 'cargo-zigbuild')
@@ -207,7 +207,7 @@ jobs:
       id-token: write
     steps:
       - name: Clone repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
