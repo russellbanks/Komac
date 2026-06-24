@@ -117,6 +117,25 @@ This should be a classic token with the `public_repo` scope.
 
 ![Screenshot of classic token being created with public_repo scope selected](https://github.com/russellbanks/komac/assets/74878137/fbe4472e-dc53-4caf-ad2b-3bef75c47b07)
 
+Please note that GitHub may require the `workflow` scope when using the
+`sync-fork` command to synchronize changes from upstream that affect files in
+the `.github/workflows` directory. When this happens, `sync-fork` may fail with
+an error like:
+
+```text
+Error:
+   0: <username> does not have the correct permissions to execute `UpdateRef`
+   1: failed to sync upstream changes
+```
+
+This is a GitHub [restriction on creating or updating workflow
+files][gh-docs-change-contents] via the API. To avoid granting workflow access
+to the classic token that's required for the `update` command, consider running
+`sync-fork` with a separate token. A fine-grained token scoped only to your fork
+repository, with read and write access to repository contents and workflows, is
+sufficient for the sync step, while other commands can continue using your
+classic `public_repo` token.
+
 Adding to komac:
 
 ```bash
@@ -138,6 +157,8 @@ winget-pkgs. This may change as fine-grained tokens improve.
 See https://github.com/russellbanks/Komac/issues/310.
 
 </details>
+
+[gh-docs-change-contents]: https://docs.github.com/en/rest/repos/contents#create-or-update-file-contents.
 
 ## Commands
 
