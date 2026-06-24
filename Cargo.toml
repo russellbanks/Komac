@@ -38,7 +38,7 @@ strip = true
 anstream = "1.0.0"
 base64ct = { version = "1.8.3", features = ["std"] }
 bitflags = "2.13.0"
-bon = "3.9.1"
+bon = "3.9.3"
 bytes = "1.11.1"
 bzip2 = "0.6.1"
 cab = "0.6.0"
