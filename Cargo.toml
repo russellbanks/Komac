@@ -61,7 +61,7 @@ indextree = "4.8.1"
 indicatif = "0.18.4"
 inno = { version = "0.4.2", features = ["lzma-static"] }
 inquire = "0.9.4"
-itertools = "0.14.0"
+itertools = "0.15.0"
 itoa = "1.0.18"
 keyring-core = "1.0.0"
 liblzma = { version = "0.4.6", features = ["static"] }
