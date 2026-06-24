@@ -99,7 +99,7 @@ tree-sitter-highlight = "0.26.9"
 tree-sitter-yaml = "0.7.2"
 typed-path = "0.12.3"
 url = { version = "2.5.8", features = ["serde"] }
-uuid = { version = "1.23.3", features = ["serde", "v4"] }
+uuid = { version = "1.23.4", features = ["serde", "v4"] }
 walkdir = "2.5.0"
 winget-types = { version = "0.4.3", features = ["serde", "std", "chrono"] }
 zerocopy = { version = "0.8.52", features = ["derive", "std"] }
