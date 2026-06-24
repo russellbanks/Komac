@@ -75,7 +75,7 @@ owo-colors = "4.3.0"
 percent-encoding = "2.3.2"
 quick-xml = { version = "0.40.1", features = ["serialize"] }
 rand = "0.10.1"
-ratatui = "0.30.1"
+ratatui = "0.30.2"
 ratatui-textarea = { version = "0.9.1", features = ["search"] }
 regex = "1.12.4"
 reqwest = { version = "0.13.4", default-features = false, features = ["charset", "http2", "stream", "system-proxy"] }
