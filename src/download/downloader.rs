@@ -8,7 +8,7 @@ use itertools::{Itertools, Position};
 use reqwest::{
     Client,
     header::{
-        CONTENT_DISPOSITION, CONTENT_TYPE, DNT, GetAll, HeaderMap, HeaderValue, LAST_MODIFIED,
+        CONTENT_DISPOSITION, CONTENT_TYPE, GetAll, HeaderMap, HeaderValue, LAST_MODIFIED,
         USER_AGENT,
     },
 };
@@ -94,6 +94,10 @@ impl Downloader {
         Ok(downloaded_files)
     }
 
+    /// Returns a [`HeaderMap`] of the default headers komac uses.
+    ///
+    /// * `user-agent`: `Microsoft-Delivery-Optimization/10.1`
+    /// * `Sec-GPC`: `1`
     fn headers() -> HeaderMap {
         const MICROSOFT_DELIVERY_OPTIMIZATION: HeaderValue =
             HeaderValue::from_static("Microsoft-Delivery-Optimization/10.1");
@@ -101,7 +105,6 @@ impl Downloader {
 
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, MICROSOFT_DELIVERY_OPTIMIZATION);
-        headers.insert(DNT, HeaderValue::from(1));
         headers.insert(SEC_GPC, HeaderValue::from(1));
         headers
     }
