@@ -96,7 +96,7 @@ impl RemoveVersion {
             Some(reason) => reason,
             None => Text::new(&format!(
                 "Give a reason for removing {} version {}",
-                &self.package_identifier, &self.package_version
+                self.package_identifier, self.package_version
             ))
             .with_validator(MinLengthValidator::new(Self::MIN_REASON_LENGTH))
             .with_validator(MaxLengthValidator::new(Self::MAX_REASON_LENGTH))
