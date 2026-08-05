@@ -38,7 +38,7 @@ impl Downloader {
 
     const APPLICATION: &'static str = "application";
 
-    const OCTET_STREAM: HeaderValue = HeaderValue::from_static("binary/octet-stream");
+    const OCTET_STREAM: &'static str = "octet-stream";
 
     /// Creates a new Downloader with a maximum number of concurrent downloads of the number of
     /// logical cores the system has.
@@ -117,7 +117,9 @@ impl Downloader {
         content_types: GetAll<HeaderValue>,
     ) -> Result<(), ContentTypeError> {
         if content_types.iter().all(|content_type| {
-            content_type != Self::OCTET_STREAM
+            !content_type
+                .as_bytes()
+                .ends_with(Self::OCTET_STREAM.as_bytes())
                 && !content_type
                     .as_bytes()
                     .starts_with(Self::APPLICATION.as_bytes())
@@ -267,7 +269,7 @@ impl fmt::Display for ContentTypeError {
         }
         write!(
             f,
-            " but an {application} or {octet_stream:?} content type was expected",
+            " but an {application} or {octet_stream} content type was expected",
             application = Downloader::APPLICATION,
             octet_stream = Downloader::OCTET_STREAM
         )
