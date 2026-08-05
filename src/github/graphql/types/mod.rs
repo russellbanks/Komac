@@ -4,7 +4,7 @@ mod pull_request;
 
 pub use base64_string::Base64String;
 pub use git_ref_name::GitRefName;
-pub use pull_request::PullRequestState;
+pub use pull_request::{PullRequest, PullRequestState};
 
 use super::github_schema as schema;
 

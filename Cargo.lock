@@ -627,8 +627,21 @@ dependencies = [
  "itoa",
  "rustversion",
  "ryu",
+ "static_assertions",
+]
+
+[[package]]
+name = "compact_str"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79fcda08c33bb58b97008b2cdada6622500e949e060f5913361763121abd2416"
+dependencies = [
+ "castaway",
+ "cfg-if",
+ "itoa",
  "serde",
  "static_assertions",
+ "zmij",
 ]
 
 [[package]]
@@ -1178,12 +1191,6 @@ name = "fast-srgb8"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd2e7510819d6fbf51a5545c8f922716ecfb14df168a3242f7d33e0239efe6a1"
-
-[[package]]
-name = "fast32"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a35a73237400bde66c82e38387343f90d7182a2f2f22729e096a2abd57d75db9"
 
 [[package]]
 name = "fastrand"
@@ -1886,7 +1893,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f85dac6c239acc85fd61934c572292d93adfd2de459d9c032aa22b553506e915"
 dependencies = [
  "either",
- "itertools",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "strum 0.27.2",
@@ -1928,7 +1935,7 @@ dependencies = [
  "crc32fast",
  "encoding_rs",
  "flate2",
- "itertools",
+ "itertools 0.14.0",
  "liblzma",
  "nt-time 0.13.2",
  "thiserror 2.0.18",
@@ -2018,6 +2025,15 @@ name = "itertools"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b4baf93f58d4425749ca49a51c50ebab072c5df6994d08fed93541c331481dc"
 dependencies = [
  "either",
 ]
@@ -2161,7 +2177,7 @@ dependencies = [
  "clap_complete",
  "codepage",
  "color-eyre",
- "compact_str",
+ "compact_str 0.9.1",
  "const_format",
  "crossbeam-channel",
  "cynic",
@@ -2177,7 +2193,7 @@ dependencies = [
  "indoc",
  "inno",
  "inquire",
- "itertools",
+ "itertools 0.14.0",
  "itoa",
  "keyring-core",
  "liblzma",
@@ -2861,14 +2877,12 @@ checksum = "d211803b9b6b570f68772237e415a029d5a50c65d382910b879fb19d3271f94d"
 
 [[package]]
 name = "package-family-name"
-version = "2.1.2"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78e7c144b7a3401bea37f4f0a17bf2cf33d188db130e9967f172b5d7b2dc3310"
+checksum = "cbdea4b26c3ae1459694aa1237ad5246dc46b9f8840a8401f6da26b8eefa8833"
 dependencies = [
- "fast32",
- "heapless",
  "serde_core",
- "sha2 0.10.9",
+ "sha2 0.11.0",
  "thiserror 2.0.18",
 ]
 
@@ -3370,11 +3384,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42d3603f354bba8c595fa47860e60142d7372b7210c27044c6a7d0e1a4336b44"
 dependencies = [
  "bitflags 2.13.0",
- "compact_str",
+ "compact_str 0.9.1",
  "critical-section",
  "hashbrown 0.17.1",
  "indoc",
- "itertools",
+ "itertools 0.14.0",
  "kasuari",
  "lru",
  "palette",
@@ -3442,7 +3456,7 @@ dependencies = [
  "hashbrown 0.17.1",
  "indoc",
  "instability",
- "itertools",
+ "itertools 0.14.0",
  "line-clipping",
  "ratatui-core",
  "serde",
@@ -4746,7 +4760,7 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16b380a1238663e5f8a691f9039c73e1cdae598a30e9855f541d29b08b53e9a5"
 dependencies = [
- "itertools",
+ "itertools 0.14.0",
  "unicode-segmentation",
  "unicode-width",
 ]
@@ -5435,19 +5449,19 @@ checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
 
 [[package]]
 name = "winget-types"
-version = "0.4.3"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47fe97cf45a2ddc46bf9070014ea4f294618830d91cb78a00044701161f088e5"
+checksum = "da50ca41892f524df3c1d4867eea74f30d6d653c0290642398a7f4cf8ce035f6"
 dependencies = [
  "base16ct",
  "bitflags 2.13.0",
  "bon",
  "camino",
  "chrono",
- "compact_str",
+ "compact_str 0.10.0",
  "heapless",
  "icu_locale",
- "itertools",
+ "itertools 0.15.0",
  "jiff",
  "package-family-name",
  "percent-encoding",

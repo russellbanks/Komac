@@ -1,44 +1,26 @@
 #[cfg(all(feature = "openssl", feature = "rustls"))]
 compile_error!("`openssl` and `rustls` are mutually exclusive. Please enable only one.");
 
-use clap::{Parser, Subcommand, crate_name};
-use color_eyre::eyre::Result;
-use tracing::{Level, metadata::LevelFilter};
-use tracing_indicatif::IndicatifLayer;
-use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt};
-
-use crate::{
-    commands::{
-        analyze::Analyze,
-        cleanup::Cleanup,
-        complete::Complete,
-        list_versions::ListVersions,
-        new_version::NewVersion,
-        remove_dead_versions::RemoveDeadVersions,
-        remove_version::RemoveVersion,
-        show_version::ShowVersion,
-        submit::Submit,
-        sync_fork::SyncFork,
-        token::commands::{TokenArgs, TokenCommands},
-        update_version::UpdateVersion,
-    },
-    token::TokenManager,
-};
-
 mod analysis;
 mod commands;
 mod download;
-mod download_file;
 mod editor;
 mod github;
 mod manifests;
-mod match_installers;
 mod prompts;
 mod read;
 mod terminal;
 mod token;
 mod traits;
 mod update_state;
+
+use clap::{Parser, crate_name};
+use color_eyre::eyre::Result;
+use commands::Commands;
+use token::TokenManager;
+use tracing::{Level, metadata::LevelFilter};
+use tracing_indicatif::IndicatifLayer;
+use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -48,23 +30,7 @@ async fn main() -> Result<()> {
 
     setup_logging();
 
-    match Cli::parse().command {
-        Commands::New(new_version) => new_version.run().await,
-        Commands::Update(update_version) => update_version.run().await,
-        Commands::Cleanup(cleanup) => cleanup.run().await,
-        Commands::Remove(remove_version) => remove_version.run().await,
-        Commands::Token(token_args) => match token_args.command {
-            TokenCommands::Remove(remove_token) => remove_token.run(),
-            TokenCommands::Update(update_token) => update_token.run().await,
-        },
-        Commands::List(list_versions) => list_versions.run().await,
-        Commands::Show(show_version) => show_version.run().await,
-        Commands::Sync(sync_fork) => sync_fork.run().await,
-        Commands::Complete(complete) => complete.run(),
-        Commands::Analyze(analyse) => analyse.run(),
-        Commands::RemoveDeadVersions(remove_dead_versions) => remove_dead_versions.run().await,
-        Commands::Submit(submit) => submit.run().await,
-    }?;
+    Cli::parse().command.run().await?;
 
     TokenManager::unset_default_store();
 
@@ -99,36 +65,24 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Subcommand)]
-enum Commands {
-    New(Box<NewVersion>),       // Comparatively large so boxed to store on the heap
-    Update(Box<UpdateVersion>), // Comparatively large so boxed to store on the heap
-    Remove(RemoveVersion),
-    Cleanup(Cleanup),
-    Token(TokenArgs),
-    List(ListVersions),
-    Show(ShowVersion),
-    Sync(SyncFork),
-    Complete(Complete),
-    Analyze(Analyze),
-    RemoveDeadVersions(RemoveDeadVersions),
-    Submit(Submit),
-}
-
 #[cfg(test)]
 mod tests {
     use clap::CommandFactory;
 
     use super::Cli;
+    use crate::traits::AsciiExt;
 
     #[test]
     fn github_token_env_values_are_hidden_in_help() {
         fn assert_github_token_env_is_hidden(command: &clap::Command) {
             for arg in command.get_arguments() {
-                if arg.get_env() == Some(std::ffi::OsStr::new("GITHUB_TOKEN")) {
+                if arg
+                    .get_env()
+                    .is_some_and(|env| env.contains_ignore_ascii_case("TOKEN"))
+                {
                     assert!(
                         arg.is_hide_env_values_set(),
-                        "command `{}` arg `{:?}` exposes GITHUB_TOKEN values in help",
+                        "command {:?} arg {:?} exposes token values in help",
                         command.get_name(),
                         arg.get_id()
                     );

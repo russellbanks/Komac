@@ -1,4 +1,3 @@
-use camino::Utf8PathBuf;
 use const_format::formatcp;
 use inno::{
     Inno,
@@ -9,9 +8,8 @@ use winget_types::{
     LanguageTag, Sha256String,
     installer::{
         AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture as WingetArchitecture,
-        ElevationRequirement, InstallationMetadata, Installer, InstallerType, Scope,
-        UnsupportedOSArchitecture,
-        switches::{CustomSwitch, InstallerSwitches},
+        ElevationRequirement, InstallationMetadata, Installer, InstallerType, Scope, Switches,
+        UnsupportedOSArchitecture, switches::CustomSwitch,
     },
     url::DecodedUrl,
 };
@@ -91,11 +89,10 @@ impl Installers for Inno {
                 .header
                 .privileges_required()
                 .to_elevation_requirement(self.header.privileges_required_overrides_allowed()),
-            installation_metadata: InstallationMetadata {
-                default_install_location: install_dir.map(Utf8PathBuf::from),
-                ..InstallationMetadata::default()
-            },
-            ..Default::default()
+            installation_metadata: InstallationMetadata::new_install_location(
+                install_dir.map(winget_types::PathBuf::from),
+            ),
+            ..Installer::default()
         };
 
         if self
@@ -120,26 +117,24 @@ impl Installers for Inno {
                 Scope::User => (CustomSwitch::current_user(), CustomSwitch::all_users()),
             };
 
-            installer.switches = InstallerSwitches::builder()
+            installer.switches = Switches::builder()
                 .maybe_custom(has_scope_switch.then_some(default_switch))
                 .build();
 
             let override_installer = Installer {
                 scope: Some(override_scope),
-                switches: InstallerSwitches::builder()
+                switches: Switches::builder()
                     .maybe_custom(has_scope_switch.then_some(override_switch))
                     .build(),
-                installation_metadata: InstallationMetadata {
-                    default_install_location: self
-                        .header
+                installation_metadata: InstallationMetadata::new_install_location(
+                    self.header
                         .default_dir_name()
                         .map(|install_dir| {
                             to_relative_install_dir(install_dir.to_owned(), override_scope)
                         })
                         .filter(|dir| !dir.contains(['{', '}']))
-                        .map(Utf8PathBuf::from),
-                    ..InstallationMetadata::default()
-                },
+                        .map(winget_types::PathBuf::from),
+                ),
                 ..installer.clone()
             };
 

@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 pub trait AsciiExt {
     fn contains_ignore_ascii_case<T>(&self, other: T) -> bool
     where
@@ -26,6 +28,15 @@ impl AsciiExt for [u8] {
 
         self.windows(other.len())
             .any(|window| window.eq_ignore_ascii_case(other))
+    }
+}
+
+impl AsciiExt for OsStr {
+    fn contains_ignore_ascii_case<T>(&self, other: T) -> bool
+    where
+        T: AsRef<[u8]>,
+    {
+        self.as_encoded_bytes().contains_ignore_ascii_case(other)
     }
 }
 

@@ -1,6 +1,7 @@
 pub mod client;
 mod error;
 pub mod graphql;
+mod package;
 mod rest;
 pub mod utils;
 

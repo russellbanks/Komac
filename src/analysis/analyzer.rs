@@ -74,6 +74,11 @@ impl<'reader, R: Read + Seek> Analyzer<'reader, R> {
             ..Self::default()
         })
     }
+
+    /// Consumes the [`Analyzer`], returning the inner installers.
+    pub fn into_installers(self) -> Vec<Installer> {
+        self.installers
+    }
 }
 
 impl<R: Read + Seek> Default for Analyzer<'_, R> {

@@ -53,7 +53,7 @@ impl SyncFork {
             return Ok(());
         }
 
-        let commit_label = match comparison.ahead_by {
+        let commit_label = match comparison.ahead_by() {
             1 => "commit",
             _ => "commits",
         };
@@ -61,7 +61,7 @@ impl SyncFork {
         // Show an indeterminate progress bar while upstream changes are being merged
         let pb = ProgressBar::new_spinner().with_message(format!(
             "Merging {} upstream {commit_label} from {} into {}",
-            comparison.ahead_by,
+            comparison.ahead_by(),
             winget_pkgs.full_name.blue(),
             fork.full_name.blue(),
         ));
@@ -73,7 +73,9 @@ impl SyncFork {
             .with_context(|| {
                 format!(
                     "while merging {} upstream {commit_label} from {} into {}",
-                    comparison.ahead_by, winget_pkgs.full_name, fork.full_name
+                    comparison.ahead_by(),
+                    winget_pkgs.full_name,
+                    fork.full_name
                 )
             })?
             .merge_type;
@@ -83,7 +85,7 @@ impl SyncFork {
         println!(
             "{} merged {} upstream {commit_label} from {} into {} ({sync_type})",
             "Successfully".green(),
-            comparison.ahead_by,
+            comparison.ahead_by(),
             winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
             fork.full_name.hyperlink(fork.url).blue()
         );

@@ -33,7 +33,7 @@ with unnecessary pull requests.
 #[derive(Parser)]
 #[clap(alias = "rdv", hide = true)]
 pub struct RemoveDeadVersions {
-    #[arg()]
+    #[arg(value_name = "PACKAGE_IDENTIFIER")]
     package_identifier: PackageIdentifier,
 
     /// Check versions lesser than a given version

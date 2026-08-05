@@ -1,23 +1,30 @@
 use std::{
-    borrow::Cow,
-    env,
-    fmt::{Display, Formatter, Write},
+    fmt,
+    fmt::Display,
     io::{StdoutLock, Write as IoWrite},
     sync::LazyLock,
 };
 
 use anstream::AutoStream;
-use clap::{crate_name, crate_version};
-use const_format::concatc;
 use owo_colors::{OwoColorize, Style, colors::css::SlateGrey};
-use serde::Serialize;
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent, Highlighter};
 pub use url::Url;
 use winget_types::{
-    Manifest,
+    Manifest, PackageIdentifier, PackageVersion, VersionManifest,
     installer::InstallerManifest,
     locale::{DefaultLocaleManifest, LocaleManifest},
-    version::VersionManifest,
+    url::ReleaseNotesUrl,
+};
+
+use crate::{
+    github::{
+        client::GitHubValues,
+        utils::{
+            PackagePath,
+            pull_request::{Change, Changes},
+        },
+    },
+    traits::LocaleExt,
 };
 
 pub mod manifest;
@@ -30,12 +37,91 @@ pub struct Manifests {
     pub version: VersionManifest,
 }
 
+impl Manifests {
+    /// Returns the package identifier for this package, retrieved from the
+    /// version manifest.
+    #[must_use]
+    #[inline]
+    pub fn package_identifier(&self) -> &PackageIdentifier {
+        self.version.package_identifier()
+    }
+
+    /// Returns the package version for this package, retrieved from the
+    /// version manifest.
+    #[must_use]
+    #[inline]
+    pub fn package_version(&self) -> &PackageVersion {
+        self.version.package_version()
+    }
+
+    pub fn create(
+        &self,
+        identifier: &PackageIdentifier,
+        version: &PackageVersion,
+        created_with: Option<&str>,
+    ) -> Changes {
+        let package_path = PackagePath::new(identifier, Some(version), None);
+
+        let mut path_content_map = vec![
+            Change::new(
+                format!("{package_path}/{identifier}.installer.yaml"),
+                &self.installer,
+                created_with,
+            ),
+            Change::new(
+                format!(
+                    "{package_path}/{identifier}.locale.{}.yaml",
+                    self.version.default_locale()
+                ),
+                &self.default_locale,
+                created_with,
+            ),
+        ];
+
+        for locale_manifest in &self.locales {
+            path_content_map.push(Change::new(
+                format!(
+                    "{package_path}/{identifier}.locale.{}.yaml",
+                    locale_manifest.package_locale
+                ),
+                locale_manifest,
+                created_with,
+            ));
+        }
+
+        path_content_map.push(Change::new(
+            format!("{package_path}/{identifier}.yaml"),
+            &self.version,
+            created_with,
+        ));
+
+        Changes::new(path_content_map)
+    }
+
+    pub fn update(
+        &mut self,
+        version: &PackageVersion,
+        github_values: &mut Option<GitHubValues>,
+        release_notes_url: Option<&ReleaseNotesUrl>,
+    ) {
+        self.default_locale
+            .update(version, github_values, release_notes_url);
+
+        self.locales.iter_mut().for_each(|locale| {
+            locale.update(version, github_values, release_notes_url);
+        });
+
+        self.version.update(version);
+    }
+}
+
 impl Display for Manifests {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{} version {}",
-            self.version.package_identifier, self.version.package_version
+            self.package_identifier(),
+            self.package_version()
         )
     }
 }
@@ -104,126 +190,5 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
             Ok(HighlightEvent::HighlightEnd) => current_highlight = None,
             Err(_) => {}
         }
-    }
-}
-
-pub fn build_manifest_string<T>(
-    manifest: &T,
-    created_with: Option<&str>,
-) -> serde_yaml::Result<String>
-where
-    T: Manifest + Serialize,
-{
-    let mut result = String::from("# Created with ");
-    if let Some(created_with_tool) = created_with {
-        let _ = write!(result, "{created_with_tool} using ");
-    }
-    let _ = writeln!(result, "{} v{}", crate_name!(), crate_version!());
-    let _ = writeln!(result, "# yaml-language-server: $schema={}", T::SCHEMA);
-    let _ = writeln!(result);
-    let _ = write!(result, "{}", serde_yaml::to_string(manifest)?);
-    Ok(convert_to_crlf(&result).into_owned())
-}
-
-fn convert_to_crlf(input: &str) -> Cow<'_, str> {
-    const CR: char = '\r';
-    const LF: char = '\n';
-    const CRLF: &str = concatc!(CR, LF);
-
-    let mut buffer = None;
-    let mut position = 0;
-    let mut chars = input.char_indices().peekable();
-
-    while let Some((index, char)) = chars.next() {
-        match char {
-            CR => {
-                let buf = buffer.get_or_insert_with(|| String::with_capacity(input.len()));
-
-                // Copy text before CR
-                buf.push_str(&input[position..index]);
-
-                // Check for CR+LF
-                if let Some(&(_, LF)) = chars.peek() {
-                    // Skip the LF as we'll add CRLF
-                    chars.next();
-                }
-
-                buf.push_str(CRLF);
-
-                position = chars
-                    .peek()
-                    .map_or(input.len(), |&(next_index, _)| next_index);
-            }
-            LF => {
-                // Convert LF
-                let buf = buffer.get_or_insert_with(|| String::with_capacity(input.len()));
-                buf.push_str(&input[position..index]);
-                buf.push_str(CRLF);
-                position = index + LF.len_utf8();
-            }
-            _ => {}
-        }
-    }
-
-    buffer.map_or(Cow::Borrowed(input), |mut buf| {
-        buf.push_str(&input[position..]);
-        Cow::Owned(buf)
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use std::borrow::Cow;
-
-    use crate::manifests::convert_to_crlf;
-
-    #[test]
-    fn preserves_valid_crlf() {
-        assert_eq!(
-            convert_to_crlf("Valid\r\nLine"),
-            Cow::Borrowed("Valid\r\nLine")
-        );
-    }
-
-    #[test]
-    fn converts_lf_to_crlf() {
-        assert_eq!(
-            convert_to_crlf("Unix\nLine"),
-            Cow::Owned::<str>("Unix\r\nLine".into())
-        );
-    }
-
-    #[test]
-    fn converts_lone_cr_to_crlf() {
-        assert_eq!(
-            convert_to_crlf("Old\rMac"),
-            Cow::Owned::<str>("Old\r\nMac".into())
-        );
-    }
-
-    #[test]
-    fn mixed_conversions() {
-        assert_eq!(
-            convert_to_crlf("Mix\r\n\n\rEnd"),
-            Cow::Owned::<str>("Mix\r\n\r\n\r\nEnd".into())
-        );
-    }
-
-    #[test]
-    fn no_changes_needed() {
-        assert_eq!(convert_to_crlf("No changes"), Cow::Borrowed("No changes"));
-    }
-
-    #[test]
-    fn empty_string() {
-        assert_eq!(convert_to_crlf(""), Cow::Borrowed(""));
-    }
-
-    #[test]
-    fn edge_cases() {
-        assert_eq!(convert_to_crlf("\r"), "\r\n");
-        assert_eq!(convert_to_crlf("\n"), "\r\n");
-        assert_eq!(convert_to_crlf("\r\n"), "\r\n");
-        assert_eq!(convert_to_crlf("a\rb\nc\r\nd"), "a\r\nb\r\nc\r\nd");
     }
 }

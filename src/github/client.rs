@@ -12,11 +12,10 @@ use secrecy::SecretString;
 use serde::de::DeserializeOwned;
 use url::Url;
 use winget_types::{
-    Manifest, ManifestType, ManifestTypeWithLocale, PackageIdentifier, PackageVersion,
-    installer::InstallerManifest,
-    locale::{DefaultLocaleManifest, License, LocaleManifest, Publisher, ReleaseNotes, Tag},
+    DefaultLocaleManifest, InstallerManifest, LocaleManifest, Manifest, ManifestType,
+    ManifestTypeWithLocale, PackageIdentifier, PackageVersion, VersionManifest,
+    locale::{License, Publisher, ReleaseNotes, Tag},
     url::{DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl, ReleaseNotesUrl},
-    version::VersionManifest,
 };
 
 use super::{GitHubError, graphql::create_pull_request};
@@ -38,6 +37,7 @@ use crate::{
         },
         utils::{
             CommitTitle, PackagePath, branch_name, commit_title, is_manifest_file,
+            pull_request::{Change, Changes},
             pull_request_body,
         },
     },
@@ -90,7 +90,7 @@ impl GitHub {
                 is_manifest_file::<LocaleManifest>(
                     &file.name,
                     identifier,
-                    Some(&version_manifest.default_locale),
+                    Some(version_manifest.default_locale()),
                 )
             })
             .map(|file| serde_yaml::from_str::<LocaleManifest>(&file.text))
@@ -102,7 +102,7 @@ impl GitHub {
                 is_manifest_file::<DefaultLocaleManifest>(
                     &file.name,
                     identifier,
-                    Some(&version_manifest.default_locale),
+                    Some(version_manifest.default_locale()),
                 )
             })
             .map(|file| serde_yaml::from_str::<DefaultLocaleManifest>(&file.text))
@@ -523,7 +523,7 @@ impl GitHub {
         identifier: &PackageIdentifier,
         version: &PackageVersion,
         versions: Option<&BTreeSet<PackageVersion>>,
-        changes: Vec<(String, String)>,
+        changes: Changes,
         replace_version: Option<&PackageVersion>,
         issue_resolves: &[NonZeroU32],
         created_with: Option<&str>,
@@ -539,7 +539,7 @@ impl GitHub {
         let commit_title = commit_title(identifier, version, UpdateState::get(version, versions));
         let additions = changes
             .iter()
-            .map(|(path, content)| FileAddition::new(path, content))
+            .map(|Change { path, manifest }| FileAddition::new(path, manifest))
             .collect::<Vec<_>>();
         let deletions = if replace_version.is_some() {
             self.get_directory_content()

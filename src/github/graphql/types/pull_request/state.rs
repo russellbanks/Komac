@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use super::super::github_schema as schema;
+use crate::github::graphql::github_schema as schema;
 
 /// The possible states of a pull request.
 ///

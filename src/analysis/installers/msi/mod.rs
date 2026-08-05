@@ -13,7 +13,7 @@ use winget_types::{
     LanguageTag,
     installer::{
         AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture, InstallationMetadata,
-        Installer, InstallerSwitches, InstallerType, Scope,
+        Installer, InstallerType, Scope, Switches,
     },
 };
 
@@ -228,16 +228,12 @@ impl Msi {
         self.property_table.get(WIX_UI_INSTALL_DIR)
     }
 
-    fn install_location_switches(&self) -> InstallerSwitches {
+    fn install_location_switches(&self) -> Switches {
         self.wix_ui_install_dir()
             .and_then(|install_dir| {
                 format!(r#"{install_dir}="<INSTALLPATH>""#)
                     .parse()
-                    .map(|switch| {
-                        InstallerSwitches::builder()
-                            .install_location(switch)
-                            .build()
-                    })
+                    .map(|switch| Switches::builder().install_location(switch).build())
                     .ok()
             })
             .unwrap_or_default()
@@ -296,10 +292,9 @@ impl Installers for Msi {
             } else {
                 AppsAndFeaturesEntries::new()
             },
-            installation_metadata: InstallationMetadata {
-                default_install_location: self.find_install_directory(),
-                ..InstallationMetadata::default()
-            },
+            installation_metadata: InstallationMetadata::new_install_location(
+                self.find_install_directory(),
+            ),
             ..Installer::default()
         };
 

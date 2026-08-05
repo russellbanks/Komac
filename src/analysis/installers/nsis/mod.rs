@@ -263,9 +263,8 @@ impl Installers for Nsis {
             } else {
                 AppsAndFeaturesEntries::new()
             },
-            installation_metadata: InstallationMetadata {
-                default_install_location: self
-                    .install_directory
+            installation_metadata: InstallationMetadata::new_install_location(
+                self.install_directory
                     .as_deref()
                     .filter(|path| {
                         !path.components().next().is_none_or(|component| {
@@ -275,8 +274,7 @@ impl Installers for Nsis {
                         })
                     })
                     .map(|path| Utf8PathBuf::from(path.as_str())),
-                ..InstallationMetadata::default()
-            },
+            ),
             ..Installer::default()
         };
 

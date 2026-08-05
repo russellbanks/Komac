@@ -5,7 +5,9 @@ use inquire::Select;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
-    commands::utils::environment::VHS, editor::Editor, manifests::print_changes,
+    editor::Editor,
+    github::utils::pull_request::{Change, Changes},
+    manifests::print_changes,
     prompts::handle_inquire_error,
 };
 
@@ -18,25 +20,17 @@ pub enum SubmitOption {
 
 impl SubmitOption {
     pub fn prompt(
-        changes: &mut [(String, String)],
+        changes: &mut Changes,
         identifier: &PackageIdentifier,
         version: &PackageVersion,
         submit: bool,
-        dry_run: bool,
     ) -> Result<Self> {
         let mut submit_option;
 
         loop {
-            let changes_iter = changes.iter().map(|(_, content)| content.as_str());
-            if *VHS {
-                print_changes(changes_iter.take(1));
-            } else {
-                print_changes(changes_iter);
-            }
+            print_changes(changes.iter().map(Change::manifest));
 
-            submit_option = if dry_run {
-                Self::Exit
-            } else if submit {
+            submit_option = if submit {
                 Self::Submit
             } else {
                 Select::new(

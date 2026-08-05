@@ -10,7 +10,7 @@ use crate::{github::client::GitHub, manifests::print_changes, token::TokenManage
 #[derive(Parser)]
 pub struct ShowVersion {
     /// The package's unique identifier
-    #[arg()]
+    #[arg(value_name = "PACKAGE_IDENTIFIER")]
     package_identifier: PackageIdentifier,
 
     /// The package's version

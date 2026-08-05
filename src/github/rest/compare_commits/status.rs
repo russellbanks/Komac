@@ -11,7 +11,6 @@ pub enum Status {
 
 impl Status {
     /// Returns `true` if the commit has diverged from the comparison commit.
-    #[expect(unused)]
     #[must_use]
     #[inline]
     pub const fn is_diverged(self) -> bool {
@@ -19,7 +18,6 @@ impl Status {
     }
 
     /// Returns `true` if the commit is ahead of the comparison commit.
-    #[expect(unused)]
     #[must_use]
     #[inline]
     pub const fn is_ahead(self) -> bool {
@@ -27,7 +25,6 @@ impl Status {
     }
 
     /// Returns `true` if the commit is behind the comparison commit.
-    #[expect(unused)]
     #[must_use]
     #[inline]
     pub const fn is_behind(self) -> bool {

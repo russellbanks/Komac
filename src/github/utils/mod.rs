@@ -162,11 +162,8 @@ pub fn commit_title(
 #[cfg(test)]
 mod tests {
     use winget_types::{
-        LanguageTag, PackageIdentifier,
-        icu_locale::langid,
-        installer::InstallerManifest,
-        locale::{DefaultLocaleManifest, LocaleManifest},
-        version::VersionManifest,
+        DefaultLocaleManifest, InstallerManifest, LanguageTag, LocaleManifest, PackageIdentifier,
+        VersionManifest, icu_locale::langid,
     };
 
     use super::is_manifest_file;

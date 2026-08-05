@@ -11,16 +11,48 @@ use crate::github::{GitHubError, MICROSOFT, WINGET_PKGS, client::GitHub};
 
 #[derive(Copy, Clone, Deserialize)]
 pub struct CompareCommits {
-    pub status: Status,
-    pub ahead_by: u32,
+    status: Status,
+    ahead_by: u32,
 }
 
 impl CompareCommits {
+    /// Returns `true` if the commit has diverged from the comparison commit.
+    #[expect(unused)]
+    #[must_use]
+    #[inline]
+    pub const fn is_diverged(self) -> bool {
+        self.status.is_diverged()
+    }
+
+    /// Returns `true` if the commit is ahead of the comparison commit.
+    #[expect(unused)]
+    #[must_use]
+    #[inline]
+    pub const fn is_ahead(self) -> bool {
+        self.status.is_ahead()
+    }
+
+    /// Returns `true` if the commit is behind the comparison commit.
+    #[expect(unused)]
+    #[must_use]
+    #[inline]
+    pub const fn is_behind(self) -> bool {
+        self.status.is_behind()
+    }
+
     /// Returns `true` if the commit is identical to the comparison commit.
     #[must_use]
     #[inline]
-    pub const fn is_identical(&self) -> bool {
+    pub const fn is_identical(self) -> bool {
         self.status.is_identical()
+    }
+
+    /// Returns the number of commits the commit is ahead of the comparison
+    /// commit.
+    #[must_use]
+    #[inline]
+    pub const fn ahead_by(self) -> u32 {
+        self.ahead_by
     }
 }
 

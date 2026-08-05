@@ -10,14 +10,11 @@ use itertools::Itertools;
 use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use walkdir::WalkDir;
-use winget_types::{GenericManifest, ManifestType, ManifestVersion};
+use winget_types::{Manifest as WingetManifest, ManifestType, utils::GenericManifest};
 
 use crate::{
     commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption},
-    github::{
-        client::GitHub,
-        utils::{PackagePath, pull_request::pr_changes},
-    },
+    github::client::GitHub,
     manifests::{Manifests, manifest::Manifest},
     prompts::handle_inquire_error,
     token::TokenManager,
@@ -142,33 +139,27 @@ impl Submit {
 
         let github = GitHub::new(token_manager)?;
 
-        for mut manifest in manifests {
-            let identifier = &manifest.version.package_identifier;
-            let version = &manifest.version.package_version;
-
+        for mut package_manifests in manifests {
             // Reorder the keys in case the manifests weren't created by komac
-            manifest.installer.optimize();
+            package_manifests.installer.optimize();
 
-            manifest.default_locale.manifest_version = ManifestVersion::default();
-            manifest.version.manifest_version = ManifestVersion::default();
-            for locale_manifest in &mut manifest.locales {
-                locale_manifest.manifest_version = ManifestVersion::default();
+            package_manifests.default_locale.update_manifest_version();
+            package_manifests.version.update_manifest_version();
+            for locale_manifest in &mut package_manifests.locales {
+                locale_manifest.update_manifest_version();
             }
 
-            let package_path = PackagePath::new(identifier, Some(version), None);
-            let mut changes = pr_changes()
-                .package_identifier(identifier)
-                .manifests(&manifest)
-                .package_path(&package_path)
-                .create()?;
+            let identifier = package_manifests.package_identifier();
+            let version = package_manifests.package_version();
 
-            let submit_option = SubmitOption::prompt(
-                &mut changes,
-                identifier,
-                version,
-                self.skip_prompt,
-                self.dry_run,
-            )?;
+            let mut changes = package_manifests.create(identifier, version, None);
+
+            if self.dry_run {
+                return Ok(());
+            }
+
+            let submit_option =
+                SubmitOption::prompt(&mut changes, identifier, version, self.skip_prompt)?;
 
             if submit_option.is_exit() {
                 continue;

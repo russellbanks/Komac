@@ -2,10 +2,10 @@ use std::{
     collections::BTreeSet,
     mem,
     num::{NonZeroU32, NonZeroUsize},
+    path::PathBuf,
 };
 
 use anstream::println;
-use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::Result;
 use indicatif::ProgressBar;
@@ -14,11 +14,11 @@ use ordinal::Ordinal;
 use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use winget_types::{
-    LanguageTag, ManifestType, ManifestVersion, PackageIdentifier, PackageVersion,
+    LanguageTag, PackageIdentifier, PackageVersion, VersionManifest,
     installer::{
         Command, FileExtension, InstallModes, InstallerManifest, InstallerSuccessCode,
-        InstallerType, Protocol, UpgradeBehavior,
-        switches::{CustomSwitch, InstallerSwitches, SilentSwitch, SilentWithProgressSwitch},
+        InstallerType, Protocol, Switches, UpgradeBehavior,
+        switches::{CustomSwitch, SilentSwitch, SilentWithProgressSwitch},
     },
     locale::{
         Author, Copyright, DefaultLocaleManifest, Description, License, Moniker, PackageName,
@@ -28,20 +28,12 @@ use winget_types::{
         CopyrightUrl, DecodedUrl, LicenseUrl, PackageUrl, PublisherSupportUrl, PublisherUrl,
         ReleaseNotesUrl,
     },
-    version::VersionManifest,
 };
 
 use crate::{
-    commands::utils::{
-        SPINNER_TICK_RATE, SubmitOption, prompt_existing_pull_request, write_changes_to_dir,
-    },
+    commands::utils::{SPINNER_TICK_RATE, SubmitOption},
     download::Downloader,
-    download_file::process_files,
-    github::{
-        GITHUB_HOST,
-        client::GitHub,
-        utils::{PackagePath, pull_request::pr_changes},
-    },
+    github::{GITHUB_HOST, client::GitHub, utils::PackagePath},
     manifests::{Manifests, Url},
     prompts::{
         check_prompt, handle_inquire_error,
@@ -57,12 +49,12 @@ use crate::{
 #[derive(Parser)]
 pub struct NewVersion {
     /// The package's unique identifier
-    #[arg()]
-    package_identifier: Option<PackageIdentifier>,
+    #[arg(value_name = "PACKAGE_IDENTIFIER")]
+    identifier: Option<PackageIdentifier>,
 
     /// The package's version
     #[arg(short = 'v', long = "version")]
-    package_version: Option<PackageVersion>,
+    version: Option<PackageVersion>,
 
     /// The list of package installers
     #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::Url)]
@@ -135,7 +127,7 @@ pub struct NewVersion {
 
     /// Directory to output the manifests to
     #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
-    output: Option<Utf8PathBuf>,
+    output: Option<PathBuf>,
 
     /// Open pull request link automatically
     #[arg(long, env = "OPEN_PR")]
@@ -159,28 +151,18 @@ impl NewVersion {
         let token_manager = TokenManager::handle(self.token).await?;
         let github = GitHub::new(token_manager)?;
 
-        let package_identifier = required_prompt(self.package_identifier, None::<&str>)?;
+        let identifier = required_prompt(self.identifier, None::<&str>)?;
 
-        let versions = github.get_versions(&package_identifier).await.ok();
+        let package = github.get_package(&identifier).await?;
 
-        let latest_version = versions.as_ref().and_then(BTreeSet::last);
-
-        if let Some(latest_version) = latest_version {
-            println!("Latest version of {package_identifier}: {latest_version}");
+        if let Some(latest_version) = package.latest_version() {
+            println!("Latest version of {identifier}: {latest_version}");
         }
 
-        let manifests =
-            latest_version.map(|version| github.get_manifests(&package_identifier, version));
+        let version = required_prompt(self.version, None::<&str>)?;
 
-        let package_version = required_prompt(self.package_version, None::<&str>)?;
-
-        if !self.skip_pr_check
-            && !self.dry_run
-            && let Some(pull_request) = github
-                .get_existing_pull_request(&package_identifier, &package_version)
-                .await?
-            && !prompt_existing_pull_request(&package_identifier, &package_version, &pull_request)?
-        {
+        let mut package = package.into_versioned(&version, &github).await?;
+        if self.skip_pr_check || self.dry_run || !package.prompt_existing_pr()? {
             return Ok(());
         }
 
@@ -222,7 +204,7 @@ impl NewVersion {
 
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
         let mut files = downloader.download(urls.iter().cloned()).await?;
-        let mut download_results = process_files(&mut files).await?;
+        let mut download_results = files.analyze().await?;
 
         let mut installers = Vec::new();
         for analyzer in &mut download_results.values_mut() {
@@ -262,7 +244,7 @@ impl NewVersion {
                         .clone_from(&zip_installer.nested_installer_files);
                 }
             }
-            let switches = InstallerSwitches::builder()
+            let switches = Switches::builder()
                 .maybe_silent(silent)
                 .maybe_silent_with_progress(silent_with_progress)
                 .maybe_custom(custom)
@@ -278,8 +260,8 @@ impl NewVersion {
 
         let default_locale = required_prompt(self.package_locale, Some("en-US"))?;
         let mut installer_manifest = InstallerManifest {
-            package_identifier: package_identifier.clone(),
-            package_version: package_version.clone(),
+            package_identifier: identifier.clone(),
+            package_version: version.clone(),
             install_modes: if installers
                 .iter()
                 .any(|installer| installer.r#type == Some(InstallerType::Inno))
@@ -301,7 +283,6 @@ impl NewVersion {
                 BTreeSet::new()
             },
             installers,
-            manifest_type: ManifestType::Installer,
             ..InstallerManifest::default()
         };
 
@@ -311,8 +292,8 @@ impl NewVersion {
         };
 
         let default_locale_manifest = DefaultLocaleManifest {
-            package_identifier: package_identifier.clone(),
-            package_version: package_version.clone(),
+            package_identifier: identifier.clone(),
+            package_version: version.clone(),
             package_locale: default_locale.clone(),
             publisher: required_prompt(
                 self.publisher,
@@ -392,7 +373,6 @@ impl NewVersion {
                     .as_ref()
                     .and_then(|values| values.release_notes_url.as_ref()),
             )?,
-            manifest_type: ManifestType::DefaultLocale,
             ..DefaultLocaleManifest::default()
         };
 
@@ -404,51 +384,33 @@ impl NewVersion {
 
         installer_manifest.optimize();
 
-        let version_manifest = VersionManifest {
-            package_identifier: package_identifier.clone(),
-            package_version: package_version.clone(),
-            default_locale,
-            manifest_type: ManifestType::Version,
-            manifest_version: ManifestVersion::default(),
-        };
-
-        let manifests = match manifests {
-            Some(manifests) => Some(manifests.await?),
-            None => None,
-        };
-
         let manifests = Manifests {
             installer: installer_manifest,
             default_locale: default_locale_manifest,
-            locales: manifests
+            locales: package
+                .manifests
+                .take()
                 .map(|manifests| manifests.locales)
                 .unwrap_or_default(),
-            version: version_manifest,
+            version: VersionManifest::new(identifier.clone(), version.clone(), default_locale),
         };
 
-        let package_path = PackagePath::new(&package_identifier, Some(&package_version), None);
-        let mut changes = pr_changes()
-            .package_identifier(&package_identifier)
-            .manifests(&manifests)
-            .package_path(&package_path)
-            .maybe_created_with(self.created_with.as_deref())
-            .create()?;
-
-        let submit_option = SubmitOption::prompt(
-            &mut changes,
-            &package_identifier,
-            &package_version,
-            self.submit,
-            self.dry_run,
-        )?;
-
+        let package_path = PackagePath::new(&identifier, Some(&version), None);
+        let mut changes = manifests.create(&identifier, &version, self.created_with.as_deref());
         if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
-            write_changes_to_dir(&changes, output.as_path()).await?;
+            changes.write_to(output.as_path()).await?;
             println!(
-                "{} written all manifest files to {output}",
-                "Successfully".green()
+                "{} written all manifest files to {}",
+                "Successfully".green(),
+                output.display()
             );
         }
+
+        if self.dry_run {
+            return Ok(());
+        }
+
+        let submit_option = SubmitOption::prompt(&mut changes, &identifier, &version, self.submit)?;
 
         if submit_option.is_exit() {
             return Ok(());
@@ -456,15 +418,15 @@ impl NewVersion {
 
         // Create an indeterminate progress bar to show as a pull request is being created
         let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request for {package_identifier} {package_version}"
+            "Creating a pull request for {identifier} {version}"
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
         let pull_request = github
             .add_version()
-            .identifier(&package_identifier)
-            .version(&package_version)
-            .maybe_versions(versions.as_ref())
+            .identifier(&identifier)
+            .version(&version)
+            .versions(package.versions())
             .changes(changes)
             .issue_resolves(&self.resolves)
             .maybe_created_with(self.created_with.as_deref())

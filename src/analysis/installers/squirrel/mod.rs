@@ -13,8 +13,8 @@ use quick_xml::de::from_str;
 use thiserror::Error;
 use tracing::debug;
 use winget_types::installer::{
-    AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerSwitches,
-    InstallerType, Scope,
+    AppsAndFeaturesEntry, Architecture, InstallationMetadata, Installer, InstallerType, Scope,
+    Switches,
 };
 use zip::ZipArchive;
 
@@ -138,18 +138,19 @@ impl Installers for Squirrel {
     fn installers(&self) -> Vec<Installer> {
         let nuspec = &self.nuspec;
 
-        let switches = if self.is_velopack {
-            InstallerSwitches::builder()
+        let switches = {
+            let builder = Switches::builder()
                 .silent("--silent".parse().unwrap())
-                .silent_with_progress("--silent".parse().unwrap())
-                .install_location(r#"--installto "<INSTALLPATH>""#.parse().unwrap())
-                .log(r#"--log "<LOGPATH>""#.parse().unwrap())
-                .build()
-        } else {
-            InstallerSwitches::builder()
-                .silent("--silent".parse().unwrap())
-                .silent_with_progress("--silent".parse().unwrap())
-                .build()
+                .silent_with_progress("--silent".parse().unwrap());
+
+            if self.is_velopack {
+                builder
+                    .install_location(r#"--installto "<INSTALLPATH>""#.parse().unwrap())
+                    .log(r#"--log "<LOGPATH>""#.parse().unwrap())
+                    .build()
+            } else {
+                builder.build()
+            }
         };
 
         vec![Installer {
@@ -165,13 +166,9 @@ impl Installers for Squirrel {
                 .build()
                 .into(),
             switches,
-            installation_metadata: InstallationMetadata {
-                default_install_location: Some(Utf8PathBuf::from(format!(
-                    r"%LocalAppData%\{}",
-                    nuspec.id()
-                ))),
-                ..InstallationMetadata::default()
-            },
+            installation_metadata: InstallationMetadata::new_install_location(Utf8PathBuf::from(
+                format!(r"%LocalAppData%\{}", nuspec.id()),
+            )),
             ..Installer::default()
         }]
     }

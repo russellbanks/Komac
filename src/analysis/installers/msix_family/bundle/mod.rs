@@ -24,7 +24,7 @@ use crate::analysis::Installers;
 
 pub struct MsixBundle {
     pub signature_sha_256: Sha256String,
-    pub package_family_name: PackageFamilyName<'static>,
+    pub package_family_name: PackageFamilyName,
     pub msix_files: Vec<Msix>,
 }
 
@@ -59,10 +59,8 @@ impl MsixBundle {
             }
         }
 
-        let package_family_name = PackageFamilyName::new(
-            bundle.identity.name().to_owned(),
-            bundle.identity.publisher(),
-        );
+        let package_family_name =
+            PackageFamilyName::new(bundle.identity.name(), bundle.identity.publisher());
 
         Ok(Self {
             msix_files: bundle

@@ -45,7 +45,7 @@ pub struct Footer {
 impl Footer {
     pub const SIGNATURE: &[u8; 10] = b"ADVINSTSFX";
 
-    pub const SIGNATURE_OFFSET: usize = offset_of!(Self, signature);
+    const SIGNATURE_OFFSET: usize = offset_of!(Self, signature);
 
     pub fn find<R: Read + Seek>(reader: &mut R) -> Result<Self, AdvancedInstallerError> {
         const SEARCH_BLOCK_SIZE: usize = 16 * 1024;
@@ -121,8 +121,6 @@ impl fmt::Debug for Footer {
 
 #[cfg(test)]
 mod tests {
-    use std::mem::offset_of;
-
     use super::Footer;
 
     #[test]

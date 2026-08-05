@@ -2,10 +2,7 @@ mod file_entry;
 mod footer;
 mod named_file_entry;
 
-use std::{
-    collections::BTreeSet,
-    io::{self, Cursor, Read, Seek, SeekFrom},
-};
+use std::io::{self, Cursor, Read, Seek, SeekFrom};
 
 use encoding_rs::UTF_16LE;
 use file_entry::FileEntry;
@@ -15,8 +12,8 @@ use sevenz_rust2::{ArchiveReader, Password};
 use thiserror::Error;
 use tracing::{debug, warn};
 use winget_types::installer::{
-    AppsAndFeaturesEntry, ExpectedReturnCodes, Installer, InstallerReturnCode, InstallerSwitches,
-    InstallerType, ReturnResponse,
+    AppsAndFeaturesEntry, ExpectedReturnCode, Installer, InstallerReturnCode, InstallerType,
+    ReturnResponse, Switches,
 };
 use zerocopy::IntoBytes;
 
@@ -113,7 +110,7 @@ impl Installers for AdvancedInstaller {
                 installer.r#type = Some(InstallerType::Exe);
 
                 // https://www.advancedinstaller.com/user-guide/exe-setup-file.html#proprietary-command-line-switches-for-the-exe-setup
-                installer.switches = InstallerSwitches::builder()
+                installer.switches = Switches::builder()
                     .silent("/exenoui /quiet".parse().unwrap())
                     .silent_with_progress("/exenoui /passive".parse().unwrap())
                     .install_location(r#"APPDIR="<INSTALLPATH>""#.parse().unwrap())
@@ -128,7 +125,7 @@ impl Installers for AdvancedInstaller {
                     .build();
 
                 // https://www.advancedinstaller.com/user-guide/exe-setup-file.html#return-code
-                installer.expected_return_codes = expected_return_codes();
+                installer.expected_return_codes = expected_return_codes().into();
 
                 // If the MSI is hidden, there's another ARP entry that shares some values
                 if msi
@@ -158,39 +155,80 @@ impl Installers for AdvancedInstaller {
     }
 }
 
-fn expected_return_codes() -> BTreeSet<ExpectedReturnCodes> {
+const fn expected_return_codes() -> [ExpectedReturnCode; 20] {
     use ReturnResponse::{
         AlreadyInstalled, BlockedByPolicy, CancelledByUser, ContactSupport, InstallInProgress,
         InvalidParameter, RebootInitiated, RebootRequiredToFinish, SystemNotSupported,
     };
 
     [
-        (-1, CancelledByUser),
-        (1, InvalidParameter),
-        (87, InvalidParameter),
-        (1601, ContactSupport),
-        (1602, CancelledByUser),
-        (1618, InstallInProgress),
-        (1623, SystemNotSupported),
-        (1625, BlockedByPolicy),
-        (1628, InvalidParameter),
-        (1633, SystemNotSupported),
-        (1638, AlreadyInstalled),
-        (1639, InvalidParameter),
-        (1640, BlockedByPolicy),
-        (1641, RebootInitiated),
-        (1643, BlockedByPolicy),
-        (1644, BlockedByPolicy),
-        (1649, BlockedByPolicy),
-        (1650, InvalidParameter),
-        (1654, SystemNotSupported),
-        (3010, RebootRequiredToFinish),
+        ExpectedReturnCode::new(InstallerReturnCode::from_i32(-1).unwrap(), CancelledByUser),
+        ExpectedReturnCode::new(InstallerReturnCode::from_u32(1).unwrap(), InvalidParameter),
+        ExpectedReturnCode::new(InstallerReturnCode::from_u32(87).unwrap(), InvalidParameter),
+        ExpectedReturnCode::new(InstallerReturnCode::from_u32(1601).unwrap(), ContactSupport),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1602).unwrap(),
+            CancelledByUser,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1618).unwrap(),
+            InstallInProgress,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1623).unwrap(),
+            SystemNotSupported,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1625).unwrap(),
+            BlockedByPolicy,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1628).unwrap(),
+            InvalidParameter,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1633).unwrap(),
+            SystemNotSupported,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1638).unwrap(),
+            AlreadyInstalled,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1639).unwrap(),
+            InvalidParameter,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1640).unwrap(),
+            BlockedByPolicy,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1641).unwrap(),
+            RebootInitiated,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1643).unwrap(),
+            BlockedByPolicy,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1644).unwrap(),
+            BlockedByPolicy,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1649).unwrap(),
+            BlockedByPolicy,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1650).unwrap(),
+            InvalidParameter,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(1654).unwrap(),
+            SystemNotSupported,
+        ),
+        ExpectedReturnCode::new(
+            InstallerReturnCode::from_u32(3010).unwrap(),
+            RebootRequiredToFinish,
+        ),
     ]
-    .into_iter()
-    .map(|(code, response)| ExpectedReturnCodes {
-        installer_return_code: InstallerReturnCode::new(code),
-        return_response: response,
-        return_response_url: None,
-    })
-    .collect()
 }

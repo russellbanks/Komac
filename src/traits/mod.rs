@@ -1,6 +1,7 @@
 mod ascii_ext;
 pub mod name;
 pub mod path;
+
 use std::{mem, sync::LazyLock};
 
 pub use ascii_ext::AsciiExt;
@@ -8,7 +9,7 @@ use html2text::render::{TaggedLine, TextDecorator};
 pub use name::Name;
 use regex::Regex;
 use winget_types::{
-    Manifest, ManifestVersion, PackageVersion,
+    Manifest, PackageVersion,
     installer::Architecture,
     locale::{DefaultLocaleManifest, LocaleManifest, ReleaseNotes},
     url::ReleaseNotesUrl,
@@ -192,7 +193,7 @@ impl LocaleExt for LocaleManifest {
             })
         });
         self.manifest_type = Self::TYPE;
-        self.manifest_version = ManifestVersion::default();
+        self.update_manifest_version();
     }
 }
 
@@ -243,6 +244,6 @@ impl LocaleExt for DefaultLocaleManifest {
             })
         });
         self.manifest_type = Self::TYPE;
-        self.manifest_version = ManifestVersion::default();
+        self.update_manifest_version();
     }
 }

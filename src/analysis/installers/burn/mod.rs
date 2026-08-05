@@ -247,9 +247,8 @@ impl Installers for Burn {
                     (variable.id() == "InstallFolder").then(|| variable.resolved_value())?
                 })
                 .filter(|value| !value.contains(['[', ']']))
-                .map(|install_folder| InstallationMetadata {
-                    default_install_location: Some(Utf8PathBuf::from(&install_folder)),
-                    ..InstallationMetadata::default()
+                .map(|install_folder| {
+                    InstallationMetadata::new_install_location(Utf8PathBuf::from(&install_folder))
                 })
                 .unwrap_or_default(),
             ..Installer::default()

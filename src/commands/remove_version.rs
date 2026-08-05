@@ -25,7 +25,7 @@ use crate::{
 #[derive(Parser)]
 pub struct RemoveVersion {
     /// The package's unique identifier
-    #[arg()]
+    #[arg(value_name = "PACKAGE_IDENTIFIER")]
     package_identifier: PackageIdentifier,
 
     /// The package's version

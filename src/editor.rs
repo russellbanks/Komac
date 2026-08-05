@@ -9,6 +9,8 @@ use ratatui::{
 };
 use ratatui_textarea::{CursorMove, DataCursor, Input, Key, TextArea};
 
+use crate::github::utils::pull_request::{Change, Changes};
+
 struct SearchBox<'a> {
     textarea: TextArea<'a>,
     open: bool,
@@ -109,10 +111,10 @@ pub struct Editor<'a> {
 }
 
 impl<'a> Editor<'a> {
-    pub fn new(content: &'a mut [(String, String)]) -> Self {
+    pub fn new(content: &'a mut Changes) -> Self {
         let buffers = content
             .iter_mut()
-            .map(|(path, content)| Buffer::new(path, content))
+            .map(|Change { path, manifest }| Buffer::new(path, manifest))
             .collect::<Vec<_>>();
         let terminal = ratatui::init();
         Self {

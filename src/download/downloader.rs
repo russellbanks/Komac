@@ -21,7 +21,7 @@ use tokio::{
 };
 use winget_types::Sha256String;
 
-use super::{Download, DownloadedFile};
+use super::{Download, DownloadedFile, Downloads};
 
 pub struct Downloader {
     client: Client,
@@ -76,7 +76,10 @@ impl Downloader {
         })
     }
 
-    pub async fn download<I, D>(&self, downloads: I) -> Result<Vec<DownloadedFile>>
+    /// Downloads the files at the given URLs to temporary files.
+    ///
+    /// A file is deleted when its [`DownloadedFile`] is dropped.
+    pub async fn download<I, D>(&self, downloads: I) -> Result<Downloads>
     where
         I: IntoIterator<Item = D>,
         D: Into<Download>,
@@ -86,7 +89,7 @@ impl Downloader {
         let downloaded_files = stream::iter(downloads.into_iter().map(D::into).unique())
             .map(|download| self.fetch(&self.client, download, &multi_progress))
             .buffer_unordered(self.concurrent_downloads.get())
-            .try_collect::<Vec<_>>()
+            .try_collect::<Downloads>()
             .await?;
 
         multi_progress.clear()?;

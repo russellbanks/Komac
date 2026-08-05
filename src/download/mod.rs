@@ -1,4 +1,5 @@
 mod downloader;
+mod downloads;
 mod file;
 
 use std::{borrow::Cow, fmt};
@@ -6,6 +7,7 @@ use std::{borrow::Cow, fmt};
 use camino::Utf8Path;
 use const_format::formatcp;
 pub use downloader::Downloader;
+pub use downloads::Downloads;
 pub use file::DownloadedFile;
 use reqwest::{Client, ClientBuilder, Response, header::HeaderValue, redirect::Policy};
 use uuid::Uuid;

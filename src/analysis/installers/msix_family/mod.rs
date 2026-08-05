@@ -218,7 +218,7 @@ impl Installers for Msix {
                 .supported_file_types
                 .clone(),
             package_family_name: Some(PackageFamilyName::new(
-                self.manifest.identity.name.clone(),
+                &self.manifest.identity.name,
                 &self.manifest.identity.publisher,
             )),
             capabilities: self.manifest.capabilities.unrestricted.clone(),
@@ -229,16 +229,15 @@ impl Installers for Msix {
                 .display_version(&self.manifest.identity.version)
                 .build()
                 .into(),
-            installation_metadata: InstallationMetadata {
-                default_install_location: Some(get_install_location(
+            installation_metadata: InstallationMetadata::new_install_location(
+                get_install_location(
                     &self.manifest.identity.name,
                     &self.manifest.identity.publisher,
                     &self.manifest.identity.version,
                     &self.manifest.identity.processor_architecture,
                     &self.manifest.identity.resource_id,
-                )),
-                ..InstallationMetadata::default()
-            },
+                ),
+            ),
             ..Installer::default()
         }]
     }
