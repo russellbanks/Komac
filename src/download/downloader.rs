@@ -260,9 +260,12 @@ impl fmt::Display for ContentTypeError {
             .with_position()
         {
             match position {
-                Position::First | Position::Only => write!(f, "{content_type:?}")?,
-                Position::Middle => write!(f, ", {content_type:?}")?,
-                Position::Last => write!(f, " and {content_type:?}")?,
+                Position { is_first: true, .. } => write!(f, "{content_type:?}")?,
+                Position {
+                    is_first: false,
+                    is_last: false,
+                } => write!(f, ", {content_type:?}")?,
+                Position { is_last: true, .. } => write!(f, " and {content_type:?}")?,
             }
         }
         write!(
