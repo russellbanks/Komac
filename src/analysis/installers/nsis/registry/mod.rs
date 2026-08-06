@@ -3,7 +3,7 @@ mod r#type;
 
 use std::{borrow::Borrow, collections::BTreeMap, fmt};
 
-use itertools::{Itertools, Position};
+use itertools::Itertools;
 pub use root::RegRoot;
 pub use r#type::RegType;
 
@@ -129,12 +129,12 @@ impl Registry {
 impl fmt::Display for Registry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (position, (root, keys)) in self.0.iter().with_position() {
-            if !matches!(position, Position::First | Position::Only) {
+            if !position.is_first() {
                 writeln!(f)?;
             }
 
             for (position, (key, values)) in keys.iter().with_position() {
-                if !matches!(position, Position::First | Position::Only) {
+                if !position.is_first() {
                     writeln!(f)?;
                 }
 

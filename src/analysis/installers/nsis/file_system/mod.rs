@@ -11,7 +11,7 @@ use chrono::{DateTime, Utc};
 use compact_str::CompactString;
 pub use entry::FsEntry;
 use indextree::{Arena, Node, NodeId};
-use itertools::{Either, Itertools, Position};
+use itertools::{Either, Itertools};
 pub use relative_location::RelativeLocation;
 use typed_path::{Utf8Component, Utf8WindowsComponent, Utf8WindowsPath};
 
@@ -214,7 +214,7 @@ impl FileSystem {
                             .get(id)
                             .is_some_and(|item| item.get().name() == part)
                     }) {
-                        if matches!(position, Position::Last | Position::Only) {
+                        if position.is_last() {
                             return true;
                         }
                         current = directory;
