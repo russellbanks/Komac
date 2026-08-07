@@ -2224,7 +2224,7 @@ dependencies = [
  "clap_complete",
  "codepage",
  "color-eyre",
- "compact_str 0.9.1",
+ "compact_str 0.10.0",
  "const_format",
  "crossbeam-channel",
  "cynic",
