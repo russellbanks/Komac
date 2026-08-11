@@ -54,7 +54,7 @@ crossbeam-channel = "0.5.16"
 cynic = { version = "3.14.0", features = ["http-reqwest"] }
 encoding_rs = "0.8.35"
 flate2 = "1.1.9"
-futures-util = "0.3.33"
+futures-util = "0.3.34"
 html2text = "0.17.1"
 indexmap = "2.14.0"
 indextree = "4.8.1"
