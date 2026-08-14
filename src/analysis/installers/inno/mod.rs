@@ -1,6 +1,6 @@
 use const_format::formatcp;
 use inno::{
-    Inno,
+    InnoInner,
     header::{Architecture as InnoArchitecture, PrivilegesRequiredOverrides},
 };
 use msi::Language as CodePageLanguage;
@@ -23,35 +23,35 @@ use crate::analysis::Installers;
 
 const CODE: &str = "{code:";
 
-impl Installers for Inno {
+impl Installers for InnoInner {
     fn installers(&self) -> Vec<Installer> {
-        let scope = self.header.privileges_required().to_scope();
+        let scope = self.header().privileges_required().to_scope();
 
         let install_dir = self
-            .header
+            .header()
             .default_dir_name()
             .map(str::to_owned)
             .map(|install_dir| to_relative_install_dir(install_dir, scope))
             .filter(|dir| !dir.contains(['{', '}']));
 
         let product_code = self
-            .header
+            .header()
             .product_code()
             .filter(|code| !code.starts_with(CODE));
 
         let display_name = self
-            .header
+            .header()
             .uninstall_name()
-            .or_else(|| self.header.app_versioned_name())
+            .or_else(|| self.header().app_versioned_name())
             .filter(|name| !name.starts_with(CODE));
 
         let publisher = self
-            .header
+            .header()
             .app_publisher()
             .filter(|publisher| !publisher.starts_with(CODE));
 
         let display_version = self
-            .header
+            .header()
             .app_version()
             .filter(|version| !version.starts_with(CODE));
 
@@ -62,13 +62,13 @@ impl Installers for Inno {
                     .parse::<LanguageTag>()
                     .ok()
             }),
-            architecture: WingetArchitecture::from_inno(self.header.architectures_allowed()),
+            architecture: WingetArchitecture::from_inno(self.header().architectures_allowed()),
             r#type: Some(InstallerType::Inno),
             scope: Some(scope),
             url: DecodedUrl::default(),
             sha_256: Sha256String::default(),
             unsupported_os_architectures: UnsupportedOSArchitecture::from_inno(
-                self.header.architectures_disallowed(),
+                self.header().architectures_disallowed(),
             ),
             apps_and_features_entries: if [display_name, publisher, display_version]
                 .iter()
@@ -86,9 +86,9 @@ impl Installers for Inno {
             },
             product_code,
             elevation_requirement: self
-                .header
+                .header()
                 .privileges_required()
-                .to_elevation_requirement(self.header.privileges_required_overrides_allowed()),
+                .to_elevation_requirement(self.header().privileges_required_overrides_allowed()),
             installation_metadata: InstallationMetadata::new_install_location(
                 install_dir.map(winget_types::PathBuf::from),
             ),
@@ -96,14 +96,14 @@ impl Installers for Inno {
         };
 
         if self
-            .header
+            .header()
             .privileges_required_overrides_allowed()
             .is_empty()
         {
             vec![installer]
         } else {
             let has_scope_switch = self
-                .header
+                .header()
                 .privileges_required_overrides_allowed()
                 .contains(PrivilegesRequiredOverrides::COMMAND_LINE);
 
@@ -127,7 +127,7 @@ impl Installers for Inno {
                     .maybe_custom(has_scope_switch.then_some(override_switch))
                     .build(),
                 installation_metadata: InstallationMetadata::new_install_location(
-                    self.header
+                    self.header()
                         .default_dir_name()
                         .map(|install_dir| {
                             to_relative_install_dir(install_dir.to_owned(), override_scope)
