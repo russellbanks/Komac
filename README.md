@@ -271,11 +271,11 @@ jobs:
 
 ## Star History ⭐
 
-<a href="https://star-history.com/#russellbanks/Komac&Date">
+<a href="https://star-history.dera.page/#russellbanks/Komac&type=Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=russellbanks/Komac&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=russellbanks/Komac&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=russellbanks/Komac&type=Date" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.dera.page/svg?repos=russellbanks/Komac&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.dera.page/svg?repos=russellbanks/Komac&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.dera.page/svg?repos=russellbanks/Komac&type=Date" />
   </picture>
 </a>
 
