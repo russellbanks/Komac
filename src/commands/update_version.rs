@@ -110,7 +110,7 @@ impl UpdateVersion {
             package.latest_version()
         );
 
-        if self.skip_pr_check || self.dry_run || !package.prompt_existing_pr()? {
+        if !self.skip_pr_check && !self.dry_run && !package.prompt_existing_pr()? {
             return Ok(());
         }
 

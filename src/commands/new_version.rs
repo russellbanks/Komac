@@ -33,8 +33,12 @@ use winget_types::{
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, SubmitOption},
     download::Downloader,
-    github::{GITHUB_HOST, client::GitHub, utils::PackagePath},
-    manifests::{Manifests, Url},
+    github::{
+        GITHUB_HOST,
+        client::GitHub,
+        utils::{PackagePath, pull_request::Change},
+    },
+    manifests::{Manifests, Url, print_changes},
     prompts::{
         check_prompt, handle_inquire_error,
         list::list_prompt,
@@ -162,7 +166,7 @@ impl NewVersion {
         let version = required_prompt(self.version, None::<&str>)?;
 
         let mut package = package.into_versioned(&version, &github).await?;
-        if self.skip_pr_check || self.dry_run || !package.prompt_existing_pr()? {
+        if !self.skip_pr_check && !self.dry_run && !package.prompt_existing_pr()? {
             return Ok(());
         }
 
@@ -395,8 +399,16 @@ impl NewVersion {
             version: VersionManifest::new(identifier.clone(), version.clone(), default_locale),
         };
 
-        let package_path = PackagePath::new(&identifier, Some(&version), None);
         let mut changes = manifests.create(&identifier, &version, self.created_with.as_deref());
+
+        if self.dry_run {
+            print_changes(changes.iter().map(Change::manifest));
+            return Ok(());
+        }
+
+        let submit_option = SubmitOption::prompt(&mut changes, &identifier, &version, self.submit)?;
+
+        let package_path = PackagePath::new(&identifier, Some(&version), None);
         if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
             changes.write_to(output.as_path()).await?;
             println!(
@@ -405,12 +417,6 @@ impl NewVersion {
                 output.display()
             );
         }
-
-        if self.dry_run {
-            return Ok(());
-        }
-
-        let submit_option = SubmitOption::prompt(&mut changes, &identifier, &version, self.submit)?;
 
         if submit_option.is_exit() {
             return Ok(());

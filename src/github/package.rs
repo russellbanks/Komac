@@ -30,8 +30,6 @@ impl VersionedState<'_> for Unversioned {
     type Version = ();
 }
 
-// TODO: Might need another trait for MustExist and MightExist because the update command has to have the package exist while the new version command doesn't have to have the package exist, even if a version is added to it later
-
 pub struct Package<'identifier, 'version, V: VersionedState<'version>> {
     identifier: &'identifier PackageIdentifier,
     version: V::Version,
@@ -69,7 +67,7 @@ impl Package<'_, '_, Versioned> {
         }
 
         let Some(ref pull_request) = self.existing_pr else {
-            return Ok(false);
+            return Ok(true);
         };
 
         let created_at = pull_request.created_at.with_timezone(&Local);
@@ -135,11 +133,16 @@ impl GitHub {
         })
     }
 
+    /// Fetches an unversioned [Package] which may not exist in `winget-pkgs`.
     pub async fn get_package<'identifier>(
         &self,
         identifier: &'identifier PackageIdentifier,
     ) -> Result<Package<'identifier, '_, Unversioned>, GitHubError> {
-        let versions = self.get_versions(identifier).await?;
+        let versions = match self.get_versions(identifier).await {
+            Ok(versions) => versions,
+            Err(GitHubError::PackageNonExistent(_)) => BTreeSet::default(),
+            Err(err) => return Err(err),
+        };
 
         Ok(Package {
             identifier,
