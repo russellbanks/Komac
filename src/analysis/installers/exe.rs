@@ -1,7 +1,7 @@
 use std::io::{Read, Seek};
 
 use color_eyre::Result;
-use inno::{Inno, error::InnoError};
+use inno::{Inno, InnoInner, error::InnoError};
 use winget_types::installer::{Installer, InstallerType};
 
 use super::{super::Installers, AdvancedInstaller, Burn, Nsis, Squirrel};
@@ -30,7 +30,7 @@ pub struct Exe {
 pub enum ExeType {
     AdvancedInstaller(AdvancedInstaller),
     Burn(Box<Burn>),
-    Inno(Box<Inno>),
+    Inno(Box<InnoInner>),
     Nsis(Nsis),
     Squirrel(Squirrel),
     Generic(Box<Installer>),
@@ -87,7 +87,7 @@ impl Exe {
         match Inno::new(&mut reader) {
             Ok(inno) => {
                 return Ok(Self {
-                    r#type: ExeType::Inno(Box::new(inno)),
+                    r#type: ExeType::Inno(Box::new(inno.inner)),
                     legal_copyright,
                     product_name,
                     company_name,
