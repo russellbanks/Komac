@@ -106,7 +106,7 @@ zerocopy = { version = "0.8.56", features = ["derive", "std"] }
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 
 [target.'cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd"))'.dependencies]
-dbus-secret-service-keyring-store = { version = "1.0.0", features = ["vendored"] }
+dbus-secret-service-keyring-store = { version = "1.0.1", features = ["vendored"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 apple-native-keyring-store = { version = "1.0.2", features = ["keychain"] }
