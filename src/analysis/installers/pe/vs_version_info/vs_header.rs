@@ -36,7 +36,9 @@ impl<'a> VSHeader<'a> {
 
         // Use the provided key length or search for a 16-bit null word
         let key_length = key_length.unwrap_or_else(|| {
-            data.chunks_exact(size_of::<u16>())
+            let (chunks, _remainder) = data.as_chunks();
+            chunks
+                .iter()
                 .position(|chunk| chunk == b"\0\0")
                 .map_or(data.len(), |index| index * size_of::<u16>())
         });

@@ -126,8 +126,9 @@ impl<'data> NsisState<'data> {
 
         // Get the index of the null byte at the end of the string
         let string_end_index = if unicode {
-            offset_slice
-                .chunks_exact(size_of::<u16>())
+            let (chunks, _remainder) = offset_slice.as_chunks();
+            chunks
+                .iter()
                 .position(|chunk| chunk == b"\0\0")
                 .map(|index| index * size_of::<u16>())
         } else {

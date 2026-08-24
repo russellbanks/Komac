@@ -5,7 +5,7 @@ use encoding_rs::UTF_16LE;
 use super::VSHeader;
 use crate::analysis::installers::pe::vs_version_info::vs_type::VSType;
 
-/// Represents a [`String`](https://docs.microsoft.com/en-us/windows/win32/menurc/string-str) structure.
+/// Represents a [`String`](https://docs.microsoft.com/windows/win32/menurc/string-str) structure.
 #[derive(Clone)]
 pub struct VSString<'a> {
     header: VSHeader<'a>,
@@ -18,8 +18,9 @@ impl<'a> VSString<'a> {
 
         let data = &data[header.end_offset..];
 
-        let value_len = data
-            .chunks_exact(size_of::<u16>())
+        let (chunks, _remainder) = data.as_chunks();
+        let value_len = chunks
+            .iter()
             .position(|chunk| chunk == b"\0\0")
             .map_or(data.len(), |index| index * size_of::<u16>());
 
@@ -40,9 +41,10 @@ impl<'a> VSString<'a> {
 
     /// The size of the Value member.
     ///
-    /// This field is not reliable in practice: some produces store a WORD count, others a byte
-    /// count, and Windows does not enforce either interpretation. String values are always UTF-16
-    /// and NUL-terminated; Windows determines their length by scanning for the UTF-16 terminator
+    /// This field is not reliable in practice: some producers store a WORD
+    /// count, others a byte count, and Windows does not enforce either
+    /// interpretation. String values are always UTF-16 and NUL-terminated;
+    /// Windows determines their length by scanning for the UTF-16 terminator
     /// and relies on [`wLength`] for traversal.
     ///
     /// [`wLength`]: Self::length
@@ -50,6 +52,10 @@ impl<'a> VSString<'a> {
         self.header.value_length()
     }
 
+    /// Returns the type of data in the version resource.
+    ///
+    /// The value is 1 if the version resource contains text data and 0 if the
+    /// version resource contains binary data.
     #[must_use]
     #[inline]
     pub const fn r#type(&self) -> VSType {
