@@ -95,7 +95,7 @@ tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "fs", "pa
 tracing = { version = "0.1.44", features = ["release_max_level_warn"] }
 tracing-indicatif = "0.3.14"
 tracing-subscriber = "0.3.23"
-tree-sitter-highlight = "0.26.12"
+tree-sitter-highlight = "0.26.13"
 tree-sitter-yaml = "0.7.2"
 typed-path = "0.12.3"
 url = { version = "2.5.8", features = ["serde"] }
