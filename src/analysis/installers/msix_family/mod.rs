@@ -51,31 +51,31 @@ impl Msix {
 
         loop {
             match reader.read_event()? {
-                Event::Start(event) => match event.local_name().as_ref() {
-                    b"Identity" => {
+                Event::Start(event) => match event.local_name().into_inner() {
+                    "Identity" => {
                         for attribute in event.attributes().flatten() {
-                            match attribute.key.as_ref() {
-                                b"Name" => {
+                            match attribute.key.into_inner() {
+                                "Name" => {
                                     manifest.identity.name = attribute
                                         .normalized_value(XmlVersion::Implicit1_0)?
                                         .into_owned();
                                 }
-                                b"Version" => {
+                                "Version" => {
                                     manifest.identity.version = attribute
                                         .normalized_value(XmlVersion::Implicit1_0)?
                                         .into_owned();
                                 }
-                                b"Publisher" => {
+                                "Publisher" => {
                                     manifest.identity.publisher = attribute
                                         .normalized_value(XmlVersion::Implicit1_0)?
                                         .into_owned();
                                 }
-                                b"ProcessorArchitecture" => {
+                                "ProcessorArchitecture" => {
                                     manifest.identity.processor_architecture = attribute
                                         .normalized_value(XmlVersion::Implicit1_0)?
                                         .into_owned();
                                 }
-                                b"ResourceId" => {
+                                "ResourceId" => {
                                     manifest.identity.resource_id = attribute
                                         .normalized_value(XmlVersion::Implicit1_0)?
                                         .into_owned();
@@ -84,29 +84,29 @@ impl Msix {
                             }
                         }
                     }
-                    b"DisplayName" if event.name().prefix().is_none() => {
+                    "DisplayName" if event.name().prefix().is_none() => {
                         manifest.properties.display_name = reader
                             .read_text(event.to_end().name())?
-                            .xml10_content()?
+                            .xml10_content()
                             .into_owned();
                     }
-                    b"PublisherDisplayName" => {
+                    "PublisherDisplayName" => {
                         manifest.properties.publisher_display_name = reader
                             .read_text(event.to_end().name())?
-                            .xml10_content()?
+                            .xml10_content()
                             .into_owned();
                     }
-                    b"TargetDeviceFamily" => {
+                    "TargetDeviceFamily" => {
                         let mut name = None;
                         let mut min_version = None;
                         for attribute in event.attributes().flatten() {
-                            if attribute.key.as_ref() == b"Name"
+                            if attribute.key.into_inner() == "Name"
                                 && let Ok(platform) =
                                     attribute.normalized_value(XmlVersion::Implicit1_0)
                                 && let Ok(platform) = platform.parse()
                             {
                                 name = Some(platform);
-                            } else if attribute.key.as_ref() == b"MinVersion"
+                            } else if attribute.key.into_inner() == "MinVersion"
                                 && let Ok(version) =
                                     attribute.normalized_value(XmlVersion::Implicit1_0)
                                 && let Ok(version) = version.parse()
@@ -121,11 +121,11 @@ impl Msix {
                                 .insert(TargetDeviceFamily { name, min_version });
                         }
                     }
-                    b"FileType" => {
+                    "FileType" => {
                         if let Ok(extension) = FileExtension::new(
                             reader
                                 .read_text(event.to_end().name())?
-                                .xml10_content()?
+                                .xml10_content()
                                 .trim_start_matches('.'),
                         ) {
                             manifest
@@ -134,17 +134,17 @@ impl Msix {
                                 .insert(extension);
                         }
                     }
-                    b"Capability" => {
-                        if let Some(attribute) = event
+                    "Capability" => {
+                        if let Some(capability) = event
                             .attributes()
                             .flatten()
-                            .find(|attribute| attribute.key.as_ref() == b"Name")
-                            && let Ok(capability) = std::str::from_utf8(&attribute.value)
+                            .find(|attribute| attribute.key.into_inner() == "Name")
+                            .map(|attribute| attribute.value)
                         {
                             if event
                                 .name()
                                 .prefix()
-                                .is_some_and(|prefix| prefix.into_inner() == b"rescap")
+                                .is_some_and(|prefix| prefix.into_inner() == "rescap")
                             {
                                 if let Ok(restricted_capability) =
                                     capability.parse::<RestrictedCapability>()

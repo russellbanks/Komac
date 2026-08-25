@@ -47,9 +47,9 @@ impl MsixBundle {
 
         loop {
             match reader.read_event()? {
-                Event::Start(event) => match event.local_name().as_ref() {
-                    b"Identity" => bundle.identity = Identity::from_event(&event, &mut reader)?,
-                    b"Package" => bundle
+                Event::Start(event) => match event.local_name().into_inner() {
+                    "Identity" => bundle.identity = Identity::from_event(&event, &mut reader)?,
+                    "Package" => bundle
                         .packages
                         .push(Package::from_event(&event, &mut reader)?),
                     _ => {}
