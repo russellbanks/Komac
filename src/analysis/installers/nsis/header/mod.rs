@@ -12,7 +12,6 @@ use bzip2::read::BzDecoder;
 pub use compression::Compression;
 pub use decoder::Decoder;
 use flate2::{Decompress, read::ZlibDecoder};
-use liblzma::read::XzDecoder;
 use tracing::debug;
 use zerocopy::{FromBytes, I32, LE};
 
@@ -249,8 +248,8 @@ impl Header {
 
         let mut decoder = match compression {
             Compression::Lzma(_) => {
-                let stream = LzmaStreamHeader::from_reader(&mut reader)?;
-                Decoder::Lzma(XzDecoder::new_stream(reader, stream))
+                let header = reader.read_t::<LzmaStreamHeader>()?;
+                Decoder::new_lzma1(reader, header)?
             }
             Compression::BZip2 => Decoder::BZip2(BzDecoder::new(reader)),
             Compression::Zlib => Decoder::Zlib(ZlibDecoder::new_with_decompress(

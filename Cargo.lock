@@ -2249,7 +2249,7 @@ dependencies = [
  "itertools 0.15.0",
  "itoa",
  "keyring-core",
- "liblzma",
+ "lzma-rust2 0.20.0",
  "memchr",
  "msi",
  "nt-time",
@@ -2349,26 +2349,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "328c4789d42200f1eeec05bd86c9c13c7f091d2ba9a6ea35acdf51f31bc0f043"
 dependencies = [
  "cc",
- "pkg-config",
-]
-
-[[package]]
-name = "liblzma"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fe0a34ca854fd4f20c07f696fc8675aec78f87d88d29f5e10257a7490a1b2e1"
-dependencies = [
- "liblzma-sys",
-]
-
-[[package]]
-name = "liblzma-sys"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0dad045e4b1b7b170be4b60b54b780cafb4490165461bac7d1cf7b703f61d5f"
-dependencies = [
- "cc",
- "libc",
  "pkg-config",
 ]
 
@@ -2496,6 +2476,9 @@ name = "lzma-rust2"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6effa5c575f68109664a511f378c0e170888e33a426694ee0910a673762bd47"
+dependencies = [
+ "sha2 0.11.0",
+]
 
 [[package]]
 name = "lzxd"

@@ -20,7 +20,6 @@ use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
 pub use error::NsisError;
 use flate2::{Decompress, read::ZlibDecoder};
-use liblzma::read::XzDecoder;
 use msi::Language;
 use registry::Registry;
 use state::NsisState;
@@ -49,6 +48,7 @@ use super::{
 };
 use crate::{
     analysis::Installers,
+    read::ReadBytesExt,
     traits::{FromMachine, IntoWingetArchitecture},
 };
 
@@ -181,8 +181,8 @@ impl Nsis {
                                             i64::try_from(position).ok()? + i64::from(filter_flag),
                                         )
                                         .ok()?;
-                                    let stream = LzmaStreamHeader::from_reader(decoder).ok()?;
-                                    Decoder::Lzma(XzDecoder::new_stream(decoder, stream))
+                                    let header = decoder.read_t::<LzmaStreamHeader>().ok()?;
+                                    Decoder::new_lzma1(decoder, header).ok()?
                                 }
                                 Compression::BZip2 => Decoder::BZip2(BzDecoder::new(decoder)),
                                 Compression::Zlib => {

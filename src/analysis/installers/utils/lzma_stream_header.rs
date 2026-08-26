@@ -1,17 +1,24 @@
-use std::io::{Error, ErrorKind, Read, Result};
+use zerocopy::{FromBytes, Immutable, KnownLayout, LE, U32};
 
-use liblzma::stream::{Filters, Stream};
-
-pub struct LzmaStreamHeader;
+#[derive(Clone, Copy, Debug, Eq, PartialEq, FromBytes, Immutable, KnownLayout)]
+#[repr(C)]
+pub struct LzmaStreamHeader {
+    props: u8,
+    dict_size: U32<LE>,
+}
 
 impl LzmaStreamHeader {
-    pub fn from_reader<R: Read>(reader: &mut R) -> Result<Stream> {
-        let mut properties = [0; 5];
-        reader.read_exact(&mut properties)?;
+    /// Returns the LZMA properties byte.
+    #[must_use]
+    #[inline]
+    pub const fn props(self) -> u8 {
+        self.props
+    }
 
-        let mut filters = Filters::new();
-        filters.lzma1_properties(&properties)?;
-
-        Stream::new_raw_decoder(&filters).map_err(|error| Error::new(ErrorKind::InvalidData, error))
+    /// Returns the LZMA dictionary size.
+    #[must_use]
+    #[inline]
+    pub const fn dictionary_size(self) -> u32 {
+        self.dict_size.get()
     }
 }
