@@ -19,7 +19,7 @@ pub struct Identity {
 
 impl Identity {
     pub fn from_event(event: &BytesStart, reader: &mut Reader<&[u8]>) -> quick_xml::Result<Self> {
-        debug_assert_eq!(event.local_name().into_inner(), b"Identity");
+        debug_assert_eq!(event.local_name().into_inner(), "Identity");
 
         let mut identity = Self::default();
 
@@ -27,17 +27,17 @@ impl Identity {
             let attribute = attribute?;
 
             match attribute.key.into_inner() {
-                b"Name" => {
+                "Name" => {
                     identity.name = attribute
                         .normalized_value(XmlVersion::Implicit1_0)?
                         .into_owned();
                 }
-                b"Publisher" => {
+                "Publisher" => {
                     identity.publisher = attribute
                         .normalized_value(XmlVersion::Implicit1_0)?
                         .into_owned();
                 }
-                b"Version" => {
+                "Version" => {
                     identity.version = attribute
                         .normalized_value(XmlVersion::Implicit1_0)?
                         .into_owned();
@@ -92,7 +92,7 @@ pub struct Package {
 
 impl Package {
     pub fn from_event(event: &BytesStart, reader: &mut Reader<&[u8]>) -> quick_xml::Result<Self> {
-        debug_assert_eq!(event.local_name().into_inner(), b"Package");
+        debug_assert_eq!(event.local_name().into_inner(), "Package");
 
         let mut package = Self::default();
 
@@ -100,30 +100,30 @@ impl Package {
             let attribute = attribute?;
 
             match attribute.key.into_inner() {
-                b"Type"
+                "Type"
                     if let Ok(r#type) = attribute.normalized_value(XmlVersion::Implicit1_0)
                         && let Ok(r#type) = r#type.parse() =>
                 {
                     package.r#type = r#type;
                 }
-                b"FileName" => {
+                "FileName" => {
                     package.file_name = attribute
                         .normalized_value(XmlVersion::Implicit1_0)?
                         .into_owned();
                 }
-                b"Offset"
+                "Offset"
                     if let Ok(offset) = attribute.normalized_value(XmlVersion::Implicit1_0)
                         && let Ok(offset) = offset.parse() =>
                 {
                     package.offset = offset;
                 }
-                b"Size"
+                "Size"
                     if let Ok(size) = attribute.normalized_value(XmlVersion::Implicit1_0)
                         && let Ok(size) = size.parse() =>
                 {
                     package.size = size;
                 }
-                b"IsStub"
+                "IsStub"
                     if let Ok(is_stub) = attribute.normalized_value(XmlVersion::Implicit1_0)
                         && let Ok(is_stub) = is_stub.parse() =>
                 {
