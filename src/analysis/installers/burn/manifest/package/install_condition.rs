@@ -134,6 +134,11 @@ impl Parser {
                             self.advance();
                             Literal::Int(num)
                         }
+                        Some(Token::String(s)) => {
+                            let s = s.clone();
+                            self.advance();
+                            Literal::Str(s)
+                        }
                         Some(Token::Ident(s)) => {
                             let s = s.clone();
                             self.advance();
@@ -223,6 +228,23 @@ fn tokenize(input: &str) -> Vec<Token> {
                     chars.next();
                 }
                 tokens.push(Token::Number(value));
+            }
+            '"' => {
+                chars.next();
+
+                let mut value = String::new();
+
+                while let Some(&char) = chars.peek() {
+                    chars.next();
+
+                    if char == '"' {
+                        break;
+                    }
+
+                    value.push(char);
+                }
+
+                tokens.push(Token::String(value));
             }
             _ => {
                 let mut ident = String::new();
@@ -347,5 +369,6 @@ pub enum Token {
     Ge,        // >=
     Le,        // <=
     Ident(String),
+    String(String),
     Number(u32),
 }
