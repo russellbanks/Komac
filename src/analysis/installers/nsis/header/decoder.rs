@@ -7,7 +7,7 @@ use lzma_rust2::LzmaReader;
 use super::LzmaStreamHeader;
 
 pub enum Decoder<R: Read + Seek> {
-    Lzma(LzmaReader<R>),
+    Lzma(Box<LzmaReader<R>>),
     BZip2(BzDecoder<R>),
     Zlib(ZlibDecoder<R>),
     None(R),
@@ -23,7 +23,7 @@ impl<R: Read + Seek> Decoder<R> {
             header.dictionary_size(),
             None,
         )
-        .map(|reader| Self::Lzma(reader))
+        .map(|reader| Self::Lzma(Box::new(reader)))
     }
 }
 
