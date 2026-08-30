@@ -29,27 +29,27 @@ impl Downloads {
         stream::iter(self.0.iter_mut().map(
             |DownloadedFile {
                  file,
-                 url,
+                 download,
                  sha_256,
-                 file_name,
                  last_modified,
                  ..
              }| async move {
-                let mut file_analyzer = Analyzer::new(file, file_name)?;
-                let architecture = url
+                let mut file_analyzer = Analyzer::new(file, &download.file_name)?;
+                let architecture = download
+                    .url()
                     .override_architecture()
-                    .or_else(|| Architecture::from_url(url.as_str()));
+                    .or_else(|| Architecture::from_url(download.url().as_str()));
                 for installer in &mut file_analyzer.installers {
                     if let Some(architecture) = architecture {
                         installer.architecture = architecture;
                     }
-                    debug!("{url}: {architecture:?}");
-                    installer.url = url.inner().clone();
+                    debug!("{download}: {architecture:?}");
+                    installer.url = download.url().inner().clone();
                     installer.sha_256 = sha_256.clone();
                     installer.release_date = *last_modified;
                 }
-                file_analyzer.file_name = mem::take(file_name);
-                Ok((mem::take(url.inner_mut()), file_analyzer))
+                file_analyzer.file_name = mem::take(&mut download.file_name);
+                Ok((mem::take(download.url_mut().inner_mut()), file_analyzer))
             },
         ))
         .buffer_unordered(num_cpus::get())

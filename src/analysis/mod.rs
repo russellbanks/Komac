@@ -1,5 +1,5 @@
 mod analyzer;
-mod extensions;
+pub mod extensions;
 pub mod installers;
 mod r#trait;
 

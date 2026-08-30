@@ -1,3 +1,4 @@
+pub mod app_installer;
 pub mod bundle;
 mod utils;
 
