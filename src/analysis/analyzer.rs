@@ -10,7 +10,7 @@ use winget_types::{
     locale::{Copyright, PackageName, Publisher},
 };
 
-use super::extensions::{APPX, APPX_BUNDLE, EXE, MSI, MSIX, MSIX_BUNDLE, ZIP};
+use super::extensions::FileExtension;
 use crate::analysis::{
     Installers,
     installers::{
@@ -30,16 +30,17 @@ pub struct Analyzer<'reader, R: Read + Seek> {
 
 impl<'reader, R: Read + Seek> Analyzer<'reader, R> {
     pub fn new(reader: &'reader mut R, file_name: &str) -> Result<Self> {
-        let extension = Utf8Path::new(file_name)
+        let installers = match Utf8Path::new(file_name)
             .extension()
             .unwrap_or_default()
-            .to_ascii_lowercase();
-
-        let installers = match extension.as_str() {
-            MSI => Msi::new(reader)?.installers(),
-            MSIX | APPX => Msix::new(reader)?.installers(),
-            MSIX_BUNDLE | APPX_BUNDLE => MsixBundle::new(reader)?.installers(),
-            ZIP => {
+            .parse()?
+        {
+            FileExtension::Msi => Msi::new(reader)?.installers(),
+            FileExtension::Msix | FileExtension::Appx => Msix::new(reader)?.installers(),
+            FileExtension::MsixBundle | FileExtension::AppxBundle => {
+                MsixBundle::new(reader)?.installers()
+            }
+            FileExtension::Zip => {
                 let mut scoped_zip = Zip::new(reader)?;
                 let installers = mem::take(&mut scoped_zip.installers);
                 return Ok(Self {
@@ -48,7 +49,7 @@ impl<'reader, R: Read + Seek> Analyzer<'reader, R> {
                     ..Self::default()
                 });
             }
-            EXE => {
+            FileExtension::Exe => {
                 let mut exe = Exe::new(reader)?;
                 return Ok(Self {
                     installers: exe.installers(),
@@ -67,7 +68,11 @@ impl<'reader, R: Read + Seek> Analyzer<'reader, R> {
                     ..Self::default()
                 });
             }
-            _ => bail!(r#"Unsupported file extension: "{extension}""#),
+            FileExtension::AppInstaller => {
+                // AppInstaller files will only reach this point from the analyze command as they
+                // are converted to an MSIX or MSIXBundle before downloading
+                bail!(".appinstaller files are not supported for the analyze command")
+            }
         };
         Ok(Self {
             installers,

@@ -79,3 +79,12 @@ impl From<DecodedUrl> for Url {
         }
     }
 }
+
+impl From<url::Url> for Url {
+    fn from(url: url::Url) -> Self {
+        Self {
+            inner: DecodedUrl::from_str(url.as_str()).unwrap(),
+            override_architecture: None,
+        }
+    }
+}

@@ -3,12 +3,11 @@ use std::fs::File;
 use chrono::NaiveDate;
 use winget_types::Sha256String;
 
-use crate::manifests::Url;
+use crate::download::Download;
 
 pub struct DownloadedFile {
     pub file: File,
-    pub url: Url,
+    pub download: Download,
     pub sha_256: Sha256String,
-    pub file_name: String,
     pub last_modified: Option<NaiveDate>,
 }
