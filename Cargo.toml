@@ -125,7 +125,7 @@ windows_exe_info = { version = "0.5.2", features = ["manifest"] }
 
 [dev-dependencies]
 indoc = "2.0.7"
-rstest = "0.26.1"
+rstest = "0.27.0"
 
 [package.metadata.generate-rpm]
 assets = [
