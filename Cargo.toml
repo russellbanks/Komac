@@ -52,7 +52,7 @@ compact_str = "0.10.0"
 const_format = { version = "0.2.36", features = ["derive"] }
 crossbeam-channel = "0.5.17"
 cynic = { version = "3.14.0", features = ["http-reqwest"] }
-encoding_rs = "0.8.35"
+encoding_rs = "0.8.40"
 flate2 = "1.1.10"
 futures-util = "0.3.34"
 html2text = "0.17.1"
