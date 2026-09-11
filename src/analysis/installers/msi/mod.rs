@@ -11,6 +11,7 @@ use msi::{Language, Package, Select};
 use property_table::PropertyTable;
 use winget_types::{
     LanguageTag,
+    icu_locale::langid,
     installer::{
         AppsAndFeaturesEntries, AppsAndFeaturesEntry, Architecture, InstallationMetadata,
         Installer, InstallerType, Scope, Switches,
@@ -220,6 +221,7 @@ impl Msi {
             .tag()
             .parse::<LanguageTag>()
             .ok()
+            .filter(|language_tag| language_tag != &langid!("und"))
     }
 
     fn wix_ui_install_dir(&self) -> Option<&str> {
