@@ -121,7 +121,7 @@ rustls = ["dbus-secret-service-keyring-store/crypto-rust", "reqwest/rustls"]
 
 [build-dependencies]
 cynic-codegen = { version = "3.14.0", features = ["rkyv"] }
-windows_exe_info = { version = "0.5.2", features = ["manifest"] }
+windows_exe_info = { version = "0.5.3", features = ["manifest"] }
 
 [dev-dependencies]
 indoc = "2.0.7"
