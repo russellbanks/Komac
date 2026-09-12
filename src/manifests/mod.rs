@@ -161,7 +161,7 @@ pub fn print_manifest(lock: &mut AutoStream<StdoutLock<'static>>, manifest: &str
 
     let mut highlighter = Highlighter::new();
     let highlights = highlighter
-        .highlight(&YAML_CONFIG, manifest.as_bytes(), None, |_| None)
+        .highlight(&YAML_CONFIG, manifest.as_bytes(), None, None, |_| None)
         .unwrap();
 
     let mut current_highlight: Option<Highlight> = None;
