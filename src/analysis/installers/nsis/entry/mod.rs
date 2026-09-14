@@ -750,9 +750,9 @@ impl Entry {
                             sliced_source_char_count
                         } else if max_length.is_negative() {
                             usize::try_from(sliced_source_char_count as i32 + max_length)
-                                .unwrap_or(sliced_source_char_count)
+                                .unwrap_or_default()
                         } else {
-                            usize::try_from(max_length).unwrap_or(sliced_source_char_count)
+                            usize::try_from(max_length).unwrap_or_default()
                         };
 
                         let end_byte = sliced_source
@@ -788,10 +788,10 @@ impl Entry {
                     }
                 }
 
-                if !source.is_empty() {
-                    state
-                        .variables
-                        .insert(variable.get().unsigned_abs() as usize, result);
+                if result.is_empty() {
+                    state.variables.remove(&index);
+                } else {
+                    state.variables.insert(index, result);
                 }
             }
             Self::StrCmp {
