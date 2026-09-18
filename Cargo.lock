@@ -1951,7 +1951,7 @@ dependencies = [
  "encoding_rs",
  "flate2",
  "itertools 0.15.0",
- "lzma-rust2",
+ "lzma-rust2 0.20.1",
  "nt-time",
  "thiserror 2.0.20",
  "zerocopy",
@@ -2239,7 +2239,7 @@ dependencies = [
  "itertools 0.15.0",
  "itoa",
  "keyring-core",
- "lzma-rust2",
+ "lzma-rust2 0.21.0",
  "memchr",
  "msi",
  "nt-time",
@@ -2460,6 +2460,12 @@ name = "lzma-rust2"
 version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e2a88783b84d2d67ef2791778a9e76bfb68b8017aaf6c9d7d5f2626a478b16c"
+
+[[package]]
+name = "lzma-rust2"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fde178a3caf126c440fa15628147772d8ee590a39477d711353fbe2e58a73a5b"
 dependencies = [
  "sha2 0.11.0",
 ]
@@ -3993,7 +3999,7 @@ dependencies = [
  "crc32fast",
  "getrandom 0.4.3",
  "js-sys",
- "lzma-rust2",
+ "lzma-rust2 0.20.1",
  "ppmd-rust",
  "sha2 0.11.0",
  "wasm-bindgen",
