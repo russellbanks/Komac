@@ -104,6 +104,21 @@ impl UpdateVersion {
             .get_versioned_package(&self.identifier, &self.version)
             .await?;
 
+        // `update` adds a version that is not there yet and models it on the latest
+        // one. A version that already exists has no model of its own, so generating
+        // it would carry the latest version's metadata into the manifests it
+        // replaces. Refuse instead of silently producing those manifests.
+        if package.versions().contains(&self.version) {
+            bail!(
+                "Version {version} of {identifier} already exists in {repo}, so there is nothing to add. \
+                 `komac update` creates a new version; updating an existing version is not supported yet \
+                 (see https://github.com/russellbanks/Komac/issues/483).",
+                version = self.version,
+                identifier = self.identifier,
+                repo = WINGET_PKGS_FULL_NAME
+            );
+        }
+
         println!(
             "Latest version of {}: {}",
             self.identifier,
