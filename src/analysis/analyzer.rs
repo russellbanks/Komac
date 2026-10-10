@@ -71,7 +71,7 @@ impl<'reader, R: Read + Seek> Analyzer<'reader, R> {
             FileExtension::AppInstaller => {
                 // AppInstaller files will only reach this point from the analyze command as they
                 // are converted to an MSIX or MSIXBundle before downloading
-                bail!(".appinstaller files are not supported for the analyze command")
+                bail!(".appinstaller files are not supported for the analyze command");
             }
         };
         Ok(Self {

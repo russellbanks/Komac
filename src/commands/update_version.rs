@@ -134,7 +134,8 @@ impl UpdateVersion {
             .flat_map(Analyzer::into_installers)
             .collect();
 
-        manifests.installer
+        manifests
+            .installer
             .installers
             .iter_mut()
             .flat_map(|installer| &mut installer.apps_and_features_entries)
@@ -234,7 +235,7 @@ impl UpdateVersion {
         {
             bail!(
                 "Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}"
-            )
+            );
         }
 
         Ok(replace_version)
