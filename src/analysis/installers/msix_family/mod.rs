@@ -179,27 +179,27 @@ impl Installers for Msix {
     fn installers(&self) -> Vec<Installer> {
         let is_appx = self
             .manifest
-            .dependencies
-            .target_device_family
-            .iter()
+            .target_device_families()
             .all(|target_device_family| target_device_family.min_version < MSIX_MIN_VERSION)
             && !self.appx_manifest.contains_ignore_ascii_case(MSIX);
 
         vec![Installer {
             platform: self
                 .manifest
-                .dependencies
-                .target_device_family
-                .iter()
+                .target_device_families()
                 .map(|target_device_family| target_device_family.name)
                 .collect(),
             minimum_os_version: self
                 .manifest
-                .dependencies
-                .target_device_family
-                .iter()
+                .target_device_families()
+                .find(|target_device_family| target_device_family.is_windows_desktop())
                 .map(|target_device_family| target_device_family.min_version)
-                .min(),
+                .or_else(|| {
+                    self.manifest
+                        .target_device_families()
+                        .map(|target_device_family| target_device_family.min_version)
+                        .min()
+                }),
             architecture: self
                 .manifest
                 .identity
@@ -218,10 +218,7 @@ impl Installers for Msix {
                 .file_type_association
                 .supported_file_types
                 .clone(),
-            package_family_name: Some(PackageFamilyName::new(
-                &self.manifest.identity.name,
-                &self.manifest.identity.publisher,
-            )),
+            package_family_name: Some(self.manifest.package_family_name()),
             capabilities: self.manifest.capabilities.unrestricted.clone(),
             restricted_capabilities: self.manifest.capabilities.restricted.clone(),
             apps_and_features_entries: AppsAndFeaturesEntry::builder()
@@ -254,6 +251,20 @@ pub struct Package {
     file_type_association: FileTypeAssociation,
 }
 
+impl Package {
+    #[must_use]
+    #[inline]
+    pub fn package_family_name(&self) -> PackageFamilyName {
+        PackageFamilyName::new(&self.identity.name, &self.identity.publisher)
+    }
+
+    /// Returns an iterator of [`TargetDeviceFamily`].
+    #[inline]
+    pub fn target_device_families(&self) -> impl Iterator<Item = &TargetDeviceFamily> {
+        self.dependencies.target_device_family.iter()
+    }
+}
+
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-identity>
 #[derive(Clone, Default)]
 pub struct Identity {
@@ -274,14 +285,23 @@ pub struct Properties {
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-dependencies>
 #[derive(Clone, Default)]
 pub struct Dependencies {
-    pub target_device_family: BTreeSet<TargetDeviceFamily>,
+    target_device_family: BTreeSet<TargetDeviceFamily>,
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-targetdevicefamily>
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TargetDeviceFamily {
-    pub name: Platform,
-    pub min_version: MinimumOSVersion,
+    name: Platform,
+    min_version: MinimumOSVersion,
+}
+
+impl TargetDeviceFamily {
+    /// Returns `true` if the target device family's name is `Windows.Desktop`.
+    #[must_use]
+    #[inline]
+    pub const fn is_windows_desktop(&self) -> bool {
+        self.name.contains(Platform::WINDOWS_DESKTOP)
+    }
 }
 
 /// <https://learn.microsoft.com/uwp/schemas/appxpackage/uapmanifestschema/element-capabilities>
