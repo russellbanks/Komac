@@ -11,11 +11,7 @@ use reqwest::{
 };
 use sha2::{Digest, Sha256};
 use thiserror::Error;
-use tokio::{
-    io::{AsyncWriteExt, BufWriter},
-    sync::mpsc,
-    try_join,
-};
+use tokio::io::{AsyncWriteExt, BufWriter};
 use winget_types::Sha256String;
 
 use super::{Download, DownloadedFile, Downloads, PreDownload};
@@ -198,44 +194,20 @@ impl Downloader {
         let file = tokio::fs::File::from_std(temp_file.try_clone()?);
         let mut buf_writer = BufWriter::new(file);
 
-        // Create a thread for writing to the file
-        let (write_sender, mut write_receiver) = mpsc::unbounded_channel::<bytes::Bytes>();
-        let writer = tokio::spawn(async move {
-            while let Some(chunk) = write_receiver.recv().await {
-                buf_writer.write_all(&chunk).await?;
-            }
-
-            buf_writer.flush().await?;
-            buf_writer.shutdown().await
-        });
-
-        // Create a thread for hashing the downloaded bytes
-        let (hash_sender, hash_receiver) = crossbeam_channel::unbounded::<bytes::Bytes>();
-        let hasher = tokio::task::spawn_blocking(move || {
-            let mut hasher = Sha256::new();
-            while let Ok(chunk) = hash_receiver.recv() {
-                hasher.update(&chunk);
-            }
-            hasher.finalize()
-        });
-
         let mut stream = download.response.take().unwrap().bytes_stream();
+
+        let mut hasher = Sha256::new();
 
         // Download the chunks asynchronously
         while let Some(chunk) = stream.next().await.transpose()? {
             progress.inc(chunk.len() as u64);
-            hash_sender.send(chunk.clone())?;
-            write_sender.send(chunk)?;
+            hasher.update(&chunk);
+            buf_writer.write_all(&chunk).await?;
         }
 
-        drop(write_sender);
-        drop(hash_sender);
+        buf_writer.shutdown().await?;
 
-        let sha_256 = match try_join!(writer, hasher)? {
-            (Ok(()), sha_256) => sha_256,
-            (Err(err), _) => return Err(err.into()),
-        };
-
+        let sha_256 = hasher.finalize();
         progress.finish();
 
         Ok(DownloadedFile {

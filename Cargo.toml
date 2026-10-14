@@ -39,7 +39,6 @@ anstream = "1.0.0"
 base64ct = { version = "1.8.3", features = ["std"] }
 bitflags = "2.13.2"
 bon = "3.10.2"
-bytes = "1.12.1"
 bzip2 = "0.6.1"
 cab = "0.6.0"
 camino = { version = "1.2.6", features = ["serde1"] }
@@ -50,7 +49,6 @@ codepage = "0.1.3"
 color-eyre = { version = "0.6.5", default-features = false }
 compact_str = "0.10.0"
 const_format = { version = "0.2.36", features = ["derive"] }
-crossbeam-channel = "0.5.17"
 cynic = { version = "3.14.0", features = ["http-reqwest"] }
 encoding_rs = "0.8.42"
 flate2 = "1.1.10"
