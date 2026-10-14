@@ -71,13 +71,14 @@ impl MsixBundle {
                     // Find file by package file name, comparing by decoded file names
                     let file_name = zip
                         .file_names()
+                        .flatten()
                         .find(|file_name| {
                             percent_decode_str(file_name)
                                 .eq(percent_decode_str(package.file_name()))
                         })
                         .map_or_else(
                             || Cow::Borrowed(package.file_name()),
-                            |file_name| Cow::Owned(file_name.to_owned()),
+                            |file_name| Cow::Owned(file_name.into_owned()),
                         );
 
                     let mut embedded_msix = zip.by_name(&file_name)?;
