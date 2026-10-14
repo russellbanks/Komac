@@ -115,6 +115,11 @@ impl Downloader {
         download: &PreDownload,
         content_types: GetAll<HeaderValue>,
     ) -> Result<(), ContentTypeError> {
+        if content_types.iter().next().is_none() {
+            // Don't reject if no content type is provided
+            return Ok(());
+        }
+
         if content_types.iter().all(|content_type| {
             !content_type
                 .as_bytes()
