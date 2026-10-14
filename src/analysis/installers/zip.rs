@@ -3,6 +3,7 @@ use std::{
     io,
     io::{Read, Seek, SeekFrom},
     mem,
+    path::Path,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -34,23 +35,23 @@ impl<R: Read + Seek> Zip<R> {
 
         let possible_installer_files = zip
             .file_names()
-            .map(Utf8Path::new)
+            .flatten()
             .filter(|file_name| {
                 VALID_NESTED_FILE_EXTENSIONS.iter().any(|file_extension| {
-                    file_name
+                    Path::new(&**file_name)
                         .extension()
                         .is_some_and(|extension| extension.eq_ignore_ascii_case(file_extension))
                 })
             })
             .filter(|file_name| {
                 // Ignore folders that the main executable is unlikely to be in
-                file_name.components().all(|component| {
+                Utf8Path::new(file_name).components().all(|component| {
                     IGNORABLE_FOLDERS
                         .iter()
                         .all(|folder| !component.as_str().eq_ignore_ascii_case(folder))
                 })
             })
-            .map(Utf8Path::to_path_buf)
+            .map(|name| Utf8PathBuf::from(&name))
             .collect::<Vec<_>>();
 
         debug!(?possible_installer_files);

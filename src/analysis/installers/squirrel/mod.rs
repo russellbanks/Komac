@@ -58,13 +58,14 @@ impl Squirrel {
             // Squirrel
             let nupkg_name = zip
                 .file_names()
+                .flatten()
                 .find(|name| {
-                    Path::new(name)
+                    Path::new(&**name)
                         .extension()
                         .is_some_and(|ext| ext.eq_ignore_ascii_case("nupkg"))
                 })
                 .ok_or(SquirrelError::NoNupkgFound)?
-                .to_owned();
+                .into_owned();
             let mut nupkg_reader = zip.by_name(&nupkg_name)?;
 
             // Copy the .nupkg file to a temporary file
@@ -87,9 +88,10 @@ impl Squirrel {
 
         let nuspec_filename = nupkg
             .file_names()
+            .flatten()
             .find(|name| name.ends_with(".nuspec"))
             .ok_or(SquirrelError::NotSquirrelFile)?
-            .to_owned();
+            .into_owned();
 
         debug!(is_velopack);
 
@@ -99,13 +101,14 @@ impl Squirrel {
 
         let entrypoint = nupkg
             .file_names()
-            .map(Utf8Path::new)
+            .flatten()
             .filter(|name| {
-                name.extension()
+                Path::new(&**name)
+                    .extension()
                     .is_some_and(|ext| ext.eq_ignore_ascii_case("exe"))
             })
             .find(|name| {
-                name.file_stem().is_some_and(|stem| {
+                Utf8Path::new(name).file_stem().is_some_and(|stem| {
                     nuspec
                         .main_exe()
                         .is_some_and(|main_exe| main_exe.eq_ignore_ascii_case(stem))
@@ -115,7 +118,7 @@ impl Squirrel {
                             .is_some_and(|title| title.eq_ignore_ascii_case(stem))
                 })
             })
-            .map(Utf8Path::to_path_buf);
+            .map(|name| Utf8PathBuf::from(&name));
 
         let architecture = entrypoint
             .and_then(|entrypoint| {
