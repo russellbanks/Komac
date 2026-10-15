@@ -62,13 +62,15 @@ impl Package<'_, '_, Versioned> {
     }
 
     pub fn prompt_existing_pr(&self) -> InquireResult<bool> {
-        if *CI {
-            return Ok(false);
-        }
-
         let Some(ref pull_request) = self.existing_pr else {
             return Ok(true);
         };
+
+        if *CI {
+            // An existing pull request exists, but we're running in CI and so
+            // cannot prompt
+            return Ok(false);
+        }
 
         let created_at = pull_request.created_at.with_timezone(&Local);
         println!(
