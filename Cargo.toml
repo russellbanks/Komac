@@ -62,7 +62,7 @@ inquire = "0.9.4"
 itertools = "0.15.0"
 itoa = "1.0.18"
 keyring-core = "1.0.1"
-lzma-rust2 = { version = "0.22.0", features = ["std"] }
+lzma-rust2 = { version = "0.23.0", features = ["std"] }
 memchr = "2.8.3"
 msi = "0.10.0"
 nt-time = { version = "0.15.0", features = ["chrono"] }
