@@ -53,7 +53,7 @@ cynic = { version = "3.14.0", features = ["http-reqwest"] }
 encoding_rs = "0.8.42"
 flate2 = "1.1.10"
 futures-util = "0.3.34"
-html2text = "0.17.3"
+html2text = "0.17.4"
 indexmap = "2.14.2"
 indextree = "4.9.2"
 indicatif = "0.18.6"
