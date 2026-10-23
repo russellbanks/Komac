@@ -16,7 +16,7 @@ use strsim::levenshtein;
 use tokio::try_join;
 use winget_types::{
     InstallerManifest, PackageIdentifier, PackageVersion,
-    installer::{Installer, InstallerType, NestedInstallerFiles},
+    installer::{Architecture, Installer, NestedInstallerFiles, Switches},
     url::{DecodedUrl, ReleaseNotesUrl},
 };
 
@@ -131,6 +131,7 @@ impl UpdateVersion {
 
         let download_results = files.analyze().await?;
 
+        let previous_installers = PreviousInstallers::new(&manifests.installer);
         let installers = download_results
             .into_values()
             .flat_map(|analyzer| {
@@ -139,15 +140,17 @@ impl UpdateVersion {
                     .as_ref()
                     .map(|zip| zip.possible_installer_files.clone())
                     .unwrap_or_default();
-                let mut installers = analyzer.into_installers();
-                for installer in &mut installers {
-                    carry_over_nested_installer(
-                        installer,
-                        &manifests.installer,
-                        &possible_installer_files,
-                    );
-                }
-                installers
+                analyzer
+                    .into_installers()
+                    .into_iter()
+                    .flat_map(|installer| {
+                        merge_with_previous(
+                            installer,
+                            &previous_installers,
+                            &possible_installer_files,
+                        )
+                    })
+                    .collect::<Vec<_>>()
             })
             .collect();
 
@@ -280,41 +283,170 @@ impl UpdateVersion {
     }
 }
 
-/// Fills in the nested installer of a zip installer that couldn't be detected, such as when the zip
-/// contains more than one executable, from the previous installer of the same architecture.
-fn carry_over_nested_installer(
-    installer: &mut Installer,
-    previous_manifest: &InstallerManifest,
+/// The previous version's installers, used to fill in what analysis can't detect.
+struct PreviousInstallers {
+    /// Each installer with the fields it inherits from the root of the manifest applied.
+    installers: Vec<Installer>,
+
+    /// The fields from the root of the manifest that apply to the whole package rather than to a
+    /// type of installer, for installers that don't match a previous one.
+    package_wide: Installer,
+}
+
+impl PreviousInstallers {
+    fn new(manifest: &InstallerManifest) -> Self {
+        macro_rules! root_installer {
+            ($($field:ident),* $(,)?) => {
+                Installer {
+                    $($field: manifest.$field.clone(),)*
+                    ..Installer::default()
+                }
+            };
+        }
+
+        let root = root_installer!(
+            locale,
+            platform,
+            minimum_os_version,
+            r#type,
+            nested_installer_type,
+            nested_installer_files,
+            scope,
+            install_modes,
+            switches,
+            success_codes,
+            expected_return_codes,
+            upgrade_behavior,
+            commands,
+            protocols,
+            file_extensions,
+            dependencies,
+            package_family_name,
+            product_code,
+            capabilities,
+            restricted_capabilities,
+            markets,
+            aborts_terminal,
+            release_date,
+            install_location_required,
+            require_explicit_upgrade,
+            display_install_warnings,
+            unsupported_os_architectures,
+            unsupported_arguments,
+            apps_and_features_entries,
+            elevation_requirement,
+            installation_metadata,
+            download_command_prohibited,
+            repair_behavior,
+            archive_binaries_depend_on_path,
+        );
+
+        Self {
+            installers: manifest
+                .installers
+                .iter()
+                .map(|installer| merge_installer(installer.clone(), root.clone()))
+                .collect(),
+            package_wide: Installer {
+                platform: root.platform,
+                minimum_os_version: root.minimum_os_version,
+                commands: root.commands.clone(),
+                protocols: root.protocols.clone(),
+                file_extensions: root.file_extensions.clone(),
+                dependencies: root.dependencies,
+                ..Installer::default()
+            },
+        }
+    }
+}
+
+/// Fills in what analysis couldn't detect for an installer from the previous installer it matches.
+///
+/// An installer matches a previous installer of the same type, scope, and architecture. If its
+/// architecture couldn't be detected and the previous version used the same file for several
+/// architectures, it's split back into one installer per architecture. Installers without a match,
+/// such as a newly added installer type, only get the package-wide fields.
+fn merge_with_previous(
+    installer: Installer,
+    previous: &PreviousInstallers,
     possible_installer_files: &[Utf8PathBuf],
-) {
-    if installer.r#type != Some(InstallerType::Zip) || !installer.nested_installer_files.is_empty()
-    {
-        return;
-    }
-
-    let Some(previous_installer) = previous_manifest.installers.iter().find(|previous| {
-        previous.architecture == installer.architecture
-            && previous.r#type.or(previous_manifest.r#type) == Some(InstallerType::Zip)
-    }) else {
-        return;
-    };
-
-    let previous_nested_files = if previous_installer.nested_installer_files.is_empty() {
-        &previous_manifest.nested_installer_files
-    } else {
-        &previous_installer.nested_installer_files
-    };
-
-    installer.nested_installer_files = previous_nested_files
+) -> Vec<Installer> {
+    let candidates = previous
+        .installers
         .iter()
-        .map(|nested_file| fix_relative_path(nested_file, possible_installer_files))
-        .collect();
+        .filter(|previous| {
+            previous.r#type == installer.r#type
+                && (installer.scope.is_none()
+                    || previous.scope.is_none()
+                    || previous.scope == installer.scope)
+        })
+        .collect::<Vec<_>>();
 
-    if installer.nested_installer_type.is_none() {
-        installer.nested_installer_type = previous_installer
-            .nested_installer_type
-            .or(previous_manifest.nested_installer_type);
+    let same_architecture = candidates
+        .iter()
+        .filter(|previous| previous.architecture == installer.architecture)
+        .min_by_key(|previous| {
+            levenshtein(
+                file_name(previous.url.as_str()),
+                file_name(installer.url.as_str()),
+            )
+        });
+
+    let matches = if let Some(previous) = same_architecture {
+        vec![*previous]
+    } else if installer.architecture == Architecture::Neutral
+        && candidates
+            .iter()
+            .all(|previous| previous.url == candidates[0].url)
+    {
+        candidates
+    } else {
+        Vec::new()
+    };
+
+    if matches.is_empty() {
+        return vec![merge_installer(installer, previous.package_wide.clone())];
     }
+
+    matches
+        .into_iter()
+        .map(|previous| {
+            let detected_nested_files = !installer.nested_installer_files.is_empty();
+            let mut merged = merge_installer(installer.clone(), without_version_specific(previous));
+            merged.architecture = previous.architecture;
+            if !detected_nested_files {
+                merged.nested_installer_files = merged
+                    .nested_installer_files
+                    .iter()
+                    .map(|nested_file| fix_relative_path(nested_file, possible_installer_files))
+                    .collect();
+            }
+            merged
+        })
+        .collect()
+}
+
+/// Fills the fields of `installer` that are unset from `other`, keeping the switches of `installer`
+/// if it has any.
+fn merge_installer(installer: Installer, mut other: Installer) -> Installer {
+    if !installer.switches.is_empty() {
+        other.switches = Switches::default();
+    }
+    installer.merge_with(other)
+}
+
+/// Clears the fields of a previous installer that change with every version.
+fn without_version_specific(previous: &Installer) -> Installer {
+    Installer {
+        product_code: None,
+        apps_and_features_entries: Default::default(),
+        release_date: None,
+        ..previous.clone()
+    }
+}
+
+fn file_name(url: &str) -> &str {
+    url.rsplit('/').next().unwrap_or(url)
 }
 
 /// Points a nested file at the closest matching file in the new zip, as paths often contain the
@@ -342,15 +474,19 @@ fn fix_relative_path(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
+    use std::{collections::BTreeSet, str::FromStr};
 
     use camino::Utf8PathBuf;
     use winget_types::{
         InstallerManifest,
-        installer::{Architecture, Installer, InstallerType, NestedInstallerFiles},
+        installer::{
+            Architecture, Installer, InstallerType, MinimumOSVersion, NestedInstallerFiles, Scope,
+            UpgradeBehavior,
+        },
+        url::DecodedUrl,
     };
 
-    use super::{carry_over_nested_installer, fix_relative_path};
+    use super::{PreviousInstallers, fix_relative_path, merge_with_previous};
 
     fn nested_files(paths: &[&str]) -> BTreeSet<NestedInstallerFiles> {
         paths
@@ -362,121 +498,229 @@ mod tests {
             .collect()
     }
 
-    fn zip_installer(architecture: Architecture) -> Installer {
+    fn installer(r#type: InstallerType, architecture: Architecture, url: &str) -> Installer {
         Installer {
             architecture,
-            r#type: Some(InstallerType::Zip),
+            r#type: Some(r#type),
+            url: DecodedUrl::from_str(url).unwrap(),
             ..Installer::default()
         }
     }
 
-    fn previous_manifest() -> InstallerManifest {
-        InstallerManifest {
+    fn files(paths: &[&str]) -> Vec<Utf8PathBuf> {
+        paths.iter().map(Utf8PathBuf::from).collect()
+    }
+
+    #[test]
+    fn carries_over_nested_files_of_same_architecture() {
+        let previous = InstallerManifest {
             r#type: Some(InstallerType::Zip),
             nested_installer_type: InstallerType::Portable.try_into().ok(),
             installers: vec![
                 Installer {
                     nested_installer_files: nested_files(&["app-x64/app.exe", "app-x64/cli.exe"]),
-                    ..zip_installer(Architecture::X64)
+                    ..installer(
+                        InstallerType::Zip,
+                        Architecture::X64,
+                        "https://e.com/1.0/app-x64.zip",
+                    )
                 },
                 Installer {
                     nested_installer_files: nested_files(&[
                         "app-arm64/app.exe",
                         "app-arm64/cli.exe",
                     ]),
-                    ..zip_installer(Architecture::Arm64)
+                    ..installer(
+                        InstallerType::Zip,
+                        Architecture::Arm64,
+                        "https://e.com/1.0/app-arm64.zip",
+                    )
                 },
             ],
             ..InstallerManifest::default()
-        }
-    }
+        };
 
-    #[test]
-    fn carries_over_nested_files_of_same_architecture() {
-        let mut installer = zip_installer(Architecture::Arm64);
-        let possible_files = [
-            Utf8PathBuf::from("app-arm64/app.exe"),
-            Utf8PathBuf::from("app-arm64/cli.exe"),
-        ];
+        let merged = merge_with_previous(
+            installer(
+                InstallerType::Zip,
+                Architecture::Arm64,
+                "https://e.com/1.1/app-arm64.zip",
+            ),
+            &PreviousInstallers::new(&previous),
+            &files(&["app-arm64/app.exe", "app-arm64/cli.exe"]),
+        );
 
-        let previous = previous_manifest();
-
-        carry_over_nested_installer(&mut installer, &previous, &possible_files);
-
+        assert_eq!(merged.len(), 1);
         assert_eq!(
-            installer.nested_installer_files,
+            merged[0].nested_installer_files,
             nested_files(&["app-arm64/app.exe", "app-arm64/cli.exe"])
         );
-        assert!(previous.nested_installer_type.is_some());
         assert_eq!(
-            installer.nested_installer_type,
+            merged[0].nested_installer_type,
             previous.nested_installer_type
         );
     }
 
     #[test]
-    fn carries_over_root_nested_files() {
+    fn carries_over_root_fields() {
         let previous = InstallerManifest {
-            nested_installer_files: nested_files(&["app.exe", "cli.exe"]),
-            installers: vec![zip_installer(Architecture::X64)],
-            ..previous_manifest()
+            upgrade_behavior: Some(UpgradeBehavior::UninstallPrevious),
+            installers: vec![installer(
+                InstallerType::Exe,
+                Architecture::X64,
+                "https://e.com/1.0/setup.exe",
+            )],
+            ..InstallerManifest::default()
         };
-        let mut installer = zip_installer(Architecture::X64);
 
-        carry_over_nested_installer(
-            &mut installer,
-            &previous,
-            &[Utf8PathBuf::from("app.exe"), Utf8PathBuf::from("cli.exe")],
+        let merged = merge_with_previous(
+            installer(
+                InstallerType::Exe,
+                Architecture::X64,
+                "https://e.com/1.1/setup.exe",
+            ),
+            &PreviousInstallers::new(&previous),
+            &[],
         );
 
         assert_eq!(
-            installer.nested_installer_files,
-            nested_files(&["app.exe", "cli.exe"])
+            merged[0].upgrade_behavior,
+            Some(UpgradeBehavior::UninstallPrevious)
         );
     }
 
     #[test]
-    fn keeps_detected_nested_files() {
-        let mut installer = Installer {
-            nested_installer_files: nested_files(&["detected.exe"]),
-            ..zip_installer(Architecture::X64)
+    fn splits_neutral_installer_by_previous_architectures() {
+        let url = "https://e.com/app.zip";
+        let previous = InstallerManifest {
+            installers: vec![
+                Installer {
+                    nested_installer_files: nested_files(&["app.exe"]),
+                    ..installer(InstallerType::Zip, Architecture::X86, url)
+                },
+                Installer {
+                    nested_installer_files: nested_files(&["app64.exe"]),
+                    ..installer(InstallerType::Zip, Architecture::X64, url)
+                },
+            ],
+            ..InstallerManifest::default()
         };
 
-        carry_over_nested_installer(&mut installer, &previous_manifest(), &[]);
+        let merged = merge_with_previous(
+            installer(InstallerType::Zip, Architecture::Neutral, url),
+            &PreviousInstallers::new(&previous),
+            &files(&["app.exe", "app64.exe"]),
+        );
 
         assert_eq!(
-            installer.nested_installer_files,
-            nested_files(&["detected.exe"])
+            merged
+                .iter()
+                .map(|installer| (
+                    installer.architecture,
+                    installer.nested_installer_files.clone()
+                ))
+                .collect::<Vec<_>>(),
+            vec![
+                (Architecture::X86, nested_files(&["app.exe"])),
+                (Architecture::X64, nested_files(&["app64.exe"])),
+            ]
         );
     }
 
     #[test]
-    fn ignores_non_zip_installers() {
-        let mut installer = Installer {
-            architecture: Architecture::X64,
-            r#type: Some(InstallerType::Wix),
-            ..Installer::default()
+    fn keeps_installers_without_a_previous_match() {
+        let previous = InstallerManifest {
+            installers: vec![Installer {
+                nested_installer_files: nested_files(&["app.exe"]),
+                ..installer(
+                    InstallerType::Zip,
+                    Architecture::X64,
+                    "https://e.com/1.0/app.zip",
+                )
+            }],
+            ..InstallerManifest::default()
+        };
+        let msi = installer(
+            InstallerType::Wix,
+            Architecture::X64,
+            "https://e.com/1.1/app.msi",
+        );
+
+        let merged = merge_with_previous(msi.clone(), &PreviousInstallers::new(&previous), &[]);
+
+        assert_eq!(merged, vec![msi]);
+    }
+
+    #[test]
+    fn gives_unmatched_installers_package_wide_fields() {
+        let minimum_os_version = MinimumOSVersion::from_str("10.0.17763.0").ok();
+        let previous = InstallerManifest {
+            minimum_os_version,
+            upgrade_behavior: Some(UpgradeBehavior::UninstallPrevious),
+            installers: vec![installer(
+                InstallerType::Zip,
+                Architecture::X64,
+                "https://e.com/1.0/app.zip",
+            )],
+            ..InstallerManifest::default()
         };
 
-        carry_over_nested_installer(&mut installer, &previous_manifest(), &[]);
+        let merged = merge_with_previous(
+            installer(
+                InstallerType::Wix,
+                Architecture::X64,
+                "https://e.com/1.1/app.msi",
+            ),
+            &PreviousInstallers::new(&previous),
+            &[],
+        );
 
-        assert!(installer.nested_installer_files.is_empty());
-        assert_eq!(installer.nested_installer_type, None);
+        assert_eq!(merged[0].minimum_os_version, minimum_os_version);
+        assert_eq!(merged[0].upgrade_behavior, None);
+    }
+
+    #[test]
+    fn keeps_detected_values_and_skips_version_specific_ones() {
+        let previous = InstallerManifest {
+            installers: vec![Installer {
+                scope: Some(Scope::Machine),
+                product_code: Some(String::from("App 1.0")),
+                ..installer(
+                    InstallerType::Nullsoft,
+                    Architecture::X64,
+                    "https://e.com/1.0/setup.exe",
+                )
+            }],
+            ..InstallerManifest::default()
+        };
+        let new = Installer {
+            scope: Some(Scope::Machine),
+            upgrade_behavior: Some(UpgradeBehavior::Install),
+            ..installer(
+                InstallerType::Nullsoft,
+                Architecture::X64,
+                "https://e.com/1.1/setup.exe",
+            )
+        };
+
+        let merged = merge_with_previous(new.clone(), &PreviousInstallers::new(&previous), &[]);
+
+        assert_eq!(merged, vec![new]);
     }
 
     #[test]
     fn fixes_versioned_relative_path() {
-        let possible_files = [
-            Utf8PathBuf::from("app_1.1.0/app.exe"),
-            Utf8PathBuf::from("app_1.1.0/cli.exe"),
-        ];
         let nested_file = NestedInstallerFiles {
             relative_file_path: Utf8PathBuf::from("app_1.0.0/cli.exe"),
             portable_command_alias: None,
         };
 
         assert_eq!(
-            fix_relative_path(&nested_file, &possible_files).relative_file_path,
+            fix_relative_path(
+                &nested_file,
+                &files(&["app_1.1.0/app.exe", "app_1.1.0/cli.exe"])
+            )
+            .relative_file_path,
             "app_1.1.0/cli.exe"
         );
     }
