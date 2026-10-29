@@ -5,20 +5,22 @@ use std::{
 };
 
 use anstream::println;
+use camino::Utf8PathBuf;
 use clap::Parser;
 use color_eyre::eyre::{Error, Result, bail};
 use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use owo_colors::OwoColorize;
 use secrecy::SecretString;
+use strsim::levenshtein;
 use tokio::try_join;
 use winget_types::{
-    PackageIdentifier, PackageVersion,
+    InstallerManifest, PackageIdentifier, PackageVersion,
+    installer::{Installer, InstallerType, NestedInstallerFiles},
     url::{DecodedUrl, ReleaseNotesUrl},
 };
 
 use crate::{
-    analysis::Analyzer,
     commands::utils::{SPINNER_TICK_RATE, SubmitOption},
     download::Downloader,
     github::{
@@ -28,6 +30,7 @@ use crate::{
     },
     manifests::{Url, print_changes},
     token::TokenManager,
+    traits::path::NormalizePath,
 };
 
 /// Add a version to a pre-existing package
@@ -128,11 +131,28 @@ impl UpdateVersion {
 
         let download_results = files.analyze().await?;
 
-        manifests.installer.package_version = self.version.clone();
-        manifests.installer.installers = download_results
+        let installers = download_results
             .into_values()
-            .flat_map(Analyzer::into_installers)
+            .flat_map(|analyzer| {
+                let possible_installer_files = analyzer
+                    .zip
+                    .as_ref()
+                    .map(|zip| zip.possible_installer_files.clone())
+                    .unwrap_or_default();
+                let mut installers = analyzer.into_installers();
+                for installer in &mut installers {
+                    carry_over_nested_installer(
+                        installer,
+                        &manifests.installer,
+                        &possible_installer_files,
+                    );
+                }
+                installers
+            })
             .collect();
+
+        manifests.installer.package_version = self.version.clone();
+        manifests.installer.installers = installers;
 
         manifests
             .installer
@@ -257,5 +277,207 @@ impl UpdateVersion {
         } else {
             Ok(None)
         }
+    }
+}
+
+/// Fills in the nested installer of a zip installer that couldn't be detected, such as when the zip
+/// contains more than one executable, from the previous installer of the same architecture.
+fn carry_over_nested_installer(
+    installer: &mut Installer,
+    previous_manifest: &InstallerManifest,
+    possible_installer_files: &[Utf8PathBuf],
+) {
+    if installer.r#type != Some(InstallerType::Zip) || !installer.nested_installer_files.is_empty()
+    {
+        return;
+    }
+
+    let Some(previous_installer) = previous_manifest.installers.iter().find(|previous| {
+        previous.architecture == installer.architecture
+            && previous.r#type.or(previous_manifest.r#type) == Some(InstallerType::Zip)
+    }) else {
+        return;
+    };
+
+    let previous_nested_files = if previous_installer.nested_installer_files.is_empty() {
+        &previous_manifest.nested_installer_files
+    } else {
+        &previous_installer.nested_installer_files
+    };
+
+    installer.nested_installer_files = previous_nested_files
+        .iter()
+        .map(|nested_file| fix_relative_path(nested_file, possible_installer_files))
+        .collect();
+
+    if installer.nested_installer_type.is_none() {
+        installer.nested_installer_type = previous_installer
+            .nested_installer_type
+            .or(previous_manifest.nested_installer_type);
+    }
+}
+
+/// Points a nested file at the closest matching file in the new zip, as paths often contain the
+/// version.
+fn fix_relative_path(
+    nested_file: &NestedInstallerFiles,
+    possible_installer_files: &[Utf8PathBuf],
+) -> NestedInstallerFiles {
+    let relative_file_path = nested_file.relative_file_path.normalize();
+    if possible_installer_files.contains(&relative_file_path) {
+        return nested_file.clone();
+    }
+
+    possible_installer_files
+        .iter()
+        .min_by_key(|file_path| levenshtein(file_path.as_str(), relative_file_path.as_str()))
+        .map_or_else(
+            || nested_file.clone(),
+            |file_path| NestedInstallerFiles {
+                relative_file_path: file_path.clone(),
+                ..nested_file.clone()
+            },
+        )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use camino::Utf8PathBuf;
+    use winget_types::{
+        InstallerManifest,
+        installer::{Architecture, Installer, InstallerType, NestedInstallerFiles},
+    };
+
+    use super::{carry_over_nested_installer, fix_relative_path};
+
+    fn nested_files(paths: &[&str]) -> BTreeSet<NestedInstallerFiles> {
+        paths
+            .iter()
+            .map(|path| NestedInstallerFiles {
+                relative_file_path: Utf8PathBuf::from(*path),
+                portable_command_alias: None,
+            })
+            .collect()
+    }
+
+    fn zip_installer(architecture: Architecture) -> Installer {
+        Installer {
+            architecture,
+            r#type: Some(InstallerType::Zip),
+            ..Installer::default()
+        }
+    }
+
+    fn previous_manifest() -> InstallerManifest {
+        InstallerManifest {
+            r#type: Some(InstallerType::Zip),
+            nested_installer_type: InstallerType::Portable.try_into().ok(),
+            installers: vec![
+                Installer {
+                    nested_installer_files: nested_files(&["app-x64/app.exe", "app-x64/cli.exe"]),
+                    ..zip_installer(Architecture::X64)
+                },
+                Installer {
+                    nested_installer_files: nested_files(&[
+                        "app-arm64/app.exe",
+                        "app-arm64/cli.exe",
+                    ]),
+                    ..zip_installer(Architecture::Arm64)
+                },
+            ],
+            ..InstallerManifest::default()
+        }
+    }
+
+    #[test]
+    fn carries_over_nested_files_of_same_architecture() {
+        let mut installer = zip_installer(Architecture::Arm64);
+        let possible_files = [
+            Utf8PathBuf::from("app-arm64/app.exe"),
+            Utf8PathBuf::from("app-arm64/cli.exe"),
+        ];
+
+        let previous = previous_manifest();
+
+        carry_over_nested_installer(&mut installer, &previous, &possible_files);
+
+        assert_eq!(
+            installer.nested_installer_files,
+            nested_files(&["app-arm64/app.exe", "app-arm64/cli.exe"])
+        );
+        assert!(previous.nested_installer_type.is_some());
+        assert_eq!(
+            installer.nested_installer_type,
+            previous.nested_installer_type
+        );
+    }
+
+    #[test]
+    fn carries_over_root_nested_files() {
+        let previous = InstallerManifest {
+            nested_installer_files: nested_files(&["app.exe", "cli.exe"]),
+            installers: vec![zip_installer(Architecture::X64)],
+            ..previous_manifest()
+        };
+        let mut installer = zip_installer(Architecture::X64);
+
+        carry_over_nested_installer(
+            &mut installer,
+            &previous,
+            &[Utf8PathBuf::from("app.exe"), Utf8PathBuf::from("cli.exe")],
+        );
+
+        assert_eq!(
+            installer.nested_installer_files,
+            nested_files(&["app.exe", "cli.exe"])
+        );
+    }
+
+    #[test]
+    fn keeps_detected_nested_files() {
+        let mut installer = Installer {
+            nested_installer_files: nested_files(&["detected.exe"]),
+            ..zip_installer(Architecture::X64)
+        };
+
+        carry_over_nested_installer(&mut installer, &previous_manifest(), &[]);
+
+        assert_eq!(
+            installer.nested_installer_files,
+            nested_files(&["detected.exe"])
+        );
+    }
+
+    #[test]
+    fn ignores_non_zip_installers() {
+        let mut installer = Installer {
+            architecture: Architecture::X64,
+            r#type: Some(InstallerType::Wix),
+            ..Installer::default()
+        };
+
+        carry_over_nested_installer(&mut installer, &previous_manifest(), &[]);
+
+        assert!(installer.nested_installer_files.is_empty());
+        assert_eq!(installer.nested_installer_type, None);
+    }
+
+    #[test]
+    fn fixes_versioned_relative_path() {
+        let possible_files = [
+            Utf8PathBuf::from("app_1.1.0/app.exe"),
+            Utf8PathBuf::from("app_1.1.0/cli.exe"),
+        ];
+        let nested_file = NestedInstallerFiles {
+            relative_file_path: Utf8PathBuf::from("app_1.0.0/cli.exe"),
+            portable_command_alias: None,
+        };
+
+        assert_eq!(
+            fix_relative_path(&nested_file, &possible_files).relative_file_path,
+            "app_1.1.0/cli.exe"
+        );
     }
 }
