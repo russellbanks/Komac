@@ -164,8 +164,13 @@ impl UpdateVersion {
             return Ok(());
         }
 
-        let submit_option =
-            SubmitOption::prompt(&mut changes, &self.identifier, &self.version, self.submit, self.exit)?;
+        let submit_option = SubmitOption::prompt(
+            &mut changes,
+            &self.identifier,
+            &self.version,
+            self.submit,
+            self.exit,
+        )?;
 
         let package_path = PackagePath::new(&self.identifier, Some(&self.version), None);
         if let Some(output) = self

@@ -24,7 +24,7 @@ impl SubmitOption {
         identifier: &PackageIdentifier,
         version: &PackageVersion,
         submit: bool,
-        exit: bool
+        exit: bool,
     ) -> Result<Self> {
         let mut submit_option;
 

@@ -410,7 +410,8 @@ impl NewVersion {
             return Ok(());
         }
 
-        let submit_option = SubmitOption::prompt(&mut changes, &identifier, &version, self.submit, self.exit)?;
+        let submit_option =
+            SubmitOption::prompt(&mut changes, &identifier, &version, self.submit, self.exit)?;
 
         let package_path = PackagePath::new(&identifier, Some(&version), None);
         if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
