@@ -24,6 +24,7 @@ impl SubmitOption {
         identifier: &PackageIdentifier,
         version: &PackageVersion,
         submit: bool,
+        exit: bool
     ) -> Result<Self> {
         let mut submit_option;
 
@@ -32,6 +33,8 @@ impl SubmitOption {
 
             submit_option = if submit {
                 Self::Submit
+            } else if exit {
+                Self::Exit
             } else {
                 Select::new(
                     &format!("What would you like to do with {identifier} {version}?"),

@@ -159,7 +159,7 @@ impl Submit {
             }
 
             let submit_option =
-                SubmitOption::prompt(&mut changes, identifier, version, self.skip_prompt)?;
+                SubmitOption::prompt(&mut changes, identifier, version, self.skip_prompt, false)?;
 
             if submit_option.is_exit() {
                 continue;

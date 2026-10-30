@@ -58,6 +58,10 @@ pub struct UpdateVersion {
     #[arg(short, long)]
     submit: bool,
 
+    /// Automatically skip the prompt and exit (with saving the manifests if --output is defined)
+    #[arg(long, conflicts_with_all = ["submit", "dry_run"])]
+    exit: bool,
+
     /// URL to package's release notes
     #[arg(long, value_hint = clap::ValueHint::Url)]
     release_notes_url: Option<ReleaseNotesUrl>,
@@ -161,7 +165,7 @@ impl UpdateVersion {
         }
 
         let submit_option =
-            SubmitOption::prompt(&mut changes, &self.identifier, &self.version, self.submit)?;
+            SubmitOption::prompt(&mut changes, &self.identifier, &self.version, self.submit, self.exit)?;
 
         let package_path = PackagePath::new(&self.identifier, Some(&self.version), None);
         if let Some(output) = self

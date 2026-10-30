@@ -121,6 +121,10 @@ pub struct NewVersion {
     #[arg(short, long)]
     submit: bool,
 
+    /// Automatically skip the prompt and exit (with saving the manifests if --output is defined)
+    #[arg(long, conflicts_with_all = ["submit", "dry_run"])]
+    exit: bool,
+
     /// Name of external tool that invoked Komac
     #[arg(long, env = "KOMAC_CREATED_WITH")]
     created_with: Option<String>,
@@ -406,7 +410,7 @@ impl NewVersion {
             return Ok(());
         }
 
-        let submit_option = SubmitOption::prompt(&mut changes, &identifier, &version, self.submit)?;
+        let submit_option = SubmitOption::prompt(&mut changes, &identifier, &version, self.submit, self.exit)?;
 
         let package_path = PackagePath::new(&identifier, Some(&version), None);
         if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
