@@ -3,7 +3,7 @@ use inno::{
     InnoInner,
     header::{Architecture as InnoArchitecture, PrivilegesRequiredOverrides},
 };
-use msi::Language as CodePageLanguage;
+use msi::LanguageId as CodePageLanguage;
 use winget_types::{
     LanguageTag, Sha256String,
     installer::{
@@ -57,7 +57,7 @@ impl Installers for InnoInner {
 
         let mut installer = Installer {
             locale: self.primary_language().and_then(|language_entry| {
-                CodePageLanguage::from_code(u16::try_from(language_entry.id()).ok()?)
+                CodePageLanguage::from_id(u16::try_from(language_entry.id()).ok()?)
                     .tag()
                     .parse::<LanguageTag>()
                     .ok()

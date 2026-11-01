@@ -7,7 +7,7 @@ use std::{
 };
 
 use camino::Utf8PathBuf;
-use msi::{Language, Package, Select};
+use msi::{LanguageId, Package, Select};
 use property_table::PropertyTable;
 use winget_types::{
     LanguageTag,
@@ -217,7 +217,7 @@ impl Msi {
         let product_language = self.property_table.get(PRODUCT_LANGUAGE)?;
         let language_code = product_language.parse::<u16>().ok()?;
 
-        Language::from_code(language_code)
+        LanguageId::from_id(language_code)
             .tag()
             .parse::<LanguageTag>()
             .ok()

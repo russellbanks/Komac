@@ -64,7 +64,7 @@ itoa = "1.0.18"
 keyring-core = "1.0.1"
 lzma-rust2 = { version = "0.24.0", features = ["std"] }
 memchr = "2.8.3"
-msi = "0.10.0"
+msi = "0.11.1"
 nt-time = { version = "0.15.0", features = ["chrono"] }
 num_cpus = "1.17.0"
 open = "5.4.5"
