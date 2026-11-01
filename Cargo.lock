@@ -1954,9 +1954,9 @@ dependencies = [
 
 [[package]]
 name = "inno"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98b95b5a3f305db23a8d4af6b055abdfd6ec13ead1fd3001002068049117718a"
+checksum = "a75637e81edc8301e9c1e135b699aadf7a9ecce66c0fa474ab7113b2f6fde6c6"
 dependencies = [
  "bitflags 2.13.2",
  "codepage",
@@ -1964,7 +1964,7 @@ dependencies = [
  "encoding_rs",
  "flate2",
  "itertools 0.15.0",
- "lzma-rust2 0.24.0",
+ "lzma-rust2 0.25.0",
  "nt-time",
  "thiserror 2.0.21",
  "zerocopy",
@@ -2461,12 +2461,6 @@ name = "lzma-rust2"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1c46f3fcd2e888afdb01a07efc071cb21300e07c68d32c3e8b01b5c8cb1fcaa"
-
-[[package]]
-name = "lzma-rust2"
-version = "0.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "490750560fa7851fbbf5d3ab1a8750f09350ed361ed8aed85b1e1e40587812ee"
 
 [[package]]
 name = "lzma-rust2"
