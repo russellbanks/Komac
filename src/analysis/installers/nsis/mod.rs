@@ -20,7 +20,7 @@ use bzip2::read::BzDecoder;
 use camino::{Utf8Path, Utf8PathBuf};
 pub use error::NsisError;
 use flate2::{Decompress, read::ZlibDecoder};
-use msi::Language;
+use msi::LanguageId;
 use registry::Registry;
 use state::NsisState;
 use strsim::levenshtein;
@@ -234,7 +234,7 @@ impl Installers for Nsis {
         let display_version = self.registry.get_value_by_name("DisplayVersion");
 
         let installer = Installer {
-            locale: Language::from_code(self.primary_language_id)
+            locale: LanguageId::from_id(self.primary_language_id)
                 .tag()
                 .parse::<LanguageTag>()
                 .ok(),
