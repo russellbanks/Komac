@@ -47,7 +47,7 @@ use super::{
     utils::{LzmaStreamHeader, RELATIVE_PROGRAM_FILES_64, RELATIVE_TEMP_FOLDER},
 };
 use crate::{
-    analysis::Installers,
+    analysis::{Installers, installers::nsis::first_header::finder::FirstHeaderFinder},
     read::ReadBytesExt,
     traits::{FromMachine, IntoWingetArchitecture},
 };
@@ -65,23 +65,11 @@ pub struct Nsis {
 
 impl Nsis {
     pub fn new<R: Read + Seek>(mut reader: R, pe: &PE) -> Result<Self, NsisError> {
-        // Get the PE overlay offset
-        let first_header_offset = pe.overlay_offset().ok_or(NsisError::NotNsisFile)?;
-
         let manifest = pe.manifest(&mut reader).ok();
 
-        // Seek to the first header
-        reader
-            .seek(SeekFrom::Start(first_header_offset))
-            .map_err(|_| NsisError::NotNsisFile)?;
+        let finder = FirstHeaderFinder::find(&mut reader, pe)?;
 
-        // Read the first header
-        let first_header =
-            FirstHeader::try_read_from_io(&mut reader).map_err(|_| NsisError::NotNsisFile)?;
-
-        let data_offset = first_header_offset + size_of::<FirstHeader>() as u64;
-
-        debug!(first_header_offset, ?first_header, data_offset);
+        debug!(?finder);
 
         let Decompressed {
             data: decompressed_data,
@@ -89,7 +77,7 @@ impl Nsis {
             non_solid_start_offset,
             compression,
             decoder,
-        } = Header::decompress(&mut reader, &first_header)?;
+        } = Header::decompress(&mut reader, finder.first_header())?;
 
         let architecture = pe.winget_architecture();
 
@@ -166,7 +154,7 @@ impl Nsis {
                     .and_then(|file| {
                         let mut position = file.position()?;
                         if !is_solid {
-                            position += data_offset
+                            position += finder.data_offset()
                                 + u64::from(non_solid_start_offset)
                                 + size_of::<u32>() as u64;
                         }

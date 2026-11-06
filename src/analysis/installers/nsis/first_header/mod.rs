@@ -1,3 +1,4 @@
+pub mod finder;
 mod flags;
 mod signature;
 
