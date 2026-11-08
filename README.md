@@ -66,6 +66,19 @@ If you have cargo installed, you can compile Rust for any platform:
 cargo install --locked komac
 ```
 
+By default, komac builds with [native-tls](https://github.com/rust-native-tls/rust-native-tls).
+On Linux, this builds [OpenSSL](https://github.com/rust-openssl/rust-openssl) and requires a C compiler, perl (and
+perl-core), and make.
+For specific dependencies, see [openssl/#automatic](https://docs.rs/openssl/latest/openssl/#automatic).
+
+Alternatively, komac can be built with [rustls](https://github.com/rustls/rustls):
+
+```
+cargo install --locked --no-default-features --features rustls komac
+```
+
+#### Cargo Binstall
+
 Komac also supports [cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
 
 ```bash
