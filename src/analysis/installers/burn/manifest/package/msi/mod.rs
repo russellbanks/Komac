@@ -45,6 +45,7 @@ impl MsiPackage {
         self.product_code.as_str()
     }
 
+    #[expect(unused)]
     #[inline]
     pub const fn version(&self) -> &Version {
         &self.version
