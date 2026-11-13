@@ -5,6 +5,7 @@ use super::super::{
         RELATIVE_SYSTEM_ROOT, RELATIVE_WINDOWS_DIR,
     },
     state::NsisState,
+    strings::NsisString,
 };
 
 /// NSIS can use one name for two CSIDL_*** and `CSIDL_COMMON`_*** items (`CurrentUser` / `AllUsers`)
@@ -81,7 +82,7 @@ pub struct Shell;
 
 impl Shell {
     /// Adapted from <https://github.com/mcmilk/7-Zip/blob/HEAD/CPP/7zip/Archive/Nsis/NsisIn.cpp#L683>
-    pub fn resolve(buf: &mut String, state: &NsisState, character: u16) {
+    pub fn resolve(buf: &mut NsisString, state: &NsisState, character: u16) {
         const PROGRAM_FILES_DIR: &str = "ProgramFilesDir";
         const COMMON_FILES_DIR: &str = "CommonFilesDir";
 

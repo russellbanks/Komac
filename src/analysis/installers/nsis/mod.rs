@@ -25,7 +25,7 @@ use registry::Registry;
 use state::NsisState;
 use strsim::levenshtein;
 use tracing::{debug, error};
-use typed_path::{Utf8Component, Utf8WindowsPath, Utf8WindowsPathBuf};
+use typed_path::{Utf8Component, Utf8WindowsPathBuf};
 use variables::Variables;
 use winget_types::{
     LanguageTag,
@@ -150,7 +150,7 @@ impl Nsis {
                             .extension()
                             .is_some_and(|extension| extension.eq_ignore_ascii_case(EXE))
                     })
-                    .min_by_key(|file| levenshtein(file.name(), &app_name))
+                    .min_by_key(|file| levenshtein(file.name(), &app_name.to_string_lossy()))
                     .and_then(|file| {
                         let mut position = file.position()?;
                         if !is_solid {
@@ -199,10 +199,7 @@ impl Nsis {
             architecture: architecture.unwrap_or(Architecture::X86),
             is_portable: state.is_portable(),
             registry: state.registry,
-            install_directory: state
-                .variables
-                .install_dir()
-                .map(Utf8WindowsPath::to_path_buf),
+            install_directory: state.variables.install_dir(),
             primary_language_id: state.language_table.id(),
         })
     }

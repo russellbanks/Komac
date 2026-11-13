@@ -1,16 +1,13 @@
-use std::{
-    borrow::{Borrow, Cow},
-    collections::HashMap,
-    fmt,
-    hash::Hash,
-};
+use std::{borrow::Borrow, collections::HashMap, fmt, hash::Hash};
 
-use typed_path::Utf8WindowsPath;
+use typed_path::Utf8WindowsPathBuf;
 
-use super::strings::PredefinedVar;
+use super::strings::{NsisCow, NsisStr, PredefinedVar};
 
+/// The NSIS variables (`$0`-`$9`, `$R0`-`$R9`, predefined variables, and user variables), keyed by
+/// index and stored in the installer's native string encoding.
 #[derive(Clone)]
-pub struct Variables<'data>(HashMap<usize, Cow<'data, str>>);
+pub struct Variables<'data>(HashMap<usize, NsisCow<'data>>);
 
 impl<'data> Variables<'data> {
     /// There are 20 integer registers before predefined variables
@@ -20,27 +17,31 @@ impl<'data> Variables<'data> {
 
     const INSTALL_DIR_INDEX: usize = Self::NUM_REGISTERS + PredefinedVar::InstDir as usize;
 
+    /// Creates an empty set of variables.
     #[inline]
     pub fn new() -> Self {
         Self(HashMap::new())
     }
 
-    pub fn get<Q>(&self, index: &Q) -> Option<&str>
+    /// Returns the value of the variable at `index`, or `None` if it has not been set.
+    pub fn get<Q>(&self, index: &Q) -> Option<NsisStr<'_>>
     where
         usize: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
     {
-        self.0.get(index).map(Cow::as_ref)
+        self.0.get(index).map(NsisCow::as_nsis_str)
     }
 
-    pub fn insert<V>(&mut self, index: usize, variable: V) -> Option<Cow<'data, str>>
+    /// Sets the variable at `index`, returning its previous value if it was set.
+    pub fn insert<V>(&mut self, index: usize, variable: V) -> Option<NsisCow<'data>>
     where
-        V: Into<Cow<'data, str>>,
+        V: Into<NsisCow<'data>>,
     {
         self.0.insert(index, variable.into())
     }
 
-    pub fn remove<Q>(&mut self, index: &Q) -> Option<Cow<'data, str>>
+    /// Unsets the variable at `index`, returning its previous value if it was set.
+    pub fn remove<Q>(&mut self, index: &Q) -> Option<NsisCow<'data>>
     where
         usize: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
@@ -48,15 +49,17 @@ impl<'data> Variables<'data> {
         self.0.remove(index)
     }
 
-    pub fn install_dir(&self) -> Option<&Utf8WindowsPath> {
+    /// Returns the install directory decoded as a UTF-8 Windows path, if it is set and non-empty.
+    pub fn install_dir(&self) -> Option<Utf8WindowsPathBuf> {
         self.get(&Self::INSTALL_DIR_INDEX)
-            .filter(|&dir| !dir.is_empty())
-            .map(Utf8WindowsPath::new)
+            .filter(|dir| !dir.is_empty())
+            .map(|dir| Utf8WindowsPathBuf::from(dir.to_string_lossy().into_owned()))
     }
 
-    pub fn insert_install_dir<T>(&mut self, install_dir: T) -> Option<Cow<'_, str>>
+    /// Sets `$INSTDIR`, returning its previous value if it was set.
+    pub fn insert_install_dir<T>(&mut self, install_dir: T) -> Option<NsisCow<'data>>
     where
-        T: Into<Cow<'data, str>>,
+        T: Into<NsisCow<'data>>,
     {
         self.0.insert(Self::INSTALL_DIR_INDEX, install_dir.into())
     }

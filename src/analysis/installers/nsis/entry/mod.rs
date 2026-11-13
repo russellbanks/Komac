@@ -9,10 +9,7 @@ mod show_window;
 pub mod system;
 mod window_message;
 
-use std::{
-    borrow::Cow,
-    cmp::{Ordering, max},
-};
+use std::cmp::{Ordering, max};
 
 use chrono::DateTime;
 use compact_str::{ToCompactString, format_compact};
@@ -34,6 +31,7 @@ use super::{
     file_system::RelativeLocation,
     registry::{RegRoot, RegType},
     state::NsisState,
+    strings::NsisCow,
 };
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
@@ -437,7 +435,7 @@ impl Entry {
                 let status = state.get_string(status.get());
                 debug!(r#"Aborting: "{status}""#);
                 return Err(EntryError::Abort {
-                    status: status.into_owned(),
+                    status: status.into_string_lossy(),
                 });
             }
             Self::Quit => {
@@ -483,12 +481,12 @@ impl Entry {
                     debug!(r#"CreateDirectory: "{path}""#);
                     state
                         .file_system
-                        .create_directory(&*path, RelativeLocation::Current);
+                        .create_directory(&*path.to_string_lossy(), RelativeLocation::Current);
                 } else {
                     debug!(r#"SetOutPath: "{path}""#);
                     state
                         .file_system
-                        .set_directory(&*path, RelativeLocation::Root);
+                        .set_directory(&*path.to_string_lossy(), RelativeLocation::Root);
                 }
             }
             Self::IfFileExists {
@@ -500,7 +498,7 @@ impl Entry {
 
                 return if state
                     .file_system
-                    .exists(&*file_name, RelativeLocation::Current)
+                    .exists(&*file_name.to_string_lossy(), RelativeLocation::Current)
                 {
                     debug!(
                         r#"IfFileExists: jumping to {if_exists} as "{file_name}" exists"#,
@@ -595,9 +593,10 @@ impl Entry {
             }
             Self::GetFlag { output, r#type } => {
                 debug!("GetFlag: {type}");
-                state
-                    .variables
-                    .insert(output.get() as usize, state.exec_flags[*r#type].to_string());
+                state.variables.insert(
+                    output.get() as usize,
+                    state.encode(&state.exec_flags[*r#type].to_string()),
+                );
             }
             Self::Rename {
                 old,
@@ -667,7 +666,7 @@ impl Entry {
                     Some(date)
                 };
                 state.file_system.create_file(
-                    &*name,
+                    &*name.to_string_lossy(),
                     date,
                     position.get().unsigned_abs(),
                     RelativeLocation::Current,
@@ -676,7 +675,7 @@ impl Entry {
             Self::DeleteFile { filename, flags } => {
                 let filename = state.get_string(filename.get());
                 debug!(r#"Delete: "{filename}""#);
-                state.file_system.delete(filename, *flags);
+                state.file_system.delete(filename.to_string_lossy(), *flags);
             }
             Self::MessageBox { mb_flags, text } => {
                 let text = state.get_string(text.get());
@@ -692,17 +691,17 @@ impl Entry {
                         ""
                     },
                 );
-                state.file_system.delete(path, *flags);
+                state.file_system.delete(path.to_string_lossy(), *flags);
             }
             Self::StrLen { output, input } => {
                 let input = state.get_string(input.get());
-                let length = input.chars().count();
+                let length = input.len();
 
                 debug!(r#"StrLen ${output} "{input}" # = {length}"#);
 
                 state.variables.insert(
                     output.get().unsigned_abs() as usize,
-                    Cow::Owned(length.to_string()),
+                    state.encode(&length.to_string()),
                 );
             }
             Self::AssignVar {
@@ -724,50 +723,38 @@ impl Entry {
                 let index = variable.get().unsigned_abs() as usize;
                 let source = state.get_string(string_offset.get());
 
-                // Maximum length of the string in characters
+                // Maximum length of the string in code units (TCHARs)
                 let max_length = state.get_int(max_length.get());
 
                 let start_position = state.get_int(start_position.get());
-                let char_count = source.chars().count();
+                let length = source.len();
 
                 let mut result = source.clone();
 
                 if !source.is_empty() {
-                    // Get the start position as a usize, or add char_count to it to turn a
+                    // Get the start position as a usize, or add the length to it to turn a
                     // negative offset into a positive one.
-                    if let Ok(start_char) = usize::try_from(start_position)
-                        .or_else(|_| usize::try_from((start_position) + char_count as i32))
-                        .map(|start| start.min(char_count))
+                    if let Ok(start) = usize::try_from(start_position)
+                        .or_else(|_| usize::try_from(start_position + length as i32))
+                        .map(|start| start.min(length))
                     {
-                        let start_byte = source
-                            .char_indices()
-                            .nth(start_char)
-                            .map_or(source.len(), |(i, _)| i);
-                        let sliced_source = &source[start_byte..];
-                        let sliced_source_char_count = sliced_source.chars().count();
+                        let remaining = length - start;
 
                         let new_length = if max_length == 0 {
-                            sliced_source_char_count
+                            remaining
                         } else if max_length.is_negative() {
-                            usize::try_from(sliced_source_char_count as i32 + max_length)
-                                .unwrap_or_default()
+                            usize::try_from(remaining as i32 + max_length).unwrap_or_default()
                         } else {
                             usize::try_from(max_length).unwrap_or_default()
-                        };
+                        }
+                        .min(remaining);
 
-                        let end_byte = sliced_source
-                            .char_indices()
-                            .nth(new_length)
-                            .map_or(sliced_source.len(), |(i, _)| i);
-
-                        let range = start_byte..(start_byte + end_byte);
+                        let range = start..start + new_length;
 
                         result = match result {
-                            Cow::Borrowed(b) => Cow::Borrowed(&b[range]),
-                            Cow::Owned(mut o) => {
-                                o.truncate(range.end);
-                                o.drain(..range.start);
-                                Cow::Owned(o)
+                            NsisCow::Borrowed(string) => NsisCow::Borrowed(string.slice(range)),
+                            NsisCow::Owned(string) => {
+                                NsisCow::Owned(string.as_nsis_str().slice(range).to_nsis_string())
                             }
                         };
                     }
@@ -809,8 +796,10 @@ impl Entry {
                 );
 
                 let equal = match *case_sensitive {
-                    I32::ZERO => str_1.eq_ignore_ascii_case(&str_2), // Case-insensitive
-                    _ => str_1 == str_2,                             // Case-sensitive
+                    I32::ZERO => str_1
+                        .as_nsis_str()
+                        .eq_ignore_ascii_case(str_2.as_nsis_str()), // Case-insensitive
+                    _ => str_1 == str_2, // Case-sensitive
                 };
 
                 return if equal {
@@ -910,7 +899,7 @@ impl Entry {
 
                 state.variables.insert(
                     output.get().unsigned_abs() as usize,
-                    Cow::Owned(result.to_string()),
+                    state.encode(&result.to_string()),
                 );
             }
             Self::IntFmt {
@@ -921,15 +910,16 @@ impl Entry {
             } => {
                 let is_64_bit = *is_64_bit != I32::ZERO;
                 let format = state.get_string(format.get());
-                let formatted = if format.starts_with("0x") {
+                let formatted = if format.as_nsis_str().starts_with("0x") {
                     format_compact!("{:#X}", input.get())
                 } else {
                     input.get().to_compact_string()
                 };
                 debug!("IntFmt{}: {formatted}", if is_64_bit { "64" } else { "" });
-                state
-                    .variables
-                    .insert(output.get().unsigned_abs() as usize, formatted);
+                state.variables.insert(
+                    output.get().unsigned_abs() as usize,
+                    state.encode(&formatted),
+                );
             }
             Self::PushPop {
                 variable_or_string,
@@ -1112,11 +1102,11 @@ impl Entry {
                 let function = state.get_string(function.get());
 
                 if *display_text == I32::ZERO {
-                    if dll_file_name.ends_with("System.dll")
+                    if dll_file_name.as_nsis_str().ends_with("System.dll")
                         && function == "Call"
                         && let Some(call) = state.stack.pop()
                     {
-                        state.mock_caller.call(&call);
+                        state.mock_caller.call(&call.to_string_lossy());
                     }
                     debug!(
                         "CallInstDLL: {dll_file_name} {function}{}",
@@ -1160,7 +1150,9 @@ impl Entry {
                         ""
                     },
                 );
-                state.file_system.create_link(&*link_file, &*target_file);
+                state
+                    .file_system
+                    .create_link(&*link_file.to_string_lossy(), target_file.to_string_lossy());
             }
             Self::CopyFiles {
                 source_mask,
@@ -1240,9 +1232,11 @@ impl Entry {
                         debug!(r#"DeleteRegValue: "{root}\{key_name}" "{value_name}""#);
                     }
 
-                    state
-                        .registry
-                        .remove_value_name(*root, &*key_name, &*value_name);
+                    state.registry.remove_value_name(
+                        *root,
+                        &*key_name.to_string_lossy(),
+                        &*value_name.to_string_lossy(),
+                    );
                 } else {
                     debug!(
                         r#"DeleteRegKey: {}"{root}\{key_name}""#,
@@ -1253,7 +1247,9 @@ impl Entry {
                         }
                     );
 
-                    state.registry.remove_key(*root, &*key_name);
+                    state
+                        .registry
+                        .remove_key(*root, &*key_name.to_string_lossy());
                 }
             }
             Self::WriteReg {
@@ -1280,9 +1276,12 @@ impl Entry {
                         );
                     }
 
-                    state
-                        .registry
-                        .insert_value(*root, key_name, value_name, value);
+                    state.registry.insert_value(
+                        *root,
+                        key_name.into_string_lossy(),
+                        value_name.into_string_lossy(),
+                        value.into_string_lossy(),
+                    );
                 } else if r#type.is_dword() {
                     let value = state.get_int(value.get());
 
@@ -1290,8 +1289,8 @@ impl Entry {
 
                     state.registry.insert_value(
                         *root,
-                        key_name,
-                        value_name,
+                        key_name.into_string_lossy(),
+                        value_name.into_string_lossy(),
                         value.to_compact_string(),
                     );
                 } else if r#type.is_binary() {
@@ -1402,7 +1401,7 @@ impl Entry {
                 let handle = state
                     .variables
                     .get(&(handle.get() as usize))
-                    .and_then(|handle| handle.parse::<i32>().ok())
+                    .and_then(|handle| handle.parse_int(10))
                     .unwrap_or_default();
                 debug!("FindNext: {output} {handle}");
             }
@@ -1434,14 +1433,16 @@ impl Entry {
                 }
 
                 let name = state.get_string(name.get());
-                let name = if *alternative_path == I32::ZERO || is_path_absolute(&*name) {
+                let name = if *alternative_path == I32::ZERO
+                    || is_path_absolute(name.as_nsis_str().as_bytes())
+                {
                     name
                 } else {
                     state.get_string(alternative_path.get())
                 };
                 debug!(r#"WriteUninstaller: "{name}""#);
                 state.file_system.create_file(
-                    &*name,
+                    &*name.to_string_lossy(),
                     None,
                     offset.get().unsigned_abs(),
                     RelativeLocation::Current,

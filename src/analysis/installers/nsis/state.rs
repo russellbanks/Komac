@@ -1,6 +1,3 @@
-use std::borrow::Cow;
-
-use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use itertools::Either;
 use tracing::{debug, debug_span};
 use zerocopy::{FromBytes, I32, LE, U16};
@@ -15,7 +12,7 @@ use crate::analysis::installers::nsis::{
     header::Header,
     language::table::LanguageTable,
     registry::Registry,
-    strings::{code::NsCode, shell::Shell, var::NsVar},
+    strings::{NsisChar, NsisCow, NsisStr, NsisString, code::NsCode, shell::Shell, var::NsVar},
     version::NsisVersion,
 };
 
@@ -23,7 +20,7 @@ pub struct NsisState<'data> {
     pub str_block: &'data [u8],
     entries: &'data [Entry],
     pub language_table: &'data LanguageTable,
-    pub stack: Vec<Cow<'data, str>>,
+    pub stack: Vec<NsisCow<'data>>,
     pub variables: Variables<'data>,
     pub registry: Registry,
     pub file_system: FileSystem,
@@ -72,6 +69,27 @@ impl<'data> NsisState<'data> {
         Ok(state)
     }
 
+    /// Returns the version of the NSIS executable.
+    #[must_use]
+    #[inline]
+    pub const fn version(&self) -> NsisVersion {
+        self.version
+    }
+
+    /// Returns `true` if the NSIS executable is Unicode, `false` otherwise.
+    #[must_use]
+    #[inline]
+    pub fn is_unicode(&self) -> bool {
+        // The strings block starts with a UTF-16 null byte if it is Unicode
+        self.str_block.starts_with(b"\0\0")
+    }
+
+    /// Encodes a UTF-8 string in this executable's native string encoding.
+    #[must_use]
+    pub fn encode(&self, string: &str) -> NsisString {
+        NsisString::from_str(string, self.is_unicode())
+    }
+
     #[inline]
     pub const fn is_park(&self) -> bool {
         self.version.is_park()
@@ -97,13 +115,17 @@ impl<'data> NsisState<'data> {
             .any(|key| PORTABLE_ENVIRONMENT_VARIABLES.contains(&&**key))
     }
 
+    /// Resolves the string at `relative_offset` in the strings block, substituting any variables,
+    /// shell folders, and language strings it references. A negative offset refers to a string in
+    /// the language table. The string is borrowed from the strings block when it needs no
+    /// substitution, and is `$ERROR` if the offset is invalid.
     #[expect(
         clippy::cast_possible_truncation,
         reason = "Truncating u16 as u8 is intentional"
     )]
-    pub fn get_string(&self, relative_offset: i32) -> Cow<'data, str> {
+    pub fn get_string(&self, relative_offset: i32) -> NsisCow<'data> {
         // The strings block starts with a UTF-16 null byte if it is Unicode
-        let unicode = &self.str_block[..size_of::<u16>()] == b"\0\0";
+        let unicode = self.is_unicode();
 
         // Double the offset if the string is Unicode as each character will be 2 bytes
         let offset = if relative_offset.is_negative() {
@@ -112,7 +134,7 @@ impl<'data> NsisState<'data> {
                 .language_table
                 .string_offset((relative_offset + 1).unsigned_abs() as usize)
             else {
-                return Cow::Borrowed("$ERROR");
+                return NsisCow::Borrowed(NsisStr::error());
             };
 
             offset.unsigned_abs() as usize
@@ -121,7 +143,7 @@ impl<'data> NsisState<'data> {
         } * (usize::from(unicode) + 1);
 
         let Some(offset_slice) = self.str_block.get(offset..) else {
-            return Cow::Borrowed("$ERROR");
+            return NsisCow::Borrowed(NsisStr::error());
         };
 
         // Get the index of the null byte at the end of the string
@@ -134,7 +156,7 @@ impl<'data> NsisState<'data> {
         } else {
             memchr::memchr(0, offset_slice)
         }
-        .unwrap_or(self.str_block.len());
+        .unwrap_or(offset_slice.len());
 
         let string_bytes = &self.str_block[offset..offset + string_end_index];
 
@@ -161,8 +183,7 @@ impl<'data> NsisState<'data> {
 
         // If the string doesn't have any special characters, we can just decode it normally
         if !contains_code {
-            let encoding = if unicode { UTF_16LE } else { WINDOWS_1252 };
-            return encoding.decode_without_bom_handling(string_bytes).0;
+            return NsisCow::Borrowed(NsisStr::from_bytes(string_bytes, unicode));
         }
 
         // Create an iterator of characters represented as an unsigned 16-bit integer
@@ -170,7 +191,7 @@ impl<'data> NsisState<'data> {
             .map_left(|chars| chars.iter().copied().map(U16::get))
             .map_right(|bytes| bytes.iter().copied().map(u16::from));
 
-        let mut buf = String::new();
+        let mut buf = NsisString::new(unicode);
 
         while let Some(mut current) = characters.next() {
             if let Some(code) = NsCode::try_new_with_version(current, self.version) {
@@ -195,37 +216,39 @@ impl<'data> NsisState<'data> {
                         } else if code.is_lang()
                             && let Some(offset) = self.language_table.string_offset(index)
                         {
-                            buf.push_str(&self.get_string(offset));
+                            buf.push_nsis_str(self.get_string(offset).as_nsis_str());
                         }
                     }
                     continue;
                 }
                 current = next;
             }
-            if let Some(character) = char::from_u32(u32::from(current)) {
-                buf.push(character);
-            }
+            buf.push(if unicode {
+                NsisChar::Wide(U16::new(current))
+            } else {
+                NsisChar::Ansi(current as u8)
+            });
         }
 
-        Cow::Owned(buf)
+        NsisCow::Owned(buf)
     }
 
+    /// Resolves the string at `relative_offset` and parses it as a decimal integer, or as
+    /// hexadecimal if it starts with `0x`. Returns `0` if the string is not a valid integer.
     pub fn get_int(&self, relative_offset: i32) -> i32 {
         const HEX_START: &str = "0x";
 
-        let mut value = &*self.get_string(relative_offset);
+        let string = self.get_string(relative_offset);
+        let mut value = string.as_nsis_str();
 
-        let radix = if value
-            .get(..HEX_START.len())
-            .is_some_and(|start| start.eq_ignore_ascii_case(HEX_START))
-        {
-            value = &value[HEX_START.len()..];
+        let radix = if value.starts_with_ignore_ascii_case(HEX_START) {
+            value = value.slice(HEX_START.len()..value.len());
             16
         } else {
             10
         };
 
-        i32::from_str_radix(value, radix).unwrap_or_default()
+        value.parse_int(radix).unwrap_or_default()
     }
 
     /// Execute a NSIS code section.
@@ -270,11 +293,13 @@ impl<'data> NsisState<'data> {
         Ok(Entry::Return)
     }
 
+    /// Resolves a jump address. A negative address refers to a variable that holds the address as a
+    /// decimal integer.
     pub fn resolve_address(&self, address: i32) -> i32 {
         if address.is_negative() {
             self.variables
                 .get(&((address.unsigned_abs() - 1) as usize))
-                .and_then(|address| address.parse().ok())
+                .and_then(|address| address.parse_int(10))
                 .unwrap()
         } else {
             address
