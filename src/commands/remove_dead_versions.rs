@@ -168,7 +168,7 @@ impl RemoveDeadVersions {
                 let sender = &sender;
                 let client = &client;
                 let overall_progress = &overall_progress;
-                let progress_bar = &progress_bars[index % self.concurrent.get()];
+                let progress_bar = &progress_bars[index % self.concurrent];
                 async move {
                     progress_bar
                         .set_message(format!("Checking {package_identifier} {}", version.blue()));

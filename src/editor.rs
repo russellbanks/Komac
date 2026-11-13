@@ -304,10 +304,7 @@ impl<'a> Editor<'a> {
                         buffer.modified =
                             buffer.content.lines().enumerate().any(|(index, line)| {
                                 if let Some(textarea_line) = buffer.textarea.lines().get(index) {
-                                    if textarea_line != line {
-                                        return true;
-                                    }
-                                    false
+                                    textarea_line != line
                                 } else {
                                     true
                                 }
