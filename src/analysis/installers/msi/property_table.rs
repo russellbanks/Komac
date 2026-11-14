@@ -1,5 +1,5 @@
 use std::{
-    borrow::Borrow,
+    borrow::{Borrow, Cow},
     hash::Hash,
     io,
     io::{Read, Seek},
@@ -61,6 +61,31 @@ impl PropertyTable {
     pub fn iter(&self) -> impl Iterator<Item = (&str, &str)> {
         self.into_iter()
     }
+
+    /// Expands `[Property]` references in a [Formatted] string using this table.
+    ///
+    /// References to unknown properties and unclosed brackets are left verbatim. Substituted
+    /// values are not expanded again, so a property that references itself cannot loop forever.
+    ///
+    /// [Formatted]: https://learn.microsoft.com/windows/win32/msi/formatted
+    pub fn format<'a>(&self, value: &'a str) -> Cow<'a, str> {
+        let mut value = Cow::Borrowed(value);
+        let mut offset = 0;
+
+        while let Some(start) = value[offset..].find('[').map(|index| offset + index)
+            && let Some(end) = value[start..].find(']').map(|index| start + index)
+        {
+            offset = match self.get(&value[start + 1..end]) {
+                Some(property_value) => {
+                    value.to_mut().replace_range(start..=end, property_value);
+                    start + property_value.len()
+                }
+                None => end + 1,
+            };
+        }
+
+        value
+    }
 }
 
 impl<A, B> FromIterator<(A, B)> for PropertyTable
@@ -93,5 +118,31 @@ impl<'a> IntoIterator for &'a PropertyTable {
         self.0
             .iter()
             .map(|(property, value)| (property.as_str(), value.as_str()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::PropertyTable;
+
+    #[rstest]
+    #[case::no_reference("MyApp", "MyApp")]
+    #[case::whole_value("[AppName]", "My App")]
+    #[case::within_value("Vendor [AppName] 2", "Vendor My App 2")]
+    #[case::multiple_references(r"[Vendor]\[AppName]", r"Vendor\My App")]
+    #[case::unknown_property("[Unknown]", "[Unknown]")]
+    #[case::unknown_then_known("[Unknown] [AppName]", "[Unknown] My App")]
+    #[case::unclosed_bracket("[AppName", "[AppName")]
+    #[case::self_reference("[Recursive]", "[Recursive]")]
+    fn format(#[case] value: &str, #[case] expected: &str) {
+        let property_table = PropertyTable::from_iter([
+            ("AppName", "My App"),
+            ("Vendor", "Vendor"),
+            ("Recursive", "[Recursive]"),
+        ]);
+
+        assert_eq!(property_table.format(value), expected);
     }
 }

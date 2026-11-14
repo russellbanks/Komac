@@ -63,7 +63,7 @@ impl Msi {
             .select_rows(Select::table(CONTROL).columns(&[PROPERTY]))
             .is_ok_and(|mut rows| rows.any(|row| row[0].as_str() == Some(ALL_USERS)));
 
-        let directory_table = DirectoryTable::new(&mut msi)?;
+        let directory_table = DirectoryTable::new(&mut msi, &property_table)?;
         let summary_info = msi.summary_info();
 
         Ok(Self {
