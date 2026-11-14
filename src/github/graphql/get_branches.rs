@@ -47,8 +47,18 @@ pub struct PageInfo {
 #[cynic(graphql_type = "Ref")]
 pub struct PullRequestBranchRef {
     pub name: String,
-    #[arguments(first: 5)]
+    #[arguments(first: 5, orderBy: { field: "CREATED_AT", direction: "DESC" })]
     pub associated_pull_requests: PullRequestConnection,
+    #[arguments(states: ["OPEN"])]
+    #[cynic(rename = "associatedPullRequests", alias)]
+    pub open_pull_requests: PullRequestCount,
+}
+
+/// <https://docs.github.com/graphql/reference/pulls#object-pullrequestconnection>
+#[derive(cynic::QueryFragment, Hash, PartialEq, Eq)]
+#[cynic(graphql_type = "PullRequestConnection")]
+pub struct PullRequestCount {
+    pub total_count: i32,
 }
 
 /// <https://docs.github.com/graphql/reference/objects#ref>
@@ -107,7 +117,7 @@ mod tests {
                 refs(first: 100, after: $cursor, refPrefix: "refs/heads/") {
                   nodes {
                     name
-                    associatedPullRequests(first: 5) {
+                    associatedPullRequests(first: 5, orderBy: {field: CREATED_AT, direction: DESC}) {
                       nodes {
                         title
                         url
@@ -116,6 +126,9 @@ mod tests {
                           nameWithOwner
                         }
                       }
+                    }
+                    open_pull_requests: associatedPullRequests(states: [OPEN]) {
+                      totalCount
                     }
                   }
                   pageInfo {

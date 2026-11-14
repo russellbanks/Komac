@@ -289,6 +289,7 @@ impl GitHub {
 
             for branch in branches.into_iter().filter(|branch| {
                 branch.name != default_branch.name
+                    && branch.open_pull_requests.total_count == 0
                     && branch
                         .associated_pull_requests
                         .pull_requests
