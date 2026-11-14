@@ -10,6 +10,7 @@ use indexmap::{
 };
 use msi::{Package, Select};
 
+use super::property_table::PropertyTable;
 use crate::analysis::installers::utils::{
     RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
     RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64, RELATIVE_TEMP_FOLDER,
@@ -69,7 +70,12 @@ use crate::analysis::installers::utils::{
 pub struct DirectoryTable(IndexMap<String, (Option<String>, String)>);
 
 impl DirectoryTable {
-    pub fn new<R: Read + Seek>(msi: &mut Package<R>) -> io::Result<Self> {
+    /// Reads the Directory table, expanding any `[Property]` references in `DefaultDir` (such as
+    /// the `[ApplicationFolderName]` used by WiX's `WixUI_Advanced`) with the Property table.
+    pub fn new<R: Read + Seek>(
+        msi: &mut Package<R>,
+        property_table: &PropertyTable,
+    ) -> io::Result<Self> {
         const DIRECTORY: &str = "Directory";
         const DIRECTORY_PARENT: &str = "Directory_Parent";
         const DEFAULT_DIR: &str = "DefaultDir";
@@ -88,7 +94,10 @@ impl DirectoryTable {
                     ) {
                         (Some(directory), parent, Some(default)) => Some((
                             directory.to_owned(),
-                            (parent.map(str::to_owned), default.to_owned()),
+                            (
+                                parent.map(str::to_owned),
+                                property_table.format(default).into_owned(),
+                            ),
                         )),
                         _ => None,
                     }
