@@ -7,8 +7,11 @@ pub mod utils;
 
 use const_format::formatcp;
 pub use error::GitHubError;
+pub use rest::Release;
 
 pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
 pub const WINGET_PKGS_FULL_NAME: &str = formatcp!("{MICROSOFT}/{WINGET_PKGS}");
 pub const GITHUB_HOST: &str = "github.com";
+pub const KOMAC_OWNER: &str = "russellbanks";
+pub const KOMAC: &str = "Komac";

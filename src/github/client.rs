@@ -57,9 +57,17 @@ impl GitHub {
     where
         T: AsRef<SecretString>,
     {
+        Self::with_optional_token(Some(token.as_ref()))
+    }
+
+    /// Creates a client that authenticates only if a token is provided.
+    ///
+    /// This is useful for public, read-only endpoints where a token merely
+    /// raises the rate limit.
+    pub fn with_optional_token(token: Option<&SecretString>) -> Result<Self, GitHubError> {
         Ok(Self(
             Client::builder()
-                .default_headers(default_headers(Some(token.as_ref())))
+                .default_headers(default_headers(token))
                 .build()?,
         ))
     }

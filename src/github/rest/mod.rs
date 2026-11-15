@@ -1,7 +1,10 @@
 mod compare_commits;
 mod error;
+mod latest_release;
 mod merge_upstream;
 mod tree;
+
+pub use latest_release::Release;
 
 use reqwest::header::{HeaderName, HeaderValue};
 

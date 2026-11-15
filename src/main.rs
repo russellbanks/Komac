@@ -12,6 +12,7 @@ mod read;
 mod terminal;
 mod token;
 mod traits;
+mod update_notifier;
 mod update_state;
 
 use clap::{Parser, crate_name};
@@ -21,6 +22,7 @@ use token::TokenManager;
 use tracing::{Level, metadata::LevelFilter};
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt};
+use update_notifier::UpdateNotifier;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,9 +32,15 @@ async fn main() -> Result<()> {
 
     setup_logging();
 
-    Cli::parse().command.run().await?;
+    let cli = Cli::parse();
+
+    let update_notifier = UpdateNotifier::start(&cli.command);
+
+    cli.command.run().await?;
 
     TokenManager::unset_default_store();
+
+    update_notifier.finish().await;
 
     Ok(())
 }

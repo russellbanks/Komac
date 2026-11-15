@@ -152,6 +152,13 @@ See https://github.com/russellbanks/Komac/issues/310.
 
 </details>
 
+## Update notifications
+
+komac checks GitHub for a newer release at most once every 24 hours and, if one is available, prints a notice to
+stderr after a command finishes. The check never runs in CI (`CI=true`) or when stderr is not a terminal.
+
+To disable it, set the `KOMAC_NO_UPDATE_NOTIFIER` environment variable to any value.
+
 ## Commands
 
 <details>
