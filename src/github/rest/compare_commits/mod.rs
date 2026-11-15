@@ -7,7 +7,7 @@ pub use status::Status;
 use super::{
     GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION, error::RestError,
 };
-use crate::github::{GitHubError, MICROSOFT, WINGET_PKGS, client::GitHub};
+use crate::github::{GitHubError, client::GitHub, upstream};
 
 #[derive(Copy, Clone, Deserialize)]
 pub struct CompareCommits {
@@ -59,7 +59,9 @@ impl CompareCommits {
 impl GitHub {
     pub async fn compare_upstream(&self, fork_owner: &str) -> Result<CompareCommits, GitHubError> {
         let endpoint = format!(
-            "{REST_API_URL}/repos/{fork_owner}/{WINGET_PKGS}/compare/HEAD...{MICROSOFT}:HEAD"
+            "{REST_API_URL}/repos/{fork_owner}/{name}/compare/HEAD...{owner}:HEAD",
+            name = upstream().name(),
+            owner = upstream().owner(),
         );
 
         let response = self

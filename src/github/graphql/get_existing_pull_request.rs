@@ -2,7 +2,7 @@ use cynic::{QueryBuilder, http::ReqwestExt};
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use super::{
-    super::{GitHubError, WINGET_PKGS_FULL_NAME, client::GitHub},
+    super::{GitHubError, client::GitHub, upstream},
     GRAPHQL_URL, github_schema as schema,
     types::PullRequest,
 };
@@ -60,7 +60,7 @@ impl GitHub {
             .0
             .post(GRAPHQL_URL)
             .run_graphql(GetExistingPullRequest::build(GetExistingPullRequestVariables {
-                query: &format!("repo:{WINGET_PKGS_FULL_NAME} is:pull-request in:title {identifier} {version}"),
+                query: &format!("repo:{} is:pull-request in:title {identifier} {version}", upstream()),
             }))
             .await
             .map(|response| {

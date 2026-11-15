@@ -13,7 +13,7 @@ pub use r#type::TreeType;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use super::{
-    super::{GitHubError, MICROSOFT, WINGET_PKGS, client::GitHub, utils::PackagePath},
+    super::{GitHubError, client::GitHub, upstream, utils::PackagePath},
     GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION,
 };
 
@@ -32,8 +32,8 @@ impl GitHub {
         package_identifier: &PackageIdentifier,
     ) -> Result<BTreeSet<PackageVersion>, GitHubError> {
         self.get_all_versions(
-            MICROSOFT,
-            WINGET_PKGS,
+            upstream().owner(),
+            upstream().name(),
             PackagePath::new(package_identifier, None, None),
         )
         .await

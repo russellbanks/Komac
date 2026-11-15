@@ -11,12 +11,13 @@ use tokio::{time::sleep, try_join};
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
-    github::{WINGET_PKGS, WINGET_PKGS_FULL_NAME, client::GitHub},
+    github::{client::GitHub, upstream},
     terminal::Hyperlinkable,
     token::TokenManager,
 };
 
-/// Merges changes from microsoft/winget-pkgs into the fork repository
+/// Merges changes from the upstream repository (microsoft/winget-pkgs by default) into the fork
+/// repository
 #[derive(Parser)]
 #[clap(visible_aliases = ["sync-fork", "merge-upstream"])]
 pub struct SyncFork {
@@ -97,8 +98,8 @@ impl SyncFork {
         let merge_message = format!(
             "{} upstream commits from {} into {}",
             random_range(50..=500),
-            WINGET_PKGS_FULL_NAME.blue(),
-            format_args!("octocat/{WINGET_PKGS}").blue()
+            upstream().blue(),
+            format_args!("octocat/{}", upstream().name()).blue()
         );
 
         let pb = ProgressBar::new_spinner().with_message(format!("Merging {merge_message}"));

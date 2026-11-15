@@ -24,7 +24,8 @@ use crate::{
     commands::utils::{SPINNER_TICK_RATE, SubmitOption},
     download::Downloader,
     github::{
-        GITHUB_HOST, GitHubError, WINGET_PKGS_FULL_NAME,
+        GITHUB_HOST, GitHubError,
+        upstream,
         client::{GitHub, GitHubValues},
         utils::{PackagePath, pull_request::Change},
     },
@@ -263,7 +264,8 @@ impl UpdateVersion {
             && let Some(closest) = version.closest(versions)
         {
             bail!(
-                "Replacement version {version} does not exist in {WINGET_PKGS_FULL_NAME}. The closest version is {closest}"
+                "Replacement version {version} does not exist in {}. The closest version is {closest}",
+                upstream()
             );
         }
 
