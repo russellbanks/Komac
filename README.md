@@ -197,7 +197,7 @@ komac update Package.Identifier --version 1.2.3 --urls https://www.example.com/i
 |--------------------------------------|-----------------------------------|------------------------------------------------------------|
 | Package Identifier                   | `komac update Package.Identifier` |                                                            |
 | Version                              | `--version`                       |                                                            |
-| URLs                                 | `--urls`                          | URLs are delimited by a space                              |
+| URLs                                 | `--urls`                          | Direct download URLs for each installer, separated by a space |
 | Automatically submit                 | `--submit`                        |                                                            |
 | Token (if one is not already stored) | `--token`                         | Komac will check for a `GITHUB_TOKEN` environment variable |
 

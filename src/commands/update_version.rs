@@ -45,7 +45,7 @@ pub struct UpdateVersion {
     #[arg(short = 'v', long = "version")]
     version: PackageVersion,
 
-    /// The list of package installers
+    /// Direct download URLs of the package's installers, separated by a space
     #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
     urls: Vec<Url>,
 
