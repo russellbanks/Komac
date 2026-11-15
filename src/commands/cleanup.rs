@@ -15,8 +15,8 @@ use crate::{
     token::TokenManager,
 };
 
-/// Finds branches from the fork of winget-pkgs that have had a merged or closed pull request to
-/// microsoft/winget-pkgs from them, prompting for which ones to delete
+/// Finds branches from the fork of the upstream repository that have had a merged or closed pull request to
+/// the upstream repository from them, prompting for which ones to delete
 #[derive(Parser)]
 #[clap(visible_alias = "clean")]
 pub struct Cleanup {
@@ -49,7 +49,7 @@ impl Cleanup {
         ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
-        // Get all fork branches with an associated pull request to microsoft/winget-pkgs
+        // Get all fork branches with an associated pull request to the upstream repository
         let (pr_branch_map, repository_id) = github
             .get_username()
             .and_then(|username| github.get_branches(username, merge_state))

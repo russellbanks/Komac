@@ -159,6 +159,19 @@ stderr after a command finishes. The check never runs in CI (`CI=true`) or when 
 
 To disable it, set the `KOMAC_NO_UPDATE_NOTIFIER` environment variable to any value.
 
+## Third-party repositories
+
+By default, komac reads manifests from and opens pull requests against
+[microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs). To use a third-party or private repository that
+follows the same `manifests/` layout, pass `--repository owner/name` to any command, or set the `KOMAC_REPOSITORY`
+environment variable:
+
+```shell
+komac update Contoso.App --version 1.2.3 --urls https://example.com/app.msi --repository contoso/winget-pkgs
+```
+
+Your fork of that repository must have the same name as the repository itself (GitHub's default when forking).
+
 ## Commands
 
 <details>

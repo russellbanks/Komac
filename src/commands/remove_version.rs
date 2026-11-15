@@ -14,12 +14,12 @@ use tokio::try_join;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
-    github::{WINGET_PKGS_FULL_NAME, client::GitHub},
+    github::{client::GitHub, upstream},
     prompts::{handle_inquire_error, text::confirm_prompt},
     token::TokenManager,
 };
 
-/// Remove a version from winget-pkgs
+/// Remove a version from the upstream repository (microsoft/winget-pkgs by default)
 ///
 /// To remove a package, all versions of that package must be removed
 #[derive(Parser)]
@@ -81,9 +81,10 @@ impl RemoveVersion {
 
         if !versions.contains(&self.package_version) {
             bail!(
-                "{} version {} does not exist in {WINGET_PKGS_FULL_NAME}",
+                "{} version {} does not exist in {}",
                 self.package_identifier,
                 self.package_version,
+                upstream(),
             );
         }
 

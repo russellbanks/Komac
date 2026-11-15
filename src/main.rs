@@ -18,6 +18,7 @@ mod update_state;
 use clap::{Parser, crate_name};
 use color_eyre::eyre::Result;
 use commands::Commands;
+use github::Repository;
 use token::TokenManager;
 use tracing::{Level, metadata::LevelFilter};
 use tracing_indicatif::IndicatifLayer;
@@ -33,6 +34,8 @@ async fn main() -> Result<()> {
     setup_logging();
 
     let cli = Cli::parse();
+
+    github::set_upstream(cli.repository);
 
     let update_notifier = UpdateNotifier::start(&cli.command);
 
@@ -69,6 +72,18 @@ fn setup_logging() {
 struct Cli {
     #[arg(short = 'v', short_alias = 'V', long, action = clap::builder::ArgAction::Version)]
     version: (),
+    /// The GitHub repository that manifests are read from and pull requests are opened against
+    ///
+    /// Use this to work with a third-party or private repository instead of microsoft/winget-pkgs.
+    /// Your fork must have the same name as this repository.
+    #[arg(
+        long,
+        global = true,
+        env = "KOMAC_REPOSITORY",
+        value_name = "OWNER/NAME",
+        default_value_t = Repository::WINGET_PKGS
+    )]
+    repository: Repository,
     #[command(subcommand)]
     command: Commands,
 }

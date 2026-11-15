@@ -2,16 +2,16 @@ pub mod client;
 mod error;
 pub mod graphql;
 mod package;
+mod repository;
 mod rest;
 pub mod utils;
 
-use const_format::formatcp;
 pub use error::GitHubError;
+pub use repository::{Repository, set_upstream, upstream};
 pub use rest::Release;
 
 pub const MICROSOFT: &str = "microsoft";
 pub const WINGET_PKGS: &str = "winget-pkgs";
-pub const WINGET_PKGS_FULL_NAME: &str = formatcp!("{MICROSOFT}/{WINGET_PKGS}");
 pub const GITHUB_HOST: &str = "github.com";
 pub const KOMAC_OWNER: &str = "russellbanks";
 pub const KOMAC: &str = "Komac";

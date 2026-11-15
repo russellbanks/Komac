@@ -22,7 +22,7 @@ use super::{GitHubError, graphql::create_pull_request};
 use crate::{
     commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
     github::{
-        MICROSOFT, WINGET_PKGS, WINGET_PKGS_FULL_NAME,
+        upstream,
         graphql::{
             GRAPHQL_URL,
             create_commit::{FileAddition, FileDeletion},
@@ -79,7 +79,11 @@ impl GitHub {
     ) -> Result<Manifests, GitHubError> {
         let full_package_path = PackagePath::new(identifier, Some(latest_version), None);
         let content = self
-            .get_directory_content_with_text(MICROSOFT, WINGET_PKGS, &full_package_path)
+            .get_directory_content_with_text(
+                upstream().owner(),
+                upstream().name(),
+                &full_package_path,
+            )
             .await?
             .collect::<Vec<_>>();
 
@@ -172,7 +176,8 @@ impl GitHub {
         manifest_type: ManifestTypeWithLocale,
     ) -> Result<T, GitHubError> {
         let path = PackagePath::new(identifier, Some(version), Some(&manifest_type));
-        let content = self.get_file_content(MICROSOFT, WINGET_PKGS, &path).await?;
+        let content = self
+            .get_file_content(upstream().owner(), upstream().name(), &path).await?;
         let manifest = serde_yaml::from_str::<T>(&content)?;
         Ok(manifest)
     }
@@ -182,7 +187,10 @@ impl GitHub {
         &self,
         #[builder(into)] owner: Option<Cow<'_, str>>,
     ) -> Result<RepositoryData, GitHubError> {
-        self.get_repository_info(owner.as_deref().unwrap_or(MICROSOFT), WINGET_PKGS)
+        self.get_repository_info(
+            owner.as_deref().unwrap_or(upstream().owner()),
+            upstream().name(),
+        )
             .await
     }
 
@@ -272,7 +280,7 @@ impl GitHub {
                 .post(GRAPHQL_URL)
                 .run_graphql(GetBranches::build(GetBranchesVariables {
                     owner: user,
-                    name: WINGET_PKGS,
+                    name: upstream().name(),
                     cursor: cursor.as_deref(),
                 }))
                 .await?;
@@ -314,7 +322,7 @@ impl GitHub {
                         _ => !pull_request.state.is_open(),
                     })
                     .find(|pull_request| {
-                        pull_request.repository.name_with_owner == WINGET_PKGS_FULL_NAME
+                        upstream().matches_full_name(&pull_request.repository.name_with_owner)
                     })
                 {
                     pr_branch_map.insert(pull_request, branch.name);

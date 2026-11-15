@@ -5,7 +5,7 @@ use color_eyre::eyre::eyre;
 use cynic::{GraphQlResponse, QueryBuilder, http::ReqwestExt};
 
 use super::{
-    super::{GitHubError, MICROSOFT, WINGET_PKGS, client::GitHub, utils::PackagePath},
+    super::{GitHubError, client::GitHub, upstream, utils::PackagePath},
     GRAPHQL_URL, GetFileContent, github_schema as schema,
 };
 
@@ -103,8 +103,8 @@ impl GitHub {
     #[builder]
     pub async fn get_directory_content(
         &self,
-        #[builder(default = MICROSOFT)] owner: &str,
-        #[builder(default = WINGET_PKGS)] repo: &str,
+        #[builder(default = upstream().owner())] owner: &str,
+        #[builder(default = upstream().name())] repo: &str,
         #[builder(default = "HEAD")] branch_name: &str,
         path: &PackagePath,
     ) -> Result<impl Iterator<Item = String>, GitHubError> {

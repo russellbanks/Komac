@@ -9,7 +9,7 @@ use reqwest::header::ACCEPT;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    super::{GitHubError, WINGET_PKGS, client::GitHub},
+    super::{GitHubError, client::GitHub, upstream},
     GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION,
     error::RestError,
 };
@@ -39,7 +39,10 @@ impl GitHub {
     ///
     /// See <https://docs.github.com/rest/branches/branches#sync-a-fork-branch-with-the-upstream-repository>.
     pub async fn sync_fork(&self, fork_owner: &str, branch: &str) -> Result<Response, GitHubError> {
-        let endpoint = format!("{REST_API_URL}/repos/{fork_owner}/{WINGET_PKGS}/merge-upstream");
+        let endpoint = format!(
+            "{REST_API_URL}/repos/{fork_owner}/{name}/merge-upstream",
+            name = upstream().name()
+        );
 
         let response = self
             .0
