@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
+use indicatif::HumanCount;
 use itertools::Either;
-use tracing::{debug, debug_span};
+use tracing::{Level, debug, debug_span, level_enabled, subscriber::NoSubscriber};
 use zerocopy::{FromBytes, I32, LE, U16};
 
 use super::{
@@ -19,6 +22,10 @@ use crate::analysis::installers::nsis::{
 /// The maximum number of entries that can be executed within a single code segment before it is
 /// considered to be an infinite loop.
 const MAX_EXECUTED_ENTRIES: usize = 1 << 20;
+
+/// The number of times an entry is logged within a single code segment before further executions
+/// of it (such as the iterations of a loop) are no longer logged.
+const MAX_LOGGED_EXECUTIONS: u16 = 3;
 
 pub struct NsisState<'data> {
     pub str_block: &'data [u8],
@@ -270,12 +277,37 @@ impl<'data> NsisState<'data> {
         // entries before treating the segment as an infinite loop
         let infinite_loop_threshold = MAX_EXECUTED_ENTRIES;
 
-        while let Ok(index) = usize::try_from(position) {
-            let span = debug_span!("", "{}", index + 1);
-            let _enter = span.enter();
+        // Track how many times each entry has been executed so that repeated loop iterations
+        // don't flood the debug logs
+        let mut execution_counts = HashMap::<usize, u16>::new();
+        let mut suppressed_entries = 0usize;
 
+        while let Ok(index) = usize::try_from(position) {
             let entry = self.entries[index];
-            let address = entry.execute(self)?;
+
+            let suppress_logs = level_enabled!(Level::DEBUG) && {
+                let count = execution_counts.entry(index).or_default();
+                *count = count.saturating_add(1);
+                *count > MAX_LOGGED_EXECUTIONS
+            };
+
+            let address = if suppress_logs {
+                suppressed_entries += 1;
+                tracing::subscriber::with_default(NoSubscriber::new(), || entry.execute(self))?
+            } else {
+                if suppressed_entries != 0 {
+                    debug!(
+                        "Suppressed logs for {} repeated loop entries",
+                        HumanCount(suppressed_entries as u64)
+                    );
+                    suppressed_entries = 0;
+                }
+
+                let span = debug_span!("", "{}", index + 1);
+                let _enter = span.enter();
+
+                entry.execute(self)?
+            };
 
             if matches!(entry, Entry::Return | Entry::Quit) {
                 return Ok(entry);
