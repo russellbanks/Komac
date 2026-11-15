@@ -16,6 +16,10 @@ use crate::analysis::installers::nsis::{
     version::NsisVersion,
 };
 
+/// The maximum number of entries that can be executed within a single code segment before it is
+/// considered to be an infinite loop.
+const MAX_EXECUTED_ENTRIES: usize = 1 << 20;
+
 pub struct NsisState<'data> {
     pub str_block: &'data [u8],
     entries: &'data [Entry],
@@ -261,9 +265,10 @@ impl<'data> NsisState<'data> {
         // Create a watchdog counter to detect infinite loops
         let mut watchdog_counter = 0;
 
-        // Set an infinite loop threshold to the number of total entries, as we're only simulating
-        // execution of a segment, not all code
-        let infinite_loop_threshold = self.entries.len();
+        // Bounded loops in real installers (e.g. scanning thousands of bytes of a file) can execute
+        // far more entries than the script contains, so allow a generous number of executed
+        // entries before treating the segment as an infinite loop
+        let infinite_loop_threshold = MAX_EXECUTED_ENTRIES;
 
         while let Ok(index) = usize::try_from(position) {
             let span = debug_span!("", "{}", index + 1);
