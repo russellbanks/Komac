@@ -163,6 +163,15 @@ impl Parser {
                     Expr::Var(name)
                 }
             }
+            Some(&Token::Number(num)) => {
+                self.advance();
+                Expr::Literal(Literal::Int(num))
+            }
+            Some(Token::String(s)) => {
+                let s = s.clone();
+                self.advance();
+                Expr::Literal(Literal::Str(s))
+            }
             other => panic!("Unexpected token: {other:?}"),
         }
     }
@@ -275,6 +284,7 @@ pub enum Literal {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expr {
+    Literal(Literal),
     Var(String),
     Eq(String, Literal),
     NotEq(String, Literal),
@@ -291,6 +301,8 @@ pub enum Expr {
 impl Expr {
     pub fn eval(&self, variables: &HashMap<&str, Value>) -> bool {
         match self {
+            Self::Literal(Literal::Int(int)) => *int != 0,
+            Self::Literal(Literal::Str(str)) => !str.is_empty(),
             Self::Var(name) => match variables.get(name.as_str()) {
                 Some(&Value::Bool(bool)) => bool,
                 Some(&Value::Int(int)) => int != 0,
@@ -371,4 +383,43 @@ pub enum Token {
     Ident(String),
     String(String),
     Number(u32),
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use rstest::rstest;
+
+    use super::{InstallCondition, Value};
+
+    fn variables() -> HashMap<&'static str, Value<'static>> {
+        HashMap::from([
+            ("VersionNT64", Value::Bool(true)),
+            ("NativeMachine", Value::Int(0x8664)),
+            ("NeedsMongooseVcRedist", Value::Int(1)),
+        ])
+    }
+
+    #[rstest]
+    #[case("1", true)]
+    #[case("0", false)]
+    #[case(r#""""#, false)]
+    #[case(r#""value""#, true)]
+    #[case("NOT VersionNT64", false)]
+    #[case("VersionNT64", true)]
+    #[case("NativeMachine = 43620", false)]
+    #[case("VersionNT64 AND NativeMachine <> 43620", true)]
+    #[case("NeedsMongooseVcRedist = 1", true)]
+    #[case("NeedsMongooseVcRedist = 1 AND VersionNT64>v6.0 AND VersionNT64", true)]
+    #[case(
+        "( ((VersionNT = v6.1) AND (ServicePackLevel = 1)) OR (VersionNT >= v6.2) )",
+        true
+    )]
+    fn evaluate_condition(#[case] condition: &str, #[case] expected: bool) {
+        assert_eq!(
+            InstallCondition::new(condition).evaluate(&variables()),
+            expected
+        );
+    }
 }
