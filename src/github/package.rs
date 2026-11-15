@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use anstream::println;
 use chrono::Local;
-use inquire::error::InquireResult;
+use color_eyre::eyre::{Result, bail};
 use owo_colors::OwoColorize;
 use tokio::try_join;
 use winget_types::{PackageIdentifier, PackageVersion};
@@ -61,16 +61,16 @@ impl Package<'_, '_, Versioned> {
         self.manifests.as_mut()
     }
 
-    pub fn prompt_existing_pr(&self) -> InquireResult<bool> {
+    /// Checks for an existing pull request for this package version and returns whether to proceed.
+    ///
+    /// Interactively, the user is asked whether to proceed. In CI, where prompting isn't possible,
+    /// a pull request that was closed without being merged doesn't block a new submission, whereas
+    /// an open or merged pull request results in an error so that the caller doesn't mistake an
+    /// early exit for a successful submission.
+    pub fn prompt_existing_pr(&self) -> Result<bool> {
         let Some(ref pull_request) = self.existing_pr else {
             return Ok(true);
         };
-
-        if *CI {
-            // An existing pull request exists, but we're running in CI and so
-            // cannot prompt
-            return Ok(false);
-        }
 
         let created_at = pull_request.created_at.with_timezone(&Local);
         println!(
@@ -82,7 +82,22 @@ impl Package<'_, '_, Versioned> {
             time = created_at.time()
         );
         println!("{}", pull_request.url.blue());
-        confirm_prompt("Would you like to proceed?")
+
+        if *CI {
+            if pull_request.state.is_closed() {
+                println!("Proceeding as the existing pull request was closed without being merged");
+                return Ok(true);
+            }
+
+            bail!(
+                "{state} pull request already exists for {identifier} {version}. Use --skip-pr-check to submit anyway",
+                state = pull_request.state,
+                identifier = self.identifier,
+                version = self.version,
+            );
+        }
+
+        Ok(confirm_prompt("Would you like to proceed?")?)
     }
 }
 
