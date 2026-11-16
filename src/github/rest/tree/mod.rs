@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 pub use git_file_mode::GitFileMode;
 use itertools::Itertools;
 pub use object::TreeObject;
-use reqwest::header::ACCEPT;
+use reqwest::{StatusCode, header::ACCEPT};
 use serde::{Deserialize, Serialize};
 pub use r#type::TreeType;
 use winget_types::{PackageIdentifier, PackageVersion};
@@ -37,7 +37,18 @@ impl GitHub {
             PackagePath::new(package_identifier, None, None),
         )
         .await
-        .map_err(|_| GitHubError::PackageNonExistent(package_identifier.clone()))
+        .map_err(|error| match error {
+            // A missing path returns 404, and a package directory without any valid version
+            // folders is equivalent to the package not existing. Any other error (network,
+            // authentication, rate limiting) is propagated so its real cause is visible.
+            GitHubError::NoValidFiles { .. } => {
+                GitHubError::PackageNonExistent(package_identifier.clone())
+            }
+            GitHubError::Reqwest(ref err) if err.status() == Some(StatusCode::NOT_FOUND) => {
+                GitHubError::PackageNonExistent(package_identifier.clone())
+            }
+            other => other,
+        })
     }
 
     /// Returns all valid package versions under a specific repository path
