@@ -11,6 +11,7 @@ use reqwest::{
 use secrecy::{ExposeSecret, SecretString};
 use thiserror::Error;
 use tokio::runtime::Handle;
+use tracing::warn;
 
 use crate::{commands::utils::environment::CI, prompts::handle_inquire_error};
 
@@ -87,12 +88,13 @@ impl TokenManager {
 
         let validated_token = Self::prompt().client(&client).call()?;
 
-        if let Some(credential) = credential
-            && credential
-                .set_password(validated_token.expose_secret())
-                .is_ok()
-        {
-            println!("Successfully stored token in platform's secure storage");
+        if let Some(credential) = credential {
+            match credential.set_password(validated_token.expose_secret()) {
+                Ok(()) => println!("Successfully stored token in platform's secure storage"),
+                Err(error) => warn!(
+                    "Failed to store token in platform's secure storage, so it will be requested again next time: {error}"
+                ),
+            }
         }
 
         Ok(Self {

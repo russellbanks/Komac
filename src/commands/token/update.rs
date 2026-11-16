@@ -35,12 +35,12 @@ impl UpdateToken {
                 .call()?,
         };
 
-        if credential.set_password(token.expose_secret()).is_ok() {
-            println!(
-                "{} stored token in platform's secure storage",
-                "Successfully".green()
-            );
-        }
+        credential.set_password(token.expose_secret())?;
+
+        println!(
+            "{} stored token in platform's secure storage",
+            "Successfully".green()
+        );
 
         Ok(())
     }
