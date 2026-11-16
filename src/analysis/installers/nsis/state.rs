@@ -167,13 +167,21 @@ impl<'data> NsisState<'data> {
         } else {
             memchr::memchr(0, offset_slice)
         }
-        .unwrap_or(offset_slice.len());
+        // An unterminated Unicode string may end with a dangling byte, so only take whole
+        // UTF-16 code units
+        .unwrap_or(if unicode {
+            offset_slice.len() & !1
+        } else {
+            offset_slice.len()
+        });
 
-        let string_bytes = &self.str_block[offset..offset + string_end_index];
+        let string_bytes = &offset_slice[..string_end_index];
 
         let string_chars = if unicode {
-            assert_eq!(string_bytes.len() % size_of::<u16>(), 0);
-            Either::Left(<[U16<LE>]>::ref_from_bytes(string_bytes).unwrap())
+            let Ok(chars) = <[U16<LE>]>::ref_from_bytes(string_bytes) else {
+                return NsisCow::Borrowed(NsisStr::error());
+            };
+            Either::Left(chars)
         } else {
             Either::Right(string_bytes)
         };
