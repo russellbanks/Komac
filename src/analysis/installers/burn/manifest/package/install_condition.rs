@@ -131,7 +131,8 @@ impl Parser {
     fn parse_not(&mut self) -> Result<Expr, ParseError> {
         if matches!(self.peek(), Some(Token::Not)) {
             self.advance();
-            let expr = self.parse_primary()?;
+            // Recurse so that `NOT NOT x` is accepted
+            let expr = self.parse_not()?;
             Ok(Expr::Not(Box::new(expr)))
         } else {
             self.parse_primary()
@@ -460,6 +461,11 @@ mod tests {
             InstallCondition::new(condition).evaluate(&variables()),
             expected
         );
+    }
+
+    #[test]
+    fn double_not() {
+        assert!(InstallCondition::new("NOT NOT VersionNT64").evaluate(&variables()));
     }
 
     #[rstest]
