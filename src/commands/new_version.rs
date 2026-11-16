@@ -110,7 +110,7 @@ pub struct NewVersion {
     release_notes_url: Option<ReleaseNotesUrl>,
 
     /// Number of installers to download at the same time
-    #[arg(long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
+    #[arg(long, default_value_t = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN))]
     concurrent_downloads: NonZeroUsize,
 
     /// List of issues that adding this package or version would resolve
