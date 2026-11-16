@@ -508,7 +508,12 @@ impl GitHub {
         let _commit_url = self
             .commit()
             .branch_id(&pull_request_branch.id)
-            .head_sha(pull_request_branch.target.unwrap())
+            .head_sha(pull_request_branch.target.ok_or_else(|| {
+                GitHubError::GraphQL(eyre!(
+                    "branch {} was created without a target commit",
+                    pull_request_branch.name
+                ))
+            })?)
             .message(&commit_title)
             .deletions(deletions)
             .create()
@@ -573,7 +578,12 @@ impl GitHub {
         let _commit_url = self
             .commit()
             .branch_id(&pull_request_branch.id)
-            .head_sha(pull_request_branch.target.unwrap())
+            .head_sha(pull_request_branch.target.ok_or_else(|| {
+                GitHubError::GraphQL(eyre!(
+                    "branch {} was created without a target commit",
+                    pull_request_branch.name
+                ))
+            })?)
             .message(&commit_title)
             .additions(additions)
             .deletions(deletions)
