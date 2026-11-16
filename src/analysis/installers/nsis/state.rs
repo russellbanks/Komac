@@ -294,7 +294,10 @@ impl<'data> NsisState<'data> {
         let mut suppressed_entries = 0usize;
 
         while let Ok(index) = usize::try_from(position) {
-            let entry = self.entries[index];
+            // A jump past the end of the script comes from a malformed or misread installer
+            let Some(&entry) = self.entries.get(index) else {
+                return Err(EntryError::Invalid);
+            };
 
             let suppress_logs = level_enabled!(Level::DEBUG) && {
                 let count = execution_counts.entry(index).or_default();
