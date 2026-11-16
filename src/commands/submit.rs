@@ -14,8 +14,8 @@ use winget_types::{Manifest as WingetManifest, ManifestType, utils::GenericManif
 
 use crate::{
     commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption},
-    github::client::GitHub,
-    manifests::{Manifests, manifest::Manifest},
+    github::{client::GitHub, utils::pull_request::Change},
+    manifests::{Manifests, manifest::Manifest, print_changes},
     prompts::handle_inquire_error,
     token::TokenManager,
 };
@@ -155,7 +155,8 @@ impl Submit {
             let mut changes = package_manifests.create(identifier, version, None);
 
             if self.dry_run {
-                return Ok(());
+                print_changes(changes.iter().map(Change::manifest));
+                continue;
             }
 
             let submit_option =
