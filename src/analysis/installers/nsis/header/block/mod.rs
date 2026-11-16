@@ -97,9 +97,15 @@ impl BlockHeaders {
 
     pub fn sections<'data>(&self, data: &'data [u8]) -> impl Iterator<Item = &'data Section> {
         let sections = self.sections_block(data);
-        let section_size = sections.len() / self[BlockType::Sections].num() as usize;
+        let section_size = sections
+            .len()
+            .checked_div(self[BlockType::Sections].num() as usize)
+            .unwrap_or_default();
+        // `chunks_exact` panics on a chunk size of 0, which happens if there are no sections or
+        // the block is smaller than the declared number of sections
         sections
-            .chunks_exact(section_size)
+            .chunks_exact(section_size.max(1))
+            .filter(move |_| section_size != 0)
             .flat_map(Section::ref_from_bytes)
     }
 
@@ -248,5 +254,19 @@ mod tests {
             (BlockType::LangTables, end, 0),
         ]);
         assert!(headers.strings_block(&data).is_empty());
+    }
+
+    #[test]
+    fn zero_sections_does_not_panic() {
+        let data = [0; 64];
+        let headers = headers(&[(BlockType::Sections, 8, 0), (BlockType::Entries, 32, 0)]);
+        assert_eq!(headers.sections(&data).count(), 0);
+    }
+
+    #[test]
+    fn more_sections_than_bytes_does_not_panic() {
+        let data = [0; 64];
+        let headers = headers(&[(BlockType::Sections, 8, 100), (BlockType::Entries, 16, 0)]);
+        assert_eq!(headers.sections(&data).count(), 0);
     }
 }
