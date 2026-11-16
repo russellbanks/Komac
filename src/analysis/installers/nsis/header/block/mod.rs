@@ -70,15 +70,19 @@ impl BlockHeaders {
         }
     }
 
-    /// Returns the data of a block.
+    /// Returns the data of a block, or an empty slice if the block's offsets are out of bounds.
     fn get<'data>(&self, data: &'data [u8], block_type: BlockType) -> &'data [u8] {
-        let start = usize::try_from(self[block_type].offset()).unwrap();
+        let Ok(start) = usize::try_from(self[block_type].offset()) else {
+            return &[];
+        };
         let end = self
             .iter()
             .skip(block_type as usize + 1)
             .find(|block_header| block_header.offset > U64::ZERO)
-            .map_or(start, |block| usize::try_from(block.offset()).unwrap());
-        &data[start..end]
+            .map_or(Ok(start), |block| usize::try_from(block.offset()));
+        end.ok()
+            .and_then(|end| data.get(start..end))
+            .unwrap_or_default()
     }
 
     /// Returns the pages block.
@@ -204,5 +208,45 @@ impl<'a> IntoIterator for &'a mut BlockHeaders {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter_mut()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+    use zerocopy::{U32, U64};
+
+    use super::{BlockHeader, BlockHeaders, BlockType};
+
+    /// Builds block headers from `(block type, offset, num)` triples.
+    fn headers(blocks: &[(BlockType, u64, u32)]) -> BlockHeaders {
+        let mut headers = BlockHeaders::default();
+        for &(block_type, offset, num) in blocks {
+            headers.0[block_type as usize] = BlockHeader {
+                offset: U64::new(offset),
+                num: U32::new(num),
+            };
+        }
+        headers
+    }
+
+    #[test]
+    fn get_in_bounds() {
+        let data = [0, 1, 2, 3, 4, 5, 6, 7];
+        let headers = headers(&[(BlockType::Strings, 2, 0), (BlockType::LangTables, 5, 0)]);
+        assert_eq!(headers.strings_block(&data), &[2, 3, 4]);
+    }
+
+    #[rstest]
+    #[case::end_past_data(2, 100)]
+    #[case::start_past_data(100, 200)]
+    #[case::start_after_end(6, 3)]
+    fn get_out_of_bounds_is_empty(#[case] start: u64, #[case] end: u64) {
+        let data = [0; 8];
+        let headers = headers(&[
+            (BlockType::Strings, start, 0),
+            (BlockType::LangTables, end, 0),
+        ]);
+        assert!(headers.strings_block(&data).is_empty());
     }
 }
