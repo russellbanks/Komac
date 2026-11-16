@@ -144,8 +144,10 @@ impl BlockHeaders {
             .checked_div(self[BlockType::LangTables].num() as usize)
             .unwrap_or(language_table_block.len());
 
+        // `chunks_exact` panics on a chunk size of 0, which happens if the block is empty
         language_table_block
-            .chunks_exact(language_table_size)
+            .chunks_exact(language_table_size.max(1))
+            .filter(move |_| language_table_size != 0)
             .flat_map(LanguageTable::ref_from_bytes)
     }
 
@@ -268,5 +270,12 @@ mod tests {
         let data = [0; 64];
         let headers = headers(&[(BlockType::Sections, 8, 100), (BlockType::Entries, 16, 0)]);
         assert_eq!(headers.sections(&data).count(), 0);
+    }
+
+    #[test]
+    fn empty_language_table_block_does_not_panic() {
+        let data = [0; 64];
+        let headers = headers(&[(BlockType::LangTables, 8, 1), (BlockType::CtlColors, 8, 0)]);
+        assert_eq!(headers.language_tables(&data).count(), 0);
     }
 }
