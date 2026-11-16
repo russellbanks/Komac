@@ -1,7 +1,8 @@
-FROM rust:slim as build
+# Build and runtime stages use the same Debian release so the binary's glibc requirement is met
+FROM rust:slim-trixie AS build
 
 # Copy source code into the build container
-WORKDIR /usr/src 
+WORKDIR /usr/src
 COPY ./ /usr/src
 
 # Install apt packages required for building the package dependencies
@@ -12,10 +13,10 @@ RUN apt-get update \
       make
 
 # Build Komac from the source code
-RUN cargo build --release
+RUN cargo build --release --locked
 
-# Create a new container for
-FROM debian:bookworm-slim as release 
+# Create a minimal runtime container with just the Komac binary
+FROM debian:trixie-slim AS release
 RUN apt-get update \
  && apt-get install -y --no-install-recommends --no-install-suggests \
       ca-certificates \

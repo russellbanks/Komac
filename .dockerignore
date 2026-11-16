@@ -1,4 +1,7 @@
 .github
 .gitattributes
-.gitigore
+.gitignore
 *.md
+.idea
+target
+.git
