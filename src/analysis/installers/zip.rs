@@ -139,7 +139,10 @@ impl<R: Read + Seek> Zip<R> {
                 &mut temp_file,
             )?;
             temp_file.seek(SeekFrom::Start(0))?;
-            let file_analyzer = Analyzer::new(&mut temp_file, first_choice.file_name().unwrap())?;
+            let file_analyzer = Analyzer::new(
+                &mut temp_file,
+                first_choice.file_name().unwrap_or(first_choice.as_str()),
+            )?;
             let nested_installer_files = chosen
                 .into_iter()
                 .map(|path| {
