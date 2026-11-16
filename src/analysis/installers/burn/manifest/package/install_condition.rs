@@ -271,9 +271,10 @@ fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
             '0'..='9' => {
-                let mut value = 0;
+                let mut value = 0u32;
                 while let Some(digit) = chars.peek().and_then(|char| char.to_digit(10)) {
-                    value = value * 10 + digit;
+                    // Saturate rather than overflow on absurdly long numbers
+                    value = value.saturating_mul(10).saturating_add(digit);
                     chars.next();
                 }
                 tokens.push(Token::Number(value));
@@ -466,6 +467,11 @@ mod tests {
     #[test]
     fn double_not() {
         assert!(InstallCondition::new("NOT NOT VersionNT64").evaluate(&variables()));
+    }
+
+    #[test]
+    fn long_number_does_not_overflow() {
+        assert!(InstallCondition::try_parse("NativeMachine = 99999999999999999999").is_ok());
     }
 
     #[rstest]
