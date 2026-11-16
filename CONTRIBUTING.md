@@ -10,6 +10,20 @@ Contributions are what make the open source community such an amazing place to l
 4. Push to the Branch (`git push origin feat/new-feature`)
 5. Open a Pull Request
 
+### Checks
+
+CI runs these on every pull request, so run them locally before pushing:
+
+```sh
+cargo +nightly fmt --check                          # Formatting
+cargo clippy --locked --all-targets -- -D warnings  # Lints
+cargo test --locked                                 # Tests
+```
+
+Formatting needs the nightly toolchain (`rustup toolchain install nightly --component rustfmt`) because
+`rustfmt.toml` uses unstable options to group and merge imports. Stable `rustfmt` ignores them and
+formats imports differently. Run `cargo +nightly fmt` to fix formatting.
+
 ### Testing your changes
 
 Using Docker is the easiest way to test your code before submitting a pull request.
