@@ -8,6 +8,7 @@ pub use ascii_ext::AsciiExt;
 use html2text::render::{TaggedLine, TextDecorator};
 pub use name::Name;
 use regex::Regex;
+use tracing::warn;
 use winget_types::{
     Manifest, PackageVersion,
     installer::Architecture,
@@ -55,7 +56,12 @@ impl FromMachine for Architecture {
                 Self::Arm
             }
             IMAGE_FILE_MACHINE_UNKNOWN => Self::Neutral,
-            _ => panic!("Unexpected architecture: {machine:?}"),
+            _ => {
+                // Unrecognised machine types (e.g. RISC-V, LoongArch, EFI byte code) come from
+                // untrusted installer headers, so they must not abort analysis.
+                warn!("Unrecognised PE machine type {machine:#06X}, treating it as neutral");
+                Self::Neutral
+            }
         }
     }
 }
@@ -245,5 +251,28 @@ impl LocaleExt for DefaultLocaleManifest {
         });
         self.manifest_type = Self::TYPE;
         self.update_manifest_version();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+    use winget_types::installer::Architecture;
+
+    use super::{
+        FromMachine, IMAGE_FILE_MACHINE_AMD64, IMAGE_FILE_MACHINE_ARM64, IMAGE_FILE_MACHINE_I386,
+        IMAGE_FILE_MACHINE_UNKNOWN,
+    };
+
+    #[rstest]
+    #[case(IMAGE_FILE_MACHINE_AMD64, Architecture::X64)]
+    #[case(IMAGE_FILE_MACHINE_I386, Architecture::X86)]
+    #[case(IMAGE_FILE_MACHINE_ARM64, Architecture::Arm64)]
+    #[case(IMAGE_FILE_MACHINE_UNKNOWN, Architecture::Neutral)]
+    #[case(0x5064, Architecture::Neutral)] // RISC-V 64
+    #[case(0x6264, Architecture::Neutral)] // LoongArch 64
+    #[case(u16::MAX, Architecture::Neutral)]
+    fn from_machine(#[case] machine: u16, #[case] expected: Architecture) {
+        assert_eq!(Architecture::from_machine(machine), expected);
     }
 }
