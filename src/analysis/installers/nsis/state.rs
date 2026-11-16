@@ -342,13 +342,15 @@ impl<'data> NsisState<'data> {
     }
 
     /// Resolves a jump address. A negative address refers to a variable that holds the address as a
-    /// decimal integer.
+    /// decimal integer. As in NSIS, an unset or non-numeric variable resolves to 0 (no jump).
+    ///
+    /// <https://github.com/NSIS-Dev/nsis/blob/v311/Source/exehead/exec.c#L68>
     pub fn resolve_address(&self, address: i32) -> i32 {
         if address.is_negative() {
             self.variables
                 .get(&((address.unsigned_abs() - 1) as usize))
                 .and_then(|address| address.parse_int(10))
-                .unwrap()
+                .unwrap_or_default()
         } else {
             address
         }
