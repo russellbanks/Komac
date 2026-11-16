@@ -2,6 +2,8 @@ use std::{
     collections::HashMap,
     io::{Read, Seek},
     mem,
+    num::NonZeroUsize,
+    thread,
 };
 
 use color_eyre::Result;
@@ -52,7 +54,7 @@ impl Downloads {
                 Ok((mem::take(download.url_mut().inner_mut()), file_analyzer))
             },
         ))
-        .buffer_unordered(num_cpus::get())
+        .buffer_unordered(thread::available_parallelism().map_or(1, NonZeroUsize::get))
         .try_collect::<HashMap<_, _>>()
         .await
     }

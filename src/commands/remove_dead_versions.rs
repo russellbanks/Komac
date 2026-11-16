@@ -53,7 +53,7 @@ pub struct RemoveDeadVersions {
     auto: bool,
 
     /// Number of versions to check concurrently
-    #[arg(short, long, default_value_t = NonZeroUsize::new(num_cpus::get()).unwrap())]
+    #[arg(short, long, default_value_t = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN))]
     concurrent: NonZeroUsize,
 
     /// GitHub personal access token with the `public_repo` scope

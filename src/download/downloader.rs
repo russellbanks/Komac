@@ -1,4 +1,4 @@
-use std::{fmt, num::NonZeroUsize};
+use std::{fmt, num::NonZeroUsize, thread};
 
 use camino::Utf8Path;
 use color_eyre::{Result, eyre::bail};
@@ -48,11 +48,7 @@ impl Downloader {
     /// [`ClientBuilder::build`]: reqwest::ClientBuilder::build
     #[expect(unused)]
     pub fn new() -> reqwest::Result<Self> {
-        Self::new_with_concurrent(
-            num_cpus::get()
-                .try_into()
-                .unwrap_or_else(|_| unreachable!("num_cpus::get should always returns at least 1")),
-        )
+        Self::new_with_concurrent(thread::available_parallelism().unwrap_or(NonZeroUsize::MIN))
     }
 
     /// Creates a new Downloader with a specified number of maximum concurrent downloads.
