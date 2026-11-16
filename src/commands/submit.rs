@@ -3,12 +3,13 @@ use std::{fs::File, io, num::NonZeroU32};
 use anstream::println;
 use camino::Utf8PathBuf;
 use clap::Parser;
-use color_eyre::{Result, eyre};
+use color_eyre::Result;
 use indicatif::ProgressBar;
 use inquire::MultiSelect;
 use itertools::Itertools;
 use owo_colors::OwoColorize;
 use secrecy::SecretString;
+use tracing::warn;
 use walkdir::WalkDir;
 use winget_types::{Manifest as WingetManifest, ManifestType, utils::GenericManifest};
 
@@ -63,24 +64,10 @@ impl Submit {
 
         let packages = yaml_entries
             .iter()
-            .flat_map(|path| {
-                // Read file to string so we can read it twice - once for the manifest type and
-                // second for the full manifest
-                let manifest = io::read_to_string(File::open(path)?)?;
-
-                // Deserialize the manifest into just the manifest type so that it can be determined
-                // which manifest to properly deserialize into
-                let manifest = match serde_yaml::from_str::<GenericManifest>(&manifest)?.r#type {
-                    ManifestType::Installer => {
-                        Manifest::Installer(serde_yaml::from_str(&manifest)?)
-                    }
-                    ManifestType::DefaultLocale => {
-                        Manifest::DefaultLocale(serde_yaml::from_str(&manifest)?)
-                    }
-                    ManifestType::Locale => Manifest::Locale(serde_yaml::from_str(&manifest)?),
-                    ManifestType::Version => Manifest::Version(serde_yaml::from_str(&manifest)?),
-                };
-                Ok::<Manifest, eyre::Error>(manifest)
+            .filter_map(|path| {
+                Self::read_manifest(path)
+                    .inspect_err(|error| warn!("Skipping {path}: {error}"))
+                    .ok()
             })
             .chunk_by(|manifest| {
                 // Group manifests by both the package identifier and the package version
@@ -198,6 +185,26 @@ impl Submit {
         }
 
         Ok(())
+    }
+
+    /// Reads a YAML file and deserializes it into the manifest type it declares.
+    fn read_manifest(path: &Utf8PathBuf) -> Result<Manifest> {
+        // Read file to string so we can read it twice - once for the manifest type and
+        // second for the full manifest
+        let manifest = io::read_to_string(File::open(path)?)?;
+
+        // Deserialize the manifest into just the manifest type so that it can be determined
+        // which manifest to properly deserialize into
+        Ok(
+            match serde_yaml::from_str::<GenericManifest>(&manifest)?.r#type {
+                ManifestType::Installer => Manifest::Installer(serde_yaml::from_str(&manifest)?),
+                ManifestType::DefaultLocale => {
+                    Manifest::DefaultLocale(serde_yaml::from_str(&manifest)?)
+                }
+                ManifestType::Locale => Manifest::Locale(serde_yaml::from_str(&manifest)?),
+                ManifestType::Version => Manifest::Version(serde_yaml::from_str(&manifest)?),
+            },
+        )
     }
 
     fn get_yaml_file_paths(&self) -> walkdir::Result<Vec<Utf8PathBuf>> {
