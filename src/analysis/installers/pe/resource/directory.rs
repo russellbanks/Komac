@@ -60,7 +60,10 @@ impl<R: Read + Seek> ResourceDirectory<R> {
                     )
                 })?;
 
-        self.current_directory_table = directory_entry.data(self)?.table().unwrap();
+        self.current_directory_table = directory_entry
+            .data(self)?
+            .table()
+            .ok_or_else(|| not_a_table(id))?;
         Ok(&self.current_directory_table)
     }
 
@@ -78,7 +81,19 @@ impl<R: Read + Seek> ResourceDirectory<R> {
                 )
             })?;
 
-        self.current_directory_table = directory_entry.entry().data(self)?.table().unwrap();
+        self.current_directory_table = directory_entry
+            .entry()
+            .data(self)?
+            .table()
+            .ok_or_else(|| not_a_table(name))?;
         Ok(&self.current_directory_table)
     }
+}
+
+/// The error returned when a directory entry points to a data entry rather than a subdirectory.
+fn not_a_table(entry: impl std::fmt::Display) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidData,
+        format!("{entry} is a data entry rather than a directory table"),
+    )
 }
