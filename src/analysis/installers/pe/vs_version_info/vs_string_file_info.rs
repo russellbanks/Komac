@@ -79,12 +79,20 @@ impl<'a> VSStringFileInfo<'a> {
         self.children.as_slice()
     }
 
+    /// The entries of the first string table, or nothing if there are no string tables.
     pub fn entries(&'a self) -> impl Iterator<Item = (&'a str, &'a str)> {
-        self.children.first().map(VSStringTable::entries).unwrap()
+        self.children
+            .first()
+            .into_iter()
+            .flat_map(VSStringTable::entries)
     }
 
+    /// The first string table, or an empty table if there are no string tables.
     pub fn table(&'a self) -> IndexMap<&'a str, &'a str> {
-        self.children.first().map(VSStringTable::table).unwrap()
+        self.children
+            .first()
+            .map(VSStringTable::table)
+            .unwrap_or_default()
     }
 }
 
