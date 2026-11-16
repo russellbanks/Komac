@@ -147,9 +147,9 @@ impl<R: Read + Seek> Zip<R> {
                 .into_iter()
                 .map(|path| {
                     Ok(NestedInstallerFiles {
-                        portable_command_alias: if file_analyzer.installers[0].r#type
-                            == Some(InstallerType::Portable)
-                        {
+                        portable_command_alias: if file_analyzer.installers.first().is_some_and(
+                            |installer| installer.r#type == Some(InstallerType::Portable),
+                        ) {
                             CustomType::<PortableCommandAlias>::new(&format!(
                                 "Portable command alias for {path}:",
                             ))
