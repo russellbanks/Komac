@@ -2,7 +2,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use bon::bon;
 use color_eyre::eyre::Result;
-use inquire::{InquireError, Password, error::InquireResult, validator::Validation};
+use inquire::{
+    InquireError, Password, PasswordDisplayMode, error::InquireResult, validator::Validation,
+};
 use keyring_core::Entry;
 use reqwest::{
     Client, StatusCode,
@@ -118,6 +120,8 @@ impl TokenManager {
             };
 
             Password::new(message)
+                .with_display_mode(PasswordDisplayMode::Masked)
+                .with_display_toggle_enabled()
                 .with_validator(validator)
                 .without_confirmation()
                 .prompt()
