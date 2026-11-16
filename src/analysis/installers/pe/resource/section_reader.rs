@@ -213,12 +213,12 @@ mod tests {
         // Jump to middle
         reader.seek(SeekFrom::Start(20)).unwrap();
         let mut buf = [0u8; 1];
-        reader.read(&mut buf).unwrap();
+        reader.read_exact(&mut buf).unwrap();
         assert_eq!(buf[0], 30); // 10 + 20
 
         // Relative jump backwards
         reader.seek(SeekFrom::Current(-10)).unwrap();
-        reader.read(&mut buf).unwrap();
+        reader.read_exact(&mut buf).unwrap();
         assert_eq!(buf[0], 21); // 10 + 11 (position after previous read was 21)
 
         // Jump beyond end (should clamp)
@@ -242,11 +242,11 @@ mod tests {
 
         // Section at file boundaries
         let mut start_reader = SectionReader::new(Cursor::new(create_test_data()), 0, 5).unwrap();
-        start_reader.read(&mut buf).unwrap();
+        assert_eq!(start_reader.read(&mut buf).unwrap(), 5);
         assert_eq!(&buf[..5], &[0, 1, 2, 3, 4]);
 
         let mut end_reader = SectionReader::new(Cursor::new(create_test_data()), 95, 5).unwrap();
-        end_reader.read(&mut buf).unwrap();
+        assert_eq!(end_reader.read(&mut buf).unwrap(), 5);
         assert_eq!(&buf[..5], &[95, 96, 97, 98, 99]);
     }
 }

@@ -110,7 +110,7 @@ mod tests {
     #[case::executable(GitFileMode::Executable, 0o100_755)]
     #[case::directory(GitFileMode::Directory, 0o040_000)]
     #[case::submodule(GitFileMode::Submodule, 0o160_000)]
-    #[case::symlink(GitFileMode::Symlink, 0o1200_00)]
+    #[case::symlink(GitFileMode::Symlink, 0o120_000)]
     fn git_file_mode_to_u16(#[case] git_file_mode: GitFileMode, #[case] expected: u16) {
         assert_eq!(u16::from(git_file_mode), expected);
         assert_eq!(u16::from(git_file_mode), git_file_mode as u16);
