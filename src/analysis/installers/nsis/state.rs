@@ -186,8 +186,11 @@ impl<'data> NsisState<'data> {
             Either::Right(string_bytes)
         };
 
+        // NSIS Park (the Unicode fork of NSIS 2.45-2.46) uses different special codes that aren't
+        // supported yet. Return the raw string rather than misinterpreting its characters as
+        // NSIS 2 codes.
         if self.is_park() {
-            todo!("NSIS Park support");
+            return NsisCow::Borrowed(NsisStr::from_bytes(string_bytes, unicode));
         }
 
         // Check whether the string contains any special characters that need to be decoded
