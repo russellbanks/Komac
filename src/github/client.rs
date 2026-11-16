@@ -22,7 +22,6 @@ use super::{GitHubError, graphql::create_pull_request};
 use crate::{
     commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
     github::{
-        upstream,
         graphql::{
             GRAPHQL_URL,
             create_commit::{FileAddition, FileDeletion},
@@ -35,6 +34,7 @@ use crate::{
             types::GitObjectId,
             update_refs::{RefUpdate, UpdateRefs, UpdateRefsInput},
         },
+        upstream,
         utils::{
             CommitTitle, PackagePath, branch_name, commit_title, is_manifest_file,
             pull_request::{Change, Changes},
@@ -177,7 +177,8 @@ impl GitHub {
     ) -> Result<T, GitHubError> {
         let path = PackagePath::new(identifier, Some(version), Some(&manifest_type));
         let content = self
-            .get_file_content(upstream().owner(), upstream().name(), &path).await?;
+            .get_file_content(upstream().owner(), upstream().name(), &path)
+            .await?;
         let manifest = serde_yaml::from_str::<T>(&content)?;
         Ok(manifest)
     }
@@ -191,7 +192,7 @@ impl GitHub {
             owner.as_deref().unwrap_or(upstream().owner()),
             upstream().name(),
         )
-            .await
+        .await
     }
 
     async fn get_repository_info(

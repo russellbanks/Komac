@@ -5,7 +5,6 @@ mod merge_upstream;
 mod tree;
 
 pub use latest_release::Release;
-
 use reqwest::header::{HeaderName, HeaderValue};
 
 pub const GITHUB_JSON_MIME: HeaderValue = HeaderValue::from_static("application/vnd.github+json");

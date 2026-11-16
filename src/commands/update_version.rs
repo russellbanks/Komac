@@ -25,8 +25,8 @@ use crate::{
     download::Downloader,
     github::{
         GITHUB_HOST, GitHubError,
-        upstream,
         client::{GitHub, GitHubValues},
+        upstream,
         utils::{PackagePath, pull_request::Change},
     },
     manifests::{Url, print_changes},
