@@ -1,12 +1,32 @@
 use std::{borrow::Cow, collections::HashMap};
 
 use serde::Deserialize;
+use thiserror::Error;
 use tracing::warn;
 
+/// A Burn install condition. If the condition couldn't be parsed, it is stored as `None` and
+/// always evaluates to `true`, matching how unknown variables are treated.
 // https://docs.firegiant.com/wix3/tutorial/com-expression-syntax-miscellanea/expression-syntax/
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(from = "Cow<str>")]
-pub struct InstallCondition(Expr);
+pub struct InstallCondition(Option<Expr>);
+
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
+pub enum ParseError {
+    #[error("Expected {expected:?}, got {found:?}")]
+    Expected {
+        expected: Token,
+        found: Option<Token>,
+    },
+    #[error("Expected a literal after {op:?} and name {name}, got {found:?}")]
+    ExpectedLiteral {
+        op: Token,
+        name: String,
+        found: Option<Token>,
+    },
+    #[error("Unexpected token: {0:?}")]
+    UnexpectedToken(Option<Token>),
+}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Value<'manifest> {
@@ -17,16 +37,27 @@ pub enum Value<'manifest> {
 
 impl InstallCondition {
     pub fn new<S: AsRef<str>>(input: S) -> Self {
-        Self(Parser::new(tokenize(input.as_ref())).parse_expr())
+        let input = input.as_ref();
+        Self(
+            Self::try_parse(input)
+                .inspect_err(|error| {
+                    warn!("Failed to parse Burn install condition `{input}`: {error}");
+                })
+                .ok(),
+        )
+    }
+
+    pub fn try_parse(input: &str) -> Result<Expr, ParseError> {
+        Parser::new(tokenize(input)).parse_expr()
     }
 
     pub fn evaluate(&self, variables: &HashMap<&str, Value>) -> bool {
-        self.inner().eval(variables)
+        self.inner().is_none_or(|expr| expr.eval(variables))
     }
 
     #[inline]
-    const fn inner(&self) -> &Expr {
-        &self.0
+    const fn inner(&self) -> Option<&Expr> {
+        self.0.as_ref()
     }
 }
 
@@ -53,7 +84,7 @@ impl Parser {
         Self { tokens, pos: 0 }
     }
 
-    fn parse_expr(&mut self) -> Expr {
+    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
         self.parse_or()
     }
 
@@ -65,51 +96,55 @@ impl Parser {
         self.pos += 1;
     }
 
-    fn expect(&mut self, expected: &Token) {
-        if self.peek() == Some(expected) {
+    fn expect(&mut self, expected: Token) -> Result<(), ParseError> {
+        if self.peek() == Some(&expected) {
             self.advance();
+            Ok(())
         } else {
-            panic!("Expected {expected:?}, got {:?}", self.peek());
+            Err(ParseError::Expected {
+                expected,
+                found: self.peek().cloned(),
+            })
         }
     }
 
-    fn parse_or(&mut self) -> Expr {
-        let mut expr = self.parse_and();
+    fn parse_or(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.parse_and()?;
         while matches!(self.peek(), Some(Token::Or)) {
             self.advance();
-            let rhs = self.parse_and();
+            let rhs = self.parse_and()?;
             expr = Expr::Or(Box::new(expr), Box::new(rhs));
         }
-        expr
+        Ok(expr)
     }
 
-    fn parse_and(&mut self) -> Expr {
-        let mut expr = self.parse_not();
+    fn parse_and(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.parse_not()?;
         while matches!(self.peek(), Some(Token::And)) {
             self.advance();
-            let rhs = self.parse_not();
+            let rhs = self.parse_not()?;
             expr = Expr::And(Box::new(expr), Box::new(rhs));
         }
-        expr
+        Ok(expr)
     }
 
-    fn parse_not(&mut self) -> Expr {
+    fn parse_not(&mut self) -> Result<Expr, ParseError> {
         if matches!(self.peek(), Some(Token::Not)) {
             self.advance();
-            let expr = self.parse_primary();
-            Expr::Not(Box::new(expr))
+            let expr = self.parse_primary()?;
+            Ok(Expr::Not(Box::new(expr)))
         } else {
             self.parse_primary()
         }
     }
 
-    fn parse_primary(&mut self) -> Expr {
+    fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         match self.peek() {
             Some(Token::LParen) => {
                 self.advance();
-                let expr = self.parse_expr();
-                self.expect(&Token::RParen);
-                expr
+                let expr = self.parse_expr()?;
+                self.expect(Token::RParen)?;
+                Ok(expr)
             }
             Some(Token::Ident(name)) => {
                 let name = name.clone();
@@ -125,8 +160,8 @@ impl Parser {
                             | Token::Lt
                             | Token::Le
                     )
-                ) {
-                    let op = self.peek().cloned().unwrap();
+                ) && let Some(op) = self.peek().cloned()
+                {
                     self.advance();
 
                     let lit = match self.peek() {
@@ -144,12 +179,16 @@ impl Parser {
                             self.advance();
                             Literal::Str(s)
                         }
-                        other => panic!(
-                            "Expected literal after operator {op:?} and name {name}, got {other:?}"
-                        ),
+                        other => {
+                            return Err(ParseError::ExpectedLiteral {
+                                op,
+                                name,
+                                found: other.cloned(),
+                            });
+                        }
                     };
 
-                    match op {
+                    Ok(match op {
                         Token::Eq => Expr::Eq(name, lit),
                         Token::NotEq => Expr::NotEq(name, lit),
                         Token::EqAnyCase => Expr::EqAnyCase(name, lit),
@@ -157,22 +196,22 @@ impl Parser {
                         Token::Ge => Expr::Ge(name, lit),
                         Token::Lt => Expr::Lt(name, lit),
                         Token::Le => Expr::Le(name, lit),
-                        _ => unreachable!(),
-                    }
+                        _ => unreachable!("op is one of the comparison tokens matched above"),
+                    })
                 } else {
-                    Expr::Var(name)
+                    Ok(Expr::Var(name))
                 }
             }
             Some(&Token::Number(num)) => {
                 self.advance();
-                Expr::Literal(Literal::Int(num))
+                Ok(Expr::Literal(Literal::Int(num)))
             }
             Some(Token::String(s)) => {
                 let s = s.clone();
                 self.advance();
-                Expr::Literal(Literal::Str(s))
+                Ok(Expr::Literal(Literal::Str(s)))
             }
-            other => panic!("Unexpected token: {other:?}"),
+            other => Err(ParseError::UnexpectedToken(other.cloned())),
         }
     }
 }
@@ -421,5 +460,17 @@ mod tests {
             InstallCondition::new(condition).evaluate(&variables()),
             expected
         );
+    }
+
+    #[rstest]
+    #[case::unclosed_paren("(VersionNT64")]
+    #[case::missing_literal("NativeMachine =")]
+    #[case::operator_without_name("= 1")]
+    #[case::dangling_and("VersionNT64 AND")]
+    #[case::empty("")]
+    fn malformed_condition(#[case] condition: &str) {
+        assert!(InstallCondition::try_parse(condition).is_err());
+        // An unparseable condition is treated like an unknown variable and evaluates to true
+        assert!(InstallCondition::new(condition).evaluate(&variables()));
     }
 }
