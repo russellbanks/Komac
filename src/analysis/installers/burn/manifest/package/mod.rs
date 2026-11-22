@@ -6,9 +6,8 @@ use std::collections::HashMap;
 use install_condition::{InstallCondition, Value};
 use msi::MsiPackage;
 use serde::Deserialize;
-use serde_with::{DisplayFromStr, serde_as};
 
-use super::{BundleCacheType, bool_from_yes_no};
+use super::{BundleCacheType, bool_from_yes_no, deserialize_from_str};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -45,7 +44,6 @@ impl Package {
 /// Attributes that are present in all package types
 ///
 /// <https://github.com/wixtoolset/wix/blob/main/src/wix/WixToolset.Core.Burn/Bundles/CreateBurnManifestCommand.cs#L355>
-#[serde_as]
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PackageBase {
@@ -55,11 +53,9 @@ pub struct PackageBase {
     cache: BundleCacheType,
     #[serde(rename = "@CacheId")]
     cache_id: String,
-    #[serde(rename = "@InstallSize")]
-    #[serde_as(as = "DisplayFromStr")]
+    #[serde(rename = "@InstallSize", deserialize_with = "deserialize_from_str")]
     install_size: u32,
-    #[serde(rename = "@Size")]
-    #[serde_as(as = "DisplayFromStr")]
+    #[serde(rename = "@Size", deserialize_with = "deserialize_from_str")]
     size: u32,
     #[serde(rename = "@PerMachine", deserialize_with = "bool_from_yes_no", default)]
     per_machine: bool,
@@ -142,5 +138,31 @@ impl PackageBase {
         self.install_condition
             .as_ref()
             .is_none_or(|condition| condition.evaluate(variables))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Package;
+
+    #[test]
+    fn package_sizes() {
+        let Package::Exe(exe) = quick_xml::de::from_str::<Package>(
+            r#"<ExePackage Id="exe" CacheId="exe_cache" InstallSize="1234" Size="5678" />"#,
+        )
+        .unwrap() else {
+            panic!("expected an ExePackage");
+        };
+        assert_eq!(exe.install_size, 1234);
+        assert_eq!(exe.size, 5678);
+
+        let Package::Msi(msi) = quick_xml::de::from_str::<Package>(
+            r#"<MsiPackage Id="msi" CacheId="msi_cache" InstallSize="4321" Size="8765" ProductCode="{00000000-0000-0000-0000-000000000000}" Language="1033" Version="1.2.3" />"#,
+        )
+        .unwrap() else {
+            panic!("expected an MsiPackage");
+        };
+        assert_eq!(msi.base.install_size, 4321);
+        assert_eq!(msi.base.size, 8765);
     }
 }
