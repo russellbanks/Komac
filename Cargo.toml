@@ -3,7 +3,7 @@ name = "komac"
 version = "2.17.2"
 authors = ["Russell Banks"]
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.96"
 description = "A manifest creator for winget-pkgs"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/russellbanks/Komac"
@@ -118,6 +118,7 @@ rustls = ["dbus-secret-service-keyring-store/crypto-rust", "reqwest/rustls"]
 
 [build-dependencies]
 cynic-codegen = { version = "3.14.0", features = ["rkyv"] }
+vergen-gix = { version = "10.0.4", features = ["emit_and_set", "vcs_info"] }
 windows_exe_info = { version = "0.5.3", features = ["manifest"] }
 
 [dev-dependencies]
