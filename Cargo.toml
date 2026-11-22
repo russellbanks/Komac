@@ -96,7 +96,7 @@ tree-sitter-yaml = "0.7.2"
 typed-path = "0.13.0"
 url = { version = "2.5.9", features = ["serde"] }
 uuid = { version = "1.29.3", features = ["serde", "v4"] }
-walkdir = "2.5.0"
+walkdir = "2.5.1"
 winget-types = { version = "0.6.0", features = ["serde", "std", "chrono"] }
 zerocopy = { version = "0.8.63", features = ["derive", "std"] }
 zip = { version = "9.8.1", default-features = false, features = ["deflate", "deflate64"] }
