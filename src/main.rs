@@ -68,7 +68,7 @@ fn setup_logging() {
 }
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None, disable_version_flag = true)]
+#[command(author, version = env!("KOMAC_VERSION"), about, long_about = None, disable_version_flag = true)]
 struct Cli {
     #[arg(short = 'v', short_alias = 'V', long, action = clap::builder::ArgAction::Version)]
     version: (),
