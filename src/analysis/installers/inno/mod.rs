@@ -1,4 +1,3 @@
-use const_format::formatcp;
 use inno::{
     InnoInner,
     header::{Architecture as InnoArchitecture, PrivilegesRequiredOverrides},
@@ -244,8 +243,8 @@ pub fn to_relative_install_dir(mut install_dir: String, scope: Scope) -> String 
     const USER_PROGRAM_FILES: &str = "{userpf}";
     const USER_COMMON_FILES: &str = "{usercf}";
 
-    const RELATIVE_USER_PROGRAM_FILES: &str = formatcp!(r"{RELATIVE_LOCAL_APP_DATA}\Programs");
-    const RELATIVE_USER_COMMON_FILES: &str = formatcp!(r"{RELATIVE_USER_PROGRAM_FILES}\Common");
+    const RELATIVE_USER_PROGRAM_FILES: &str = r"%LocalAppData%\Programs";
+    const RELATIVE_USER_COMMON_FILES: &str = r"%LocalAppData%\Programs\Common";
 
     let (
         auto_program_files,

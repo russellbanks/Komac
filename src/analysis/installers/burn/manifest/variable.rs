@@ -1,14 +1,8 @@
 use std::borrow::Cow;
 
-use const_format::concatcp;
 use serde::Deserialize;
 
 use super::bool_from_yes_no;
-use crate::analysis::installers::utils::{
-    RELATIVE_APP_DATA, RELATIVE_COMMON_FILES_32, RELATIVE_COMMON_FILES_64, RELATIVE_LOCAL_APP_DATA,
-    RELATIVE_PROGRAM_DATA, RELATIVE_PROGRAM_FILES_32, RELATIVE_PROGRAM_FILES_64,
-    RELATIVE_TEMP_FOLDER, RELATIVE_WINDOWS_DIR,
-};
 
 /// <https://github.com/wixtoolset/wix/blob/main/src/wix/WixToolset.Core.Burn/Bundles/CreateBurnManifestCommand.cs#L133>
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -30,41 +24,17 @@ impl Variable {
     pub fn resolved_value(&self) -> Option<Cow<'_, str>> {
         /// <https://docs.firegiant.com/wix/tools/burn/builtin-variables/>
         const BUILT_IN_VARIABLES: [(&str, &str); 11] = [
-            ("[AppDataFolder]", concatcp!(RELATIVE_APP_DATA, '\\')),
-            (
-                "[CommonAppDataFolder]",
-                concatcp!(RELATIVE_PROGRAM_DATA, '\\'),
-            ),
-            (
-                "[CommonFilesFolder]",
-                concatcp!(RELATIVE_COMMON_FILES_32, '\\'),
-            ),
-            (
-                "[CommonFiles64Folder]",
-                concatcp!(RELATIVE_COMMON_FILES_64, '\\'),
-            ),
-            (
-                "[CommonFiles6432Folder]",
-                concatcp!(RELATIVE_COMMON_FILES_64, '\\'),
-            ),
-            (
-                "[LocalAppDataFolder",
-                concatcp!(RELATIVE_LOCAL_APP_DATA, '\\'),
-            ),
-            (
-                "[ProgramFilesFolder]",
-                concatcp!(RELATIVE_PROGRAM_FILES_32, '\\'),
-            ),
-            (
-                "[ProgramFiles64Folder]",
-                concatcp!(RELATIVE_PROGRAM_FILES_64, '\\'),
-            ),
-            (
-                "[ProgramFiles6432Folder]",
-                concatcp!(RELATIVE_PROGRAM_FILES_64, '\\'),
-            ),
-            ("[TempFolder]", concatcp!(RELATIVE_TEMP_FOLDER, '\\')),
-            ("[WindowsFolder]", concatcp!(RELATIVE_WINDOWS_DIR, '\\')),
+            ("[AppDataFolder]", "%AppData%\\"),
+            ("[CommonAppDataFolder]", "%ProgramData%\\"),
+            ("[CommonFilesFolder]", "%CommonProgramFiles(x86)%\\"),
+            ("[CommonFiles64Folder]", "%CommonProgramFiles%\\"),
+            ("[CommonFiles6432Folder]", "%CommonProgramFiles%\\"),
+            ("[LocalAppDataFolder", "%LocalAppData%\\"),
+            ("[ProgramFilesFolder]", "%ProgramFiles(x86)%\\"),
+            ("[ProgramFiles64Folder]", "%ProgramFiles%\\"),
+            ("[ProgramFiles6432Folder]", "%ProgramFiles%\\"),
+            ("[TempFolder]", "%Temp%\\"),
+            ("[WindowsFolder]", "%WinDir%\\"),
         ];
 
         const ESCAPES: [(&str, &str); 1] = [("&quot;", r#"""#)];

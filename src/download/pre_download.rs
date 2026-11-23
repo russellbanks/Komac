@@ -1,7 +1,6 @@
 use std::{borrow::Cow, fmt};
 
 use camino::Utf8Path;
-use const_format::formatcp;
 use reqwest::{Client, ClientBuilder, Response, header::HeaderValue, redirect::Policy};
 use uuid::Uuid;
 use winget_types::installer::VALID_FILE_EXTENSIONS;
@@ -56,7 +55,7 @@ impl PreDownload {
         content_disposition: Option<&'a HeaderValue>,
     ) -> Cow<'a, str> {
         const FILENAME: &str = "filename";
-        const FILENAME_EXT: &str = formatcp!("{FILENAME}*");
+        const FILENAME_EXT: &str = "filename*";
 
         if let Some(content_disposition) = content_disposition
             && let Ok(content_disposition) = content_disposition.to_str()

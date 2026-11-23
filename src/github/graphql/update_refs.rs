@@ -1,5 +1,4 @@
 use bon::Builder;
-use const_format::str_repeat;
 use ref_update_builder::SetAfterOid;
 
 use super::{
@@ -91,7 +90,7 @@ pub struct RefUpdate {
 
 impl RefUpdate {
     pub fn delete() -> RefUpdateBuilder<SetAfterOid> {
-        const DELETE_ID: &str = str_repeat!("0", 40);
+        const DELETE_ID: &str = "0000000000000000000000000000000000000000";
 
         Self::builder().after_oid(DELETE_ID)
     }
