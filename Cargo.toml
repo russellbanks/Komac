@@ -105,7 +105,7 @@ zip = { version = "9.8.1", default-features = false, features = ["deflate", "def
 dbus-secret-service-keyring-store = { version = "1.0.1", features = ["vendored"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-apple-native-keyring-store = { version = "1.0.2", features = ["keychain"] }
+apple-native-keyring-store = { version = "1.0.3", features = ["keychain"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-native-keyring-store = { version = "1.1.0", default-features = false }
