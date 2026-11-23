@@ -1,7 +1,6 @@
 use std::{borrow::Cow, fmt::Write, io, path::Path, slice, vec};
 
 use clap::{crate_name, crate_version};
-use const_format::concatc;
 use futures_util::{StreamExt, TryStreamExt, stream};
 use serde::Serialize;
 use tokio::{fs, fs::File, io::AsyncWriteExt};
@@ -100,7 +99,7 @@ impl Change {
 fn convert_to_crlf(input: &str) -> Cow<'_, str> {
     const CR: char = '\r';
     const LF: char = '\n';
-    const CRLF: &str = concatc!(CR, LF);
+    const CRLF: &str = "\r\n";
 
     let mut buffer = None;
     let mut position = 0;
