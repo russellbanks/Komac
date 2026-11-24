@@ -1,5 +1,6 @@
 use std::{
     collections::BTreeSet,
+    io::{IsTerminal, stdin},
     num::{NonZeroU32, NonZeroUsize},
     path::PathBuf,
 };
@@ -14,6 +15,7 @@ use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use strsim::levenshtein;
 use tokio::try_join;
+use tracing::warn;
 use winget_types::{
     InstallerManifest, PackageIdentifier, PackageVersion,
     installer::{Installer, InstallerType, NestedInstallerFiles},
@@ -21,7 +23,7 @@ use winget_types::{
 };
 
 use crate::{
-    commands::utils::{SPINNER_TICK_RATE, SubmitOption},
+    commands::utils::{SPINNER_TICK_RATE, SubmitOption, environment::CI},
     download::Downloader,
     github::{
         GITHUB_HOST, GitHubError,
@@ -169,25 +171,35 @@ impl UpdateVersion {
 
         manifests.installer.optimize();
 
-        let release_notes_url = if manifests.default_locale.release_notes.is_some()
-            || manifests.default_locale.release_notes_url.is_some()
+        // The previous version had a release notes URL that would otherwise be dropped
+        if self.release_notes_url.is_none()
+            && github_values
+                .as_ref()
+                .and_then(GitHubValues::release_notes_url)
+                .is_none()
+            && let Some(previous_url) = &manifests.default_locale.release_notes_url
         {
-            optional_prompt(
-                self.release_notes_url.clone(),
-                manifests
-                    .default_locale
-                    .release_notes_url
-                    .as_ref()
-                    .map(ReleaseNotesUrl::as_str),
-            )?
-        } else {
-            self.release_notes_url.clone()
-        };
+            if self.is_interactive() {
+                self.release_notes_url = optional_prompt(
+                    None,
+                    Some(suggest_release_notes_url(
+                        previous_url.as_str(),
+                        manifests.default_locale.package_version.as_str(),
+                        self.version.as_str(),
+                    )),
+                )?;
+            } else {
+                warn!(
+                    "The previous version had a release notes URL ({previous_url}). Use --release-notes-url to set one for {}",
+                    self.version
+                );
+            }
+        }
 
         manifests.update(
             &self.version,
             &mut github_values,
-            release_notes_url.as_ref(),
+            self.release_notes_url.as_ref(),
         );
 
         let mut changes = manifests.create(
@@ -258,6 +270,10 @@ impl UpdateVersion {
         Ok(())
     }
 
+    fn is_interactive(&self) -> bool {
+        !self.submit && !self.exit && !self.dry_run && !*CI && stdin().is_terminal()
+    }
+
     fn resolve_replace_version<'a>(
         &'a self,
         versions: &'a BTreeSet<PackageVersion>,
@@ -305,6 +321,43 @@ impl UpdateVersion {
             Ok(None)
         }
     }
+}
+
+/// Suggests a release notes URL for the new version by replacing occurrences of the previous
+/// version in the previous URL. Occurrences that are part of a longer version, such as `1.2` in
+/// `1.2.3`, are left untouched. A URL without the previous version is returned as is, as it's
+/// likely to be shared between versions.
+fn suggest_release_notes_url(
+    previous_url: &str,
+    previous_version: &str,
+    new_version: &str,
+) -> String {
+    let is_digit = |char: char| char.is_ascii_digit();
+    let mut suggested = String::with_capacity(previous_url.len());
+    let mut last_end = 0;
+
+    for (start, _) in previous_url.match_indices(previous_version) {
+        let end = start + previous_version.len();
+        let before = &previous_url[..start];
+        let after = &previous_url[end..];
+        let continues_before = before
+            .strip_suffix('.')
+            .unwrap_or(before)
+            .ends_with(is_digit);
+        let continues_after = after
+            .strip_prefix('.')
+            .unwrap_or(after)
+            .starts_with(is_digit);
+
+        if !continues_before && !continues_after {
+            suggested.push_str(&previous_url[last_end..start]);
+            suggested.push_str(new_version);
+            last_end = end;
+        }
+    }
+
+    suggested.push_str(&previous_url[last_end..]);
+    suggested
 }
 
 /// Fills in the nested installer of a zip installer that couldn't be detected, such as when the zip
@@ -372,12 +425,56 @@ mod tests {
     use std::collections::BTreeSet;
 
     use camino::Utf8PathBuf;
+    use rstest::rstest;
     use winget_types::{
         InstallerManifest,
         installer::{Architecture, Installer, InstallerType, NestedInstallerFiles},
     };
 
-    use super::{carry_over_nested_installer, fix_relative_path};
+    use super::{carry_over_nested_installer, fix_relative_path, suggest_release_notes_url};
+
+    #[rstest]
+    #[case(
+        "https://github.com/owner/repo/releases/tag/v1.2.3",
+        "1.2.3",
+        "1.3.0",
+        "https://github.com/owner/repo/releases/tag/v1.3.0"
+    )]
+    #[case(
+        "https://example.com/app_1.2.3/notes-1.2.3.html",
+        "1.2.3",
+        "2.0.0",
+        "https://example.com/app_2.0.0/notes-2.0.0.html"
+    )]
+    #[case(
+        "https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html",
+        "13.0.2",
+        "13.1.0",
+        "https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html"
+    )]
+    #[case(
+        "https://example.com/releases/1.2.30",
+        "1.2.3",
+        "1.2.4",
+        "https://example.com/releases/1.2.30"
+    )]
+    #[case(
+        "https://example.com/v5/releases/15",
+        "5",
+        "6",
+        "https://example.com/v6/releases/15"
+    )]
+    fn suggests_release_notes_url(
+        #[case] previous_url: &str,
+        #[case] previous_version: &str,
+        #[case] new_version: &str,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(
+            suggest_release_notes_url(previous_url, previous_version, new_version),
+            expected
+        );
+    }
 
     fn nested_files(paths: &[&str]) -> BTreeSet<NestedInstallerFiles> {
         paths

@@ -619,6 +619,16 @@ pub struct GitHubValues {
     pub topics: BTreeSet<Tag>,
 }
 
+impl GitHubValues {
+    /// The release's URL, only when the release has notes for it to point to.
+    pub const fn release_notes_url(&self) -> Option<&ReleaseNotesUrl> {
+        match self.release_notes {
+            Some(_) => self.release_notes_url.as_ref(),
+            None => None,
+        }
+    }
+}
+
 pub struct GitHubFile {
     pub name: String,
     pub text: String,
