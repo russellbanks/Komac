@@ -3,7 +3,7 @@ use std::{fmt, time::Duration};
 use anstream::println;
 use clap::Parser;
 use color_eyre::{Result, eyre::Context};
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressFinish};
 use owo_colors::OwoColorize;
 use rand::random_range;
 use secrecy::SecretString;
@@ -77,13 +77,20 @@ impl SyncFork {
             }
         };
 
-        // Show an indeterminate progress bar while upstream changes are being merged
-        let pb = ProgressBar::new_spinner().with_message(format!(
-            "Merging {} from {} into {}",
-            Commits(upstream_commits),
-            winget_pkgs.full_name.blue(),
-            fork.full_name.blue(),
-        ));
+        let commits = Commits(upstream_commits);
+
+        // Show an indeterminate progress bar while upstream changes are being merged. It is
+        // cleared when dropped, so a failed sync does not leave it on screen above the error.
+        let pb = ProgressBar::new_spinner()
+            .with_finish(ProgressFinish::AndClear)
+            .with_message(format!(
+                "Merging {}",
+                MergeSummary {
+                    commits,
+                    upstream: winget_pkgs.full_name.blue(),
+                    fork: fork.full_name.blue(),
+                }
+            ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         let response = github
@@ -91,10 +98,12 @@ impl SyncFork {
             .await
             .with_context(|| {
                 format!(
-                    "while merging {} from {} into {}",
-                    Commits(upstream_commits),
-                    winget_pkgs.full_name,
-                    fork.full_name
+                    "Failed to merge {}",
+                    MergeSummary {
+                        commits,
+                        upstream: &winget_pkgs.full_name,
+                        fork: &fork.full_name,
+                    }
                 )
             })?;
 
@@ -102,11 +111,13 @@ impl SyncFork {
 
         match response.merge_type {
             MergeType::Merge | MergeType::FastForward => println!(
-                "{} merged {} from {} into {} ({})",
+                "{} merged {} ({})",
                 "Successfully".green(),
-                Commits(upstream_commits),
-                winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
-                fork.full_name.hyperlink(fork.url).blue(),
+                MergeSummary {
+                    commits,
+                    upstream: winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
+                    fork: fork.full_name.hyperlink(&fork.url).blue(),
+                },
                 response.merge_type,
             ),
             // GitHub found nothing to merge even though the comparison said otherwise, e.g.
@@ -122,21 +133,23 @@ impl SyncFork {
     }
 
     async fn vhs() -> Result<()> {
-        let merge_message = format!(
-            "{} upstream commits from {} into {}",
-            random_range(50..=500),
-            upstream().blue(),
-            format_args!("octocat/{}", upstream().name()).blue()
-        );
+        let fork = format!("octocat/{}", upstream().name());
+        let summary = MergeSummary {
+            commits: Commits(random_range(50..=500)),
+            upstream: upstream().blue(),
+            fork: fork.blue(),
+        };
 
-        let pb = ProgressBar::new_spinner().with_message(format!("Merging {merge_message}"));
+        let pb = ProgressBar::new_spinner()
+            .with_finish(ProgressFinish::AndClear)
+            .with_message(format!("Merging {summary}"));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         sleep(Duration::from_secs(1)).await;
 
         pb.finish_and_clear();
 
-        print!("{} merged {merge_message}", "Successfully".green());
+        println!("{} merged {summary}", "Successfully".green());
 
         Ok(())
     }
@@ -154,11 +167,43 @@ impl fmt::Display for Commits {
     }
 }
 
+/// Describes a sync, e.g. `5 commits from microsoft/winget-pkgs into octocat/winget-pkgs`.
+///
+/// The repositories are generic so each message can style them (color, hyperlinks) as it needs.
+struct MergeSummary<Upstream, Fork> {
+    commits: Commits,
+    upstream: Upstream,
+    fork: Fork,
+}
+
+impl<Upstream: fmt::Display, Fork: fmt::Display> fmt::Display for MergeSummary<Upstream, Fork> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} from {} into {}",
+            self.commits, self.upstream, self.fork
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
 
-    use super::Commits;
+    use super::{Commits, MergeSummary};
+
+    #[rstest]
+    #[case(1, "1 commit from microsoft/winget-pkgs into octocat/winget-pkgs")]
+    #[case(5, "5 commits from microsoft/winget-pkgs into octocat/winget-pkgs")]
+    fn merge_summary(#[case] count: u32, #[case] expected: &str) {
+        let summary = MergeSummary {
+            commits: Commits(count),
+            upstream: "microsoft/winget-pkgs",
+            fork: "octocat/winget-pkgs",
+        };
+
+        assert_eq!(summary.to_string(), expected);
+    }
 
     #[rstest]
     #[case(0, "0 commits")]
