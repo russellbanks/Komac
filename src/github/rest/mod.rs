@@ -2,9 +2,11 @@ mod compare_commits;
 mod error;
 mod latest_release;
 mod merge_upstream;
+mod transport;
 mod tree;
 
 pub use compare_commits::Divergence;
+pub use error::RestError;
 pub use latest_release::Release;
 pub use merge_upstream::MergeType;
 use reqwest::header::{HeaderName, HeaderValue};

@@ -3,14 +3,14 @@ use cynic::http::CynicReqwestError;
 use thiserror::Error;
 use winget_types::{ManifestType, PackageIdentifier};
 
-use super::{upstream, utils::PackagePath};
+use super::{rest::RestError, upstream, utils::PackagePath};
 
 #[derive(Debug, Error)]
 pub enum GitHubError {
     #[error(transparent)]
     GraphQL(eyre::Error),
     #[error(transparent)]
-    Rest(eyre::Error),
+    Rest(#[from] RestError),
     #[error("{0} does not exist in {upstream}", upstream = upstream())]
     PackageNonExistent(PackageIdentifier),
     #[error("No {type} manifest was found in {path}")]

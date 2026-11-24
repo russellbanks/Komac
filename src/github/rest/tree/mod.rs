@@ -7,14 +7,15 @@ use std::collections::BTreeSet;
 pub use git_file_mode::GitFileMode;
 use itertools::Itertools;
 pub use object::TreeObject;
-use reqwest::{StatusCode, header::ACCEPT};
+use reqwest::{Method, StatusCode};
 use serde::{Deserialize, Serialize};
 pub use r#type::TreeType;
 use winget_types::{PackageIdentifier, PackageVersion};
 
 use super::{
     super::{GitHubError, client::GitHub, upstream, utils::PackagePath},
-    GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION,
+    error::RestError,
+    transport::SendJson,
 };
 
 /// A Git Tree which represents the hierarchy between files in a Git repository.
@@ -44,9 +45,10 @@ impl GitHub {
             GitHubError::NoValidFiles { .. } => {
                 GitHubError::PackageNonExistent(package_identifier.clone())
             }
-            GitHubError::Reqwest(ref err) if err.status() == Some(StatusCode::NOT_FOUND) => {
-                GitHubError::PackageNonExistent(package_identifier.clone())
-            }
+            GitHubError::Rest(RestError {
+                status: StatusCode::NOT_FOUND,
+                ..
+            }) => GitHubError::PackageNonExistent(package_identifier.clone()),
             other => other,
         })
     }
@@ -64,21 +66,13 @@ impl GitHub {
     ) -> Result<BTreeSet<PackageVersion>, GitHubError> {
         const SEPARATOR: char = '/';
 
-        let endpoint = format!(
-            "{REST_API_URL}/repos/{owner}/{repo}/git/trees/HEAD:{path}?recursive={recursive}",
-            recursive = true
-        );
-
-        let response = self
-            .0
-            .get(endpoint)
-            .header(ACCEPT, GITHUB_JSON_MIME)
-            .header(X_GITHUB_API_VERSION, REST_API_VERSION)
-            .send()
-            .await?
-            .error_for_status()?;
-
-        let GitTree { tree, .. } = response.json::<GitTree>().await?;
+        let GitTree { tree, .. } = self
+            .rest(
+                Method::GET,
+                &format!("repos/{owner}/{repo}/git/trees/HEAD:{path}?recursive=true"),
+            )
+            .send_json::<GitTree>()
+            .await?;
 
         let versions = tree
             .iter()

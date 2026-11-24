@@ -2,13 +2,11 @@ mod divergence;
 mod status;
 
 pub use divergence::Divergence;
-use reqwest::header::ACCEPT;
+use reqwest::Method;
 use serde::Deserialize;
 use status::Status;
 
-use super::{
-    GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION, error::RestError,
-};
+use super::transport::SendJson;
 use crate::github::{GitHubError, client::GitHub, upstream};
 
 /// The subset of GitHub's "Compare two commits" response that is needed.
@@ -42,33 +40,16 @@ impl GitHub {
     /// Compares the default branch of the fork owned by `fork_owner` with upstream's default
     /// branch.
     pub async fn compare_upstream(&self, fork_owner: &str) -> Result<Divergence, GitHubError> {
-        let endpoint = format!(
-            "{REST_API_URL}/repos/{fork_owner}/{name}/compare/HEAD...{owner}:HEAD",
+        let path = format!(
+            "repos/{fork_owner}/{name}/compare/HEAD...{owner}:HEAD",
             name = upstream().name(),
             owner = upstream().owner(),
         );
 
-        let response = self
-            .0
-            .get(endpoint)
-            .header(ACCEPT, GITHUB_JSON_MIME)
-            .header(X_GITHUB_API_VERSION, REST_API_VERSION)
-            .send()
-            .await?;
-
-        if response.status().is_success() {
-            response
-                .json::<CompareCommits>()
-                .await
-                .map(CompareCommits::fork_divergence)
-                .map_err(GitHubError::from)
-        } else {
-            Err(response
-                .json::<RestError>()
-                .await
-                .map_err(GitHubError::from)?
-                .into())
-        }
+        self.rest(Method::GET, &path)
+            .send_json::<CompareCommits>()
+            .await
+            .map(CompareCommits::fork_divergence)
     }
 }
 

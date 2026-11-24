@@ -5,13 +5,12 @@
 mod merge_type;
 
 pub use merge_type::MergeType;
-use reqwest::header::ACCEPT;
+use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
 use super::{
     super::{GitHubError, client::GitHub, upstream},
-    GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION,
-    error::RestError,
+    transport::SendJson,
 };
 
 #[derive(Serialize)]
@@ -38,29 +37,15 @@ impl GitHub {
     ///
     /// See <https://docs.github.com/rest/branches/branches#sync-a-fork-branch-with-the-upstream-repository>.
     pub async fn sync_fork(&self, fork_owner: &str, branch: &str) -> Result<Response, GitHubError> {
-        let endpoint = format!(
-            "{REST_API_URL}/repos/{fork_owner}/{name}/merge-upstream",
+        let path = format!(
+            "repos/{fork_owner}/{name}/merge-upstream",
             name = upstream().name()
         );
 
-        let response = self
-            .0
-            .post(endpoint)
-            .header(ACCEPT, GITHUB_JSON_MIME)
-            .header(X_GITHUB_API_VERSION, REST_API_VERSION)
+        self.rest(Method::POST, &path)
             .json(&Body { branch })
-            .send()
-            .await?;
-
-        if response.status().is_success() {
-            response.json::<Response>().await.map_err(GitHubError::from)
-        } else {
-            Err(response
-                .json::<RestError>()
-                .await
-                .map_err(GitHubError::from)?
-                .into())
-        }
+            .send_json::<Response>()
+            .await
     }
 }
 
@@ -96,34 +81,5 @@ mod tests {
         );
         assert_eq!(response.merge_type, MergeType::FastForward);
         assert_eq!(response.base_branch, "defunkt:main");
-    }
-
-    #[test]
-    fn error_response_deserializes() {
-        let error = serde_json::from_str::<RestError>(
-            r#"{
-                "status": "422",
-                "message": "refusing to allow a Personal Access Token to create or update workflow `.github/workflows/foo.yaml` without `workflow` scope"
-            }"#,
-        ).unwrap();
-
-        assert_eq!(error.status.as_deref(), Some("422"));
-        assert_eq!(
-            error.message,
-            "refusing to allow a Personal Access Token to create or update workflow `.github/workflows/foo.yaml` without `workflow` scope"
-        );
-    }
-
-    #[test]
-    fn error_response_without_status_deserializes() {
-        let error = serde_json::from_str::<RestError>(
-            r#"{
-                "message": "Validation Failed"
-            }"#,
-        )
-        .unwrap();
-
-        assert!(error.status.is_none());
-        assert_eq!(error.message, "Validation Failed");
     }
 }
