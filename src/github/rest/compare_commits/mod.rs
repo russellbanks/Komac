@@ -1,63 +1,47 @@
+mod divergence;
 mod status;
 
+pub use divergence::Divergence;
 use reqwest::header::ACCEPT;
 use serde::Deserialize;
-pub use status::Status;
+use status::Status;
 
 use super::{
     GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION, error::RestError,
 };
 use crate::github::{GitHubError, client::GitHub, upstream};
 
+/// The subset of GitHub's "Compare two commits" response that is needed.
+///
+/// `status`, `ahead_by` and `behind_by` describe the head commit relative to the base commit.
 #[derive(Copy, Clone, Deserialize)]
-pub struct CompareCommits {
+struct CompareCommits {
     status: Status,
     ahead_by: u32,
+    behind_by: u32,
 }
 
 impl CompareCommits {
-    /// Returns `true` if the commit has diverged from the comparison commit.
-    #[expect(unused)]
+    /// Interprets a comparison whose base is the fork and whose head is upstream, flipping
+    /// GitHub's head-relative status so that it describes the fork.
     #[must_use]
-    #[inline]
-    pub const fn is_diverged(self) -> bool {
-        self.status.is_diverged()
-    }
-
-    /// Returns `true` if the commit is ahead of the comparison commit.
-    #[expect(unused)]
-    #[must_use]
-    #[inline]
-    pub const fn is_ahead(self) -> bool {
-        self.status.is_ahead()
-    }
-
-    /// Returns `true` if the commit is behind the comparison commit.
-    #[expect(unused)]
-    #[must_use]
-    #[inline]
-    pub const fn is_behind(self) -> bool {
-        self.status.is_behind()
-    }
-
-    /// Returns `true` if the commit is identical to the comparison commit.
-    #[must_use]
-    #[inline]
-    pub const fn is_identical(self) -> bool {
-        self.status.is_identical()
-    }
-
-    /// Returns the number of commits the commit is ahead of the comparison
-    /// commit.
-    #[must_use]
-    #[inline]
-    pub const fn ahead_by(self) -> u32 {
-        self.ahead_by
+    const fn fork_divergence(self) -> Divergence {
+        match self.status {
+            Status::Identical => Divergence::Identical,
+            Status::Ahead => Divergence::Behind { by: self.ahead_by },
+            Status::Behind => Divergence::Ahead { by: self.behind_by },
+            Status::Diverged => Divergence::Diverged {
+                behind: self.ahead_by,
+                ahead: self.behind_by,
+            },
+        }
     }
 }
 
 impl GitHub {
-    pub async fn compare_upstream(&self, fork_owner: &str) -> Result<CompareCommits, GitHubError> {
+    /// Compares the default branch of the fork owned by `fork_owner` with upstream's default
+    /// branch.
+    pub async fn compare_upstream(&self, fork_owner: &str) -> Result<Divergence, GitHubError> {
         let endpoint = format!(
             "{REST_API_URL}/repos/{fork_owner}/{name}/compare/HEAD...{owner}:HEAD",
             name = upstream().name(),
@@ -76,6 +60,7 @@ impl GitHub {
             response
                 .json::<CompareCommits>()
                 .await
+                .map(CompareCommits::fork_divergence)
                 .map_err(GitHubError::from)
         } else {
             Err(response
@@ -84,5 +69,33 @@ impl GitHub {
                 .map_err(GitHubError::from)?
                 .into())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::{CompareCommits, Divergence};
+
+    /// The comparison is `fork...upstream`, so GitHub's `ahead`/`behind` describe upstream
+    /// relative to the fork and must be flipped to describe the fork.
+    #[rstest]
+    #[case("identical", 0, 0, Divergence::Identical)]
+    #[case("ahead", 12, 0, Divergence::Behind { by: 12 })]
+    #[case("behind", 0, 3, Divergence::Ahead { by: 3 })]
+    #[case("diverged", 12, 3, Divergence::Diverged { behind: 12, ahead: 3 })]
+    fn fork_divergence(
+        #[case] status: &str,
+        #[case] ahead_by: u32,
+        #[case] behind_by: u32,
+        #[case] expected: Divergence,
+    ) {
+        let comparison = serde_json::from_str::<CompareCommits>(&format!(
+            r#"{{"status":"{status}","ahead_by":{ahead_by},"behind_by":{behind_by},"total_commits":{ahead_by}}}"#
+        ))
+        .unwrap();
+
+        assert_eq!(comparison.fork_divergence(), expected);
     }
 }

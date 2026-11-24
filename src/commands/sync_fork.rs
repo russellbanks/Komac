@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{fmt, time::Duration};
 
 use anstream::println;
 use clap::Parser;
@@ -8,10 +8,11 @@ use owo_colors::OwoColorize;
 use rand::random_range;
 use secrecy::SecretString;
 use tokio::{time::sleep, try_join};
+use tracing::warn;
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
-    github::{client::GitHub, upstream},
+    github::{Divergence, MergeType, client::GitHub, upstream},
     terminal::Hyperlinkable,
     token::TokenManager,
 };
@@ -43,53 +44,79 @@ impl SyncFork {
             github.get_winget_pkgs().owner(&username).send(),
         )?;
 
-        let comparison = github.compare_upstream(&username).await?;
-        if comparison.is_identical() {
-            println!(
-                "{} is already {} with {}",
-                fork.full_name.hyperlink(&fork.url).blue(),
-                "up-to-date".green(),
-                winget_pkgs.full_name.hyperlink(&winget_pkgs.url).blue()
-            );
-            return Ok(());
-        }
-
-        let commit_label = match comparison.ahead_by() {
-            1 => "commit",
-            _ => "commits",
+        let upstream_commits = match github.compare_upstream(&username).await? {
+            Divergence::Identical => {
+                println!(
+                    "{} is already {} with {}",
+                    fork.full_name.hyperlink(&fork.url).blue(),
+                    "up-to-date".green(),
+                    winget_pkgs.full_name.hyperlink(&winget_pkgs.url).blue()
+                );
+                return Ok(());
+            }
+            Divergence::Ahead { by } => {
+                println!(
+                    "{} is not behind {}, so there is nothing to merge. It has {} that {} does not",
+                    fork.full_name.hyperlink(&fork.url).blue(),
+                    winget_pkgs.full_name.hyperlink(&winget_pkgs.url).blue(),
+                    Commits(by),
+                    winget_pkgs.full_name,
+                );
+                return Ok(());
+            }
+            Divergence::Behind { by } => by,
+            Divergence::Diverged { behind, ahead } => {
+                warn!(
+                    "{} has diverged from {}: it has {} that {} does not. Syncing creates a merge commit, and fails if the changes conflict",
+                    fork.full_name,
+                    winget_pkgs.full_name,
+                    Commits(ahead),
+                    winget_pkgs.full_name,
+                );
+                behind
+            }
         };
 
         // Show an indeterminate progress bar while upstream changes are being merged
         let pb = ProgressBar::new_spinner().with_message(format!(
-            "Merging {} upstream {commit_label} from {} into {}",
-            comparison.ahead_by(),
+            "Merging {} from {} into {}",
+            Commits(upstream_commits),
             winget_pkgs.full_name.blue(),
             fork.full_name.blue(),
         ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
-        let sync_type = github
+        let response = github
             .sync_fork(&username, &fork.default_branch_name)
             .await
             .with_context(|| {
                 format!(
-                    "while merging {} upstream {commit_label} from {} into {}",
-                    comparison.ahead_by(),
+                    "while merging {} from {} into {}",
+                    Commits(upstream_commits),
                     winget_pkgs.full_name,
                     fork.full_name
                 )
-            })?
-            .merge_type;
+            })?;
 
         pb.finish_and_clear();
 
-        println!(
-            "{} merged {} upstream {commit_label} from {} into {} ({sync_type})",
-            "Successfully".green(),
-            comparison.ahead_by(),
-            winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
-            fork.full_name.hyperlink(fork.url).blue()
-        );
+        match response.merge_type {
+            MergeType::Merge | MergeType::FastForward => println!(
+                "{} merged {} from {} into {} ({})",
+                "Successfully".green(),
+                Commits(upstream_commits),
+                winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
+                fork.full_name.hyperlink(fork.url).blue(),
+                response.merge_type,
+            ),
+            // GitHub found nothing to merge even though the comparison said otherwise, e.g.
+            // because the fork was synced in between. Its message says why.
+            MergeType::None => println!(
+                "{}: {}",
+                fork.full_name.hyperlink(fork.url).blue(),
+                response.message
+            ),
+        }
 
         Ok(())
     }
@@ -112,5 +139,33 @@ impl SyncFork {
         print!("{} merged {merge_message}", "Successfully".green());
 
         Ok(())
+    }
+}
+
+/// A commit count that displays with the correctly pluralized noun, e.g. `1 commit` or
+/// `12 commits`, without allocating.
+#[derive(Copy, Clone)]
+struct Commits(u32);
+
+impl fmt::Display for Commits {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let noun = if self.0 == 1 { "commit" } else { "commits" };
+        write!(f, "{} {noun}", self.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::Commits;
+
+    #[rstest]
+    #[case(0, "0 commits")]
+    #[case(1, "1 commit")]
+    #[case(2, "2 commits")]
+    #[case(347, "347 commits")]
+    fn commit_count(#[case] count: u32, #[case] expected: &str) {
+        assert_eq!(Commits(count).to_string(), expected);
     }
 }

@@ -24,7 +24,6 @@ struct Body<'branch> {
 #[derive(Deserialize)]
 pub struct Response {
     /// Human-readable summary of the sync result returned by GitHub.
-    #[allow(unused)]
     pub message: String,
     /// The strategy GitHub used to sync the branch.
     pub merge_type: MergeType,
