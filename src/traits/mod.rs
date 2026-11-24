@@ -189,15 +189,9 @@ impl LocaleExt for LocaleManifest {
         release_notes_url: Option<&ReleaseNotesUrl>,
     ) {
         self.package_version.clone_from(package_version);
-        self.release_notes_url = release_notes_url.cloned().or_else(|| {
-            github_values.as_ref().and_then(|values| {
-                if values.release_notes.is_some() {
-                    values.release_notes_url.clone()
-                } else {
-                    None
-                }
-            })
-        });
+        self.release_notes_url = release_notes_url
+            .or_else(|| github_values.as_ref()?.release_notes_url())
+            .cloned();
         self.manifest_type = Self::TYPE;
         self.update_manifest_version();
     }
@@ -237,18 +231,12 @@ impl LocaleExt for DefaultLocaleManifest {
                 .map(|values| mem::take(&mut values.topics))
                 .unwrap_or_default();
         }
+        self.release_notes_url = release_notes_url
+            .or_else(|| github_values.as_ref()?.release_notes_url())
+            .cloned();
         self.release_notes = github_values
             .as_mut()
             .and_then(|values| values.release_notes.take());
-        self.release_notes_url = release_notes_url.cloned().or_else(|| {
-            github_values.as_mut().and_then(|values| {
-                if self.release_notes.is_some() {
-                    values.release_notes_url.take()
-                } else {
-                    None
-                }
-            })
-        });
         self.manifest_type = Self::TYPE;
         self.update_manifest_version();
     }
