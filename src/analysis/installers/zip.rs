@@ -83,31 +83,11 @@ impl<R: Read + Seek> Zip<R> {
             .count()
             == 1
         {
-            let chosen_file_name = &possible_installer_files[0];
             nested_installer_files = BTreeSet::from([NestedInstallerFiles {
-                relative_file_path: chosen_file_name.clone(),
+                relative_file_path: possible_installer_files[0].clone(),
                 portable_command_alias: None,
             }]);
-            if let Ok(mut chosen_file) = zip.by_name(chosen_file_name.as_str()) {
-                let mut temp_file = tempfile::tempfile()?;
-                io::copy(&mut chosen_file, &mut temp_file)?;
-                temp_file.seek(SeekFrom::Start(0))?;
-                let file_analyzer = Analyzer::new(&mut temp_file, chosen_file_name.as_str())?;
-                installers = Some(
-                    file_analyzer
-                        .installers
-                        .into_iter()
-                        .map(|installer| Installer {
-                            r#type: Some(InstallerType::Zip),
-                            nested_installer_type: installer
-                                .r#type
-                                .and_then(|installer_type| installer_type.try_into().ok()),
-                            nested_installer_files: nested_installer_files.clone(),
-                            ..installer
-                        })
-                        .collect::<Vec<_>>(),
-                );
-            }
+            installers = analyze_nested_files(&mut zip, &nested_installer_files)?;
         }
 
         Ok(Self {
@@ -121,6 +101,13 @@ impl<R: Read + Seek> Zip<R> {
                 }]
             }),
         })
+    }
+
+    pub fn analyze_nested_files(
+        &mut self,
+        nested_installer_files: &BTreeSet<NestedInstallerFiles>,
+    ) -> Result<Option<Vec<Installer>>> {
+        analyze_nested_files(&mut self.archive, nested_installer_files)
     }
 
     pub fn prompt(&mut self) -> Result<()> {
@@ -177,4 +164,34 @@ impl<R: Read + Seek> Zip<R> {
         }
         Ok(())
     }
+}
+
+fn analyze_nested_files<R: Read + Seek>(
+    archive: &mut ZipArchive<R>,
+    nested_installer_files: &BTreeSet<NestedInstallerFiles>,
+) -> Result<Option<Vec<Installer>>> {
+    let Some(first_file) = nested_installer_files.first() else {
+        return Ok(None);
+    };
+    let Ok(mut nested_file) = archive.by_name(first_file.relative_file_path.as_str()) else {
+        return Ok(None);
+    };
+    let mut temp_file = tempfile::tempfile()?;
+    io::copy(&mut nested_file, &mut temp_file)?;
+    temp_file.seek(SeekFrom::Start(0))?;
+    let file_analyzer = Analyzer::new(&mut temp_file, first_file.relative_file_path.as_str())?;
+    Ok(Some(
+        file_analyzer
+            .installers
+            .into_iter()
+            .map(|installer| Installer {
+                r#type: Some(InstallerType::Zip),
+                nested_installer_type: installer
+                    .r#type
+                    .and_then(|installer_type| installer_type.try_into().ok()),
+                nested_installer_files: nested_installer_files.clone(),
+                ..installer
+            })
+            .collect(),
+    ))
 }

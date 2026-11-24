@@ -222,7 +222,7 @@ impl NewVersion {
 
         let downloader = Downloader::new_with_concurrent(self.concurrent_downloads)?;
         let mut files = downloader.download(urls.iter().cloned()).await?;
-        let mut download_results = files.analyze().await?;
+        let mut download_results = files.analyze(|_, _| BTreeSet::new()).await?;
 
         let mut installers = Vec::new();
         for analyzer in &mut download_results.values_mut() {

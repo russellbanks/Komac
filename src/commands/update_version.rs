@@ -11,13 +11,14 @@ use clap::Parser;
 use color_eyre::eyre::{Error, Result, bail};
 use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
+use itertools::Itertools;
 use secrecy::SecretString;
 use strsim::levenshtein;
 use tokio::try_join;
 use tracing::warn;
 use winget_types::{
     InstallerManifest, PackageIdentifier, PackageVersion,
-    installer::{Installer, InstallerType, NestedInstallerFiles},
+    installer::{Architecture, Installer, InstallerType, NestedInstallerFiles},
     url::{DecodedUrl, ReleaseNotesUrl},
 };
 
@@ -153,7 +154,19 @@ impl UpdateVersion {
 
         let manifests = package.manifests_mut().unwrap();
 
-        let download_results = files.analyze().await?;
+        let download_results = files
+            .analyze(|architecture, possible_installer_files| {
+                previous_zip_installer(&manifests.installer, architecture)
+                    .map(|previous_installer| {
+                        previous_nested_files(
+                            previous_installer,
+                            &manifests.installer,
+                            possible_installer_files,
+                        )
+                    })
+                    .unwrap_or_default()
+            })
+            .await?;
 
         let installers = download_results
             .into_values()
@@ -386,7 +399,7 @@ fn suggest_release_notes_url(
 }
 
 /// Fills in the nested installer of a zip installer that couldn't be detected, such as when the zip
-/// contains more than one executable, from the previous installer of the same architecture.
+/// contains more than one executable, from the previous zip installer.
 fn carry_over_nested_installer(
     installer: &mut Installer,
     previous_manifest: &InstallerManifest,
@@ -397,29 +410,53 @@ fn carry_over_nested_installer(
         return;
     }
 
-    let Some(previous_installer) = previous_manifest.installers.iter().find(|previous| {
-        previous.architecture == installer.architecture
-            && previous.r#type.or(previous_manifest.r#type) == Some(InstallerType::Zip)
-    }) else {
+    let Some(previous_installer) =
+        previous_zip_installer(previous_manifest, Some(installer.architecture))
+    else {
         return;
     };
 
-    let previous_nested_files = if previous_installer.nested_installer_files.is_empty() {
-        &previous_manifest.nested_installer_files
-    } else {
-        &previous_installer.nested_installer_files
-    };
-
-    installer.nested_installer_files = previous_nested_files
-        .iter()
-        .map(|nested_file| fix_relative_path(nested_file, possible_installer_files))
-        .collect();
+    installer.nested_installer_files = previous_nested_files(
+        previous_installer,
+        previous_manifest,
+        possible_installer_files,
+    );
 
     if installer.nested_installer_type.is_none() {
         installer.nested_installer_type = previous_installer
             .nested_installer_type
             .or(previous_manifest.nested_installer_type);
     }
+}
+
+fn previous_zip_installer(
+    previous_manifest: &InstallerManifest,
+    architecture: Option<Architecture>,
+) -> Option<&Installer> {
+    let zip_installers = previous_manifest.installers.iter().filter(|previous| {
+        previous.r#type.or(previous_manifest.r#type) == Some(InstallerType::Zip)
+    });
+    zip_installers
+        .clone()
+        .find(|previous| Some(previous.architecture) == architecture)
+        .or_else(|| zip_installers.exactly_one().ok())
+}
+
+fn previous_nested_files(
+    previous_installer: &Installer,
+    previous_manifest: &InstallerManifest,
+    possible_installer_files: &[Utf8PathBuf],
+) -> BTreeSet<NestedInstallerFiles> {
+    let previous_nested_files = if previous_installer.nested_installer_files.is_empty() {
+        &previous_manifest.nested_installer_files
+    } else {
+        &previous_installer.nested_installer_files
+    };
+
+    previous_nested_files
+        .iter()
+        .map(|nested_file| fix_relative_path(nested_file, possible_installer_files))
+        .collect()
 }
 
 /// Points a nested file at the closest matching file in the new zip, as paths often contain the
@@ -582,6 +619,44 @@ mod tests {
             installer.nested_installer_files,
             nested_files(&["app.exe", "cli.exe"])
         );
+    }
+
+    #[test]
+    fn carries_over_only_previous_zip_installer_of_other_architecture() {
+        let previous = InstallerManifest {
+            nested_installer_type: InstallerType::Msi.try_into().ok(),
+            nested_installer_files: nested_files(&["Setup.msi"]),
+            installers: vec![zip_installer(Architecture::X86)],
+            ..previous_manifest()
+        };
+        let mut installer = zip_installer(Architecture::Neutral);
+
+        carry_over_nested_installer(
+            &mut installer,
+            &previous,
+            &[
+                Utf8PathBuf::from("Setup.msi"),
+                Utf8PathBuf::from("setup.exe"),
+            ],
+        );
+
+        assert_eq!(
+            installer.nested_installer_files,
+            nested_files(&["Setup.msi"])
+        );
+        assert_eq!(
+            installer.nested_installer_type,
+            previous.nested_installer_type
+        );
+    }
+
+    #[test]
+    fn ignores_previous_zip_installers_of_other_architectures() {
+        let mut installer = zip_installer(Architecture::X86);
+
+        carry_over_nested_installer(&mut installer, &previous_manifest(), &[]);
+
+        assert!(installer.nested_installer_files.is_empty());
     }
 
     #[test]

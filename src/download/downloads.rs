@@ -1,15 +1,19 @@
 use std::{
-    collections::HashMap,
+    collections::{BTreeSet, HashMap},
     io::{Read, Seek},
     mem,
     num::NonZeroUsize,
     thread,
 };
 
+use camino::Utf8PathBuf;
 use color_eyre::Result;
 use futures_util::{StreamExt, TryStreamExt, stream};
 use tracing::debug;
-use winget_types::{installer::Architecture, url::DecodedUrl};
+use winget_types::{
+    installer::{Architecture, NestedInstallerFiles},
+    url::DecodedUrl,
+};
 
 use super::DownloadedFile;
 use crate::analysis::Analyzer;
@@ -27,7 +31,14 @@ impl Downloads {
         Self(downloads.into_iter().collect())
     }
 
-    pub async fn analyze(&mut self) -> Result<HashMap<DecodedUrl, Analyzer<'_, impl Read + Seek>>> {
+    pub async fn analyze<F>(
+        &mut self,
+        previous_nested_files: F,
+    ) -> Result<HashMap<DecodedUrl, Analyzer<'_, impl Read + Seek>>>
+    where
+        F: Fn(Option<Architecture>, &[Utf8PathBuf]) -> BTreeSet<NestedInstallerFiles>,
+    {
+        let previous_nested_files = &previous_nested_files;
         stream::iter(self.0.iter_mut().map(
             |DownloadedFile {
                  file,
@@ -41,6 +52,18 @@ impl Downloads {
                     .url()
                     .override_architecture()
                     .or_else(|| Architecture::from_url(download.url().as_str()));
+                if let Some(zip) = &mut file_analyzer.zip
+                    && file_analyzer
+                        .installers
+                        .iter()
+                        .all(|installer| installer.nested_installer_files.is_empty())
+                    && let Some(installers) = zip.analyze_nested_files(&previous_nested_files(
+                        architecture,
+                        &zip.possible_installer_files,
+                    ))?
+                {
+                    file_analyzer.installers = installers;
+                }
                 for installer in &mut file_analyzer.installers {
                     if let Some(architecture) = architecture {
                         installer.architecture = architecture;
