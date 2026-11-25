@@ -3327,7 +3327,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sevenz-rust2",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "strsim 0.11.1",
  "strum",
  "supports-hyperlinks",
@@ -3521,7 +3521,7 @@ version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef1d73c59a56771343712b22ea5615092c612c16ba291c0979e3105dfeec4890"
 dependencies = [
- "sha2 0.11.1",
+ "sha2 0.11.2",
 ]
 
 [[package]]
@@ -4000,7 +4000,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbdea4b26c3ae1459694aa1237ad5246dc46b9f8840a8401f6da26b8eefa8833"
 dependencies = [
  "serde_core",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "thiserror 2.0.21",
 ]
 
@@ -5083,7 +5083,7 @@ dependencies = [
  "js-sys",
  "lzma-rust2",
  "ppmd-rust",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "wasm-bindgen",
 ]
 
@@ -5106,9 +5106,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.11.1"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47d7069beb7d6ac7b9acd1039986e73443f24234f41074da099d6f994ac9ad19"
+checksum = "5b0e5c7d67bc53f435386b2130fdc900488c5703770f6d8a4633060e34288a27"
 dependencies = [
  "cfg-if",
  "cpufeatures 0.3.1",
@@ -6530,7 +6530,7 @@ dependencies = [
  "package-family-name",
  "percent-encoding",
  "serde",
- "sha2 0.11.1",
+ "sha2 0.11.2",
  "smallvec",
  "thiserror 2.0.21",
  "time",
