@@ -10,7 +10,6 @@ use itertools::Itertools;
 use reqwest::Client;
 use secrecy::SecretString;
 use serde::de::DeserializeOwned;
-use url::Url;
 use winget_types::{
     DefaultLocaleManifest, InstallerManifest, LocaleManifest, Manifest, ManifestType,
     ManifestTypeWithLocale, PackageIdentifier, PackageVersion, VersionManifest,
@@ -22,7 +21,6 @@ use super::{GitHubError, graphql::create_pull_request};
 use crate::{
     commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
     github::{
-        Repository,
         graphql::{
             GRAPHQL_URL,
             create_commit::{FileAddition, FileDeletion},
@@ -196,15 +194,6 @@ impl GitHub {
         .await
     }
 
-    /// Gets the ID, URL and default branch of a repository.
-    pub async fn get_repository(
-        &self,
-        repository: &Repository,
-    ) -> Result<RepositoryData, GitHubError> {
-        self.get_repository_info(repository.owner(), repository.name())
-            .await
-    }
-
     async fn get_repository_info(
         &self,
         owner: &str,
@@ -245,8 +234,6 @@ impl GitHub {
         Ok(RepositoryData {
             id: repository.id,
             owner: repository.owner.login,
-            full_name: repository.name_with_owner,
-            url: repository.url,
             default_branch_name: default_branch.name,
             default_branch_oid: commits.oid,
         })
@@ -660,8 +647,6 @@ impl GitHubFile {
 pub struct RepositoryData {
     pub id: Id,
     pub owner: String,
-    pub full_name: String,
-    pub url: Url,
     pub default_branch_name: String,
     pub default_branch_oid: GitObjectId,
 }

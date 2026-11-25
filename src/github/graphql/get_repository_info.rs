@@ -1,5 +1,3 @@
-use url::Url;
-
 use super::{github_schema as schema, types::GitObjectId};
 
 #[derive(cynic::QueryVariables)]
@@ -26,8 +24,6 @@ pub struct GetRepositoryInfo {
 pub struct Repository {
     pub id: cynic::Id,
     pub owner: RepositoryOwner,
-    pub name_with_owner: String,
-    pub url: Url,
     pub default_branch_ref: Option<Ref>,
 }
 
@@ -83,8 +79,6 @@ mod tests {
                 owner {
                   login
                 }
-                nameWithOwner
-                url
                 defaultBranchRef {
                   name
                   target {
