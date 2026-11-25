@@ -1,16 +1,28 @@
+//! `komac sync`, laid out as ports and adapters:
+//!
+//! - `domain`: the core's types and rules, with no knowledge of GitHub or the terminal
+//! - `service`: the use case and the ports it drives ([`ForkSyncApi`](service::ForkSyncApi),
+//!   [`SyncObserver`])
+//! - `github_api` and `demo`: driven adapters for the real GitHub and the VHS demo
+//! - this module: the driving adapter (command line), plus the terminal observer and output
+
 mod demo;
+mod domain;
+mod github_api;
 mod service;
 mod summary;
 
 use anstream::println;
 use clap::Parser;
-use color_eyre::Result;
+use color_eyre::{Report, Result, Section};
 use demo::DemoApi;
+use domain::{SyncError, SyncOutcome, SyncReport};
 use indicatif::{ProgressBar, ProgressFinish};
 use owo_colors::OwoColorize;
 use secrecy::SecretString;
-use service::{Progress, SyncOutcome, SyncReport, SyncRequest, sync};
-use summary::MergeSummary;
+use service::{SyncObserver, SyncRequest, sync};
+use summary::{Commits, MergeSummary};
+use tracing::warn;
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
@@ -54,15 +66,15 @@ impl SyncFork {
             branch: self.branch.as_deref(),
         };
 
-        // VHS recordings run the same flow against a pretend GitHub, without a token
-        let report = if *VHS {
-            sync(&DemoApi, &request, &Spinner).await?
+        // VHS recordings run the same flow against a pretend host, without a token
+        let result = if *VHS {
+            sync(&DemoApi, &request, &TerminalObserver).await
         } else {
             let github = GitHub::new(TokenManager::handle(self.token).await?)?;
-            sync(&github, &request, &Spinner).await?
+            sync(&github, &request, &TerminalObserver).await
         };
 
-        render(&report);
+        render(&result.map_err(into_report)?);
 
         Ok(())
     }
@@ -78,10 +90,38 @@ fn explicit_fork(
     fork.or_else(|| Some(Repository::new(fork_owner?, upstream.name().to_owned())))
 }
 
-/// Shows a spinner while a merge is in progress.
-struct Spinner;
+/// Turns a sync error into a report, with a suggestion that names the command-line options that
+/// could fix it.
+fn into_report(error: SyncError) -> Report {
+    let hint = cli_hint(&error);
+    let report = Report::new(error);
 
-impl Progress for Spinner {
+    match hint {
+        Some(hint) => report.suggestion(hint),
+        None => report,
+    }
+}
+
+/// A suggestion that names the command-line options that could fix `error`, if there are any.
+fn cli_hint(error: &SyncError) -> Option<String> {
+    match error {
+        SyncError::ForkNotFound { upstream, .. } => Some(format!(
+            "Fork {upstream} on GitHub first, or name your fork with --fork"
+        )),
+        _ => None,
+    }
+}
+
+/// Shows a sync in the terminal: a warning for a diverged fork, and a spinner while merging.
+struct TerminalObserver;
+
+impl SyncObserver for TerminalObserver {
+    fn diverged(&self, fork: &Repository, upstream: &Repository, ahead: Commits) {
+        warn!(
+            "{fork} has diverged from {upstream}: it has {ahead} that {upstream} does not. Syncing creates a merge commit, and fails if the changes conflict"
+        );
+    }
+
     fn merging(&self, summary: &MergeSummary<&Repository, &Repository>) -> impl Sized {
         // Cleared when dropped, so a failed merge does not leave it on screen above the error
         let pb = ProgressBar::new_spinner()
@@ -123,11 +163,8 @@ fn render(report: &SyncReport) {
             upstream_link.blue(),
             upstream.repository,
         ),
-        SyncOutcome::Merged {
-            commits,
-            merge_type,
-        } => println!(
-            "{} merged {} ({merge_type})",
+        SyncOutcome::Merged { commits, kind } => println!(
+            "{} merged {} ({kind})",
             "Successfully".green(),
             MergeSummary {
                 commits: *commits,
@@ -143,11 +180,31 @@ fn render(report: &SyncReport) {
 mod tests {
     use clap::Parser;
 
-    use super::{SyncFork, explicit_fork};
+    use super::{SyncError, SyncFork, cli_hint, explicit_fork};
     use crate::github::Repository;
 
     fn upstream() -> Repository {
         Repository::new("microsoft", "winget-pkgs")
+    }
+
+    #[test]
+    fn missing_fork_hint_names_fork_option() {
+        let error = SyncError::ForkNotFound {
+            fork: Repository::new("octocat", "winget-pkgs"),
+            upstream: upstream(),
+        };
+
+        assert_eq!(
+            cli_hint(&error).as_deref(),
+            Some("Fork microsoft/winget-pkgs on GitHub first, or name your fork with --fork")
+        );
+    }
+
+    #[test]
+    fn other_errors_have_no_hint() {
+        let error = SyncError::UpstreamNotFound(upstream());
+
+        assert_eq!(cli_hint(&error), None);
     }
 
     #[test]

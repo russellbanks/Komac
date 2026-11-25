@@ -1,10 +1,8 @@
-mod divergence;
 mod status;
 
-pub use divergence::Divergence;
 use reqwest::Method;
 use serde::Deserialize;
-use status::Status;
+pub use status::CompareStatus;
 
 use super::transport::SendJson;
 use crate::github::{GitHubError, Repository, client::GitHub};
@@ -12,47 +10,29 @@ use crate::github::{GitHubError, Repository, client::GitHub};
 /// The subset of GitHub's "Compare two commits" response that is needed.
 ///
 /// `status`, `ahead_by` and `behind_by` describe the head commit relative to the base commit.
-#[derive(Copy, Clone, Deserialize)]
-struct CompareCommits {
-    status: Status,
-    ahead_by: u32,
-    behind_by: u32,
-}
-
-impl CompareCommits {
-    /// Interprets a comparison whose base is the fork and whose head is upstream, flipping
-    /// GitHub's head-relative status so that it describes the fork.
-    #[must_use]
-    const fn fork_divergence(self) -> Divergence {
-        match self.status {
-            Status::Identical => Divergence::Identical,
-            Status::Ahead => Divergence::Behind { by: self.ahead_by },
-            Status::Behind => Divergence::Ahead { by: self.behind_by },
-            Status::Diverged => Divergence::Diverged {
-                behind: self.ahead_by,
-                ahead: self.behind_by,
-            },
-        }
-    }
+#[derive(Copy, Clone, Debug, Deserialize)]
+pub struct Comparison {
+    pub status: CompareStatus,
+    pub ahead_by: u32,
+    pub behind_by: u32,
 }
 
 impl GitHub {
-    /// Compares `fork_branch` in `fork` with `upstream_branch` in `upstream`, describing how the
-    /// fork's branch relates to upstream's.
+    /// Compares `fork_branch` in `fork` (the base) with `upstream_branch` in `upstream` (the
+    /// head). The result describes upstream's branch relative to the fork's.
     pub async fn compare_fork(
         &self,
         fork: &Repository,
         fork_branch: &str,
         upstream: &Repository,
         upstream_branch: &str,
-    ) -> Result<Divergence, GitHubError> {
+    ) -> Result<Comparison, GitHubError> {
         self.rest(
             Method::GET,
             &compare_path(fork, fork_branch, upstream, upstream_branch),
         )
-        .send_json::<CompareCommits>()
+        .send_json::<Comparison>()
         .await
-        .map(CompareCommits::fork_divergence)
     }
 }
 
@@ -72,9 +52,7 @@ fn compare_path(
 
 #[cfg(test)]
 mod tests {
-    use rstest::rstest;
-
-    use super::{CompareCommits, Divergence, compare_path};
+    use super::compare_path;
     use crate::github::Repository;
 
     #[test]
@@ -88,26 +66,5 @@ mod tests {
             ),
             "repos/octocat/winget-pkgs/compare/main...microsoft:master"
         );
-    }
-
-    /// The comparison is `fork...upstream`, so GitHub's `ahead`/`behind` describe upstream
-    /// relative to the fork and must be flipped to describe the fork.
-    #[rstest]
-    #[case("identical", 0, 0, Divergence::Identical)]
-    #[case("ahead", 12, 0, Divergence::Behind { by: 12 })]
-    #[case("behind", 0, 3, Divergence::Ahead { by: 3 })]
-    #[case("diverged", 12, 3, Divergence::Diverged { behind: 12, ahead: 3 })]
-    fn fork_divergence(
-        #[case] status: &str,
-        #[case] ahead_by: u32,
-        #[case] behind_by: u32,
-        #[case] expected: Divergence,
-    ) {
-        let comparison = serde_json::from_str::<CompareCommits>(&format!(
-            r#"{{"status":"{status}","ahead_by":{ahead_by},"behind_by":{behind_by},"total_commits":{ahead_by}}}"#
-        ))
-        .unwrap();
-
-        assert_eq!(comparison.fork_divergence(), expected);
     }
 }

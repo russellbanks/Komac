@@ -5,7 +5,7 @@ mod merge_upstream;
 mod transport;
 mod tree;
 
-pub use compare_commits::Divergence;
+pub use compare_commits::{CompareStatus, Comparison};
 pub use error::RestError;
 pub use latest_release::Release;
 pub use merge_upstream::MergeType;

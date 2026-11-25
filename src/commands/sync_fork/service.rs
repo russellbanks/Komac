@@ -1,26 +1,30 @@
-//! The sync use case: resolve and validate the fork, compare it with upstream, and merge only when
-//! upstream has commits the fork lacks. It talks to GitHub through [`ForkSyncApi`] and prints
-//! nothing, so it runs the same against GitHub, the VHS demo, and test fakes.
+//! The sync use case and the ports it drives. It resolves and validates the fork, compares it with
+//! upstream, and merges only when upstream has commits the fork lacks. It reaches GitHub only
+//! through [`ForkSyncApi`] and reports progress only through [`SyncObserver`], so it runs the same
+//! against GitHub, the VHS demo, and test fakes.
 
-use thiserror::Error;
-use tracing::warn;
+use std::error::Error;
 
-use super::summary::{Commits, MergeSummary};
-use crate::github::{
-    Divergence, GitHubError, MergeType, Repository,
-    client::GitHub,
-    graphql::get_sync_repositories::{RemoteRepository, SyncRepositories},
+use super::{
+    domain::{
+        Branches, Divergence, MergeResult, SyncError, SyncOutcome, SyncReport, SyncRepositories,
+        Target, validate,
+    },
+    summary::{Commits, MergeSummary},
 };
+use crate::github::Repository;
 
-/// The GitHub operations a sync needs.
+/// The repository host operations a sync needs (driven port).
 pub trait ForkSyncApi {
+    type Error: Error + Send + Sync + 'static;
+
     /// Gets upstream and the fork, which is the user's repository with upstream's name unless
-    /// `fork` names it.
+    /// `fork` names it. A repository that is not found is `None`.
     async fn get_sync_repositories(
         &self,
         upstream: &Repository,
         fork: Option<&Repository>,
-    ) -> Result<SyncRepositories, GitHubError>;
+    ) -> Result<SyncRepositories, Self::Error>;
 
     /// Describes how `fork_branch` in `fork` relates to `upstream_branch` in `upstream`.
     async fn compare_fork(
@@ -29,52 +33,18 @@ pub trait ForkSyncApi {
         fork_branch: &str,
         upstream: &Repository,
         upstream_branch: &str,
-    ) -> Result<Divergence, GitHubError>;
+    ) -> Result<Divergence, Self::Error>;
 
     /// Merges upstream into `branch` of `fork`.
-    async fn sync_fork(&self, fork: &Repository, branch: &str) -> Result<MergeResult, GitHubError>;
+    async fn sync_fork(&self, fork: &Repository, branch: &str) -> Result<MergeResult, Self::Error>;
 }
 
-/// What GitHub did when asked to merge upstream into the fork.
-#[derive(Debug)]
-pub struct MergeResult {
-    pub merge_type: MergeType,
-    /// GitHub's explanation, which says why nothing was merged when `merge_type` is `None`.
-    pub message: String,
-}
+/// Hears about a sync as it happens, e.g. to show it in a terminal (driven port).
+pub trait SyncObserver {
+    /// The fork has commits upstream lacks, so syncing will create a merge commit.
+    fn diverged(&self, fork: &Repository, upstream: &Repository, ahead: Commits);
 
-impl ForkSyncApi for GitHub {
-    async fn get_sync_repositories(
-        &self,
-        upstream: &Repository,
-        fork: Option<&Repository>,
-    ) -> Result<SyncRepositories, GitHubError> {
-        Self::get_sync_repositories(self, upstream, fork).await
-    }
-
-    async fn compare_fork(
-        &self,
-        fork: &Repository,
-        fork_branch: &str,
-        upstream: &Repository,
-        upstream_branch: &str,
-    ) -> Result<Divergence, GitHubError> {
-        Self::compare_fork(self, fork, fork_branch, upstream, upstream_branch).await
-    }
-
-    async fn sync_fork(&self, fork: &Repository, branch: &str) -> Result<MergeResult, GitHubError> {
-        Self::sync_fork(self, fork, branch)
-            .await
-            .map(|response| MergeResult {
-                merge_type: response.merge_type,
-                message: response.message,
-            })
-    }
-}
-
-/// Shows that a merge is in progress.
-pub trait Progress {
-    /// Starts showing that `summary` is being merged, until the returned guard is dropped.
+    /// Upstream is being merged into the fork, until the returned guard is dropped.
     fn merging(&self, summary: &MergeSummary<&Repository, &Repository>) -> impl Sized;
 }
 
@@ -87,79 +57,18 @@ pub struct SyncRequest<'a> {
     pub branch: Option<&'a str>,
 }
 
-/// What a sync found or did.
-#[derive(Debug, PartialEq, Eq)]
-pub enum SyncOutcome {
-    /// The fork already matches upstream.
-    UpToDate,
-    /// The fork has commits upstream lacks, and upstream has nothing new to merge.
-    ForkAhead(Commits),
-    /// Upstream's commits were merged into the fork.
-    Merged {
-        commits: Commits,
-        merge_type: MergeType,
-    },
-    /// GitHub merged nothing even though the comparison found upstream commits, e.g. because the
-    /// fork was synced in between. The message is GitHub's explanation.
-    NothingMerged { message: String },
-}
-
-/// The repositories that were synced and the outcome.
-#[derive(Debug)]
-pub struct SyncReport {
-    pub upstream: RemoteRepository,
-    pub fork: RemoteRepository,
-    pub outcome: SyncOutcome,
-}
-
-/// Why a sync failed.
-#[derive(Debug, Error)]
-pub enum SyncError {
-    #[error("{0} was not found, or the token cannot access it")]
-    UpstreamNotFound(Repository),
-    #[error("{fork} was not found. Fork {upstream} on GitHub first, or name your fork with --fork")]
-    ForkNotFound {
-        fork: Repository,
-        upstream: Repository,
-    },
-    #[error("{fork} is not a fork, so it cannot be synced with {upstream}")]
-    NotAFork {
-        fork: Repository,
-        upstream: Repository,
-    },
-    #[error(
-        "{fork} is a fork of {parent}, not {upstream}. GitHub syncs a fork only from its parent"
-    )]
-    ForkOfOtherRepository {
-        fork: Repository,
-        parent: String,
-        upstream: Repository,
-    },
-    #[error("{fork} is a fork, but the token cannot access its parent to check it is {upstream}")]
-    ParentInaccessible {
-        fork: Repository,
-        upstream: Repository,
-    },
-    #[error("Failed to merge {summary}")]
-    Merge {
-        summary: String,
-        source: GitHubError,
-    },
-    #[error(transparent)]
-    GitHub(#[from] GitHubError),
-}
-
 /// Syncs the fork with upstream, merging only when upstream has commits the fork lacks.
 pub async fn sync<A: ForkSyncApi>(
     api: &A,
     request: &SyncRequest<'_>,
-    progress: &impl Progress,
+    observer: &impl SyncObserver,
 ) -> Result<SyncReport, SyncError> {
-    let Target { upstream, fork } = validate(
-        api.get_sync_repositories(request.upstream, request.fork.as_ref())
-            .await?,
-        request.upstream,
-    )?;
+    let repositories = api
+        .get_sync_repositories(request.upstream, request.fork.as_ref())
+        .await
+        .map_err(api_error)?;
+
+    let Target { upstream, fork } = validate(repositories, request.upstream)?;
 
     let branches = Branches::new(
         request.branch,
@@ -174,7 +83,8 @@ pub async fn sync<A: ForkSyncApi>(
             &upstream.repository,
             branches.upstream,
         )
-        .await?;
+        .await
+        .map_err(api_error)?;
 
     let commits = match divergence {
         Divergence::Identical => {
@@ -193,13 +103,7 @@ pub async fn sync<A: ForkSyncApi>(
         }
         Divergence::Behind { by } => Commits(by),
         Divergence::Diverged { behind, ahead } => {
-            warn!(
-                "{} has diverged from {}: it has {} that {} does not. Syncing creates a merge commit, and fails if the changes conflict",
-                fork.repository,
-                upstream.repository,
-                Commits(ahead),
-                upstream.repository,
-            );
+            observer.diverged(&fork.repository, &upstream.repository, Commits(ahead));
             Commits(behind)
         }
     };
@@ -211,23 +115,18 @@ pub async fn sync<A: ForkSyncApi>(
     };
 
     let result = {
-        let _progress = progress.merging(&summary);
+        let _merging = observer.merging(&summary);
         api.sync_fork(&fork.repository, branches.fork)
             .await
             .map_err(|source| SyncError::Merge {
                 summary: summary.to_string(),
-                source,
+                source: Box::new(source),
             })?
     };
 
-    let outcome = match result.merge_type {
-        MergeType::Merge | MergeType::FastForward => SyncOutcome::Merged {
-            commits,
-            merge_type: result.merge_type,
-        },
-        MergeType::None => SyncOutcome::NothingMerged {
-            message: result.message,
-        },
+    let outcome = match result {
+        MergeResult::Merged(kind) => SyncOutcome::Merged { commits, kind },
+        MergeResult::NothingMerged { message } => SyncOutcome::NothingMerged { message },
     };
 
     Ok(SyncReport {
@@ -237,131 +136,27 @@ pub async fn sync<A: ForkSyncApi>(
     })
 }
 
-/// Upstream and a fork of it that can be synced.
-#[derive(Debug)]
-struct Target {
-    upstream: RemoteRepository,
-    fork: RemoteRepository,
-}
-
-/// Checks that both repositories exist and that the fork's parent is upstream, since GitHub syncs
-/// a fork only from its direct parent.
-fn validate(repositories: SyncRepositories, upstream: &Repository) -> Result<Target, SyncError> {
-    let SyncRepositories {
-        upstream: found_upstream,
-        fork,
-        fork_lookup,
-    } = repositories;
-
-    let found_upstream =
-        found_upstream.ok_or_else(|| SyncError::UpstreamNotFound(upstream.clone()))?;
-    let upstream = found_upstream.repository.clone();
-
-    let fork = fork.ok_or_else(|| SyncError::ForkNotFound {
-        fork: fork_lookup,
-        upstream: upstream.clone(),
-    })?;
-    let fork_repository = fork.remote.repository.clone();
-
-    if !fork.is_fork {
-        return Err(SyncError::NotAFork {
-            fork: fork_repository,
-            upstream,
-        });
-    }
-
-    match fork.parent {
-        Some(parent) if upstream.matches_full_name(&parent) => Ok(Target {
-            upstream: found_upstream,
-            fork: fork.remote,
-        }),
-        Some(parent) => Err(SyncError::ForkOfOtherRepository {
-            fork: fork_repository,
-            parent,
-            upstream,
-        }),
-        None => Err(SyncError::ParentInaccessible {
-            fork: fork_repository,
-            upstream,
-        }),
-    }
-}
-
-/// The branch to sync in the fork, and the upstream branch it is compared with.
-#[derive(Debug, PartialEq, Eq)]
-struct Branches<'a> {
-    fork: &'a str,
-    upstream: &'a str,
-}
-
-impl<'a> Branches<'a> {
-    /// Uses each repository's default branch, unless a branch was given.
-    ///
-    /// A given branch is compared with upstream's branch of the same name, matching
-    /// `gh repo sync --branch`. GitHub's API docs don't say which upstream branch merge-upstream
-    /// uses for a non-default branch.
-    fn new(branch: Option<&'a str>, fork_default: &'a str, upstream_default: &'a str) -> Self {
-        match branch {
-            Some(branch) => Self {
-                fork: branch,
-                upstream: branch,
-            },
-            None => Self {
-                fork: fork_default,
-                upstream: upstream_default,
-            },
-        }
-    }
+fn api_error(error: impl Error + Send + Sync + 'static) -> SyncError {
+    SyncError::Api(Box::new(error))
 }
 
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
 
-    use color_eyre::eyre::eyre;
-    use rstest::rstest;
+    use thiserror::Error;
 
     use super::{
-        Branches, Commits, Divergence, ForkSyncApi, GitHubError, MergeResult, MergeSummary,
-        MergeType, Progress, SyncError, SyncOutcome, SyncRequest, sync, validate,
+        Commits, Divergence, ForkSyncApi, MergeResult, MergeSummary, SyncError, SyncObserver,
+        SyncOutcome, SyncRepositories, SyncRequest, sync,
     };
-    use crate::github::{
-        Repository,
-        graphql::get_sync_repositories::{RemoteFork, RemoteRepository, SyncRepositories},
+    use crate::{
+        commands::sync_fork::domain::{
+            MergeKind,
+            tests::{fork_of, remote, repositories, upstream},
+        },
+        github::Repository,
     };
-
-    fn upstream() -> Repository {
-        Repository::new("microsoft", "winget-pkgs")
-    }
-
-    fn remote(owner: &str, name: &str, default_branch: &str) -> RemoteRepository {
-        RemoteRepository {
-            repository: Repository::new(owner.to_owned(), name.to_owned()),
-            url: format!("https://github.com/{owner}/{name}")
-                .parse()
-                .unwrap(),
-            default_branch: default_branch.to_owned(),
-        }
-    }
-
-    fn fork_of(parent: Option<&str>) -> RemoteFork {
-        RemoteFork {
-            remote: remote("octocat", "winget-pkgs", "main"),
-            is_fork: true,
-            parent: parent.map(str::to_owned),
-        }
-    }
-
-    fn repositories(
-        upstream: Option<RemoteRepository>,
-        fork: Option<RemoteFork>,
-    ) -> SyncRepositories {
-        SyncRepositories {
-            upstream,
-            fork,
-            fork_lookup: Repository::new("octocat", "winget-pkgs"),
-        }
-    }
 
     /// A fork of upstream whose default branch is `main`, while upstream's is `master`.
     fn valid_repositories() -> SyncRepositories {
@@ -371,24 +166,28 @@ mod tests {
         )
     }
 
-    /// A scripted GitHub that records the branches it is asked to compare and merge.
+    #[derive(Debug, Error)]
+    #[error("{0}")]
+    struct FakeError(&'static str);
+
+    /// A scripted host that records the branches it is asked to compare and merge.
     struct FakeApi {
         repositories: RefCell<Option<SyncRepositories>>,
         divergence: Divergence,
-        merge: Result<MergeType, &'static str>,
+        merge: Result<MergeResult, &'static str>,
         compared: RefCell<Option<(String, String)>>,
         merged: RefCell<Option<String>>,
     }
 
     impl FakeApi {
-        fn new(divergence: Divergence, merge: Result<MergeType, &'static str>) -> Self {
+        fn new(divergence: Divergence, merge: Result<MergeResult, &'static str>) -> Self {
             Self::with_repositories(valid_repositories(), divergence, merge)
         }
 
         fn with_repositories(
             repositories: SyncRepositories,
             divergence: Divergence,
-            merge: Result<MergeType, &'static str>,
+            merge: Result<MergeResult, &'static str>,
         ) -> Self {
             Self {
                 repositories: RefCell::new(Some(repositories)),
@@ -401,11 +200,13 @@ mod tests {
     }
 
     impl ForkSyncApi for FakeApi {
+        type Error = FakeError;
+
         async fn get_sync_repositories(
             &self,
             _upstream: &Repository,
             _fork: Option<&Repository>,
-        ) -> Result<SyncRepositories, GitHubError> {
+        ) -> Result<SyncRepositories, FakeError> {
             Ok(self.repositories.borrow_mut().take().unwrap())
         }
 
@@ -415,7 +216,7 @@ mod tests {
             fork_branch: &str,
             _upstream: &Repository,
             upstream_branch: &str,
-        ) -> Result<Divergence, GitHubError> {
+        ) -> Result<Divergence, FakeError> {
             *self.compared.borrow_mut() =
                 Some((fork_branch.to_owned(), upstream_branch.to_owned()));
             Ok(self.divergence)
@@ -425,24 +226,34 @@ mod tests {
             &self,
             _fork: &Repository,
             branch: &str,
-        ) -> Result<MergeResult, GitHubError> {
+        ) -> Result<MergeResult, FakeError> {
             *self.merged.borrow_mut() = Some(branch.to_owned());
-            self.merge
-                .map(|merge_type| MergeResult {
-                    merge_type,
-                    message: "GitHub's explanation".to_owned(),
-                })
-                .map_err(|error| GitHubError::GraphQL(eyre!(error)))
+            match &self.merge {
+                Ok(MergeResult::Merged(kind)) => Ok(MergeResult::Merged(*kind)),
+                Ok(MergeResult::NothingMerged { message }) => Ok(MergeResult::NothingMerged {
+                    message: message.clone(),
+                }),
+                Err(error) => Err(FakeError(error)),
+            }
         }
     }
 
-    /// Records each merge it is asked to show.
+    /// Records what it is told about the sync.
     #[derive(Default)]
-    struct RecordingProgress(RefCell<Vec<String>>);
+    struct RecordingObserver {
+        diverged: RefCell<Vec<String>>,
+        merging: RefCell<Vec<String>>,
+    }
 
-    impl Progress for RecordingProgress {
+    impl SyncObserver for RecordingObserver {
+        fn diverged(&self, fork: &Repository, upstream: &Repository, ahead: Commits) {
+            self.diverged
+                .borrow_mut()
+                .push(format!("{fork} has {ahead} not in {upstream}"));
+        }
+
         fn merging(&self, summary: &MergeSummary<&Repository, &Repository>) -> impl Sized {
-            self.0.borrow_mut().push(summary.to_string());
+            self.merging.borrow_mut().push(summary.to_string());
         }
     }
 
@@ -454,28 +265,32 @@ mod tests {
         }
     }
 
+    fn fast_forward() -> Result<MergeResult, &'static str> {
+        Ok(MergeResult::Merged(MergeKind::FastForward))
+    }
+
     #[tokio::test]
     async fn up_to_date_fork_is_not_merged() {
-        let api = FakeApi::new(Divergence::Identical, Ok(MergeType::None));
-        let progress = RecordingProgress::default();
+        let api = FakeApi::new(Divergence::Identical, fast_forward());
+        let observer = RecordingObserver::default();
 
-        let report = sync(&api, &request(&upstream(), None), &progress)
+        let report = sync(&api, &request(&upstream(), None), &observer)
             .await
             .unwrap();
 
         assert_eq!(report.outcome, SyncOutcome::UpToDate);
         assert!(api.merged.borrow().is_none());
-        assert!(progress.0.borrow().is_empty());
+        assert!(observer.merging.borrow().is_empty());
     }
 
     #[tokio::test]
     async fn fork_ahead_is_not_merged() {
-        let api = FakeApi::new(Divergence::Ahead { by: 3 }, Ok(MergeType::None));
+        let api = FakeApi::new(Divergence::Ahead { by: 3 }, fast_forward());
 
         let report = sync(
             &api,
             &request(&upstream(), None),
-            &RecordingProgress::default(),
+            &RecordingObserver::default(),
         )
         .await
         .unwrap();
@@ -486,10 +301,10 @@ mod tests {
 
     #[tokio::test]
     async fn behind_fork_merges_its_default_branch() {
-        let api = FakeApi::new(Divergence::Behind { by: 5 }, Ok(MergeType::FastForward));
-        let progress = RecordingProgress::default();
+        let api = FakeApi::new(Divergence::Behind { by: 5 }, fast_forward());
+        let observer = RecordingObserver::default();
 
-        let report = sync(&api, &request(&upstream(), None), &progress)
+        let report = sync(&api, &request(&upstream(), None), &observer)
             .await
             .unwrap();
 
@@ -497,7 +312,7 @@ mod tests {
             report.outcome,
             SyncOutcome::Merged {
                 commits: Commits(5),
-                merge_type: MergeType::FastForward
+                kind: MergeKind::FastForward
             }
         );
         assert_eq!(
@@ -506,9 +321,10 @@ mod tests {
         );
         assert_eq!(api.merged.borrow().as_deref(), Some("main"));
         assert_eq!(
-            *progress.0.borrow(),
+            *observer.merging.borrow(),
             ["5 commits from microsoft/winget-pkgs into octocat/winget-pkgs"]
         );
+        assert!(observer.diverged.borrow().is_empty());
         assert_eq!(
             report.fork.repository,
             Repository::new("octocat", "winget-pkgs")
@@ -523,13 +339,13 @@ mod tests {
                 behind: 4,
                 ahead: 2,
             },
-            Ok(MergeType::Merge),
+            Ok(MergeResult::Merged(MergeKind::Merge)),
         );
 
         let report = sync(
             &api,
             &request(&upstream(), None),
-            &RecordingProgress::default(),
+            &RecordingObserver::default(),
         )
         .await
         .unwrap();
@@ -538,19 +354,45 @@ mod tests {
             report.outcome,
             SyncOutcome::Merged {
                 commits: Commits(4),
-                merge_type: MergeType::Merge
+                kind: MergeKind::Merge
             }
         );
     }
 
     #[tokio::test]
-    async fn nothing_merged_keeps_github_explanation() {
-        let api = FakeApi::new(Divergence::Behind { by: 1 }, Ok(MergeType::None));
+    async fn diverged_fork_is_reported_to_the_observer() {
+        let api = FakeApi::new(
+            Divergence::Diverged {
+                behind: 4,
+                ahead: 2,
+            },
+            Ok(MergeResult::Merged(MergeKind::Merge)),
+        );
+        let observer = RecordingObserver::default();
+
+        sync(&api, &request(&upstream(), None), &observer)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            *observer.diverged.borrow(),
+            ["octocat/winget-pkgs has 2 commits not in microsoft/winget-pkgs"]
+        );
+    }
+
+    #[tokio::test]
+    async fn nothing_merged_keeps_the_explanation() {
+        let api = FakeApi::new(
+            Divergence::Behind { by: 1 },
+            Ok(MergeResult::NothingMerged {
+                message: "GitHub's explanation".to_owned(),
+            }),
+        );
 
         let report = sync(
             &api,
             &request(&upstream(), None),
-            &RecordingProgress::default(),
+            &RecordingObserver::default(),
         )
         .await
         .unwrap();
@@ -565,12 +407,12 @@ mod tests {
 
     #[tokio::test]
     async fn given_branch_is_compared_and_merged() {
-        let api = FakeApi::new(Divergence::Behind { by: 1 }, Ok(MergeType::FastForward));
+        let api = FakeApi::new(Divergence::Behind { by: 1 }, fast_forward());
 
         sync(
             &api,
             &request(&upstream(), Some("release")),
-            &RecordingProgress::default(),
+            &RecordingObserver::default(),
         )
         .await
         .unwrap();
@@ -587,13 +429,13 @@ mod tests {
         let api = FakeApi::with_repositories(
             repositories(Some(remote("microsoft", "winget-pkgs", "master")), None),
             Divergence::Behind { by: 1 },
-            Ok(MergeType::FastForward),
+            fast_forward(),
         );
 
         let error = sync(
             &api,
             &request(&upstream(), None),
-            &RecordingProgress::default(),
+            &RecordingObserver::default(),
         )
         .await
         .unwrap_err();
@@ -609,7 +451,7 @@ mod tests {
         let error = sync(
             &api,
             &request(&upstream(), None),
-            &RecordingProgress::default(),
+            &RecordingObserver::default(),
         )
         .await
         .unwrap_err();
@@ -618,121 +460,9 @@ mod tests {
             error.to_string(),
             "Failed to merge 5 commits from microsoft/winget-pkgs into octocat/winget-pkgs"
         );
-        assert!(matches!(error, SyncError::Merge { .. }));
-    }
-
-    #[rstest]
-    #[case("microsoft/winget-pkgs")]
-    #[case("Microsoft/Winget-Pkgs")]
-    fn fork_of_upstream_is_valid(#[case] parent: &str) {
-        let target = validate(
-            repositories(
-                Some(remote("microsoft", "winget-pkgs", "master")),
-                Some(fork_of(Some(parent))),
-            ),
-            &upstream(),
-        )
-        .unwrap();
-
-        assert_eq!(target.upstream.repository, upstream());
         assert_eq!(
-            target.fork.repository,
-            Repository::new("octocat", "winget-pkgs")
-        );
-    }
-
-    #[test]
-    fn missing_upstream() {
-        let error = validate(repositories(None, Some(fork_of(None))), &upstream()).unwrap_err();
-
-        assert!(
-            matches!(error, SyncError::UpstreamNotFound(repository) if repository == upstream())
-        );
-    }
-
-    #[test]
-    fn missing_fork_reports_the_lookup_name() {
-        let error = validate(
-            repositories(Some(remote("microsoft", "winget-pkgs", "master")), None),
-            &upstream(),
-        )
-        .unwrap_err();
-
-        assert!(matches!(
-            error,
-            SyncError::ForkNotFound { fork, .. } if fork == Repository::new("octocat", "winget-pkgs")
-        ));
-    }
-
-    #[test]
-    fn repository_that_is_not_a_fork() {
-        let not_a_fork = RemoteFork {
-            is_fork: false,
-            ..fork_of(None)
-        };
-
-        let error = validate(
-            repositories(
-                Some(remote("microsoft", "winget-pkgs", "master")),
-                Some(not_a_fork),
-            ),
-            &upstream(),
-        )
-        .unwrap_err();
-
-        assert!(matches!(error, SyncError::NotAFork { .. }));
-    }
-
-    #[test]
-    fn fork_of_another_repository() {
-        let error = validate(
-            repositories(
-                Some(remote("microsoft", "winget-pkgs", "master")),
-                Some(fork_of(Some("contoso/winget-pkgs"))),
-            ),
-            &upstream(),
-        )
-        .unwrap_err();
-
-        assert!(matches!(
-            error,
-            SyncError::ForkOfOtherRepository { parent, .. } if parent == "contoso/winget-pkgs"
-        ));
-    }
-
-    #[test]
-    fn fork_with_inaccessible_parent() {
-        let error = validate(
-            repositories(
-                Some(remote("microsoft", "winget-pkgs", "master")),
-                Some(fork_of(None)),
-            ),
-            &upstream(),
-        )
-        .unwrap_err();
-
-        assert!(matches!(error, SyncError::ParentInaccessible { .. }));
-    }
-
-    #[test]
-    fn branches_default_to_each_default_branch() {
-        assert_eq!(
-            Branches::new(None, "main", "master"),
-            Branches {
-                fork: "main",
-                upstream: "master"
-            }
-        );
-    }
-
-    #[test]
-    fn given_branch_is_used_on_both_sides() {
-        assert_eq!(
-            Branches::new(Some("release"), "main", "master"),
-            Branches {
-                fork: "release",
-                upstream: "release"
-            }
+            std::error::Error::source(&error).map(ToString::to_string),
+            Some("merge conflict".to_owned())
         );
     }
 }
