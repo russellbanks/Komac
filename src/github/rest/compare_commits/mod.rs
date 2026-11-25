@@ -7,7 +7,7 @@ use serde::Deserialize;
 use status::Status;
 
 use super::transport::SendJson;
-use crate::github::{GitHubError, client::GitHub, upstream};
+use crate::github::{GitHubError, Repository, client::GitHub};
 
 /// The subset of GitHub's "Compare two commits" response that is needed.
 ///
@@ -37,27 +37,58 @@ impl CompareCommits {
 }
 
 impl GitHub {
-    /// Compares the default branch of the fork owned by `fork_owner` with upstream's default
-    /// branch.
-    pub async fn compare_upstream(&self, fork_owner: &str) -> Result<Divergence, GitHubError> {
-        let path = format!(
-            "repos/{fork_owner}/{name}/compare/HEAD...{owner}:HEAD",
-            name = upstream().name(),
-            owner = upstream().owner(),
-        );
-
-        self.rest(Method::GET, &path)
-            .send_json::<CompareCommits>()
-            .await
-            .map(CompareCommits::fork_divergence)
+    /// Compares `fork_branch` in `fork` with `upstream_branch` in `upstream`, describing how the
+    /// fork's branch relates to upstream's.
+    pub async fn compare_fork(
+        &self,
+        fork: &Repository,
+        fork_branch: &str,
+        upstream: &Repository,
+        upstream_branch: &str,
+    ) -> Result<Divergence, GitHubError> {
+        self.rest(
+            Method::GET,
+            &compare_path(fork, fork_branch, upstream, upstream_branch),
+        )
+        .send_json::<CompareCommits>()
+        .await
+        .map(CompareCommits::fork_divergence)
     }
+}
+
+/// The REST path comparing the fork's branch (base) with upstream's branch (head), which is
+/// qualified with upstream's owner because it lives in another repository of the same network.
+fn compare_path(
+    fork: &Repository,
+    fork_branch: &str,
+    upstream: &Repository,
+    upstream_branch: &str,
+) -> String {
+    format!(
+        "repos/{fork}/compare/{fork_branch}...{owner}:{upstream_branch}",
+        owner = upstream.owner()
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use rstest::rstest;
 
-    use super::{CompareCommits, Divergence};
+    use super::{CompareCommits, Divergence, compare_path};
+    use crate::github::Repository;
+
+    #[test]
+    fn compare_path_uses_both_branches() {
+        assert_eq!(
+            compare_path(
+                &Repository::new("octocat", "winget-pkgs"),
+                "main",
+                &Repository::new("microsoft", "winget-pkgs"),
+                "master",
+            ),
+            "repos/octocat/winget-pkgs/compare/main...microsoft:master"
+        );
+    }
 
     /// The comparison is `fork...upstream`, so GitHub's `ahead`/`behind` describe upstream
     /// relative to the fork and must be flipped to describe the fork.

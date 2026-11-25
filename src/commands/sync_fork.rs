@@ -12,7 +12,7 @@ use tracing::warn;
 
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
-    github::{Divergence, MergeType, client::GitHub, upstream},
+    github::{Divergence, MergeType, Repository, client::GitHub, upstream},
     terminal::Hyperlinkable,
     token::TokenManager,
 };
@@ -22,6 +22,20 @@ use crate::{
 #[derive(Parser)]
 #[clap(visible_aliases = ["sync-fork", "merge-upstream"])]
 pub struct SyncFork {
+    /// The fork to sync, if it is not `<you>/<upstream name>`, e.g. a renamed fork or one owned
+    /// by an organization
+    #[arg(long, value_name = "OWNER/NAME")]
+    fork: Option<Repository>,
+
+    /// The owner of the fork, if it is not the authenticated user. Ignored when --fork is given
+    #[arg(long, env = "KOMAC_FORK_OWNER", value_name = "OWNER")]
+    fork_owner: Option<String>,
+
+    /// The branch to sync. Without this, the fork's default branch is synced with upstream's
+    /// default branch. With it, the branch is synced with upstream's branch of the same name
+    #[arg(long)]
+    branch: Option<String>,
+
     /// GitHub personal access token with the `public_repo` scope
     #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
     token: Option<SecretString>,
@@ -33,34 +47,48 @@ impl SyncFork {
             return Self::vhs().await;
         }
 
+        // Read the global upstream once here so everything below receives it explicitly
+        let upstream = upstream();
+
         let token_manager = TokenManager::handle(self.token).await?;
         let github = GitHub::new(token_manager)?;
 
-        let username = github.get_username().await?;
+        let fork = match explicit_fork(self.fork, self.fork_owner, upstream) {
+            Some(fork) => fork,
+            None => Repository::new(github.get_username().await?, upstream.name()),
+        };
 
-        // Fetch repository data from both upstream and fork repositories asynchronously
-        let (winget_pkgs, fork) = try_join!(
-            github.get_winget_pkgs().send(),
-            github.get_winget_pkgs().owner(&username).send(),
+        let (upstream_info, fork_info) = try_join!(
+            github.get_repository(upstream),
+            github.get_repository(&fork),
         )?;
 
-        let upstream_commits = match github.compare_upstream(&username).await? {
+        let branches = Branches::new(
+            self.branch.as_deref(),
+            &fork_info.default_branch_name,
+            &upstream_info.default_branch_name,
+        );
+
+        let upstream_commits = match github
+            .compare_fork(&fork, branches.fork, upstream, branches.upstream)
+            .await?
+        {
             Divergence::Identical => {
                 println!(
                     "{} is already {} with {}",
-                    fork.full_name.hyperlink(&fork.url).blue(),
+                    fork_info.full_name.hyperlink(&fork_info.url).blue(),
                     "up-to-date".green(),
-                    winget_pkgs.full_name.hyperlink(&winget_pkgs.url).blue()
+                    upstream_info.full_name.hyperlink(&upstream_info.url).blue()
                 );
                 return Ok(());
             }
             Divergence::Ahead { by } => {
                 println!(
                     "{} is not behind {}, so there is nothing to merge. It has {} that {} does not",
-                    fork.full_name.hyperlink(&fork.url).blue(),
-                    winget_pkgs.full_name.hyperlink(&winget_pkgs.url).blue(),
+                    fork_info.full_name.hyperlink(&fork_info.url).blue(),
+                    upstream_info.full_name.hyperlink(&upstream_info.url).blue(),
                     Commits(by),
-                    winget_pkgs.full_name,
+                    upstream_info.full_name,
                 );
                 return Ok(());
             }
@@ -68,10 +96,10 @@ impl SyncFork {
             Divergence::Diverged { behind, ahead } => {
                 warn!(
                     "{} has diverged from {}: it has {} that {} does not. Syncing creates a merge commit, and fails if the changes conflict",
-                    fork.full_name,
-                    winget_pkgs.full_name,
+                    fork_info.full_name,
+                    upstream_info.full_name,
                     Commits(ahead),
-                    winget_pkgs.full_name,
+                    upstream_info.full_name,
                 );
                 behind
             }
@@ -87,22 +115,22 @@ impl SyncFork {
                 "Merging {}",
                 MergeSummary {
                     commits,
-                    upstream: winget_pkgs.full_name.blue(),
-                    fork: fork.full_name.blue(),
+                    upstream: upstream_info.full_name.blue(),
+                    fork: fork_info.full_name.blue(),
                 }
             ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         let response = github
-            .sync_fork(&username, &fork.default_branch_name)
+            .sync_fork(&fork, branches.fork)
             .await
             .with_context(|| {
                 format!(
                     "Failed to merge {}",
                     MergeSummary {
                         commits,
-                        upstream: &winget_pkgs.full_name,
-                        fork: &fork.full_name,
+                        upstream: &upstream_info.full_name,
+                        fork: &fork_info.full_name,
                     }
                 )
             })?;
@@ -115,8 +143,8 @@ impl SyncFork {
                 "Successfully".green(),
                 MergeSummary {
                     commits,
-                    upstream: winget_pkgs.full_name.hyperlink(winget_pkgs.url).blue(),
-                    fork: fork.full_name.hyperlink(&fork.url).blue(),
+                    upstream: upstream_info.full_name.hyperlink(&upstream_info.url).blue(),
+                    fork: fork_info.full_name.hyperlink(&fork_info.url).blue(),
                 },
                 response.merge_type,
             ),
@@ -124,7 +152,7 @@ impl SyncFork {
             // because the fork was synced in between. Its message says why.
             MergeType::None => println!(
                 "{}: {}",
-                fork.full_name.hyperlink(fork.url).blue(),
+                fork_info.full_name.hyperlink(&fork_info.url).blue(),
                 response.message
             ),
         }
@@ -152,6 +180,43 @@ impl SyncFork {
         println!("{} merged {summary}", "Successfully".green());
 
         Ok(())
+    }
+}
+
+/// Returns the fork named on the command line: `--fork` as given, or `--fork-owner` with
+/// upstream's name. `None` means the fork belongs to the authenticated user.
+fn explicit_fork(
+    fork: Option<Repository>,
+    fork_owner: Option<String>,
+    upstream: &Repository,
+) -> Option<Repository> {
+    fork.or_else(|| Some(Repository::new(fork_owner?, upstream.name().to_owned())))
+}
+
+/// The branch to sync in the fork, and the upstream branch it is compared with.
+#[derive(Debug, PartialEq, Eq)]
+struct Branches<'a> {
+    fork: &'a str,
+    upstream: &'a str,
+}
+
+impl<'a> Branches<'a> {
+    /// Uses each repository's default branch, unless a branch was given.
+    ///
+    /// A given branch is compared with upstream's branch of the same name, matching
+    /// `gh repo sync --branch`. GitHub's API docs don't say which upstream branch merge-upstream
+    /// uses for a non-default branch.
+    fn new(branch: Option<&'a str>, fork_default: &'a str, upstream_default: &'a str) -> Self {
+        match branch {
+            Some(branch) => Self {
+                fork: branch,
+                upstream: branch,
+            },
+            None => Self {
+                fork: fork_default,
+                upstream: upstream_default,
+            },
+        }
     }
 }
 
@@ -188,9 +253,72 @@ impl<Upstream: fmt::Display, Fork: fmt::Display> fmt::Display for MergeSummary<U
 
 #[cfg(test)]
 mod tests {
+    use clap::Parser;
     use rstest::rstest;
 
-    use super::{Commits, MergeSummary};
+    use super::{Branches, Commits, MergeSummary, SyncFork, explicit_fork};
+    use crate::github::Repository;
+
+    fn upstream() -> Repository {
+        Repository::new("microsoft", "winget-pkgs")
+    }
+
+    #[test]
+    fn explicit_fork_prefers_fork_over_owner() {
+        assert_eq!(
+            explicit_fork(
+                Some(Repository::new("octocat", "renamed-pkgs")),
+                Some("contoso".to_owned()),
+                &upstream(),
+            ),
+            Some(Repository::new("octocat", "renamed-pkgs"))
+        );
+    }
+
+    #[test]
+    fn explicit_fork_from_owner_uses_upstream_name() {
+        assert_eq!(
+            explicit_fork(None, Some("contoso".to_owned()), &upstream()),
+            Some(Repository::new("contoso", "winget-pkgs"))
+        );
+    }
+
+    #[test]
+    fn explicit_fork_is_none_without_flags() {
+        assert_eq!(explicit_fork(None, None, &upstream()), None);
+    }
+
+    #[test]
+    fn branches_default_to_each_default_branch() {
+        assert_eq!(
+            Branches::new(None, "main", "master"),
+            Branches {
+                fork: "main",
+                upstream: "master"
+            }
+        );
+    }
+
+    #[test]
+    fn given_branch_is_used_on_both_sides() {
+        assert_eq!(
+            Branches::new(Some("release"), "main", "master"),
+            Branches {
+                fork: "release",
+                upstream: "release"
+            }
+        );
+    }
+
+    #[test]
+    fn parses_fork_and_branch() {
+        let args =
+            SyncFork::try_parse_from(["sync", "--fork", "octocat/renamed-pkgs", "--branch", "dev"])
+                .unwrap();
+
+        assert_eq!(args.fork, Some(Repository::new("octocat", "renamed-pkgs")));
+        assert_eq!(args.branch.as_deref(), Some("dev"));
+    }
 
     #[rstest]
     #[case(1, "1 commit from microsoft/winget-pkgs into octocat/winget-pkgs")]

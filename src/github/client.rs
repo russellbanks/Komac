@@ -22,6 +22,7 @@ use super::{GitHubError, graphql::create_pull_request};
 use crate::{
     commands::{cleanup::MergeState, utils::SPINNER_TICK_RATE},
     github::{
+        Repository,
         graphql::{
             GRAPHQL_URL,
             create_commit::{FileAddition, FileDeletion},
@@ -193,6 +194,15 @@ impl GitHub {
             upstream().name(),
         )
         .await
+    }
+
+    /// Gets the ID, URL and default branch of a repository.
+    pub async fn get_repository(
+        &self,
+        repository: &Repository,
+    ) -> Result<RepositoryData, GitHubError> {
+        self.get_repository_info(repository.owner(), repository.name())
+            .await
     }
 
     async fn get_repository_info(

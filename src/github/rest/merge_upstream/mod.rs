@@ -9,7 +9,7 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    super::{GitHubError, client::GitHub, upstream},
+    super::{GitHubError, Repository, client::GitHub},
     transport::SendJson,
 };
 
@@ -36,13 +36,12 @@ impl GitHub {
     /// GitHub's "Sync fork" behavior in the web UI.
     ///
     /// See <https://docs.github.com/rest/branches/branches#sync-a-fork-branch-with-the-upstream-repository>.
-    pub async fn sync_fork(&self, fork_owner: &str, branch: &str) -> Result<Response, GitHubError> {
-        let path = format!(
-            "repos/{fork_owner}/{name}/merge-upstream",
-            name = upstream().name()
-        );
-
-        self.rest(Method::POST, &path)
+    pub async fn sync_fork(
+        &self,
+        fork: &Repository,
+        branch: &str,
+    ) -> Result<Response, GitHubError> {
+        self.rest(Method::POST, &format!("repos/{fork}/merge-upstream"))
             .json(&Body { branch })
             .send_json::<Response>()
             .await
