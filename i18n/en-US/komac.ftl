@@ -174,6 +174,18 @@ token-deleted = { $success } deleted the stored token from the platform's secure
 token-not-deleted = No token was deleted
 token-stored = { $success } stored token in platform's secure storage
 
+## Manifest editor. Arguments such as { $quit } are key names, which are shown in bold.
+
+editor-help = Press { $quit } to quit, { $save } to save, { $search } to search, { $switch } to switch buffer
+editor-search-help = Press { $enter } to jump to first match and close, { $close } to close, { $next } to search next, { $previous } to search previous
+editor-search = Search
+editor-search-error = Search: { $error }
+editor-pattern-not-found = Pattern not found
+editor-switched-buffer = Switched to buffer #{ $number }
+editor-saved = Saved!
+# Shown after the file name when it has unsaved changes
+editor-modified = [modified]
+
 ## Command-line help. The message is shown by -h, and `.long` by --help when present.
 
 command-komac = A manifest creator for winget-pkgs
