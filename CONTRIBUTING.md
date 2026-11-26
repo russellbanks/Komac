@@ -24,6 +24,41 @@ Formatting needs the nightly toolchain (`rustup toolchain install nightly --comp
 `rustfmt.toml` uses unstable options to group and merge imports. Stable `rustfmt` ignores them and
 formats imports differently. Run `cargo +nightly fmt` to fix formatting.
 
+### Translating komac
+
+komac's text is translated with [Fluent](https://projectfluent.org/fluent/guide/). Each language has a file at
+`i18n/<language>/komac.ftl`, and `i18n/en-US/komac.ftl` is the source that every other language is translated from.
+
+To add a language:
+
+1. Copy `i18n/en-US/komac.ftl` to `i18n/<language>/komac.ftl`, where `<language>` is a language tag such as `de-DE`
+   or `fr`.
+2. Translate the text after each `=`. Keep the message IDs (before the `=`) and arguments such as `{ $identifier }`
+   as they are, though arguments can move anywhere in the sentence.
+3. Remove any messages you haven't translated. komac shows those in English.
+4. Try it with `KOMAC_LANG=<language> cargo run -- --help`.
+
+Many messages choose their wording with a [selector](https://projectfluent.org/fluent/guide/selectors.html), such
+as `{ $count -> [one] ... *[other] ... }`. Use the plural categories your language needs, which may be more or fewer
+than English has.
+
+`cargo test` checks that every translation file parses and only has messages that are in `en-US`.
+
+#### Adding text in code
+
+Text that users read in the terminal goes in `i18n/en-US/komac.ftl` and is looked up with `fl!`, which checks at
+compile time that the message and its arguments exist:
+
+```rust
+println!("{}", fl!("latest-version", identifier = identifier.as_str(), version = version.to_string()));
+```
+
+- Write whole sentences, with the values that change passed as arguments. Don't build sentences out of separately
+  translated pieces, as word order differs between languages.
+- Use a selector for anything that depends on a number or a state, rather than choosing between messages in code.
+- Name arguments in snake_case, as they're also Rust identifiers.
+- Keep logs, errors from internal failures and anything sent to GitHub, such as pull request bodies, in English.
+
 ### Testing your changes
 
 Using Docker is the easiest way to test your code before submitting a pull request.

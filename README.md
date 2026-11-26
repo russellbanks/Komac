@@ -159,6 +159,18 @@ stderr after a command finishes. The check never runs in CI (`CI=true`) or when 
 
 To disable it, set the `KOMAC_NO_UPDATE_NOTIFIER` environment variable to any value.
 
+## Language
+
+komac shows its prompts, output and help in your operating system's language when a translation is available, and
+in English otherwise. To choose a language yourself, set the `KOMAC_LANG` environment variable to a language tag:
+
+```shell
+KOMAC_LANG=de-DE komac update --help
+```
+
+The pull requests komac opens are always written in English. To help translate komac, see
+[Translating komac](CONTRIBUTING.md#translating-komac).
+
 ## Third-party repositories
 
 By default, komac reads manifests from and opens pull requests against
