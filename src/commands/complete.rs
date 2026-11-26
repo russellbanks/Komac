@@ -2,22 +2,13 @@ use clap::{CommandFactory, Parser};
 use clap_complete::{Shell, generate};
 use color_eyre::{Result, Section, eyre::eyre};
 
-use crate::Cli;
+use crate::{Cli, i18n::fl};
 
-/// Outputs an autocompletion script for the given shell. Example usage:
-///
-/// Bash: echo "source <(komac complete bash)" >> ~/.bashrc
-/// Elvish: echo "eval (komac complete elvish | slurp)" >> ~/.elvish/rc.elv
-/// Fish: echo "source (komac complete fish | psub)" >> ~/.config/fish/config.fish
-/// PowerShell: echo "komac complete powershell | Out-String | Invoke-Expression" >> $PROFILE
-/// Zsh: echo "source <(komac complete zsh)" >> ~/.zshrc
 #[derive(Parser)]
-#[clap(visible_alias = "autocomplete", verbatim_doc_comment)]
+#[command(about = fl!("command-complete"), long_about = fl!("command-complete", "long"))]
+#[clap(visible_alias = "autocomplete")]
 pub struct Complete {
-    /// Specifies the shell for which to generate the completion script.
-    ///
-    /// If not provided, the shell will be inferred based on the current environment.
-    #[arg()]
+    #[arg(help = fl!("arg-complete-shell"), long_help = fl!("arg-complete-shell", "long"))]
     shell: Option<Shell>,
 }
 

@@ -12,25 +12,20 @@ use crate::{
     prompts::handle_inquire_error, terminal::success, token::TokenManager,
 };
 
-/// Finds branches from the fork of the upstream repository that have had a merged or closed pull request to
-/// the upstream repository from them, prompting for which ones to delete
 #[derive(Parser)]
+#[command(about = fl!("command-cleanup"))]
 #[clap(visible_alias = "clean")]
 pub struct Cleanup {
-    /// Only delete merged branches
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-cleanup-only-merged"))]
     only_merged: bool,
 
-    /// Only delete closed branches
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-cleanup-only-closed"))]
     only_closed: bool,
 
-    /// Automatically delete all relevant branches
-    #[arg(short, long, env = "CI")]
+    #[arg(short, long, env = "CI", help = fl!("arg-cleanup-all"))]
     all: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 

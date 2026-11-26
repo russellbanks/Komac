@@ -38,72 +38,84 @@ use crate::{
     traits::path::NormalizePath,
 };
 
-/// Add a version to a pre-existing package
 #[expect(clippy::struct_excessive_bools)]
 #[derive(Parser)]
+#[command(about = fl!("command-update"))]
 pub struct UpdateVersion {
-    /// The package's unique identifier
-    #[arg(value_name = "PACKAGE_IDENTIFIER")]
+    #[arg(value_name = "PACKAGE_IDENTIFIER", help = fl!("arg-identifier"))]
     identifier: PackageIdentifier,
 
-    /// The package's version
-    #[arg(short = 'v', long = "version")]
+    #[arg(short = 'v', long = "version", help = fl!("arg-version"))]
     version: PackageVersion,
 
-    /// Direct download URLs of the package's installers, separated by a space
-    #[arg(short, long, num_args = 1.., required = true, value_hint = clap::ValueHint::Url)]
+    #[arg(
+        short,
+        long,
+        num_args = 1..,
+        required = true,
+        value_hint = clap::ValueHint::Url,
+        help = fl!("arg-urls"),
+    )]
     urls: Vec<Url>,
 
-    /// Number of installers to download at the same time
-    #[arg(long, default_value_t = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN))]
+    #[arg(
+        long,
+        default_value_t = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN),
+        help = fl!("arg-concurrent-downloads"),
+    )]
     concurrent_downloads: NonZeroUsize,
 
-    /// List of issues that updating this package would resolve
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-update-resolves"))]
     resolves: Vec<NonZeroU32>,
 
-    /// Automatically submit a pull request
-    #[arg(short, long)]
+    #[arg(short, long, help = fl!("arg-submit"))]
     submit: bool,
 
-    /// Automatically skip the prompt and exit (with saving the manifests if --output is defined)
-    #[arg(long, conflicts_with_all = ["submit", "dry_run"])]
+    #[arg(long, conflicts_with_all = ["submit", "dry_run"], help = fl!("arg-exit"))]
     exit: bool,
 
-    /// URL to package's release notes
-    #[arg(long, value_hint = clap::ValueHint::Url)]
+    #[arg(long, value_hint = clap::ValueHint::Url, help = fl!("arg-update-release-notes-url"))]
     release_notes_url: Option<ReleaseNotesUrl>,
 
-    /// Name of external tool that invoked Komac
-    #[arg(long, env = "KOMAC_CREATED_WITH")]
+    #[arg(long, env = "KOMAC_CREATED_WITH", help = fl!("arg-created-with"))]
     created_with: Option<String>,
 
-    /// URL to external tool that invoked Komac
-    #[arg(long, env = "KOMAC_CREATED_WITH_URL", value_hint = clap::ValueHint::Url)]
+    #[arg(
+        long,
+        env = "KOMAC_CREATED_WITH_URL",
+        value_hint = clap::ValueHint::Url,
+        help = fl!("arg-created-with-url"),
+    )]
     created_with_url: Option<DecodedUrl>,
 
-    /// Directory to output the manifests to
-    #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
+    #[arg(
+        short,
+        long,
+        env = "OUTPUT_DIRECTORY",
+        value_hint = clap::ValueHint::DirPath,
+        help = fl!("arg-output"),
+    )]
     output: Option<PathBuf>,
 
-    /// Open pull request link automatically
-    #[arg(long, env = "OPEN_PR")]
+    #[arg(long, env = "OPEN_PR", help = fl!("arg-open-pr"))]
     open_pr: bool,
 
-    /// Run without submitting
-    #[arg(long, env = "DRY_RUN")]
+    #[arg(long, env = "DRY_RUN", help = fl!("arg-dry-run"))]
     dry_run: bool,
 
-    /// Package version to replace
-    #[arg(short, long, num_args = 0..=1, default_missing_value = "latest")]
+    #[arg(
+        short,
+        long,
+        num_args = 0..=1,
+        default_missing_value = "latest",
+        help = fl!("arg-update-replace"),
+    )]
     replace: Option<PackageVersion>,
 
-    /// Skip checking for existing pull requests
-    #[arg(long, env)]
+    #[arg(long, env, help = fl!("arg-skip-pr-check"))]
     skip_pr_check: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 

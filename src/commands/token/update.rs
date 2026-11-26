@@ -10,12 +10,11 @@ use crate::{
     token::{TokenManager, default_headers},
 };
 
-/// Update the stored token
 #[derive(Parser)]
+#[command(about = fl!("command-token-update"))]
 #[clap(visible_aliases = ["new", "add"])]
 pub struct UpdateToken {
-    /// The new token to store
-    #[arg(short, long)]
+    #[arg(short, long, help = fl!("arg-token-update-token"))]
     token: Option<SecretString>,
 }
 

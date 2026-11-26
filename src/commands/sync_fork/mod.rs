@@ -32,27 +32,20 @@ use crate::{
     token::TokenManager,
 };
 
-/// Merges changes from the upstream repository (microsoft/winget-pkgs by default) into the fork
-/// repository
 #[derive(Parser)]
+#[command(about = fl!("command-sync"))]
 #[clap(visible_aliases = ["sync-fork", "merge-upstream"])]
 pub struct SyncFork {
-    /// The fork to sync, if it is not `<you>/<upstream name>`, e.g. a renamed fork or one owned
-    /// by an organization
-    #[arg(long, value_name = "OWNER/NAME")]
+    #[arg(long, value_name = "OWNER/NAME", help = fl!("arg-sync-fork"))]
     fork: Option<Repository>,
 
-    /// The owner of the fork, if it is not the authenticated user. Ignored when --fork is given
-    #[arg(long, env = "KOMAC_FORK_OWNER", value_name = "OWNER")]
+    #[arg(long, env = "KOMAC_FORK_OWNER", value_name = "OWNER", help = fl!("arg-sync-fork-owner"))]
     fork_owner: Option<String>,
 
-    /// The branch to sync. Without this, the fork's default branch is synced with upstream's
-    /// default branch. With it, the branch is synced with upstream's branch of the same name
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-sync-branch"))]
     branch: Option<String>,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 

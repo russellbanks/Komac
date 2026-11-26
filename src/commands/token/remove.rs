@@ -5,12 +5,11 @@ use owo_colors::OwoColorize;
 
 use crate::{i18n::fl, prompts::text::confirm_prompt, terminal::success, token::TokenManager};
 
-/// Remove the stored token
 #[derive(Parser)]
+#[command(about = fl!("command-token-remove"))]
 #[clap(visible_alias = "delete")]
 pub struct RemoveToken {
-    /// Skip the confirmation prompt to delete the token
-    #[arg(short = 'y', long = "yes")]
+    #[arg(short = 'y', long = "yes", help = fl!("arg-token-remove-skip-prompt"))]
     skip_prompt: bool,
 }
 

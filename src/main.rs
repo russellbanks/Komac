@@ -26,6 +26,8 @@ use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{filter, layer::SubscriberExt, util::SubscriberInitExt};
 use update_notifier::UpdateNotifier;
 
+use crate::i18n::fl;
+
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::config::HookBuilder::default()
@@ -74,21 +76,24 @@ fn setup_logging() {
 }
 
 #[derive(Parser)]
-#[command(author, version = env!("KOMAC_VERSION"), about, long_about = None, disable_version_flag = true)]
+#[command(
+    author,
+    version = env!("KOMAC_VERSION"),
+    about = fl!("command-komac"),
+    long_about = None,
+    disable_version_flag = true,
+)]
 struct Cli {
     #[arg(short = 'v', short_alias = 'V', long, action = clap::builder::ArgAction::Version)]
     version: (),
-    /// The GitHub repository that manifests are read from and pull requests are opened against
-    ///
-    /// Use this to work with a third-party or private repository instead of microsoft/winget-pkgs.
-    /// Your fork must have the same name as this repository, except where a command lets you name
-    /// the fork, such as `sync --fork`.
     #[arg(
         long,
         global = true,
         env = "KOMAC_REPOSITORY",
         value_name = "OWNER/NAME",
-        default_value_t = Repository::WINGET_PKGS
+        default_value_t = Repository::WINGET_PKGS,
+        help = fl!("arg-repository"),
+        long_help = fl!("arg-repository", "long"),
     )]
     repository: Repository,
     #[command(subcommand)]

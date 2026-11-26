@@ -173,3 +173,89 @@ token-none-stored = No token is currently stored in the platform's secure storag
 token-deleted = { $success } deleted the stored token from the platform's secure storage
 token-not-deleted = No token was deleted
 token-stored = { $success } stored token in platform's secure storage
+
+## Command-line help. The message is shown by -h, and `.long` by --help when present.
+
+command-komac = A manifest creator for winget-pkgs
+command-analyze = Analyzes a file and outputs information about it
+command-cleanup = Finds branches from the fork of the upstream repository that have had a merged or closed pull request to the upstream repository from them, prompting for which ones to delete
+command-complete = Outputs an autocompletion script for the given shell. Example usage:
+    .long =
+        Outputs an autocompletion script for the given shell. Example usage:
+
+        Bash: echo "source <(komac complete bash)" >> ~/.bashrc
+        Elvish: echo "eval (komac complete elvish | slurp)" >> ~/.elvish/rc.elv
+        Fish: echo "source (komac complete fish | psub)" >> ~/.config/fish/config.fish
+        PowerShell: echo "komac complete powershell | Out-String | Invoke-Expression" >> $PROFILE
+        Zsh: echo "source <(komac complete zsh)" >> ~/.zshrc
+command-list = Lists all versions for a given package
+command-new = Create a new package from scratch
+command-remove = Remove a version from the upstream repository (microsoft/winget-pkgs by default)
+    .long =
+        Remove a version from the upstream repository (microsoft/winget-pkgs by default)
+
+        To remove a package, all versions of that package must be removed
+command-show = Output the manifests for a given package and version
+command-sync = Merges changes from the upstream repository (microsoft/winget-pkgs by default) into the fork repository
+command-token-remove = Remove the stored token
+command-token-update = Update the stored token
+command-update = Add a version to a pre-existing package
+
+arg-analyze-no-hash = Skip hashing the file
+arg-analyze-hash = Hash the file and include it in the `InstallerSha256` field
+arg-cleanup-all = Automatically delete all relevant branches
+arg-cleanup-only-closed = Only delete closed branches
+arg-cleanup-only-merged = Only delete merged branches
+arg-complete-shell = Specifies the shell for which to generate the completion script
+    .long =
+        Specifies the shell for which to generate the completion script.
+
+        If not provided, the shell will be inferred based on the current environment.
+arg-concurrent-downloads = Number of installers to download at the same time
+arg-created-with = Name of external tool that invoked Komac
+arg-created-with-url = URL to external tool that invoked Komac
+arg-dry-run = Run without submitting
+arg-exit = Automatically skip the prompt and exit (with saving the manifests if --output is defined)
+arg-fast = Use the per-minute rate limit, potentially hitting the hourly rate limit in 7.5 minutes
+arg-identifier = The package's unique identifier
+arg-list-count = Output the number of versions the package has
+arg-list-json = Output the versions as JSON
+arg-list-pretty-json = Output the versions as prettified JSON
+arg-list-yaml = Output the versions as YAML
+arg-new-dry-run = Run without prompting or submitting
+arg-new-resolves = List of issues that adding this package or version would resolve
+arg-open-pr = Open pull request link automatically
+arg-output = Directory to output the manifests to
+arg-package-identifier = The package's unique identifier
+arg-package-version = The package's version
+arg-remove-dead-versions-after = Check versions greater than a given version
+arg-remove-dead-versions-auto = Automatically create pull requests to remove dead versions without prompting
+arg-remove-dead-versions-before = Check versions lesser than a given version
+arg-remove-dead-versions-concurrent = Number of versions to check concurrently
+arg-remove-no-warning = Don't show the package removal warning
+arg-remove-resolves = List of issues that removing this version would resolve
+arg-repository = The GitHub repository that manifests are read from and pull requests are opened against
+    .long =
+        The GitHub repository that manifests are read from and pull requests are opened against
+
+        Use this to work with a third-party or private repository instead of microsoft/winget-pkgs. Your fork must have the same name as this repository, except where a command lets you name the fork, such as `sync --fork`.
+arg-show-default-locale-manifest = Switch to display the default locale manifest
+arg-show-installer-manifest = Switch to display the installer manifest
+arg-show-locale-manifests = Switch to display all locale manifests
+arg-show-version-manifest = Switch to display the version manifest
+arg-skip-pr-check = Skip checking for existing pull requests
+arg-submit = Automatically submit a pull request
+arg-submit-resolves = List of issues that submitting this version would resolve
+arg-submit-skip-prompt = Skip the confirmation prompt to submit the package
+arg-submit-submit-all = Submit all packages present in the folder
+arg-sync-branch = The branch to sync. Without this, the fork's default branch is synced with upstream's default branch. With it, the branch is synced with upstream's branch of the same name
+arg-sync-fork = The fork to sync, if it is not `<you>/<upstream name>`, e.g. a renamed fork or one owned by an organization
+arg-sync-fork-owner = The owner of the fork, if it is not the authenticated user. Ignored when --fork is given
+arg-token = GitHub personal access token with the `public_repo` scope
+arg-token-remove-skip-prompt = Skip the confirmation prompt to delete the token
+arg-token-update-token = The new token to store
+arg-update-release-notes-url = URL to package's release notes
+arg-update-replace = Package version to replace
+arg-update-resolves = List of issues that updating this package would resolve
+arg-urls = Direct download URLs of the package's installers, separated by a space
+arg-version = The package's version

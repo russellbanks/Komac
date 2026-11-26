@@ -28,32 +28,30 @@ pub struct Submit {
     #[arg(value_hint = clap::ValueHint::DirPath)]
     path: Utf8PathBuf,
 
-    /// Skip the confirmation prompt to submit the package
-    #[arg(short = 'y', long = "yes", visible_alias = "submit")]
+    #[arg(
+        short = 'y',
+        long = "yes",
+        visible_alias = "submit",
+        help = fl!("arg-submit-skip-prompt"),
+    )]
     skip_prompt: bool,
 
-    /// Submit all packages present in the folder
-    #[arg(short = 'a', long = "all")]
+    #[arg(short = 'a', long = "all", help = fl!("arg-submit-submit-all"))]
     submit_all: bool,
 
-    /// List of issues that submitting this version would resolve
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-submit-resolves"))]
     resolves: Vec<NonZeroU32>,
 
-    /// Open pull request link automatically
-    #[arg(long, env = "OPEN_PR")]
+    #[arg(long, env = "OPEN_PR", help = fl!("arg-open-pr"))]
     open_pr: bool,
 
-    /// Use the per-minute rate limit, potentially hitting the hourly rate limit in 7.5 minutes
-    #[arg(long, hide = true)]
+    #[arg(long, hide = true, help = fl!("arg-fast"))]
     fast: bool,
 
-    /// Run without submitting
-    #[arg(long, env = "DRY_RUN")]
+    #[arg(long, env = "DRY_RUN", help = fl!("arg-dry-run"))]
     dry_run: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 

@@ -20,39 +20,31 @@ use crate::{
     token::TokenManager,
 };
 
-/// Remove a version from the upstream repository (microsoft/winget-pkgs by default)
-///
-/// To remove a package, all versions of that package must be removed
 #[derive(Parser)]
+#[command(about = fl!("command-remove"), long_about = fl!("command-remove", "long"))]
 pub struct RemoveVersion {
-    /// The package's unique identifier
-    #[arg(value_name = "PACKAGE_IDENTIFIER")]
+    #[arg(value_name = "PACKAGE_IDENTIFIER", help = fl!("arg-package-identifier"))]
     package_identifier: PackageIdentifier,
 
-    /// The package's version
-    #[arg(short = 'v', long = "version")]
+    #[arg(short = 'v', long = "version", help = fl!("arg-package-version"))]
     package_version: PackageVersion,
 
     #[arg(short = 'r', long = "reason")]
     deletion_reason: Option<String>,
 
-    /// List of issues that removing this version would resolve
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-remove-resolves"))]
     resolves: Vec<NonZeroU32>,
 
     #[arg(short, long)]
     submit: bool,
 
-    /// Don't show the package removal warning
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-remove-no-warning"))]
     no_warning: bool,
 
-    /// Open pull request link automatically
-    #[arg(long, env = "OPEN_PR")]
+    #[arg(long, env = "OPEN_PR", help = fl!("arg-open-pr"))]
     open_pr: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 
