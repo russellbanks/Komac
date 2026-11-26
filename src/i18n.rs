@@ -86,6 +86,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     use fluent_syntax::{ast::Entry, parser};
+    use rstest::rstest;
 
     use super::Localizations;
 
@@ -127,11 +128,28 @@ mod tests {
         }
     }
 
+    #[rstest]
+    #[case(1, "1st")]
+    #[case(2, "2nd")]
+    #[case(3, "3rd")]
+    #[case(4, "4th")]
+    #[case(11, "11th")]
+    #[case(12, "12th")]
+    #[case(13, "13th")]
+    #[case(21, "21st")]
+    #[case(102, "102nd")]
+    fn ordinal(#[case] position: usize, #[case] expected: &str) {
+        assert_eq!(
+            fl!("prompt-installer-url", position = position),
+            format!("{expected} Installer URL")
+        );
+    }
+
     #[test]
     fn arguments_are_not_isolated() {
         assert_eq!(
-            fl!("prompt-too-many-items", max = 16, count = 20),
-            "There is a maximum of 16 items. There were 20 provided"
+            fl!("prompt-portable-exe", file = "setup.exe"),
+            "Is setup.exe a portable exe?"
         );
     }
 }

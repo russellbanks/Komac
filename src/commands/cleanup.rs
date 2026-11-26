@@ -11,8 +11,8 @@ use owo_colors::OwoColorize;
 use secrecy::SecretString;
 
 use crate::{
-    commands::utils::SPINNER_TICK_RATE, github::client::GitHub, prompts::handle_inquire_error,
-    token::TokenManager,
+    commands::utils::SPINNER_TICK_RATE, github::client::GitHub, i18n::fl,
+    prompts::handle_inquire_error, token::TokenManager,
 };
 
 /// Finds branches from the fork of the upstream repository that have had a merged or closed pull request to
@@ -71,7 +71,7 @@ impl Cleanup {
         } else {
             // Show a multi-selection prompt for which branches to delete, with all options pre-selected
             MultiSelect::new(
-                "Please select branches to delete",
+                &fl!("prompt-select-branches"),
                 pr_branch_map.keys().collect(),
             )
             .with_all_selected_by_default()

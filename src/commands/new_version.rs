@@ -10,7 +10,6 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use indicatif::ProgressBar;
 use inquire::CustomType;
-use ordinal::Ordinal;
 use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use winget_types::{
@@ -38,6 +37,7 @@ use crate::{
         client::GitHub,
         utils::{PackagePath, pull_request::Change},
     },
+    i18n::fl,
     manifests::{Manifests, Url, print_changes},
     prompts::{
         check_prompt, handle_inquire_error,
@@ -176,15 +176,17 @@ impl NewVersion {
 
         let mut urls = self.urls;
         if urls.is_empty() {
+            let invalid_message = fl!("prompt-installer-url", "invalid");
+            let help_message = fl!("prompt-installer-url", "help");
             while urls.len() < 1024 {
-                let message = format!("{} Installer URL", Ordinal(urls.len() + 1));
-                let url_prompt =
-                    CustomType::new(&message).with_error_message("Please enter a valid URL");
-                let installer_url = if urls.len() + 1 == 1 {
+                let position = urls.len() + 1;
+                let message = fl!("prompt-installer-url", position = position);
+                let url_prompt = CustomType::new(&message).with_error_message(&invalid_message);
+                let installer_url = if urls.is_empty() {
                     Some(url_prompt.prompt().map_err(handle_inquire_error)?)
                 } else {
                     url_prompt
-                        .with_help_message("Press ESC if you do not have any more URLs")
+                        .with_help_message(&help_message)
                         .prompt_skippable()
                         .map_err(handle_inquire_error)?
                 };
@@ -224,7 +226,10 @@ impl NewVersion {
                 .iter()
                 .any(|installer| installer.r#type == Some(InstallerType::Exe))
             {
-                if confirm_prompt(&format!("Is {} a portable exe?", analyzer.file_name))? {
+                if confirm_prompt(&fl!(
+                    "prompt-portable-exe",
+                    file = analyzer.file_name.as_str()
+                ))? {
                     for installer in &mut analyzer.installers {
                         installer.r#type = Some(InstallerType::Portable);
                     }

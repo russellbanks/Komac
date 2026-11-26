@@ -5,7 +5,10 @@ use owo_colors::OwoColorize;
 use reqwest::Client;
 use secrecy::{ExposeSecret, SecretString};
 
-use crate::token::{TokenManager, default_headers};
+use crate::{
+    i18n::fl,
+    token::{TokenManager, default_headers},
+};
 
 /// Update the stored token
 #[derive(Parser)]
@@ -31,7 +34,7 @@ impl UpdateToken {
             }
             None => TokenManager::prompt()
                 .client(&client)
-                .message("Please enter the new token to set")
+                .message(&fl!("prompt-new-token"))
                 .call()?,
         };
 

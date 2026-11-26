@@ -62,3 +62,30 @@ field-upgrade-behavior = Upgrade behavior
 ## Prompts
 
 prompt-too-many-items = There is a maximum of { $max } items. There were { $count } provided
+prompt-installer-url =
+    { NUMBER($position, type: "ordinal") ->
+        [one] { $position }st
+        [two] { $position }nd
+        [few] { $position }rd
+       *[other] { $position }th
+    } Installer URL
+    .invalid = Please enter a valid URL
+    .help = Press ESC if you do not have any more URLs
+prompt-portable-exe = Is { $file } a portable exe?
+prompt-nested-files = Select the nested files
+prompt-nested-portable-command-alias = Portable command alias for { $path }:
+prompt-removal-reason = Give a reason for removing { $identifier } version { $version }
+prompt-remove-version = Would you like to make a pull request to remove { $identifier } { $version }?
+# $status is the HTTP status, such as "404 Not Found"
+prompt-remove-dead-version = { $identifier } { $version } returned { $status } in all its InstallerUrls. Remove?
+prompt-remove-anyway = Remove anyway?
+prompt-remove-token = Would you like to remove the currently stored token?
+prompt-proceed = Would you like to proceed?
+prompt-token = Enter a GitHub token
+prompt-new-token = Please enter the new token to set
+prompt-select-branches = Please select branches to delete
+prompt-select-packages = Please select which packages to submit
+prompt-submit-option = What would you like to do with { $identifier } { $version }?
+    .submit = Submit
+    .edit = Edit
+    .exit = Exit

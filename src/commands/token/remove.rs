@@ -3,7 +3,7 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
 
-use crate::{prompts::text::confirm_prompt, token::TokenManager};
+use crate::{i18n::fl, prompts::text::confirm_prompt, token::TokenManager};
 
 /// Remove the stored token
 #[derive(Parser)]
@@ -25,8 +25,7 @@ impl RemoveToken {
             println!("No token stored is currently stored in the platform's secure storage");
         }
 
-        let confirm = self.skip_prompt
-            || confirm_prompt("Would you like to remove the currently stored token?")?;
+        let confirm = self.skip_prompt || confirm_prompt(&fl!("prompt-remove-token"))?;
 
         if confirm {
             credential.delete_credential()?;

@@ -15,6 +15,7 @@ use winget_types::{PackageIdentifier, PackageVersion};
 
 use crate::{
     github::{client::GitHub, upstream},
+    i18n::fl,
     prompts::{handle_inquire_error, text::confirm_prompt},
     token::TokenManager,
 };
@@ -95,9 +96,10 @@ impl RemoveVersion {
         );
         let deletion_reason = match self.deletion_reason {
             Some(reason) => reason,
-            None => Text::new(&format!(
-                "Give a reason for removing {} version {}",
-                self.package_identifier, self.package_version
+            None => Text::new(&fl!(
+                "prompt-removal-reason",
+                identifier = self.package_identifier.as_str(),
+                version = self.package_version.to_string()
             ))
             .with_validator(MinLengthValidator::new(Self::MIN_REASON_LENGTH))
             .with_validator(MaxLengthValidator::new(Self::MAX_REASON_LENGTH))
@@ -105,9 +107,10 @@ impl RemoveVersion {
             .map_err(handle_inquire_error)?,
         };
         let should_remove_manifest = self.submit
-            || confirm_prompt(&format!(
-                "Would you like to make a pull request to remove {} {}?",
-                self.package_identifier, self.package_version
+            || confirm_prompt(&fl!(
+                "prompt-remove-version",
+                identifier = self.package_identifier.as_str(),
+                version = self.package_version.to_string()
             ))?;
 
         if !should_remove_manifest {

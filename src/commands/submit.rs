@@ -16,6 +16,7 @@ use winget_types::{Manifest as WingetManifest, ManifestType, utils::GenericManif
 use crate::{
     commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption},
     github::{client::GitHub, utils::pull_request::Change},
+    i18n::fl,
     manifests::{Manifests, manifest::Manifest, print_changes},
     prompts::handle_inquire_error,
     token::TokenManager,
@@ -116,7 +117,7 @@ impl Submit {
             }
             1 => packages,
             _ if self.submit_all => packages,
-            _ => MultiSelect::new("Please select which packages to submit", packages)
+            _ => MultiSelect::new(&fl!("prompt-select-packages"), packages)
                 .with_page_size(10)
                 .prompt()
                 .map_err(handle_inquire_error)?,

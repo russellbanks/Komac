@@ -10,6 +10,7 @@ use winget_types::{PackageIdentifier, PackageVersion};
 use crate::{
     commands::utils::environment::CI,
     github::{GitHubError, client::GitHub, graphql::types::PullRequest},
+    i18n::fl,
     manifests::Manifests,
     prompts::text::confirm_prompt,
 };
@@ -97,7 +98,7 @@ impl Package<'_, '_, Versioned> {
             );
         }
 
-        Ok(confirm_prompt("Would you like to proceed?")?)
+        Ok(confirm_prompt(&fl!("prompt-proceed"))?)
     }
 }
 

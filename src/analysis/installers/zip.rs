@@ -16,7 +16,7 @@ use winget_types::installer::{
 use zip::ZipArchive;
 
 use super::super::Analyzer;
-use crate::prompts::handle_inquire_error;
+use crate::{i18n::fl, prompts::handle_inquire_error};
 
 const VALID_NESTED_FILE_EXTENSIONS: [&str; 6] =
     ["msix", "msi", "appx", "exe", "msixbundle", "appxbundle"];
@@ -126,7 +126,7 @@ impl<R: Read + Seek> Zip<R> {
     pub fn prompt(&mut self) -> Result<()> {
         if !&self.possible_installer_files.is_empty() {
             let chosen = MultiSelect::new(
-                "Select the nested files",
+                &fl!("prompt-nested-files"),
                 mem::take(&mut self.possible_installer_files),
             )
             .with_validator(min_length!(1))
@@ -150,8 +150,9 @@ impl<R: Read + Seek> Zip<R> {
                         portable_command_alias: if file_analyzer.installers.first().is_some_and(
                             |installer| installer.r#type == Some(InstallerType::Portable),
                         ) {
-                            CustomType::<PortableCommandAlias>::new(&format!(
-                                "Portable command alias for {path}:",
+                            CustomType::<PortableCommandAlias>::new(&fl!(
+                                "prompt-nested-portable-command-alias",
+                                path = path.as_str()
                             ))
                             .prompt_skippable()
                             .map_err(handle_inquire_error)?

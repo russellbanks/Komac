@@ -15,7 +15,7 @@ use thiserror::Error;
 use tokio::runtime::Handle;
 use tracing::warn;
 
-use crate::{commands::utils::environment::CI, prompts::handle_inquire_error};
+use crate::{commands::utils::environment::CI, i18n::fl, prompts::handle_inquire_error};
 
 const GITHUB_API_ENDPOINT: &str = "https://api.github.com/octocat";
 
@@ -105,10 +105,9 @@ impl TokenManager {
     }
 
     #[builder]
-    pub fn prompt(
-        client: &Client,
-        #[builder(default = "Enter a GitHub token")] message: &str,
-    ) -> InquireResult<SecretString> {
+    pub fn prompt(client: &Client, message: Option<&str>) -> InquireResult<SecretString> {
+        let message = message.map_or_else(|| fl!("prompt-token"), str::to_owned);
+
         tokio::task::block_in_place(|| {
             let rt = Handle::current();
             let client = client.clone();
@@ -119,7 +118,7 @@ impl TokenManager {
                 Err(err) => Ok(Validation::Invalid(err.into())),
             };
 
-            Password::new(message)
+            Password::new(&message)
                 .with_display_mode(PasswordDisplayMode::Masked)
                 .with_display_toggle_enabled()
                 .with_validator(validator)

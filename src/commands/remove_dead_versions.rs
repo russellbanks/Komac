@@ -19,6 +19,7 @@ use winget_types::{
 use crate::{
     commands::utils::{RateLimit, SPINNER_SLOW_TICK_RATE},
     github::client::GitHub,
+    i18n::fl,
     prompts::text::confirm_prompt,
     token::{TokenManager, default_headers},
 };
@@ -269,13 +270,15 @@ async fn confirm_removal(
         return if auto {
             Ok(false)
         } else {
-            confirm_prompt("Remove anyway?").map_err(Error::from)
+            confirm_prompt(&fl!("prompt-remove-anyway")).map_err(Error::from)
         };
     }
 
     Ok(auto
-        || confirm_prompt(&format!(
-            "{identifier} {version} returned {} in all its InstallerUrls. Remove?",
-            StatusCode::NOT_FOUND.red()
+        || confirm_prompt(&fl!(
+            "prompt-remove-dead-version",
+            identifier = identifier.as_str(),
+            version = version.to_string(),
+            status = StatusCode::NOT_FOUND.red().to_string()
         ))?)
 }
