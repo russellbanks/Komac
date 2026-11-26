@@ -99,8 +99,10 @@ fn into_report(error: SyncError) -> Report {
 /// A suggestion that names the command-line options that could fix `error`, if there are any.
 fn cli_hint(error: &SyncError) -> Option<String> {
     match error {
-        SyncError::ForkNotFound { upstream, .. } => Some(format!(
-            "Fork {upstream} on GitHub first, or name your fork with --fork"
+        SyncError::ForkNotFound { upstream, .. } => Some(fl!(
+            "error-sync-fork-not-found",
+            "suggestion",
+            upstream = upstream.to_string()
         )),
         _ => None,
     }

@@ -7,7 +7,7 @@ use thiserror::Error;
 use url::Url;
 
 use super::summary::Commits;
-use crate::github::Repository;
+use crate::{github::Repository, i18n::fl};
 
 /// An error from a [`ForkSyncApi`](super::service::ForkSyncApi) adapter, kept opaque so the core
 /// does not depend on any adapter's error type.
@@ -109,32 +109,43 @@ pub struct SyncReport {
 /// Why a sync failed.
 #[derive(Debug, Error)]
 pub enum SyncError {
-    #[error("{0} was not found, or the token cannot access it")]
+    #[error("{}", fl!("error-sync-upstream-not-found", upstream = .0.to_string()))]
     UpstreamNotFound(Repository),
-    #[error("{fork} was not found")]
+    #[error("{}", fl!("error-sync-fork-not-found", fork = .fork.to_string()))]
     ForkNotFound {
         fork: Repository,
         upstream: Repository,
     },
-    #[error("{fork} is not a fork, so it cannot be synced with {upstream}")]
+    #[error("{}", fl!(
+        "error-sync-not-a-fork",
+        fork = .fork.to_string(),
+        upstream = .upstream.to_string()
+    ))]
     NotAFork {
         fork: Repository,
         upstream: Repository,
     },
-    #[error(
-        "{fork} is a fork of {parent}, not {upstream}. GitHub syncs a fork only from its parent"
-    )]
+    #[error("{}", fl!(
+        "error-sync-fork-of-other",
+        fork = .fork.to_string(),
+        parent = .parent.as_str(),
+        upstream = .upstream.to_string()
+    ))]
     ForkOfOtherRepository {
         fork: Repository,
         parent: String,
         upstream: Repository,
     },
-    #[error("{fork} is a fork, but the token cannot access its parent to check it is {upstream}")]
+    #[error("{}", fl!(
+        "error-sync-parent-inaccessible",
+        fork = .fork.to_string(),
+        upstream = .upstream.to_string()
+    ))]
     ParentInaccessible {
         fork: Repository,
         upstream: Repository,
     },
-    #[error("Failed to merge {summary}")]
+    #[error("{}", fl!("error-sync-merge", summary = .summary.as_str()))]
     Merge { summary: String, source: ApiError },
     #[error(transparent)]
     Api(ApiError),

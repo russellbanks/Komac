@@ -174,6 +174,40 @@ token-deleted = { $success } deleted the stored token from the platform's secure
 token-not-deleted = No token was deleted
 token-stored = { $success } stored token in platform's secure storage
 
+## Errors. These follow the convention of starting in lowercase unless they're full sentences.
+
+error-no-token-in-ci = No token was provided or stored. Provide one with the `GITHUB_TOKEN` environment variable or `--token`.
+error-invalid-token = GitHub token is invalid.
+error-failed-to-connect = Failed to connect to GitHub. Please check your internet connection.
+error-invalid-repository = expected a GitHub repository in the form `owner/name`, but found `{ $value }`
+error-package-not-found = { $identifier } does not exist in { $upstream }
+# $manifest_type is the manifest's type as written in its ManifestType field, such as "installer"
+error-manifest-not-found = No { $manifest_type } manifest was found in { $path }
+error-no-valid-files = No valid files were found for { $path }
+error-version-not-found = { $identifier } version { $version } does not exist in { $upstream }
+error-replacement-version-not-found = Replacement version { $version } does not exist in { $upstream }. The closest version is { $closest }
+# $state is "open", "merged" or "closed"
+error-pull-request-exists = { $state ->
+        [open] an open
+        [merged] a merged
+       *[closed] a closed
+    } pull request already exists for { $identifier } { $version }. Use --skip-pr-check to submit anyway
+error-download-failed = { $url } returned { $status }
+# $content_types is a list of the content types the server returned, such as "text/html"
+error-unexpected-content-type = The content type for { $file } was { $content_types } but an { $application } or { $octet_stream } content type was expected
+# Joins the last item of a list onto the items before it, which are separated by commas
+list-and = { $items } and { $last }
+error-unknown-shell = Unable to determine the current shell from the environment
+    .suggestion = Specify shell explicitly
+error-sync-upstream-not-found = { $upstream } was not found, or the token cannot access it
+error-sync-fork-not-found = { $fork } was not found
+    .suggestion = Fork { $upstream } on GitHub first, or name your fork with --fork
+error-sync-not-a-fork = { $fork } is not a fork, so it cannot be synced with { $upstream }
+error-sync-fork-of-other = { $fork } is a fork of { $parent }, not { $upstream }. GitHub syncs a fork only from its parent
+error-sync-parent-inaccessible = { $fork } is a fork, but the token cannot access its parent to check it is { $upstream }
+# $summary is from the `merge-summary` message
+error-sync-merge = Failed to merge { $summary }
+
 ## Manifest editor. Arguments such as { $quit } are key names, which are shown in bold.
 
 editor-help = Press { $quit } to quit, { $save } to save, { $search } to search, { $switch } to switch buffer

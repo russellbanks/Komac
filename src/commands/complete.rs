@@ -15,10 +15,8 @@ pub struct Complete {
 impl Complete {
     pub fn run(self) -> Result<()> {
         let Some(shell) = self.shell.or_else(Shell::from_env) else {
-            return Err(
-                eyre!("Unable to determine the current shell from the environment")
-                    .suggestion("Specify shell explicitly"),
-            );
+            return Err(eyre!(fl!("error-unknown-shell"))
+                .suggestion(fl!("error-unknown-shell", "suggestion")));
         };
 
         let mut command = Cli::command();

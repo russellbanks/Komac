@@ -71,10 +71,13 @@ impl RemoveVersion {
 
         if !versions.contains(&self.package_version) {
             bail!(
-                "{} version {} does not exist in {}",
-                self.package_identifier,
-                self.package_version,
-                upstream(),
+                "{}",
+                fl!(
+                    "error-version-not-found",
+                    identifier = self.package_identifier.as_str(),
+                    version = self.package_version.to_string(),
+                    upstream = upstream().to_string()
+                )
             );
         }
 

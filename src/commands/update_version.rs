@@ -316,8 +316,13 @@ impl UpdateVersion {
             && let Some(closest) = version.closest(versions)
         {
             bail!(
-                "Replacement version {version} does not exist in {}. The closest version is {closest}",
-                upstream()
+                "{}",
+                fl!(
+                    "error-replacement-version-not-found",
+                    version = version.to_string(),
+                    upstream = upstream().to_string(),
+                    closest = closest.to_string()
+                )
             );
         }
 

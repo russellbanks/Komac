@@ -4,7 +4,7 @@ use camino::Utf8Path;
 use color_eyre::{Result, eyre::bail};
 use futures_util::{StreamExt, TryFutureExt, TryStreamExt, stream};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use itertools::{Itertools, Position};
+use itertools::Itertools;
 use reqwest::{
     Client,
     header::{CONTENT_DISPOSITION, CONTENT_TYPE, GetAll, HeaderMap, HeaderValue, USER_AGENT},
@@ -143,9 +143,12 @@ impl Downloader {
 
             if let Err(err) = res.error_for_status_ref() {
                 bail!(
-                    "{} returned {}",
-                    err.url().unwrap().as_str(),
-                    err.status().unwrap()
+                    "{}",
+                    fl!(
+                        "error-download-failed",
+                        url = err.url().unwrap().as_str(),
+                        status = err.status().unwrap().to_string()
+                    )
                 );
             }
 
@@ -243,27 +246,55 @@ impl ContentTypeError {
 
 impl fmt::Display for ContentTypeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "The content type for {} was ", self.download)?;
-        for (position, content_type) in self
+        let mut content_types = self
             .content_types
             .iter()
             .flat_map(HeaderValue::to_str)
-            .with_position()
-        {
-            match position {
-                Position { is_first: true, .. } => write!(f, "{content_type:?}")?,
-                Position {
-                    is_first: false,
-                    is_last: false,
-                } => write!(f, ", {content_type:?}")?,
-                Position { is_last: true, .. } => write!(f, " and {content_type:?}")?,
+            .map(|content_type| format!("{content_type:?}"))
+            .collect::<Vec<_>>();
+        let content_types = match content_types.pop() {
+            Some(last) if !content_types.is_empty() => {
+                fl!("list-and", items = content_types.join(", "), last = last)
             }
-        }
-        write!(
-            f,
-            " but an {application} or {octet_stream} content type was expected",
+            last => last.unwrap_or_default(),
+        };
+        f.write_str(&fl!(
+            "error-unexpected-content-type",
+            file = self.download.to_string(),
+            content_types = content_types,
             application = Downloader::APPLICATION,
             octet_stream = Downloader::OCTET_STREAM
-        )
+        ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use reqwest::header::HeaderValue;
+    use rstest::rstest;
+    use url::Url;
+
+    use super::{ContentTypeError, PreDownload};
+
+    #[rstest]
+    #[case(&["text/html"], r#""text/html""#)]
+    #[case(&["text/html", "text/plain"], r#""text/html" and "text/plain""#)]
+    #[case(
+        &["text/html", "text/plain", "image/png"],
+        r#""text/html", "text/plain" and "image/png""#
+    )]
+    fn content_type_list(#[case] content_types: &[&'static str], #[case] expected: &str) {
+        let download =
+            PreDownload::new(Url::parse("https://example.com/setup.exe").unwrap().into());
+        let error = ContentTypeError::new(
+            download,
+            content_types.iter().copied().map(HeaderValue::from_static),
+        );
+
+        let message = error.to_string();
+        assert!(
+            message.contains(&format!(" was {expected} but ")),
+            "{message}"
+        );
     }
 }

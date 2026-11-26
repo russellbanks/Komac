@@ -25,13 +25,11 @@ static DEFAULT_STORE_SET: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Error)]
 pub enum TokenError {
-    #[error(
-        "No token was provided or stored. Provide one with the `GITHUB_TOKEN` environment variable or `--token`."
-    )]
+    #[error("{}", fl!("error-no-token-in-ci"))]
     NoTokenInCI,
-    #[error("GitHub token is invalid.")]
+    #[error("{}", fl!("error-invalid-token"))]
     InvalidToken,
-    #[error("Failed to connect to GitHub. Please check your internet connection.")]
+    #[error("{}", fl!("error-failed-to-connect"))]
     FailedToConnect,
     #[error(transparent)]
     Keyring(#[from] keyring_core::Error),

@@ -94,10 +94,13 @@ impl Package<'_, '_, Versioned> {
             }
 
             bail!(
-                "{state} pull request already exists for {identifier} {version}. Use --skip-pr-check to submit anyway",
-                state = pull_request.state,
-                identifier = self.identifier,
-                version = self.version,
+                "{}",
+                fl!(
+                    "error-pull-request-exists",
+                    state = pull_request.state.id(),
+                    identifier = self.identifier.as_str(),
+                    version = self.version.to_string()
+                )
             );
         }
 
