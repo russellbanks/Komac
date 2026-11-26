@@ -32,7 +32,7 @@ where
     T: Name + AllItems<Item = T> + Display,
 {
     Select::new(
-        &format!("{}:", <T as Name>::NAME),
+        &format!("{}:", T::name()),
         <T as AllItems>::all().into_iter().collect(),
     )
     .prompt()
@@ -43,13 +43,10 @@ pub fn check_prompt<T>() -> InquireResult<T>
 where
     T: Name + Flags + Display + BitOr<Output = T> + Copy,
 {
-    MultiSelect::new(
-        &format!("{}:", <T as Name>::NAME),
-        T::all().iter().collect(),
-    )
-    .prompt()
-    .map(|items| items.iter().fold(T::empty(), |flags, flag| flags | *flag))
-    .map_err(handle_inquire_error)
+    MultiSelect::new(&format!("{}:", T::name()), T::all().iter().collect())
+        .prompt()
+        .map(|items| items.iter().fold(T::empty(), |flags, flag| flags | *flag))
+        .map_err(handle_inquire_error)
 }
 
 /// Inquire captures Ctrl+C and returns an error. This will instead exit normally if the prompt is

@@ -1,0 +1,5 @@
+# Configuration for i18n-embed, which loads the translations in i18n/<language>/komac.ftl
+fallback_language = "en-US"
+
+[fluent]
+assets_dir = "i18n"

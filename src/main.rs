@@ -6,6 +6,7 @@ mod commands;
 mod download;
 mod editor;
 mod github;
+mod i18n;
 mod manifests;
 mod prompts;
 mod read;
@@ -32,6 +33,9 @@ async fn main() -> Result<()> {
         .install()?;
 
     setup_logging();
+
+    // Must come before parsing, as clap builds the help text then
+    i18n::init();
 
     let cli = Cli::parse();
 
@@ -62,7 +66,9 @@ fn setup_logging() {
         .with(
             filter::Targets::new()
                 .with_default(LevelFilter::INFO)
-                .with_target(crate_name!(), Level::TRACE),
+                .with_target(crate_name!(), Level::TRACE)
+                // Logs the detected language at the info level on every run
+                .with_target("i18n_embed", Level::WARN),
         )
         .init();
 }

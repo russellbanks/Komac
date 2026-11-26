@@ -20,25 +20,40 @@ use winget_types::{
     },
 };
 
-use crate::{prompts::handle_inquire_error, traits::Name};
+use crate::{i18n::fl, prompts::handle_inquire_error, traits::Name};
 
 pub trait TextPrompt: Name {
-    const HELP_MESSAGE: Option<&'static str> = None;
-    const PLACEHOLDER: Option<&'static str> = None;
+    /// Returns the translated help message shown below the prompt
+    fn help_message() -> Option<String> {
+        None
+    }
+
+    /// Returns the translated placeholder shown in the prompt while it's empty
+    fn placeholder() -> Option<String> {
+        None
+    }
 }
 
 impl TextPrompt for PackageIdentifier {
-    const HELP_MESSAGE: Option<&'static str> =
-        Some("Package Identifiers are in the format of Publisher.package");
-    const PLACEHOLDER: Option<&'static str> = Some("Publisher.package");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-package-identifier", "help"))
+    }
+
+    fn placeholder() -> Option<String> {
+        Some(fl!("field-package-identifier", "placeholder"))
+    }
 }
 
 impl TextPrompt for PackageVersion {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: 1.2.3");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-package-version", "help"))
+    }
 }
 
 impl TextPrompt for Moniker {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: vscode");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-moniker", "help"))
+    }
 }
 
 impl TextPrompt for Description {}
@@ -46,32 +61,45 @@ impl TextPrompt for Description {}
 impl TextPrompt for ShortDescription {}
 
 impl TextPrompt for LanguageTag {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: en-US");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-language-tag", "help"))
+    }
 }
 
 impl TextPrompt for Publisher {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: Microsoft Corporation");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-publisher", "help"))
+    }
 }
 
 impl TextPrompt for License {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: MIT, GPL-3.0, Freeware, Proprietary");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-license", "help"))
+    }
 }
 
 impl TextPrompt for SilentSwitch {
-    const HELP_MESSAGE: Option<&'static str> =
-        Some("Example: /S, -verysilent, /qn, --silent, /exenoui");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-silent-switch", "help"))
+    }
 }
 
 impl TextPrompt for SilentWithProgressSwitch {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: /S, -silent, /qb, /exebasicui");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-silent-with-progress-switch", "help"))
+    }
 }
 
 impl TextPrompt for CustomSwitch {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: /norestart, -norestart");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-custom-switch", "help"))
+    }
 }
 
 impl TextPrompt for Copyright {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: Copyright (c) Microsoft Corporation");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-copyright", "help"))
+    }
 }
 
 impl TextPrompt for Author {}
@@ -79,7 +107,9 @@ impl TextPrompt for Author {}
 impl TextPrompt for PublisherUrl {}
 
 impl TextPrompt for PackageName {
-    const HELP_MESSAGE: Option<&'static str> = Some("Example: Microsoft Teams");
+    fn help_message() -> Option<String> {
+        Some(fl!("field-package-name", "help"))
+    }
 }
 
 impl TextPrompt for PackageUrl {}
@@ -103,7 +133,7 @@ where
     if let Some(value) = parameter {
         Ok(Some(value))
     } else {
-        let message = format!("{}:", <T as Name>::NAME);
+        let message = format!("{}:", T::name());
         let mut prompt = Text::new(&message).with_validator(|input: &str| {
             if input.is_empty() {
                 Ok(Validation::Valid)
@@ -114,10 +144,12 @@ where
                 }
             }
         });
-        if let Some(help_message) = T::HELP_MESSAGE {
+        let help_message = T::help_message();
+        if let Some(help_message) = &help_message {
             prompt = prompt.with_help_message(help_message);
         }
-        if let Some(placeholder) = T::PLACEHOLDER {
+        let placeholder = T::placeholder();
+        if let Some(placeholder) = &placeholder {
             prompt = prompt.with_placeholder(placeholder);
         }
         let default = default.as_ref().map(U::as_ref);
@@ -144,15 +176,18 @@ where
     if let Some(value) = parameter {
         Ok(value)
     } else {
+        let message = T::name();
         let mut prompt =
-            Text::new(T::NAME).with_validator(|input: &str| match input.parse::<T>() {
+            Text::new(&message).with_validator(|input: &str| match input.parse::<T>() {
                 Ok(_) => Ok(Validation::Valid),
                 Err(error) => Ok(Validation::Invalid(error.into())),
             });
-        if let Some(help_message) = T::HELP_MESSAGE {
+        let help_message = T::help_message();
+        if let Some(help_message) = &help_message {
             prompt = prompt.with_help_message(help_message);
         }
-        if let Some(placeholder) = T::PLACEHOLDER {
+        let placeholder = T::placeholder();
+        if let Some(placeholder) = &placeholder {
             prompt = prompt.with_placeholder(placeholder);
         }
         let default = default.as_ref().map(U::as_ref);

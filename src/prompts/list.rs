@@ -6,42 +6,74 @@ use winget_types::{
     locale::Tag,
 };
 
-use crate::{prompts::handle_inquire_error, traits::Name};
+use crate::{i18n::fl, prompts::handle_inquire_error, traits::Name};
 
 pub trait ListPrompt: Name {
-    const PLURAL_NAME: &'static str = Self::NAME;
-    const HELP_MESSAGE: &'static str;
     const MAX_ITEMS: u16;
+
+    /// Returns the translated name of a list of these fields
+    fn plural_name() -> String {
+        Self::name()
+    }
+
+    /// Returns the translated help message shown below the prompt
+    fn help_message() -> String;
 }
 
 impl ListPrompt for InstallerReturnCode {
-    const PLURAL_NAME: &'static str = "Installer return codes";
-    const HELP_MESSAGE: &'static str = "List of additional non-zero installer success exit codes other than known default values by winget";
     const MAX_ITEMS: u16 = 16;
+
+    fn plural_name() -> String {
+        fl!("field-installer-return-code", "plural")
+    }
+
+    fn help_message() -> String {
+        fl!("field-installer-return-code", "help")
+    }
 }
 
 impl ListPrompt for Protocol {
-    const PLURAL_NAME: &'static str = "Protocols";
-    const HELP_MESSAGE: &'static str =
-        "List of protocols the package provides a handler for. Example: http, https";
     const MAX_ITEMS: u16 = 16;
+
+    fn plural_name() -> String {
+        fl!("field-protocol", "plural")
+    }
+
+    fn help_message() -> String {
+        fl!("field-protocol", "help")
+    }
 }
 
 impl ListPrompt for FileExtension {
-    const PLURAL_NAME: &str = "File extensions";
-    const HELP_MESSAGE: &'static str = "List of file extensions the package could support";
     const MAX_ITEMS: u16 = 512;
+
+    fn plural_name() -> String {
+        fl!("field-file-extension", "plural")
+    }
+
+    fn help_message() -> String {
+        fl!("field-file-extension", "help")
+    }
 }
 
 impl ListPrompt for Tag {
-    const HELP_MESSAGE: &'static str = "Example: zip, c++, photos, OBS";
     const MAX_ITEMS: u16 = 16;
+
+    fn help_message() -> String {
+        fl!("field-tag", "help")
+    }
 }
 
 impl ListPrompt for Command {
-    const PLURAL_NAME: &'static str = "Commands";
-    const HELP_MESSAGE: &'static str = "List of commands or aliases to run the package";
     const MAX_ITEMS: u16 = 16;
+
+    fn plural_name() -> String {
+        fl!("field-command", "plural")
+    }
+
+    fn help_message() -> String {
+        fl!("field-command", "help")
+    }
 }
 
 pub fn list_prompt<T>() -> color_eyre::Result<BTreeSet<T>>
@@ -50,8 +82,9 @@ where
     <T as FromStr>::Err: Display,
 {
     const DELIMITERS: [char; 2] = [' ', ','];
-    let items = Text::new(&format!("{}:", T::PLURAL_NAME))
-        .with_help_message(T::HELP_MESSAGE)
+    let help_message = T::help_message();
+    let items = Text::new(&format!("{}:", T::plural_name()))
+        .with_help_message(&help_message)
         .with_validator(|input: &str| {
             let items = input
                 .split(|char| DELIMITERS.contains(&char))
@@ -60,9 +93,10 @@ where
             let items_len = items.len();
             if items_len > T::MAX_ITEMS as usize {
                 return Ok(Validation::Invalid(
-                    format!(
-                        "There is a maximum of {} items. There were {items_len} provided",
-                        T::MAX_ITEMS,
+                    fl!(
+                        "prompt-too-many-items",
+                        max = T::MAX_ITEMS,
+                        count = items_len
                     )
                     .into(),
                 ));

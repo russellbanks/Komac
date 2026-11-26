@@ -14,49 +14,54 @@ use winget_types::{
     },
 };
 
+use crate::i18n::fl;
+
 pub trait Name {
-    const NAME: &'static str;
+    /// Returns the translated name of this manifest field
+    fn name() -> String;
 }
 
 macro_rules! impl_names {
-    ($( $name:ty => $name_str:literal ),*$(,)?) => {
+    ($( $name:ty => $message_id:literal ),*$(,)?) => {
         $(
             impl Name for $name {
-                const NAME: &'static str = $name_str;
+                fn name() -> String {
+                    fl!($message_id)
+                }
             }
         )*
     };
 }
 
 impl_names!(
-    Author => "Author",
-    Channel => "Channel",
-    Command => "Command",
-    Copyright => "Copyright",
-    CopyrightUrl => "Copyright URL",
-    CustomSwitch => "Custom switch",
-    Description => "Description",
-    FileExtension => "File extension",
-    InstallationNotes => "Installation notes",
-    InstallerReturnCode => "Installer return code",
-    InstallModes => "Install modes",
-    LanguageTag => "Language tag",
-    License => "License",
-    LicenseUrl => "License URL",
-    Moniker => "Moniker",
-    PackageIdentifier => "Package identifier",
-    PackageName => "Package name",
-    PackageUrl => "Package URL",
-    PackageVersion => "Package version",
-    PortableCommandAlias => "Portable command alias",
-    Protocol => "Protocol",
-    Publisher => "Publisher",
-    PublisherSupportUrl => "Publisher support URL",
-    PublisherUrl => "Publisher URL",
-    ReleaseNotesUrl => "Release notes URL",
-    ShortDescription => "Short description",
-    SilentSwitch => "Silent switch",
-    SilentWithProgressSwitch => "Silent with progress switch",
-    Tag => "Tag",
-    UpgradeBehavior => "Upgrade behavior",
+    Author => "field-author",
+    Channel => "field-channel",
+    Command => "field-command",
+    Copyright => "field-copyright",
+    CopyrightUrl => "field-copyright-url",
+    CustomSwitch => "field-custom-switch",
+    Description => "field-description",
+    FileExtension => "field-file-extension",
+    InstallationNotes => "field-installation-notes",
+    InstallerReturnCode => "field-installer-return-code",
+    InstallModes => "field-install-modes",
+    LanguageTag => "field-language-tag",
+    License => "field-license",
+    LicenseUrl => "field-license-url",
+    Moniker => "field-moniker",
+    PackageIdentifier => "field-package-identifier",
+    PackageName => "field-package-name",
+    PackageUrl => "field-package-url",
+    PackageVersion => "field-package-version",
+    PortableCommandAlias => "field-portable-command-alias",
+    Protocol => "field-protocol",
+    Publisher => "field-publisher",
+    PublisherSupportUrl => "field-publisher-support-url",
+    PublisherUrl => "field-publisher-url",
+    ReleaseNotesUrl => "field-release-notes-url",
+    ShortDescription => "field-short-description",
+    SilentSwitch => "field-silent-switch",
+    SilentWithProgressSwitch => "field-silent-with-progress-switch",
+    Tag => "field-tag",
+    UpgradeBehavior => "field-upgrade-behavior",
 );
