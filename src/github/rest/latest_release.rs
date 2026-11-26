@@ -2,13 +2,12 @@
 //!
 //! See <https://docs.github.com/en/rest/releases/releases#get-the-latest-release>.
 
-use reqwest::header::ACCEPT;
+use reqwest::Method;
 use serde::Deserialize;
 
 use super::{
     super::{GitHubError, client::GitHub},
-    GITHUB_JSON_MIME, REST_API_URL, REST_API_VERSION, X_GITHUB_API_VERSION,
-    error::RestError,
+    transport::SendJson,
 };
 
 #[derive(Debug, Deserialize)]
@@ -29,25 +28,12 @@ impl GitHub {
         owner: &str,
         repo: &str,
     ) -> Result<Release, GitHubError> {
-        let endpoint = format!("{REST_API_URL}/repos/{owner}/{repo}/releases/latest");
-
-        let response = self
-            .0
-            .get(endpoint)
-            .header(ACCEPT, GITHUB_JSON_MIME)
-            .header(X_GITHUB_API_VERSION, REST_API_VERSION)
-            .send()
-            .await?;
-
-        if response.status().is_success() {
-            response.json::<Release>().await.map_err(GitHubError::from)
-        } else {
-            Err(response
-                .json::<RestError>()
-                .await
-                .map_err(GitHubError::from)?
-                .into())
-        }
+        self.rest(
+            Method::GET,
+            &format!("repos/{owner}/{repo}/releases/latest"),
+        )
+        .send_json::<Release>()
+        .await
     }
 }
 

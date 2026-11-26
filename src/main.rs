@@ -75,7 +75,8 @@ struct Cli {
     /// The GitHub repository that manifests are read from and pull requests are opened against
     ///
     /// Use this to work with a third-party or private repository instead of microsoft/winget-pkgs.
-    /// Your fork must have the same name as this repository.
+    /// Your fork must have the same name as this repository, except where a command lets you name
+    /// the fork, such as `sync --fork`.
     #[arg(
         long,
         global = true,

@@ -10,7 +10,6 @@ use itertools::Itertools;
 use reqwest::Client;
 use secrecy::SecretString;
 use serde::de::DeserializeOwned;
-use url::Url;
 use winget_types::{
     DefaultLocaleManifest, InstallerManifest, LocaleManifest, Manifest, ManifestType,
     ManifestTypeWithLocale, PackageIdentifier, PackageVersion, VersionManifest,
@@ -235,8 +234,6 @@ impl GitHub {
         Ok(RepositoryData {
             id: repository.id,
             owner: repository.owner.login,
-            full_name: repository.name_with_owner,
-            url: repository.url,
             default_branch_name: default_branch.name,
             default_branch_oid: commits.oid,
         })
@@ -650,8 +647,6 @@ impl GitHubFile {
 pub struct RepositoryData {
     pub id: Id,
     pub owner: String,
-    pub full_name: String,
-    pub url: Url,
     pub default_branch_name: String,
     pub default_branch_oid: GitObjectId,
 }

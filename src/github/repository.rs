@@ -33,6 +33,19 @@ impl Repository {
         name: Cow::Borrowed(WINGET_PKGS),
     };
 
+    /// Creates a repository from its owner and name.
+    #[must_use]
+    pub fn new<O, N>(owner: O, name: N) -> Self
+    where
+        O: Into<Cow<'static, str>>,
+        N: Into<Cow<'static, str>>,
+    {
+        Self {
+            owner: owner.into(),
+            name: name.into(),
+        }
+    }
+
     #[must_use]
     #[inline]
     pub fn owner(&self) -> &str {
@@ -119,6 +132,15 @@ mod tests {
     use rstest::rstest;
 
     use super::Repository;
+
+    #[test]
+    fn new_from_owner_and_name() {
+        let repository = Repository::new("octocat", "winget-pkgs");
+
+        assert_eq!(repository.owner(), "octocat");
+        assert_eq!(repository.name(), "winget-pkgs");
+        assert_eq!(repository.to_string(), "octocat/winget-pkgs");
+    }
 
     #[test]
     fn default_is_winget_pkgs() {
