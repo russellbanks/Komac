@@ -17,6 +17,7 @@ use winget_types::Sha256String;
 use super::{Download, DownloadedFile, Downloads, PreDownload};
 use crate::{
     analysis::{extensions::FileExtension, installers::msix_family::app_installer::AppInstaller},
+    i18n::fl,
     manifests::Url,
 };
 
@@ -187,8 +188,8 @@ impl Downloader {
             )?),
         };
 
-        let progress =
-            multi_progress.add(progress_bar.with_message(format!("Downloading {download}")));
+        let progress = multi_progress
+            .add(progress_bar.with_message(fl!("downloading", file = download.to_string())));
 
         // Create a temporary file
         let temp_file = tempfile::tempfile()?;

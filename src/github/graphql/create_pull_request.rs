@@ -3,14 +3,16 @@ use std::io::Write;
 use bon::Builder;
 use color_eyre::eyre::eyre;
 use cynic::{GraphQlResponse, MutationBuilder, http::ReqwestExt};
-use owo_colors::OwoColorize;
 use url::Url;
 
 use super::{
     super::{GitHubError, client::GitHub},
     GRAPHQL_URL, github_schema as schema,
 };
-use crate::terminal::{Hyperlinkable, SUPPORTS_HYPERLINKS};
+use crate::{
+    i18n::fl,
+    terminal::{Hyperlinkable, SUPPORTS_HYPERLINKS, success},
+};
 
 #[derive(cynic::QueryVariables)]
 pub struct CreatePullRequestVariables<'a> {
@@ -56,16 +58,21 @@ impl PullRequest {
     pub fn print_success(&self) {
         let mut stdout = anstream::stdout();
 
+        let pull_request = format_args!(
+            "{repository_name_with_owner}#{number}",
+            repository_name_with_owner = self.name_with_owner(),
+            number = self.number
+        )
+        .hyperlink(self.url())
+        .to_string();
         let _ = writeln!(
             stdout,
-            "{} created {}",
-            "Successfully".green(),
-            format_args!(
-                "{repository_name_with_owner}#{number}",
-                repository_name_with_owner = self.name_with_owner(),
-                number = self.number
+            "{}",
+            fl!(
+                "pull-request-created",
+                success = success(),
+                pull_request = pull_request
             )
-            .hyperlink(self.url())
         );
 
         // If the terminal doesn't support hyperlinks, print the pull request's URL on a new line

@@ -5,6 +5,7 @@ use indicatif::ProgressBar;
 use tokio::{sync::Mutex, time::sleep};
 
 use super::SPINNER_SLOW_TICK_RATE;
+use crate::i18n::fl;
 
 pub struct RateLimit {
     last_pr_time: Mutex<Instant>,
@@ -54,10 +55,11 @@ impl RateLimit {
                 .checked_sub(time_since_last_pr)
                 .unwrap_or_else(|| unreachable!());
 
-            let wait_pb = ProgressBar::new_spinner()
-                .with_message(format!(
-                    "Last pull request was created {time_since_last_pr:?} ago. Waiting for {wait_time:?}",
-                ));
+            let wait_pb = ProgressBar::new_spinner().with_message(fl!(
+                "pull-request-rate-limit",
+                elapsed = format!("{time_since_last_pr:?}"),
+                remaining = format!("{wait_time:?}")
+            ));
             wait_pb.enable_steady_tick(SPINNER_SLOW_TICK_RATE);
             sleep(wait_time).await;
             wait_pb.finish_and_clear();

@@ -36,6 +36,15 @@ impl PullRequestState {
         matches!(self, Self::Open)
     }
 
+    /// Returns the state's lowercase name, which translations use to choose their wording.
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Merged => "merged",
+            Self::Open => "open",
+            Self::Closed => "closed",
+        }
+    }
+
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Merged => "a merged",

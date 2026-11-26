@@ -27,7 +27,8 @@ use tracing::warn;
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
     github::{Repository, client::GitHub, upstream},
-    terminal::Hyperlinkable,
+    i18n::fl,
+    terminal::{Hyperlinkable, success},
     token::TokenManager,
 };
 
@@ -126,13 +127,14 @@ impl SyncObserver for TerminalObserver {
         // Cleared when dropped, so a failed merge does not leave it on screen above the error
         let pb = ProgressBar::new_spinner()
             .with_finish(ProgressFinish::AndClear)
-            .with_message(format!(
-                "Merging {}",
-                MergeSummary {
+            .with_message(fl!(
+                "sync-merging",
+                summary = MergeSummary {
                     commits: summary.commits,
                     upstream: summary.upstream.blue(),
                     fork: summary.fork.blue(),
                 }
+                .to_string()
             ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
         pb
@@ -150,30 +152,34 @@ fn render(report: &SyncReport) {
     let upstream_link = upstream.repository.hyperlink(&upstream.url);
     let fork_link = fork.repository.hyperlink(&fork.url);
 
-    match outcome {
-        SyncOutcome::UpToDate => println!(
-            "{} is already {} with {}",
-            fork_link.blue(),
-            "up-to-date".green(),
-            upstream_link.blue()
+    let message = match outcome {
+        SyncOutcome::UpToDate => fl!(
+            "sync-up-to-date",
+            fork = fork_link.blue().to_string(),
+            status = fl!("sync-up-to-date", "status").green().to_string(),
+            upstream = upstream_link.blue().to_string()
         ),
-        SyncOutcome::ForkAhead(commits) => println!(
-            "{} is not behind {}, so there is nothing to merge. It has {commits} that {} does not",
-            fork_link.blue(),
-            upstream_link.blue(),
-            upstream.repository,
+        SyncOutcome::ForkAhead(commits) => fl!(
+            "sync-fork-ahead",
+            fork = fork_link.blue().to_string(),
+            upstream = upstream_link.blue().to_string(),
+            commits = commits.to_string(),
+            upstream_name = upstream.repository.to_string()
         ),
-        SyncOutcome::Merged { commits, kind } => println!(
-            "{} merged {} ({kind})",
-            "Successfully".green(),
-            MergeSummary {
+        SyncOutcome::Merged { commits, kind } => fl!(
+            "sync-merged",
+            success = success(),
+            summary = MergeSummary {
                 commits: *commits,
                 upstream: upstream_link.blue(),
                 fork: fork_link.blue(),
-            },
+            }
+            .to_string(),
+            kind = kind.to_string()
         ),
-        SyncOutcome::NothingMerged { message } => println!("{}: {message}", fork_link.blue()),
-    }
+        SyncOutcome::NothingMerged { message } => format!("{}: {message}", fork_link.blue()),
+    };
+    println!("{message}");
 }
 
 #[cfg(test)]

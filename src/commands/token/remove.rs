@@ -3,7 +3,7 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
 
-use crate::{i18n::fl, prompts::text::confirm_prompt, token::TokenManager};
+use crate::{i18n::fl, prompts::text::confirm_prompt, terminal::success, token::TokenManager};
 
 /// Remove the stored token
 #[derive(Parser)]
@@ -22,19 +22,16 @@ impl RemoveToken {
             credential.get_password().err(),
             Some(keyring_core::Error::NoEntry)
         ) {
-            println!("No token stored is currently stored in the platform's secure storage");
+            println!("{}", fl!("token-none-stored"));
         }
 
         let confirm = self.skip_prompt || confirm_prompt(&fl!("prompt-remove-token"))?;
 
         if confirm {
             credential.delete_credential()?;
-            println!(
-                "{} deleted the stored token from the platform's secure storage",
-                "Successfully".green()
-            );
+            println!("{}", fl!("token-deleted", success = success()));
         } else {
-            println!("{}", "No token was deleted".cyan());
+            println!("{}", fl!("token-not-deleted").cyan());
         }
 
         Ok(())

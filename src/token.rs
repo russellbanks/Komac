@@ -15,7 +15,9 @@ use thiserror::Error;
 use tokio::runtime::Handle;
 use tracing::warn;
 
-use crate::{commands::utils::environment::CI, i18n::fl, prompts::handle_inquire_error};
+use crate::{
+    commands::utils::environment::CI, i18n::fl, prompts::handle_inquire_error, terminal::success,
+};
 
 const GITHUB_API_ENDPOINT: &str = "https://api.github.com/octocat";
 
@@ -92,7 +94,7 @@ impl TokenManager {
 
         if let Some(credential) = credential {
             match credential.set_password(validated_token.expose_secret()) {
-                Ok(()) => println!("Successfully stored token in platform's secure storage"),
+                Ok(()) => println!("{}", fl!("token-stored", success = success())),
                 Err(error) => warn!(
                     "Failed to store token in platform's secure storage, so it will be requested again next time: {error}"
                 ),

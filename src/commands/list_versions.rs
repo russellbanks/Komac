@@ -2,11 +2,10 @@ use std::io::Write;
 
 use clap::{Args, Parser};
 use color_eyre::Result;
-use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use winget_types::PackageIdentifier;
 
-use crate::{github::client::GitHub, token::TokenManager};
+use crate::{github::client::GitHub, i18n::fl, token::TokenManager};
 
 /// Lists all versions for a given package
 #[derive(Parser)]
@@ -67,8 +66,8 @@ impl ListVersions {
         if self.count {
             writeln!(
                 stdout_lock,
-                "There are {} versions",
-                versions.len().blue().bold()
+                "{}",
+                fl!("version-count", count = versions.len())
             )?;
         }
 

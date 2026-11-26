@@ -64,10 +64,7 @@ impl RemoveVersion {
         let token_manager = TokenManager::handle(self.token).await?;
 
         if !self.no_warning {
-            println!(
-                "{}",
-                "Packages should only be removed when necessary".yellow()
-            );
+            println!("{}", fl!("remove-version-warning").yellow());
         }
 
         let github = GitHub::new(&token_manager)?;
@@ -91,8 +88,12 @@ impl RemoveVersion {
 
         let latest_version = versions.last().unwrap_or_else(|| unreachable!());
         println!(
-            "Latest version of {}: {latest_version}",
-            &self.package_identifier
+            "{}",
+            fl!(
+                "latest-version",
+                identifier = self.package_identifier.as_str(),
+                version = latest_version.to_string()
+            )
         );
         let deletion_reason = match self.deletion_reason {
             Some(reason) => reason,

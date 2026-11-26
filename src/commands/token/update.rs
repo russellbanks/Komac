@@ -1,12 +1,12 @@
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::Result;
-use owo_colors::OwoColorize;
 use reqwest::Client;
 use secrecy::{ExposeSecret, SecretString};
 
 use crate::{
     i18n::fl,
+    terminal::success,
     token::{TokenManager, default_headers},
 };
 
@@ -40,10 +40,7 @@ impl UpdateToken {
 
         credential.set_password(token.expose_secret())?;
 
-        println!(
-            "{} stored token in platform's secure storage",
-            "Successfully".green()
-        );
+        println!("{}", fl!("token-stored", success = success()));
 
         Ok(())
     }

@@ -171,8 +171,11 @@ impl RemoveDeadVersions {
                 let overall_progress = &overall_progress;
                 let progress_bar = &progress_bars[index % self.concurrent];
                 async move {
-                    progress_bar
-                        .set_message(format!("Checking {package_identifier} {}", version.blue()));
+                    progress_bar.set_message(fl!(
+                        "remove-dead-checking",
+                        identifier = package_identifier.as_str(),
+                        version = version.blue().to_string()
+                    ));
 
                     let installer_urls = github
                         .get_manifest::<InstallerManifest>(
@@ -261,11 +264,16 @@ async fn confirm_removal(
         && pull_request.is_open()
     {
         println!(
-            "{identifier} {version} returned {} in all its InstallerUrls but there is already {} pull request for this version that was created on {} at {}.",
-            StatusCode::NOT_FOUND.red(),
-            pull_request.state,
-            pull_request.created_at.date_naive(),
-            pull_request.created_at.time()
+            "{}",
+            fl!(
+                "remove-dead-pull-request-exists",
+                identifier = identifier.as_str(),
+                version = version.to_string(),
+                status = StatusCode::NOT_FOUND.red().to_string(),
+                state = pull_request.state.id(),
+                date = pull_request.created_at.date_naive().to_string(),
+                time = pull_request.created_at.time().to_string()
+            )
         );
         return if auto {
             Ok(false)

@@ -75,18 +75,21 @@ impl Package<'_, '_, Versioned> {
 
         let created_at = pull_request.created_at.with_timezone(&Local);
         println!(
-            "There is already {state} pull request for {identifier} {version} that was created on {date} at {time}",
-            state = pull_request.state,
-            identifier = self.identifier,
-            version = self.version,
-            date = created_at.date_naive(),
-            time = created_at.time()
+            "{}",
+            fl!(
+                "pull-request-exists",
+                state = pull_request.state.id(),
+                identifier = self.identifier.as_str(),
+                version = self.version.to_string(),
+                date = created_at.date_naive().to_string(),
+                time = created_at.time().to_string()
+            )
         );
         println!("{}", pull_request.url.blue());
 
         if *CI {
             if pull_request.state.is_closed() {
-                println!("Proceeding as the existing pull request was closed without being merged");
+                println!("{}", fl!("pull-request-closed-proceeding"));
                 return Ok(true);
             }
 

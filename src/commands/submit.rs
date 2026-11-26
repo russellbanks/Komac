@@ -110,8 +110,8 @@ impl Submit {
         let manifests = match packages.len() {
             0 => {
                 println!(
-                    "No valid packages to submit were found in {}",
-                    self.path.blue()
+                    "{}",
+                    fl!("no-packages-to-submit", path = self.path.blue().to_string())
                 );
                 return Ok(());
             }
@@ -159,8 +159,10 @@ impl Submit {
             rate_limit.wait().await;
 
             // Create an indeterminate progress bar to show as a pull request is being created
-            let pr_progress = ProgressBar::new_spinner().with_message(format!(
-                "Creating a pull request for {identifier} version {version}",
+            let pr_progress = ProgressBar::new_spinner().with_message(fl!(
+                "pull-request-creating",
+                identifier = identifier.as_str(),
+                version = version.to_string()
             ));
             pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 

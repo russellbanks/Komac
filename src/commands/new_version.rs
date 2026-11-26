@@ -10,7 +10,6 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use indicatif::ProgressBar;
 use inquire::CustomType;
-use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use winget_types::{
     LanguageTag, PackageIdentifier, PackageVersion, VersionManifest,
@@ -45,6 +44,7 @@ use crate::{
         radio_prompt,
         text::{confirm_prompt, optional_prompt, required_prompt},
     },
+    terminal::success,
     token::TokenManager,
 };
 
@@ -164,7 +164,14 @@ impl NewVersion {
         let package = github.get_package(&identifier).await?;
 
         if let Some(latest_version) = package.latest_version() {
-            println!("Latest version of {identifier}: {latest_version}");
+            println!(
+                "{}",
+                fl!(
+                    "latest-version",
+                    identifier = identifier.as_str(),
+                    version = latest_version.to_string()
+                )
+            );
         }
 
         let version = required_prompt(self.version, None::<&str>)?;
@@ -422,9 +429,12 @@ impl NewVersion {
         if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
             changes.write_to(output.as_path()).await?;
             println!(
-                "{} written all manifest files to {}",
-                "Successfully".green(),
-                output.display()
+                "{}",
+                fl!(
+                    "manifests-written",
+                    success = success(),
+                    path = output.display().to_string()
+                )
             );
         }
 
@@ -433,8 +443,10 @@ impl NewVersion {
         }
 
         // Create an indeterminate progress bar to show as a pull request is being created
-        let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request for {identifier} {version}"
+        let pr_progress = ProgressBar::new_spinner().with_message(fl!(
+            "pull-request-creating",
+            identifier = identifier.as_str(),
+            version = version.to_string()
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 
