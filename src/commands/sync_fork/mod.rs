@@ -27,31 +27,25 @@ use tracing::warn;
 use crate::{
     commands::utils::{SPINNER_TICK_RATE, environment::VHS},
     github::{Repository, client::GitHub, upstream},
-    terminal::Hyperlinkable,
+    i18n::fl,
+    terminal::{Hyperlinkable, success},
     token::TokenManager,
 };
 
-/// Merges changes from the upstream repository (microsoft/winget-pkgs by default) into the fork
-/// repository
 #[derive(Parser)]
+#[command(about = fl!("command-sync"))]
 #[clap(visible_aliases = ["sync-fork", "merge-upstream"])]
 pub struct SyncFork {
-    /// The fork to sync, if it is not `<you>/<upstream name>`, e.g. a renamed fork or one owned
-    /// by an organization
-    #[arg(long, value_name = "OWNER/NAME")]
+    #[arg(long, value_name = "OWNER/NAME", help = fl!("arg-sync-fork"))]
     fork: Option<Repository>,
 
-    /// The owner of the fork, if it is not the authenticated user. Ignored when --fork is given
-    #[arg(long, env = "KOMAC_FORK_OWNER", value_name = "OWNER")]
+    #[arg(long, env = "KOMAC_FORK_OWNER", value_name = "OWNER", help = fl!("arg-sync-fork-owner"))]
     fork_owner: Option<String>,
 
-    /// The branch to sync. Without this, the fork's default branch is synced with upstream's
-    /// default branch. With it, the branch is synced with upstream's branch of the same name
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-sync-branch"))]
     branch: Option<String>,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 
@@ -105,8 +99,10 @@ fn into_report(error: SyncError) -> Report {
 /// A suggestion that names the command-line options that could fix `error`, if there are any.
 fn cli_hint(error: &SyncError) -> Option<String> {
     match error {
-        SyncError::ForkNotFound { upstream, .. } => Some(format!(
-            "Fork {upstream} on GitHub first, or name your fork with --fork"
+        SyncError::ForkNotFound { upstream, .. } => Some(fl!(
+            "error-sync-fork-not-found",
+            "suggestion",
+            upstream = upstream.to_string()
         )),
         _ => None,
     }
@@ -126,13 +122,14 @@ impl SyncObserver for TerminalObserver {
         // Cleared when dropped, so a failed merge does not leave it on screen above the error
         let pb = ProgressBar::new_spinner()
             .with_finish(ProgressFinish::AndClear)
-            .with_message(format!(
-                "Merging {}",
-                MergeSummary {
+            .with_message(fl!(
+                "sync-merging",
+                summary = MergeSummary {
                     commits: summary.commits,
                     upstream: summary.upstream.blue(),
                     fork: summary.fork.blue(),
                 }
+                .to_string()
             ));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
         pb
@@ -150,30 +147,34 @@ fn render(report: &SyncReport) {
     let upstream_link = upstream.repository.hyperlink(&upstream.url);
     let fork_link = fork.repository.hyperlink(&fork.url);
 
-    match outcome {
-        SyncOutcome::UpToDate => println!(
-            "{} is already {} with {}",
-            fork_link.blue(),
-            "up-to-date".green(),
-            upstream_link.blue()
+    let message = match outcome {
+        SyncOutcome::UpToDate => fl!(
+            "sync-up-to-date",
+            fork = fork_link.blue().to_string(),
+            status = fl!("sync-up-to-date", "status").green().to_string(),
+            upstream = upstream_link.blue().to_string()
         ),
-        SyncOutcome::ForkAhead(commits) => println!(
-            "{} is not behind {}, so there is nothing to merge. It has {commits} that {} does not",
-            fork_link.blue(),
-            upstream_link.blue(),
-            upstream.repository,
+        SyncOutcome::ForkAhead(commits) => fl!(
+            "sync-fork-ahead",
+            fork = fork_link.blue().to_string(),
+            upstream = upstream_link.blue().to_string(),
+            commits = commits.to_string(),
+            upstream_name = upstream.repository.to_string()
         ),
-        SyncOutcome::Merged { commits, kind } => println!(
-            "{} merged {} ({kind})",
-            "Successfully".green(),
-            MergeSummary {
+        SyncOutcome::Merged { commits, kind } => fl!(
+            "sync-merged",
+            success = success(),
+            summary = MergeSummary {
                 commits: *commits,
                 upstream: upstream_link.blue(),
                 fork: fork_link.blue(),
-            },
+            }
+            .to_string(),
+            kind = kind.to_string()
         ),
-        SyncOutcome::NothingMerged { message } => println!("{}: {message}", fork_link.blue()),
-    }
+        SyncOutcome::NothingMerged { message } => format!("{}: {message}", fork_link.blue()),
+    };
+    println!("{message}");
 }
 
 #[cfg(test)]

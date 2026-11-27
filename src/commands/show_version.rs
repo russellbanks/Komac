@@ -3,38 +3,31 @@ use color_eyre::Result;
 use secrecy::SecretString;
 use winget_types::{PackageIdentifier, PackageVersion};
 
-use crate::{github::client::GitHub, manifests::print_changes, token::TokenManager};
+use crate::{github::client::GitHub, i18n::fl, manifests::print_changes, token::TokenManager};
 
-/// Output the manifests for a given package and version
 #[expect(clippy::struct_excessive_bools)]
 #[derive(Parser)]
+#[command(about = fl!("command-show"))]
 pub struct ShowVersion {
-    /// The package's unique identifier
-    #[arg(value_name = "PACKAGE_IDENTIFIER")]
+    #[arg(value_name = "PACKAGE_IDENTIFIER", help = fl!("arg-package-identifier"))]
     package_identifier: PackageIdentifier,
 
-    /// The package's version
-    #[arg(short = 'v', long = "version")]
+    #[arg(short = 'v', long = "version", help = fl!("arg-package-version"))]
     package_version: Option<PackageVersion>,
 
-    /// Switch to display the installer manifest
-    #[arg(short, long)]
+    #[arg(short, long, help = fl!("arg-show-installer-manifest"))]
     installer_manifest: bool,
 
-    /// Switch to display the default locale manifest
-    #[arg(short, long = "defaultlocale-manifest")]
+    #[arg(short, long = "defaultlocale-manifest", help = fl!("arg-show-default-locale-manifest"))]
     default_locale_manifest: bool,
 
-    /// Switch to display all locale manifests
-    #[arg(short, long)]
+    #[arg(short, long, help = fl!("arg-show-locale-manifests"))]
     locale_manifests: bool,
 
-    /// Switch to display the version manifest
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-show-version-manifest"))]
     version_manifest: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 

@@ -3,6 +3,7 @@ use std::{borrow::Cow, fmt, str::FromStr, sync::OnceLock};
 use thiserror::Error;
 
 use super::{GITHUB_HOST, MICROSOFT, WINGET_PKGS};
+use crate::i18n::fl;
 
 static UPSTREAM: OnceLock<Repository> = OnceLock::new();
 
@@ -82,7 +83,7 @@ impl fmt::Display for Repository {
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
-#[error("expected a GitHub repository in the form `owner/name`, but found `{0}`")]
+#[error("{}", fl!("error-invalid-repository", value = .0.as_str()))]
 pub struct RepositoryParseError(String);
 
 impl FromStr for Repository {

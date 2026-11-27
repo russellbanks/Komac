@@ -1,14 +1,15 @@
 use std::fmt;
 
+use crate::i18n::fl;
+
 /// A commit count that displays with the correctly pluralized noun, e.g. `1 commit` or
-/// `12 commits`, without allocating.
+/// `12 commits`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Commits(pub u32);
 
 impl fmt::Display for Commits {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let noun = if self.0 == 1 { "commit" } else { "commits" };
-        write!(f, "{} {noun}", self.0)
+        f.write_str(&fl!("commits", count = self.0))
     }
 }
 
@@ -23,11 +24,12 @@ pub struct MergeSummary<Upstream, Fork> {
 
 impl<Upstream: fmt::Display, Fork: fmt::Display> fmt::Display for MergeSummary<Upstream, Fork> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} from {} into {}",
-            self.commits, self.upstream, self.fork
-        )
+        f.write_str(&fl!(
+            "merge-summary",
+            commits = self.commits.to_string(),
+            upstream = self.upstream.to_string(),
+            fork = self.fork.to_string()
+        ))
     }
 }
 

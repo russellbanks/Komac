@@ -9,7 +9,37 @@ use ratatui::{
 };
 use ratatui_textarea::{CursorMove, DataCursor, Input, Key, TextArea};
 
-use crate::github::utils::pull_request::{Change, Changes};
+use crate::{
+    github::utils::pull_request::{Change, Changes},
+    i18n::fl,
+};
+
+/// Mark the start and end of a key name in a translated message, which [`key_hints`] shows in bold
+const KEY_START: char = '\u{E000}';
+const KEY_END: char = '\u{E001}';
+
+/// Marks a key name, such as `^Q`, so that [`key_hints`] shows it in bold
+fn key(name: &str) -> String {
+    format!("{KEY_START}{name}{KEY_END}")
+}
+
+/// Splits a translated message into spans, showing the key names marked by [`key`] in bold
+fn key_hints(message: &str) -> Line<'static> {
+    let bold = Style::default().add_modifier(Modifier::BOLD);
+    message
+        .split([KEY_START, KEY_END])
+        .enumerate()
+        .filter(|(_, part)| !part.is_empty())
+        .map(|(index, part)| {
+            // Splitting on both markers puts each key name at an odd index
+            if index % 2 == 1 {
+                Span::styled(part.to_owned(), bold)
+            } else {
+                Span::raw(part.to_owned())
+            }
+        })
+        .collect()
+}
 
 struct SearchBox<'a> {
     textarea: TextArea<'a>,
@@ -19,7 +49,11 @@ struct SearchBox<'a> {
 impl Default for SearchBox<'_> {
     fn default() -> Self {
         let mut textarea = TextArea::default();
-        textarea.set_block(Block::default().borders(Borders::ALL).title("Search"));
+        textarea.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(fl!("editor-search")),
+        );
         Self {
             textarea,
             open: false,
@@ -61,11 +95,15 @@ impl SearchBox<'_> {
 
     fn set_error(&mut self, err: Option<impl Display>) {
         let b = err.map_or_else(
-            || Block::default().borders(Borders::ALL).title("Search"),
+            || {
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(fl!("editor-search"))
+            },
             |err| {
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(format!("Search: {err}"))
+                    .title(fl!("editor-search-error", error = err.to_string()))
                     .style(Style::default().fg(Color::Red))
             },
         );
@@ -153,7 +191,11 @@ impl<'a> Editor<'a> {
                 f.render_widget(textarea, chunks[1]);
 
                 // Render status line
-                let modified = if buffer.modified { " [modified]" } else { "" };
+                let modified = if buffer.modified {
+                    format!(" {}", fl!("editor-modified"))
+                } else {
+                    String::new()
+                };
                 let slot = format!("[{}/{}]", self.current + 1, self.buffers.len());
                 let path = format!(" {}{} ", buffer.path, modified);
                 let DataCursor(row, col) = textarea.cursor();
@@ -178,38 +220,21 @@ impl<'a> Editor<'a> {
                 let message = self.message.take().map_or_else(
                     || {
                         if search_height > 0 {
-                            Line::from(vec![
-                                Span::raw("Press "),
-                                Span::styled(
-                                    "Enter",
-                                    Style::default().add_modifier(Modifier::BOLD),
-                                ),
-                                Span::raw(" to jump to first match and close, "),
-                                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to close, "),
-                                Span::styled(
-                                    "^G or ↓ or ^N",
-                                    Style::default().add_modifier(Modifier::BOLD),
-                                ),
-                                Span::raw(" to search next, "),
-                                Span::styled(
-                                    "M-G or ↑ or ^P",
-                                    Style::default().add_modifier(Modifier::BOLD),
-                                ),
-                                Span::raw(" to search previous"),
-                            ])
+                            key_hints(&fl!(
+                                "editor-search-help",
+                                enter = key("Enter"),
+                                close = key("Esc"),
+                                next = key("^G or ↓ or ^N"),
+                                previous = key("M-G or ↑ or ^P")
+                            ))
                         } else {
-                            Line::from(vec![
-                                Span::raw("Press "),
-                                Span::styled("^Q", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to quit, "),
-                                Span::styled("^S", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to save, "),
-                                Span::styled("^G", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to search, "),
-                                Span::styled("^T", Style::default().add_modifier(Modifier::BOLD)),
-                                Span::raw(" to switch buffer"),
-                            ])
+                            key_hints(&fl!(
+                                "editor-help",
+                                quit = key("^Q"),
+                                save = key("^S"),
+                                search = key("^G"),
+                                switch = key("^T")
+                            ))
                         }
                     },
                     |message| Line::from(Span::raw(message)),
@@ -228,7 +253,7 @@ impl<'a> Editor<'a> {
                     }
                     | Input { key: Key::Down, .. } => {
                         if !textarea.search_forward(false) {
-                            self.search.set_error(Some("Pattern not found"));
+                            self.search.set_error(Some(fl!("editor-pattern-not-found")));
                         }
                     }
                     Input {
@@ -245,14 +270,14 @@ impl<'a> Editor<'a> {
                     }
                     | Input { key: Key::Up, .. } => {
                         if !textarea.search_back(false) {
-                            self.search.set_error(Some("Pattern not found"));
+                            self.search.set_error(Some(fl!("editor-pattern-not-found")));
                         }
                     }
                     Input {
                         key: Key::Enter, ..
                     } => {
                         if !textarea.search_forward(true) {
-                            self.message = Some("Pattern not found".into());
+                            self.message = Some(fl!("editor-pattern-not-found").into());
                         }
                         self.search.close();
                         textarea.set_search_pattern("").unwrap();
@@ -281,8 +306,8 @@ impl<'a> Editor<'a> {
                         ..
                     } => {
                         self.current = (self.current + 1) % self.buffers.len();
-                        self.message =
-                            Some(format!("Switched to buffer #{}", self.current + 1).into());
+                        let number = self.current + 1;
+                        self.message = Some(fl!("editor-switched-buffer", number = number).into());
                     }
                     Input {
                         key: Key::Char('s'),
@@ -290,7 +315,7 @@ impl<'a> Editor<'a> {
                         ..
                     } => {
                         self.buffers[self.current].save();
-                        self.message = Some("Saved!".into());
+                        self.message = Some(fl!("editor-saved").into());
                     }
                     Input {
                         key: Key::Char('g'),
@@ -322,5 +347,66 @@ impl<'a> Editor<'a> {
 impl Drop for Editor<'_> {
     fn drop(&mut self) {
         ratatui::restore();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ratatui::{style::Modifier, text::Line};
+
+    use super::{key, key_hints};
+    use crate::i18n::fl;
+
+    /// Returns each span's text and whether it's bold
+    fn spans(line: &Line) -> Vec<(String, bool)> {
+        line.spans
+            .iter()
+            .map(|span| {
+                (
+                    span.content.to_string(),
+                    span.style.add_modifier.contains(Modifier::BOLD),
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn key_names_are_bold() {
+        let line = key_hints(&fl!(
+            "editor-help",
+            quit = key("^Q"),
+            save = key("^S"),
+            search = key("^G"),
+            switch = key("^T")
+        ));
+
+        assert_eq!(
+            line.to_string(),
+            "Press ^Q to quit, ^S to save, ^G to search, ^T to switch buffer"
+        );
+        assert_eq!(
+            spans(&line),
+            [
+                ("Press ".to_owned(), false),
+                ("^Q".to_owned(), true),
+                (" to quit, ".to_owned(), false),
+                ("^S".to_owned(), true),
+                (" to save, ".to_owned(), false),
+                ("^G".to_owned(), true),
+                (" to search, ".to_owned(), false),
+                ("^T".to_owned(), true),
+                (" to switch buffer".to_owned(), false),
+            ]
+        );
+    }
+
+    #[test]
+    fn message_can_start_with_a_key() {
+        let line = key_hints(&format!("{} quits", key("^Q")));
+
+        assert_eq!(
+            spans(&line),
+            [("^Q".to_owned(), true), (" quits".to_owned(), false)]
+        );
     }
 }

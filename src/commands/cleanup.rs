@@ -1,5 +1,3 @@
-use std::fmt::{Display, Formatter};
-
 use anstream::println;
 use bitflags::bitflags;
 use clap::Parser;
@@ -7,33 +5,27 @@ use color_eyre::Result;
 use futures_util::TryFutureExt;
 use indicatif::ProgressBar;
 use inquire::MultiSelect;
-use owo_colors::OwoColorize;
 use secrecy::SecretString;
 
 use crate::{
-    commands::utils::SPINNER_TICK_RATE, github::client::GitHub, prompts::handle_inquire_error,
-    token::TokenManager,
+    commands::utils::SPINNER_TICK_RATE, github::client::GitHub, i18n::fl,
+    prompts::handle_inquire_error, terminal::success, token::TokenManager,
 };
 
-/// Finds branches from the fork of the upstream repository that have had a merged or closed pull request to
-/// the upstream repository from them, prompting for which ones to delete
 #[derive(Parser)]
+#[command(about = fl!("command-cleanup"))]
 #[clap(visible_alias = "clean")]
 pub struct Cleanup {
-    /// Only delete merged branches
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-cleanup-only-merged"))]
     only_merged: bool,
 
-    /// Only delete closed branches
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-cleanup-only-closed"))]
     only_closed: bool,
 
-    /// Automatically delete all relevant branches
-    #[arg(short, long, env = "CI")]
+    #[arg(short, long, env = "CI", help = fl!("arg-cleanup-all"))]
     all: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 
@@ -44,9 +36,8 @@ impl Cleanup {
 
         let merge_state = MergeState::from((self.only_merged, self.only_closed));
 
-        let pb = ProgressBar::new_spinner().with_message(format!(
-            "Retrieving branches that have a {merge_state} pull request associated with them"
-        ));
+        let pb = ProgressBar::new_spinner()
+            .with_message(fl!("cleanup-retrieving", state = merge_state.id()));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         // Get all fork branches with an associated pull request to the upstream repository
@@ -59,10 +50,7 @@ impl Cleanup {
 
         // Exit if there are no branches to delete
         if pr_branch_map.is_empty() {
-            println!(
-                "There are no {} pull requests with branches that can be deleted",
-                merge_state.blue()
-            );
+            println!("{}", fl!("cleanup-no-branches", state = merge_state.id()));
             return Ok(());
         }
 
@@ -71,7 +59,7 @@ impl Cleanup {
         } else {
             // Show a multi-selection prompt for which branches to delete, with all options pre-selected
             MultiSelect::new(
-                "Please select branches to delete",
+                &fl!("prompt-select-branches"),
                 pr_branch_map.keys().collect(),
             )
             .with_all_selected_by_default()
@@ -81,7 +69,7 @@ impl Cleanup {
         };
 
         if chosen_pr_branches.is_empty() {
-            println!("No branches have been deleted");
+            println!("{}", fl!("cleanup-none-deleted"));
             return Ok(());
         }
 
@@ -91,16 +79,8 @@ impl Cleanup {
             .filter_map(|pull_request| pr_branch_map.get(pull_request).map(String::as_str))
             .collect::<Vec<_>>();
 
-        let branch_label = match branches_to_delete.len() {
-            1 => "branch",
-            _ => "branches",
-        };
-
         pb.reset();
-        pb.set_message(format!(
-            "Deleting {} selected {branch_label}",
-            branches_to_delete.len(),
-        ));
+        pb.set_message(fl!("cleanup-deleting", count = branches_to_delete.len()));
         pb.enable_steady_tick(SPINNER_TICK_RATE);
 
         let branches_count = branches_to_delete.len();
@@ -112,9 +92,12 @@ impl Cleanup {
         pb.finish_and_clear();
 
         println!(
-            "{} deleted {} selected {branch_label}",
-            "Successfully".green(),
-            branches_count.blue(),
+            "{}",
+            fl!(
+                "cleanup-deleted",
+                success = success(),
+                count = branches_count
+            )
         );
 
         Ok(())
@@ -130,17 +113,14 @@ bitflags! {
     }
 }
 
-impl Display for MergeState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                Self::MERGED => "merged",
-                Self::CLOSED => "closed",
-                _ => "merged or closed",
-            }
-        )
+impl MergeState {
+    /// Returns the state's name, which translations use to choose their wording.
+    const fn id(self) -> &'static str {
+        match self {
+            Self::MERGED => "merged",
+            Self::CLOSED => "closed",
+            _ => "any",
+        }
     }
 }
 

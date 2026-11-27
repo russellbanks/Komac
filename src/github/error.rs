@@ -4,6 +4,7 @@ use thiserror::Error;
 use winget_types::{ManifestType, PackageIdentifier};
 
 use super::{rest::RestError, upstream, utils::PackagePath};
+use crate::i18n::fl;
 
 #[derive(Debug, Error)]
 pub enum GitHubError {
@@ -11,14 +12,22 @@ pub enum GitHubError {
     GraphQL(eyre::Error),
     #[error(transparent)]
     Rest(#[from] RestError),
-    #[error("{0} does not exist in {upstream}", upstream = upstream())]
+    #[error("{}", fl!(
+        "error-package-not-found",
+        identifier = .0.as_str(),
+        upstream = upstream().to_string()
+    ))]
     PackageNonExistent(PackageIdentifier),
-    #[error("No {type} manifest was found in {path}")]
+    #[error("{}", fl!(
+        "error-manifest-not-found",
+        manifest_type = .r#type.to_string(),
+        path = .path.as_str()
+    ))]
     ManifestNotFound {
         r#type: ManifestType,
         path: PackagePath,
     },
-    #[error("No valid files were found for {path}")]
+    #[error("{}", fl!("error-no-valid-files", path = .path.as_str()))]
     NoValidFiles { path: PackagePath },
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),

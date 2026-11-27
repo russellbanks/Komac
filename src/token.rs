@@ -15,7 +15,9 @@ use thiserror::Error;
 use tokio::runtime::Handle;
 use tracing::warn;
 
-use crate::{commands::utils::environment::CI, prompts::handle_inquire_error};
+use crate::{
+    commands::utils::environment::CI, i18n::fl, prompts::handle_inquire_error, terminal::success,
+};
 
 const GITHUB_API_ENDPOINT: &str = "https://api.github.com/octocat";
 
@@ -23,13 +25,11 @@ static DEFAULT_STORE_SET: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Error)]
 pub enum TokenError {
-    #[error(
-        "No token was provided or stored. Provide one with the `GITHUB_TOKEN` environment variable or `--token`."
-    )]
+    #[error("{}", fl!("error-no-token-in-ci"))]
     NoTokenInCI,
-    #[error("GitHub token is invalid.")]
+    #[error("{}", fl!("error-invalid-token"))]
     InvalidToken,
-    #[error("Failed to connect to GitHub. Please check your internet connection.")]
+    #[error("{}", fl!("error-failed-to-connect"))]
     FailedToConnect,
     #[error(transparent)]
     Keyring(#[from] keyring_core::Error),
@@ -92,7 +92,7 @@ impl TokenManager {
 
         if let Some(credential) = credential {
             match credential.set_password(validated_token.expose_secret()) {
-                Ok(()) => println!("Successfully stored token in platform's secure storage"),
+                Ok(()) => println!("{}", fl!("token-stored", success = success())),
                 Err(error) => warn!(
                     "Failed to store token in platform's secure storage, so it will be requested again next time: {error}"
                 ),
@@ -105,10 +105,9 @@ impl TokenManager {
     }
 
     #[builder]
-    pub fn prompt(
-        client: &Client,
-        #[builder(default = "Enter a GitHub token")] message: &str,
-    ) -> InquireResult<SecretString> {
+    pub fn prompt(client: &Client, message: Option<&str>) -> InquireResult<SecretString> {
+        let message = message.map_or_else(|| fl!("prompt-token"), str::to_owned);
+
         tokio::task::block_in_place(|| {
             let rt = Handle::current();
             let client = client.clone();
@@ -119,7 +118,7 @@ impl TokenManager {
                 Err(err) => Ok(Validation::Invalid(err.into())),
             };
 
-            Password::new(message)
+            Password::new(&message)
                 .with_display_mode(PasswordDisplayMode::Masked)
                 .with_display_toggle_enabled()
                 .with_validator(validator)

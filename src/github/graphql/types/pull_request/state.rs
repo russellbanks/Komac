@@ -1,5 +1,3 @@
-use std::fmt::{Display, Formatter};
-
 use crate::github::graphql::github_schema as schema;
 
 /// The possible states of a pull request.
@@ -36,17 +34,12 @@ impl PullRequestState {
         matches!(self, Self::Open)
     }
 
-    pub const fn as_str(self) -> &'static str {
+    /// Returns the state's lowercase name, which translations use to choose their wording.
+    pub const fn id(self) -> &'static str {
         match self {
-            Self::Merged => "a merged",
-            Self::Open => "an open",
-            Self::Closed => "a closed",
+            Self::Merged => "merged",
+            Self::Open => "open",
+            Self::Closed => "closed",
         }
-    }
-}
-
-impl Display for PullRequestState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        self.as_str().fmt(f)
     }
 }

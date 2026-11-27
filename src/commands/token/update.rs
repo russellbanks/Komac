@@ -1,18 +1,20 @@
 use anstream::println;
 use clap::Parser;
 use color_eyre::eyre::Result;
-use owo_colors::OwoColorize;
 use reqwest::Client;
 use secrecy::{ExposeSecret, SecretString};
 
-use crate::token::{TokenManager, default_headers};
+use crate::{
+    i18n::fl,
+    terminal::success,
+    token::{TokenManager, default_headers},
+};
 
-/// Update the stored token
 #[derive(Parser)]
+#[command(about = fl!("command-token-update"))]
 #[clap(visible_aliases = ["new", "add"])]
 pub struct UpdateToken {
-    /// The new token to store
-    #[arg(short, long)]
+    #[arg(short, long, help = fl!("arg-token-update-token"))]
     token: Option<SecretString>,
 }
 
@@ -31,16 +33,13 @@ impl UpdateToken {
             }
             None => TokenManager::prompt()
                 .client(&client)
-                .message("Please enter the new token to set")
+                .message(&fl!("prompt-new-token"))
                 .call()?,
         };
 
         credential.set_password(token.expose_secret())?;
 
-        println!(
-            "{} stored token in platform's secure storage",
-            "Successfully".green()
-        );
+        println!("{}", fl!("token-stored", success = success()));
 
         Ok(())
     }

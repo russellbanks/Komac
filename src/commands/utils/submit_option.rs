@@ -7,6 +7,7 @@ use winget_types::{PackageIdentifier, PackageVersion};
 use crate::{
     editor::Editor,
     github::utils::pull_request::{Change, Changes},
+    i18n::fl,
     manifests::print_changes,
     prompts::handle_inquire_error,
 };
@@ -37,7 +38,11 @@ impl SubmitOption {
                 Self::Exit
             } else {
                 Select::new(
-                    &format!("What would you like to do with {identifier} {version}?"),
+                    &fl!(
+                        "prompt-submit-option",
+                        identifier = identifier.as_str(),
+                        version = version.to_string()
+                    ),
                     Self::all().into(),
                 )
                 .prompt()
@@ -79,17 +84,18 @@ impl SubmitOption {
         [Self::Submit, Self::Edit, Self::Exit]
     }
 
-    pub const fn as_str(self) -> &'static str {
+    /// Returns the translated label shown in the prompt
+    pub fn label(self) -> String {
         match self {
-            Self::Submit => "Submit",
-            Self::Edit => "Edit",
-            Self::Exit => "Exit",
+            Self::Submit => fl!("prompt-submit-option", "submit"),
+            Self::Edit => fl!("prompt-submit-option", "edit"),
+            Self::Exit => fl!("prompt-submit-option", "exit"),
         }
     }
 }
 
 impl fmt::Display for SubmitOption {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_str().fmt(f)
+        f.write_str(&self.label())
     }
 }

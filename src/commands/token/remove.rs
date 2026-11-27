@@ -3,14 +3,13 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use owo_colors::OwoColorize;
 
-use crate::{prompts::text::confirm_prompt, token::TokenManager};
+use crate::{i18n::fl, prompts::text::confirm_prompt, terminal::success, token::TokenManager};
 
-/// Remove the stored token
 #[derive(Parser)]
+#[command(about = fl!("command-token-remove"))]
 #[clap(visible_alias = "delete")]
 pub struct RemoveToken {
-    /// Skip the confirmation prompt to delete the token
-    #[arg(short = 'y', long = "yes")]
+    #[arg(short = 'y', long = "yes", help = fl!("arg-token-remove-skip-prompt"))]
     skip_prompt: bool,
 }
 
@@ -22,20 +21,16 @@ impl RemoveToken {
             credential.get_password().err(),
             Some(keyring_core::Error::NoEntry)
         ) {
-            println!("No token stored is currently stored in the platform's secure storage");
+            println!("{}", fl!("token-none-stored"));
         }
 
-        let confirm = self.skip_prompt
-            || confirm_prompt("Would you like to remove the currently stored token?")?;
+        let confirm = self.skip_prompt || confirm_prompt(&fl!("prompt-remove-token"))?;
 
         if confirm {
             credential.delete_credential()?;
-            println!(
-                "{} deleted the stored token from the platform's secure storage",
-                "Successfully".green()
-            );
+            println!("{}", fl!("token-deleted", success = success()));
         } else {
-            println!("{}", "No token was deleted".cyan());
+            println!("{}", fl!("token-not-deleted").cyan());
         }
 
         Ok(())

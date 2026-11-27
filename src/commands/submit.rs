@@ -16,6 +16,7 @@ use winget_types::{Manifest as WingetManifest, ManifestType, utils::GenericManif
 use crate::{
     commands::utils::{RateLimit, SPINNER_TICK_RATE, SubmitOption},
     github::{client::GitHub, utils::pull_request::Change},
+    i18n::fl,
     manifests::{Manifests, manifest::Manifest, print_changes},
     prompts::handle_inquire_error,
     token::TokenManager,
@@ -27,32 +28,30 @@ pub struct Submit {
     #[arg(value_hint = clap::ValueHint::DirPath)]
     path: Utf8PathBuf,
 
-    /// Skip the confirmation prompt to submit the package
-    #[arg(short = 'y', long = "yes", visible_alias = "submit")]
+    #[arg(
+        short = 'y',
+        long = "yes",
+        visible_alias = "submit",
+        help = fl!("arg-submit-skip-prompt"),
+    )]
     skip_prompt: bool,
 
-    /// Submit all packages present in the folder
-    #[arg(short = 'a', long = "all")]
+    #[arg(short = 'a', long = "all", help = fl!("arg-submit-submit-all"))]
     submit_all: bool,
 
-    /// List of issues that submitting this version would resolve
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-submit-resolves"))]
     resolves: Vec<NonZeroU32>,
 
-    /// Open pull request link automatically
-    #[arg(long, env = "OPEN_PR")]
+    #[arg(long, env = "OPEN_PR", help = fl!("arg-open-pr"))]
     open_pr: bool,
 
-    /// Use the per-minute rate limit, potentially hitting the hourly rate limit in 7.5 minutes
-    #[arg(long, hide = true)]
+    #[arg(long, hide = true, help = fl!("arg-fast"))]
     fast: bool,
 
-    /// Run without submitting
-    #[arg(long, env = "DRY_RUN")]
+    #[arg(long, env = "DRY_RUN", help = fl!("arg-dry-run"))]
     dry_run: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 
@@ -109,14 +108,14 @@ impl Submit {
         let manifests = match packages.len() {
             0 => {
                 println!(
-                    "No valid packages to submit were found in {}",
-                    self.path.blue()
+                    "{}",
+                    fl!("no-packages-to-submit", path = self.path.blue().to_string())
                 );
                 return Ok(());
             }
             1 => packages,
             _ if self.submit_all => packages,
-            _ => MultiSelect::new("Please select which packages to submit", packages)
+            _ => MultiSelect::new(&fl!("prompt-select-packages"), packages)
                 .with_page_size(10)
                 .prompt()
                 .map_err(handle_inquire_error)?,
@@ -158,8 +157,10 @@ impl Submit {
             rate_limit.wait().await;
 
             // Create an indeterminate progress bar to show as a pull request is being created
-            let pr_progress = ProgressBar::new_spinner().with_message(format!(
-                "Creating a pull request for {identifier} version {version}",
+            let pr_progress = ProgressBar::new_spinner().with_message(fl!(
+                "pull-request-creating",
+                identifier = identifier.as_str(),
+                version = version.to_string()
             ));
             pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 

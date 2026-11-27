@@ -5,10 +5,17 @@ use vergen_gix::{Emitter, Gix};
 
 const ICON: &str = "assets/branding/logo.ico";
 
+/// The translations, which the `fl!` macro checks at compile time but Cargo doesn't otherwise know
+/// to recompile for when they change
+const TRANSLATIONS: [&str; 2] = ["i18n", "i18n.toml"];
+
 fn main() {
     // cynic emits rerun-if-changed for the schema, which stops Cargo from rerunning this script
     // when any other file changes, so the icon has to be listed explicitly
     println!("cargo:rerun-if-changed={ICON}");
+    for path in TRANSLATIONS {
+        println!("cargo:rerun-if-changed={path}");
+    }
 
     cynic_codegen::register_schema("github")
         .from_sdl_file("assets/github.graphql")

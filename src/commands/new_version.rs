@@ -10,8 +10,6 @@ use clap::Parser;
 use color_eyre::eyre::Result;
 use indicatif::ProgressBar;
 use inquire::CustomType;
-use ordinal::Ordinal;
-use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use winget_types::{
     LanguageTag, PackageIdentifier, PackageVersion, VersionManifest,
@@ -38,6 +36,7 @@ use crate::{
         client::GitHub,
         utils::{PackagePath, pull_request::Change},
     },
+    i18n::fl,
     manifests::{Manifests, Url, print_changes},
     prompts::{
         check_prompt, handle_inquire_error,
@@ -45,23 +44,21 @@ use crate::{
         radio_prompt,
         text::{confirm_prompt, optional_prompt, required_prompt},
     },
+    terminal::success,
     token::TokenManager,
 };
 
-/// Create a new package from scratch
 #[expect(clippy::struct_excessive_bools, reason = "CLI flags")]
 #[derive(Parser)]
+#[command(about = fl!("command-new"))]
 pub struct NewVersion {
-    /// The package's unique identifier
-    #[arg(value_name = "PACKAGE_IDENTIFIER")]
+    #[arg(value_name = "PACKAGE_IDENTIFIER", help = fl!("arg-identifier"))]
     identifier: Option<PackageIdentifier>,
 
-    /// The package's version
-    #[arg(short = 'v', long = "version")]
+    #[arg(short = 'v', long = "version", help = fl!("arg-version"))]
     version: Option<PackageVersion>,
 
-    /// Direct download URLs of the package's installers, separated by a space
-    #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::Url)]
+    #[arg(short, long, num_args = 1.., value_hint = clap::ValueHint::Url, help = fl!("arg-urls"))]
     urls: Vec<Url>,
 
     #[arg(long)]
@@ -109,48 +106,52 @@ pub struct NewVersion {
     #[arg(long, value_hint = clap::ValueHint::Url)]
     release_notes_url: Option<ReleaseNotesUrl>,
 
-    /// Number of installers to download at the same time
-    #[arg(long, default_value_t = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN))]
+    #[arg(
+        long,
+        default_value_t = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN),
+        help = fl!("arg-concurrent-downloads"),
+    )]
     concurrent_downloads: NonZeroUsize,
 
-    /// List of issues that adding this package or version would resolve
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-new-resolves"))]
     resolves: Vec<NonZeroU32>,
 
-    /// Automatically submit a pull request
-    #[arg(short, long)]
+    #[arg(short, long, help = fl!("arg-submit"))]
     submit: bool,
 
-    /// Automatically skip the prompt and exit (with saving the manifests if --output is defined)
-    #[arg(long, conflicts_with_all = ["submit", "dry_run"])]
+    #[arg(long, conflicts_with_all = ["submit", "dry_run"], help = fl!("arg-exit"))]
     exit: bool,
 
-    /// Name of external tool that invoked Komac
-    #[arg(long, env = "KOMAC_CREATED_WITH")]
+    #[arg(long, env = "KOMAC_CREATED_WITH", help = fl!("arg-created-with"))]
     created_with: Option<String>,
 
-    /// URL to external tool that invoked Komac
-    #[arg(long, env = "KOMAC_CREATED_WITH_URL", value_hint = clap::ValueHint::Url)]
+    #[arg(
+        long,
+        env = "KOMAC_CREATED_WITH_URL",
+        value_hint = clap::ValueHint::Url,
+        help = fl!("arg-created-with-url"),
+    )]
     created_with_url: Option<DecodedUrl>,
 
-    /// Directory to output the manifests to
-    #[arg(short, long, env = "OUTPUT_DIRECTORY", value_hint = clap::ValueHint::DirPath)]
+    #[arg(
+        short,
+        long,
+        env = "OUTPUT_DIRECTORY",
+        value_hint = clap::ValueHint::DirPath,
+        help = fl!("arg-output"),
+    )]
     output: Option<PathBuf>,
 
-    /// Open pull request link automatically
-    #[arg(long, env = "OPEN_PR")]
+    #[arg(long, env = "OPEN_PR", help = fl!("arg-open-pr"))]
     open_pr: bool,
 
-    /// Run without prompting or submitting
-    #[arg(long, env = "DRY_RUN")]
+    #[arg(long, env = "DRY_RUN", help = fl!("arg-new-dry-run"))]
     dry_run: bool,
 
-    /// Skip checking for existing pull requests
-    #[arg(long, env)]
+    #[arg(long, env, help = fl!("arg-skip-pr-check"))]
     skip_pr_check: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 
@@ -164,7 +165,14 @@ impl NewVersion {
         let package = github.get_package(&identifier).await?;
 
         if let Some(latest_version) = package.latest_version() {
-            println!("Latest version of {identifier}: {latest_version}");
+            println!(
+                "{}",
+                fl!(
+                    "latest-version",
+                    identifier = identifier.as_str(),
+                    version = latest_version.to_string()
+                )
+            );
         }
 
         let version = required_prompt(self.version, None::<&str>)?;
@@ -176,15 +184,17 @@ impl NewVersion {
 
         let mut urls = self.urls;
         if urls.is_empty() {
+            let invalid_message = fl!("prompt-installer-url", "invalid");
+            let help_message = fl!("prompt-installer-url", "help");
             while urls.len() < 1024 {
-                let message = format!("{} Installer URL", Ordinal(urls.len() + 1));
-                let url_prompt =
-                    CustomType::new(&message).with_error_message("Please enter a valid URL");
-                let installer_url = if urls.len() + 1 == 1 {
+                let position = urls.len() + 1;
+                let message = fl!("prompt-installer-url", position = position);
+                let url_prompt = CustomType::new(&message).with_error_message(&invalid_message);
+                let installer_url = if urls.is_empty() {
                     Some(url_prompt.prompt().map_err(handle_inquire_error)?)
                 } else {
                     url_prompt
-                        .with_help_message("Press ESC if you do not have any more URLs")
+                        .with_help_message(&help_message)
                         .prompt_skippable()
                         .map_err(handle_inquire_error)?
                 };
@@ -224,7 +234,10 @@ impl NewVersion {
                 .iter()
                 .any(|installer| installer.r#type == Some(InstallerType::Exe))
             {
-                if confirm_prompt(&format!("Is {} a portable exe?", analyzer.file_name))? {
+                if confirm_prompt(&fl!(
+                    "prompt-portable-exe",
+                    file = analyzer.file_name.as_str()
+                ))? {
                     for installer in &mut analyzer.installers {
                         installer.r#type = Some(InstallerType::Portable);
                     }
@@ -417,9 +430,12 @@ impl NewVersion {
         if let Some(output) = self.output.map(|out| out.join(package_path.as_str())) {
             changes.write_to(output.as_path()).await?;
             println!(
-                "{} written all manifest files to {}",
-                "Successfully".green(),
-                output.display()
+                "{}",
+                fl!(
+                    "manifests-written",
+                    success = success(),
+                    path = output.display().to_string()
+                )
             );
         }
 
@@ -428,8 +444,10 @@ impl NewVersion {
         }
 
         // Create an indeterminate progress bar to show as a pull request is being created
-        let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request for {identifier} {version}"
+        let pr_progress = ProgressBar::new_spinner().with_message(fl!(
+            "pull-request-creating",
+            identifier = identifier.as_str(),
+            version = version.to_string()
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 

@@ -11,33 +11,39 @@ use color_eyre::{Result, eyre::ensure};
 use sha2::{Digest, Sha256, digest::Output};
 use winget_types::Sha256String;
 
-use crate::{analysis::Analyzer, manifests::print_manifest};
+use crate::{analysis::Analyzer, i18n::fl, manifests::print_manifest};
 
-/// Analyzes a file and outputs information about it
 #[derive(Parser)]
+#[command(about = fl!("command-analyze"))]
 #[clap(visible_alias = "analyse")]
 pub struct Analyze {
     #[arg(value_parser = is_valid_file, value_hint = clap::ValueHint::FilePath)]
     file_path: Utf8PathBuf,
 
     #[cfg(not(debug_assertions))]
-    /// Hash the file and include it in the `InstallerSha256` field
-    #[arg(long = "hash", alias = "sha256", overrides_with = "hash")]
+    #[arg(
+        long = "hash",
+        alias = "sha256",
+        overrides_with = "hash",
+        help = fl!("arg-analyze-hash"),
+    )]
     _no_hash: bool,
 
     #[cfg(not(debug_assertions))]
-    /// Skip hashing the file
-    #[arg(long = "no-hash", alias = "no-sha256", action = clap::ArgAction::SetFalse)]
+    #[arg(
+        long = "no-hash",
+        alias = "no-sha256",
+        action = clap::ArgAction::SetFalse,
+        help = fl!("arg-analyze-no-hash"),
+    )]
     hash: bool,
 
     #[cfg(debug_assertions)]
-    /// Hash the file and include it in the `InstallerSha256` field
-    #[arg(long, alias = "sha256", overrides_with = "_no_hash")]
+    #[arg(long, alias = "sha256", overrides_with = "_no_hash", help = fl!("arg-analyze-hash"))]
     hash: bool,
 
     #[cfg(debug_assertions)]
-    /// Skip hashing the file
-    #[arg(long = "no-hash", alias = "no-sha256")]
+    #[arg(long = "no-hash", alias = "no-sha256", help = fl!("arg-analyze-no-hash"))]
     _no_hash: bool,
 }
 

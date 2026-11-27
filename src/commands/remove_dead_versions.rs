@@ -19,6 +19,7 @@ use winget_types::{
 use crate::{
     commands::utils::{RateLimit, SPINNER_SLOW_TICK_RATE},
     github::client::GitHub,
+    i18n::fl,
     prompts::text::confirm_prompt,
     token::{TokenManager, default_headers},
 };
@@ -36,28 +37,27 @@ pub struct RemoveDeadVersions {
     #[arg(value_name = "PACKAGE_IDENTIFIER")]
     package_identifier: PackageIdentifier,
 
-    /// Check versions lesser than a given version
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-remove-dead-versions-before"))]
     before: Option<PackageVersion>,
 
-    /// Check versions greater than a given version
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-remove-dead-versions-after"))]
     after: Option<PackageVersion>,
 
-    /// Use the per-minute rate limit, potentially hitting the hourly rate limit in 7.5 minutes
-    #[arg(long, hide = true)]
+    #[arg(long, hide = true, help = fl!("arg-fast"))]
     fast: bool,
 
-    /// Automatically create pull requests to remove dead versions without prompting
-    #[arg(long, hide = true, env = "CI")]
+    #[arg(long, hide = true, env = "CI", help = fl!("arg-remove-dead-versions-auto"))]
     auto: bool,
 
-    /// Number of versions to check concurrently
-    #[arg(short, long, default_value_t = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN))]
+    #[arg(
+        short,
+        long,
+        default_value_t = std::thread::available_parallelism().unwrap_or(NonZeroUsize::MIN),
+        help = fl!("arg-remove-dead-versions-concurrent"),
+    )]
     concurrent: NonZeroUsize,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 
@@ -170,8 +170,11 @@ impl RemoveDeadVersions {
                 let overall_progress = &overall_progress;
                 let progress_bar = &progress_bars[index % self.concurrent];
                 async move {
-                    progress_bar
-                        .set_message(format!("Checking {package_identifier} {}", version.blue()));
+                    progress_bar.set_message(fl!(
+                        "remove-dead-checking",
+                        identifier = package_identifier.as_str(),
+                        version = version.blue().to_string()
+                    ));
 
                     let installer_urls = github
                         .get_manifest::<InstallerManifest>(
@@ -260,22 +263,29 @@ async fn confirm_removal(
         && pull_request.is_open()
     {
         println!(
-            "{identifier} {version} returned {} in all its InstallerUrls but there is already {} pull request for this version that was created on {} at {}.",
-            StatusCode::NOT_FOUND.red(),
-            pull_request.state,
-            pull_request.created_at.date_naive(),
-            pull_request.created_at.time()
+            "{}",
+            fl!(
+                "remove-dead-pull-request-exists",
+                identifier = identifier.as_str(),
+                version = version.to_string(),
+                status = StatusCode::NOT_FOUND.red().to_string(),
+                state = pull_request.state.id(),
+                date = pull_request.created_at.date_naive().to_string(),
+                time = pull_request.created_at.time().to_string()
+            )
         );
         return if auto {
             Ok(false)
         } else {
-            confirm_prompt("Remove anyway?").map_err(Error::from)
+            confirm_prompt(&fl!("prompt-remove-anyway")).map_err(Error::from)
         };
     }
 
     Ok(auto
-        || confirm_prompt(&format!(
-            "{identifier} {version} returned {} in all its InstallerUrls. Remove?",
-            StatusCode::NOT_FOUND.red()
+        || confirm_prompt(&fl!(
+            "prompt-remove-dead-version",
+            identifier = identifier.as_str(),
+            version = version.to_string(),
+            status = StatusCode::NOT_FOUND.red().to_string()
         ))?)
 }

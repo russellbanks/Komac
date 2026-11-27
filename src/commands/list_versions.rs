@@ -2,14 +2,13 @@ use std::io::Write;
 
 use clap::{Args, Parser};
 use color_eyre::Result;
-use owo_colors::OwoColorize;
 use secrecy::SecretString;
 use winget_types::PackageIdentifier;
 
-use crate::{github::client::GitHub, token::TokenManager};
+use crate::{github::client::GitHub, i18n::fl, token::TokenManager};
 
-/// Lists all versions for a given package
 #[derive(Parser)]
+#[command(about = fl!("command-list"))]
 #[clap(visible_alias = "list-versions")]
 pub struct ListVersions {
     #[arg()]
@@ -18,28 +17,23 @@ pub struct ListVersions {
     #[command(flatten)]
     output_type: OutputType,
 
-    /// Output the number of versions the package has
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-list-count"))]
     count: bool,
 
-    /// GitHub personal access token with the `public_repo` scope
-    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true)]
+    #[arg(short, long, env = "GITHUB_TOKEN", hide_env_values = true, help = fl!("arg-token"))]
     token: Option<SecretString>,
 }
 
 #[derive(Args)]
 #[group(multiple = false)]
 struct OutputType {
-    /// Output the versions as JSON
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-list-json"))]
     json: bool,
 
-    /// Output the versions as prettified JSON
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-list-pretty-json"))]
     pretty_json: bool,
 
-    /// Output the versions as YAML
-    #[arg(long)]
+    #[arg(long, help = fl!("arg-list-yaml"))]
     yaml: bool,
 }
 
@@ -67,8 +61,8 @@ impl ListVersions {
         if self.count {
             writeln!(
                 stdout_lock,
-                "There are {} versions",
-                versions.len().blue().bold()
+                "{}",
+                fl!("version-count", count = versions.len())
             )?;
         }
 

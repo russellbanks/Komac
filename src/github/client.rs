@@ -40,6 +40,7 @@ use crate::{
             pull_request_body,
         },
     },
+    i18n::fl,
     manifests::Manifests,
     token::default_headers,
     traits::FromHtml,
@@ -480,8 +481,10 @@ impl GitHub {
         #[builder(default)] issue_resolves: &[NonZeroU32],
     ) -> Result<create_pull_request::PullRequest, GitHubError> {
         // Create an indeterminate progress bar to show as a pull request is being created
-        let pr_progress = ProgressBar::new_spinner().with_message(format!(
-            "Creating a pull request to remove {identifier} {version}",
+        let pr_progress = ProgressBar::new_spinner().with_message(fl!(
+            "pull-request-creating-removal",
+            identifier = identifier.as_str(),
+            version = version.to_string()
         ));
         pr_progress.enable_steady_tick(SPINNER_TICK_RATE);
 

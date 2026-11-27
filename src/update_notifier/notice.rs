@@ -7,6 +7,7 @@ use owo_colors::OwoColorize;
 use winget_types::Version;
 
 use super::cache::CachedRelease;
+use crate::i18n::fl;
 
 /// A notice that a newer release than the running version is available.
 #[derive(Debug, PartialEq, Eq)]
@@ -35,7 +36,7 @@ impl fmt::Display for UpdateNotice<'_> {
         writeln!(
             f,
             "{} {} → {}",
-            format_args!("A new release of {} is available:", crate_name!()).yellow(),
+            fl!("update-available", name = crate_name!()).yellow(),
             self.current.cyan(),
             self.latest.cyan()
         )?;
