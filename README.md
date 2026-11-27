@@ -162,7 +162,11 @@ To disable it, set the `KOMAC_NO_UPDATE_NOTIFIER` environment variable to any va
 ## Language
 
 komac shows its prompts, output and help in your operating system's language when a translation is available, and
-in English otherwise. To choose a language yourself, set the `KOMAC_LANG` environment variable to a language tag:
+in English otherwise. Translations are available for:
+
+- Simplified Chinese (`zh-CN`), which is also used for Traditional Chinese until it has its own translation
+
+To choose a language yourself, set the `KOMAC_LANG` environment variable to a language tag:
 
 ```shell
 KOMAC_LANG=de-DE komac update --help
