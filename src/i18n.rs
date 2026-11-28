@@ -83,49 +83,159 @@ pub(crate) use fl;
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
+    use std::collections::{BTreeMap, BTreeSet};
 
-    use fluent_syntax::{ast::Entry, parser};
+    use fluent_syntax::{
+        ast::{Entry, Expression, InlineExpression, Pattern, PatternElement},
+        parser,
+    };
+    use i18n_embed::{
+        fluent::{FluentLanguageLoader, fluent_language_loader},
+        unic_langid::LanguageIdentifier,
+    };
     use rstest::rstest;
 
     use super::Localizations;
 
     const EN_US: &str = "en-US/komac.ftl";
 
-    /// Returns the IDs of the messages and their attributes in a translation file, such as
-    /// `field-tag` and `field-tag.help`, failing if the file has a syntax error
-    fn message_ids(path: &str) -> BTreeSet<String> {
+    /// Returns the translation files, such as `zh-CN/komac.ftl`, other than en-US
+    fn translations() -> impl Iterator<Item = String> {
+        Localizations::iter()
+            .filter(|path| path.ends_with(".ftl") && path != EN_US)
+            .map(Into::into)
+    }
+
+    /// Returns the messages and their attributes in a translation file, such as `field-tag` and
+    /// `field-tag.help`, with the arguments each one uses, failing if the file has a syntax error
+    fn messages(path: &str) -> BTreeMap<String, BTreeSet<String>> {
         let file = Localizations::get(path).unwrap_or_else(|| panic!("{path} is not embedded"));
         let source = str::from_utf8(&file.data).unwrap();
         let resource = parser::parse(source)
             .unwrap_or_else(|(_, errors)| panic!("{path} has syntax errors: {errors:#?}"));
 
-        let mut ids = BTreeSet::new();
+        let mut messages = BTreeMap::new();
         for entry in resource.body {
             if let Entry::Message(message) = entry {
-                for attribute in message.attributes {
-                    ids.insert(format!("{}.{}", message.id.name, attribute.id.name));
+                let id = message.id.name;
+                for attribute in &message.attributes {
+                    messages.insert(
+                        format!("{id}.{}", attribute.id.name),
+                        arguments(&attribute.value),
+                    );
                 }
-                ids.insert(message.id.name.to_owned());
+                if let Some(value) = &message.value {
+                    messages.insert(id.to_owned(), arguments(value));
+                }
             }
         }
-        ids
+        messages
+    }
+
+    /// Returns the names of the arguments a pattern uses, including those in selectors
+    fn arguments(pattern: &Pattern<&str>) -> BTreeSet<String> {
+        fn pattern_arguments(pattern: &Pattern<&str>, names: &mut BTreeSet<String>) {
+            for element in &pattern.elements {
+                if let PatternElement::Placeable { expression } = element {
+                    expression_arguments(expression, names);
+                }
+            }
+        }
+
+        fn expression_arguments(expression: &Expression<&str>, names: &mut BTreeSet<String>) {
+            match expression {
+                Expression::Select { selector, variants } => {
+                    inline_arguments(selector, names);
+                    for variant in variants {
+                        pattern_arguments(&variant.value, names);
+                    }
+                }
+                Expression::Inline(inline) => inline_arguments(inline, names),
+            }
+        }
+
+        fn inline_arguments(inline: &InlineExpression<&str>, names: &mut BTreeSet<String>) {
+            match inline {
+                InlineExpression::VariableReference { id } => {
+                    names.insert(id.name.to_owned());
+                }
+                InlineExpression::FunctionReference { arguments, .. } => {
+                    for argument in &arguments.positional {
+                        inline_arguments(argument, names);
+                    }
+                    for argument in &arguments.named {
+                        inline_arguments(&argument.value, names);
+                    }
+                }
+                InlineExpression::Placeable { expression } => {
+                    expression_arguments(expression, names);
+                }
+                _ => {}
+            }
+        }
+
+        let mut names = BTreeSet::new();
+        pattern_arguments(pattern, &mut names);
+        names
     }
 
     #[test]
     fn translations_only_have_en_us_messages() {
-        let en_us = message_ids(EN_US);
+        let en_us = messages(EN_US);
 
-        for path in Localizations::iter().filter(|path| path.ends_with(".ftl")) {
-            let unknown = message_ids(&path)
-                .difference(&en_us)
-                .cloned()
+        for path in translations() {
+            let unknown = messages(&path)
+                .into_keys()
+                .filter(|id| !en_us.contains_key(id))
                 .collect::<Vec<_>>();
             assert!(
                 unknown.is_empty(),
                 "{path} has messages that aren't in {EN_US}: {unknown:?}"
             );
         }
+    }
+
+    /// A translation that leaves out an argument would drop information such as a version, and
+    /// one that adds an argument would show a Fluent error, as Komac doesn't pass it
+    #[test]
+    fn translations_use_en_us_arguments() {
+        let en_us = messages(EN_US);
+
+        for path in translations() {
+            for (id, arguments) in messages(&path) {
+                let expected = &en_us[&id];
+                assert_eq!(
+                    &arguments, expected,
+                    "{path}: {id} uses {arguments:?} but {EN_US} uses {expected:?}"
+                );
+            }
+        }
+    }
+
+    /// Simplified Chinese is chosen however the operating system names it: Windows uses `zh-CN`,
+    /// macOS `zh-Hans-CN` and Linux `zh_CN`. Without a Traditional Chinese translation, Fluent
+    /// matches on the language alone, so Traditional Chinese systems get Simplified Chinese
+    /// rather than English.
+    #[rstest]
+    #[case("zh-CN", "zh-CN")]
+    #[case("zh-Hans-CN", "zh-CN")]
+    #[case("zh-Hans", "zh-CN")]
+    #[case("zh", "zh-CN")]
+    #[case("zh-SG", "zh-CN")]
+    #[case("zh-TW", "zh-CN")]
+    #[case("zh-HK", "zh-CN")]
+    #[case("en-GB", "en-US")]
+    #[case("de-DE", "en-US")]
+    fn language_negotiation(#[case] requested: &str, #[case] expected: &str) {
+        let loader: FluentLanguageLoader = fluent_language_loader!();
+        let requested = [requested.parse::<LanguageIdentifier>().unwrap()];
+
+        let selected = i18n_embed::select(&loader, &Localizations, &requested).unwrap();
+
+        assert_eq!(
+            selected.first().map(ToString::to_string).as_deref(),
+            Some(expected)
+        );
     }
 
     #[rstest]
