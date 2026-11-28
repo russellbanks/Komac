@@ -164,7 +164,8 @@ To disable it, set the `KOMAC_NO_UPDATE_NOTIFIER` environment variable to any va
 komac shows its prompts, output and help in your operating system's language when a translation is available, and
 in English otherwise. Translations are available for:
 
-- Simplified Chinese (`zh-CN`), which is also used for Traditional Chinese until it has its own translation
+- Simplified Chinese (`zh-CN`)
+- Traditional Chinese (`zh-TW`), which is also used in Hong Kong and Macau
 
 To choose a language yourself, set the `KOMAC_LANG` environment variable to a language tag:
 

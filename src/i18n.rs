@@ -9,9 +9,9 @@ use std::{env, sync::LazyLock};
 use i18n_embed::{
     DesktopLanguageRequester, LanguageLoader,
     fluent::{FluentLanguageLoader, fluent_language_loader},
-    unic_langid::LanguageIdentifier,
 };
 use rust_embed::RustEmbed;
+use unic_langid::LanguageIdentifier;
 
 /// Overrides the language detected from the operating system, e.g. `KOMAC_LANG=de-DE`
 const LANGUAGE_ENV: &str = "KOMAC_LANG";
@@ -89,11 +89,9 @@ mod tests {
         ast::{Entry, Expression, InlineExpression, Pattern, PatternElement},
         parser,
     };
-    use i18n_embed::{
-        fluent::{FluentLanguageLoader, fluent_language_loader},
-        unic_langid::LanguageIdentifier,
-    };
+    use i18n_embed::fluent::{FluentLanguageLoader, fluent_language_loader};
     use rstest::rstest;
+    use unic_langid::LanguageIdentifier;
 
     use super::Localizations;
 
@@ -212,18 +210,22 @@ mod tests {
         }
     }
 
-    /// Simplified Chinese is chosen however the operating system names it: Windows uses `zh-CN`,
-    /// macOS `zh-Hans-CN` and Linux `zh_CN`. Without a Traditional Chinese translation, Fluent
-    /// matches on the language alone, so Traditional Chinese systems get Simplified Chinese
-    /// rather than English.
+    /// Chinese is chosen however the operating system names it: Windows uses `zh-CN`, macOS
+    /// `zh-Hans-CN` and Linux `zh_CN`. Fluent adds the likely script to regions without their own
+    /// translation, so Hong Kong and Macau get Traditional Chinese and Singapore gets Simplified
+    /// Chinese, as does Chinese with no script or region.
     #[rstest]
     #[case("zh-CN", "zh-CN")]
     #[case("zh-Hans-CN", "zh-CN")]
     #[case("zh-Hans", "zh-CN")]
     #[case("zh", "zh-CN")]
     #[case("zh-SG", "zh-CN")]
-    #[case("zh-TW", "zh-CN")]
-    #[case("zh-HK", "zh-CN")]
+    #[case("zh-TW", "zh-TW")]
+    #[case("zh-Hant-TW", "zh-TW")]
+    #[case("zh-Hant", "zh-TW")]
+    #[case("zh-HK", "zh-TW")]
+    #[case("zh-Hant-HK", "zh-TW")]
+    #[case("zh-MO", "zh-TW")]
     #[case("en-GB", "en-US")]
     #[case("de-DE", "en-US")]
     fn language_negotiation(#[case] requested: &str, #[case] expected: &str) {
