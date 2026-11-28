@@ -3492,6 +3492,7 @@ dependencies = [
  "tree-sitter-highlight",
  "tree-sitter-yaml",
  "typed-path",
+ "unic-langid",
  "url",
  "uuid",
  "vergen-gix",
