@@ -75,7 +75,7 @@ memchr = "2.8.3"
 msi = "0.11.1"
 nt-time = { version = "0.15.0", features = ["chrono"] }
 open = "5.4.5"
-owo-colors = "4.4.0"
+owo-colors = "4.4.1"
 percent-encoding = "2.3.2"
 quick-xml = { version = "0.42.0", features = ["serialize"] }
 rand = "0.10.4"
